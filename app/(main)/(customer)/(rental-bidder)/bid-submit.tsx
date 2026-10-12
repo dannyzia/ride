@@ -26,6 +26,7 @@ import { useIsDark } from "@/lib/useAppearance";
 import { colors } from "@/theme/goRide";
 import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
+import { useTranslation } from "react-i18next";
 import { describeVehicleType } from "@/constants/truckCatalog";
 
 const SERVER_URL = process.env.EXPO_PUBLIC_SERVER_URL ?? "http://localhost:8080";
@@ -69,6 +70,7 @@ interface RequestDetail {
 }
 
 export default function BidSubmitScreen() {
+  const { t } = useTranslation();
   const isDark = useIsDark();
   const bg = isDark ? colors.bgDark : colors.bgLight;
   const surfaceBg = isDark ? colors.surfaceElevatedDark : colors.surfaceLight;
@@ -174,16 +176,16 @@ export default function BidSubmitScreen() {
 
       const data = await res.json();
       if (!res.ok) {
-        Alert.alert("Bid Failed", data.message || "Could not submit bid");
+        Alert.alert(t("rental_bid_submit.err_title"), data.message || t("rental_bid_submit.err_body"));
         return;
       }
 
-      Alert.alert("Bid Submitted", "Your bid has been placed. You'll be notified if it's accepted.", [
-        { text: "OK", onPress: () => router.back() },
+      Alert.alert(t("rental_bid_submit.submitted_title"), t("rental_bid_submit.submitted_body"), [
+        { text: t("common.ok"), onPress: () => router.back() },
       ]);
     } catch (err) {
       logger.error("[bid-submit] error", err);
-      Alert.alert("Error", "Could not submit bid");
+      Alert.alert(t("common.error"), t("rental_bid_submit.err_body"));
     } finally {
       setSubmitting(false);
     }
@@ -207,7 +209,7 @@ export default function BidSubmitScreen() {
           <Ionicons name="arrow-back" size={24} color={textPrimary} />
         </TouchableOpacity>
         <Text style={{ flex: 1, fontSize: 20, fontFamily: "JakartaBold", color: textPrimary, marginLeft: 12 }}>
-          Submit Bid
+          {t("rental_bid_submit.title")}
         </Text>
       </View>
 
@@ -251,26 +253,26 @@ export default function BidSubmitScreen() {
                 {request.tracking_required && (
                   <View style={{ backgroundColor: colors.amber + "18", borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4 }}>
                     <Text style={{ fontSize: 12, fontFamily: "JakartaSemiBold", color: colors.amber }}>
-                      Tracking Required
+                      {t("rental_bid_submit.chip_tracking")}
                     </Text>
                   </View>
                 )}
                 {request.scheduled_start_at && (
                   <View style={{ backgroundColor: colors.blue + "18", borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4 }}>
                     <Text style={{ fontSize: 12, fontFamily: "JakartaSemiBold", color: colors.blue }}>
-                      Scheduled
+                      {t("rental_bid_submit.chip_scheduled")}
                     </Text>
                   </View>
                 )}
               </View>
               {request.rental_options && (
                 <Text style={{ fontSize: 12, fontFamily: "Jakarta", color: textSecondary, marginTop: 8 }}>
-                  Options: {request.rental_options}
+                  {t("rental_bid_submit.options_label", { options: request.rental_options })}
                 </Text>
               )}
               {request.duration_hours && (
                 <Text style={{ fontSize: 12, fontFamily: "Jakarta", color: textSecondary, marginTop: 2 }}>
-                  Duration: {request.duration_hours}h
+                  {t("rental_bid_submit.duration_label", { hours: request.duration_hours })}
                 </Text>
               )}
             </View>
@@ -278,7 +280,7 @@ export default function BidSubmitScreen() {
 
           {/* Vehicle type selector */}
           <Text style={{ fontSize: 15, fontFamily: "JakartaSemiBold", color: textPrimary, marginBottom: 8 }}>
-            Vehicle Type
+            {t("rental_bid_submit.vehicle_type")}
           </Text>
           <View style={{ flexDirection: "row", flexWrap: "wrap", marginBottom: 20 }}>
             {vehicleTypes.map((vt) => {
@@ -317,7 +319,7 @@ export default function BidSubmitScreen() {
 
           {/* Price input */}
           <Text style={{ fontSize: 15, fontFamily: "JakartaSemiBold", color: textPrimary, marginBottom: 8 }}>
-            Bid Price (৳)
+            {t("rental_bid_submit.bid_price")}
           </Text>
           <TextInput
             style={{
@@ -331,25 +333,25 @@ export default function BidSubmitScreen() {
               fontFamily: "JakartaBold",
               marginBottom: 4,
             }}
-            placeholder="e.g. 2500"
+            placeholder={t("rental_bid_submit.price_placeholder")}
             placeholderTextColor={textSecondary}
             value={priceInput}
             onChangeText={setPriceInput}
             keyboardType="number-pad"
-            accessibilityLabel="Bid price in Taka"
+            accessibilityLabel={t("rental_bid_submit.a11y_price")}
            testID="customer.rental-bidder.bid-submit.set-price-input"/>
           {pricePaisa > 0 && (
             <Text style={{ fontSize: 12, fontFamily: "Jakarta", color: textSecondary, marginBottom: 16 }}>
-              {pricePaisa.toLocaleString()} BDT (integer paisa)
+              {t("rental_bid_submit.paisa_echo", { paisa: pricePaisa.toLocaleString() })}
             </Text>
           )}
 
           {/* Overtime rate (ruling 15) — display-only info for customer */}
           <Text style={{ fontSize: 15, fontFamily: "JakartaSemiBold", color: textPrimary, marginBottom: 4 }}>
-            Per-hour extra (৳/hr) — optional
+            {t("rental_bid_submit.overtime_label")}
           </Text>
           <Text style={{ fontSize: 12, fontFamily: "Jakarta", color: textSecondary, marginBottom: 8 }}>
-            Extra charge beyond the agreed duration. Displayed to the customer as information only.
+            {t("rental_bid_submit.overtime_hint")}
           </Text>
           <TextInput
             style={{
@@ -362,17 +364,17 @@ export default function BidSubmitScreen() {
               fontSize: 15,
               marginBottom: 20,
             }}
-            placeholder="e.g. 200"
+            placeholder={t("rental_bid_submit.overtime_placeholder")}
             placeholderTextColor={textSecondary}
             value={overtimeInput}
             onChangeText={setOvertimeInput}
             keyboardType="number-pad"
-            accessibilityLabel="Overtime rate in Taka per hour"
+            accessibilityLabel={t("rental_bid_submit.a11y_overtime")}
            testID="customer.rental-bidder.bid-submit.set-overtime-input"/>
 
           {/* Notes */}
           <Text style={{ fontSize: 15, fontFamily: "JakartaSemiBold", color: textPrimary, marginBottom: 8 }}>
-            Notes — optional
+            {t("rental_bid_submit.notes_label")}
           </Text>
           <TextInput
             style={{
@@ -387,13 +389,13 @@ export default function BidSubmitScreen() {
               textAlignVertical: "top",
               marginBottom: 24,
             }}
-            placeholder="Any notes for the customer (e.g. vehicle condition, availability)"
+            placeholder={t("rental_bid_submit.notes_placeholder")}
             placeholderTextColor={textSecondary}
             value={notes}
             onChangeText={setNotes}
             multiline
             maxLength={500}
-            accessibilityLabel="Bid notes"
+            accessibilityLabel={t("rental_bid_submit.a11y_notes")}
            testID="customer.rental-bidder.bid-submit.set-notes"/>
 
           {/* Submit button */}
@@ -409,13 +411,13 @@ export default function BidSubmitScreen() {
               marginBottom: 40,
             }}
             accessibilityRole="button"
-            accessibilityLabel="Submit bid"
+            accessibilityLabel={t("rental_bid_submit.a11y_submit")}
            testID="customer.rental-bidder.bid-submit.handle-submit">
             {submitting ? (
               <ActivityIndicator size="small" color="#FFFFFF" />
             ) : (
               <Text style={{ color: "#FFFFFF", fontSize: 16, fontFamily: "JakartaSemiBold" }}>
-                {pricePaisa > 0 ? `Bid ৳${priceTaka.toFixed(0)}` : "Submit Bid"}
+                {pricePaisa > 0 ? t("rental_bid_submit.cta_with_price", { amount: priceTaka.toFixed(0) }) : t("rental_bid_submit.cta")}
               </Text>
             )}
           </TouchableOpacity>

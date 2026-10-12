@@ -19,6 +19,7 @@ import { colors } from "@/theme/goRide";
 import { useRentalStore } from "@/store/useRentalStore";
 import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
+import { useTranslation } from "react-i18next";
 import { describeVehicleType } from "@/constants/truckCatalog";
 import CargoSummary from "./_components/CargoSummary";
 import { formatBDT } from "@/lib/format";
@@ -42,6 +43,7 @@ interface RentalRequestDetail {
 }
 
 export default function BiddingScreen() {
+  const { t } = useTranslation();
   const isDark = useIsDark();
   const bg = isDark ? colors.bgDark : colors.bgLight;
   const surfaceBg = isDark ? colors.surfaceElevatedDark : colors.surfaceLight;
@@ -109,7 +111,7 @@ const fetchBids = useCallback(async () => {
 
       const data = await res.json();
       if (!res.ok) {
-        alert(data.message || "Could not accept bid");
+        alert(data.message || t("rental_marketplace.err_accept"));
         return;
       }
 
@@ -135,7 +137,7 @@ const fetchBids = useCallback(async () => {
           <Ionicons name="arrow-back" size={24} color={textPrimary} />
         </TouchableOpacity>
         <Text style={{ flex: 1, fontSize: 20, fontFamily: "JakartaBold", color: textPrimary, marginLeft: 12 }}>
-          Bids ({bids.length})
+          {t("rental_marketplace.bids_count", { count: bids.length })}
         </Text>
         {requestDetail?.requested_vehicle_type ? (
           <View
@@ -160,7 +162,7 @@ const fetchBids = useCallback(async () => {
       <View style={{ paddingHorizontal: 20, marginBottom: 12 }}>
         <View style={{ backgroundColor: "#FEF3C7", borderRadius: 8, padding: 10 }}>
           <Text style={{ fontSize: 12, fontFamily: "JakartaMedium", color: "#92400E" }}>
-            Payment is made directly to the driver — not through the app.
+            {t("rental_marketplace.payment_disclosure")}
           </Text>
         </View>
       </View>
@@ -189,7 +191,7 @@ const fetchBids = useCallback(async () => {
           <View style={{ padding: 40, alignItems: "center" }}>
             <ActivityIndicator size="large" color={colors.primary} />
             <Text style={{ fontSize: 15, fontFamily: "JakartaMedium", color: textSecondary, marginTop: 12 }}>
-              Waiting for bids...
+              {t("rental_marketplace.waiting_bids")}
             </Text>
           </View>
         ) : (
@@ -238,7 +240,10 @@ const fetchBids = useCallback(async () => {
                     <View style={{ flexDirection: "row", alignItems: "center", marginTop: 4 }}>
                       <Ionicons name="star" size={12} color="#F59E0B" />
                       <Text style={{ fontSize: 12, fontFamily: "Jakarta", color: textSecondary, marginLeft: 4 }}>
-                        {bid.fleet_rating.toFixed(1)} · {bid.fleet_completed_count ?? 0} trips
+                        {t("rental_marketplace.bid_meta", {
+                          rating: bid.fleet_rating.toFixed(1),
+                          trips: bid.fleet_completed_count ?? 0,
+                        })}
                       </Text>
                     </View>
                   )}
@@ -284,7 +289,7 @@ const fetchBids = useCallback(async () => {
               <ActivityIndicator size="small" color="#FFFFFF" />
             ) : (
               <Text style={{ color: "#FFFFFF", fontSize: 16, fontFamily: "JakartaSemiBold" }}>
-                Accept This Bid
+                {t("rental_marketplace.accept_bid")}
               </Text>
             )}
           </TouchableOpacity>

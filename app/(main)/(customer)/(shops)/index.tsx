@@ -20,10 +20,12 @@ import { colors } from "@/theme/goRide";
 import { useShopStore } from "@/store/useShopStore";
 
 import { logger } from "@/lib/logger";
+import { useTranslation } from "react-i18next";
 
 const SERVER_URL = process.env.EXPO_PUBLIC_SERVER_URL ?? "http://localhost:8080";
 
 export default function ShopListScreen() {
+  const { t } = useTranslation();
   const isDark = useIsDark();
   const bg = isDark ? colors.bgDark : colors.bgLight;
   const surfaceBg = isDark ? colors.surfaceElevatedDark : colors.surfaceLight;
@@ -96,7 +98,7 @@ useEffect(() => {
         <Text
           style={{ flex: 1, fontSize: 20, fontFamily: "JakartaBold", color: textPrimary, marginLeft: 12 }}
         >
-          Shops
+          {t("shops.title")}
         </Text>
       </View>
 
@@ -117,7 +119,7 @@ useEffect(() => {
           <Ionicons name="search" size={18} color={textSecondary} />
           <TextInput
             style={{ flex: 1, marginLeft: 8, color: textPrimary, fontSize: 15 }}
-            placeholder="Search shops..."
+            placeholder={t("shops.search_placeholder")}
             placeholderTextColor={textSecondary}
             value={search}
             onChangeText={setSearch}
@@ -174,7 +176,7 @@ useEffect(() => {
                   numberOfLines={1}
                   style={{ fontSize: 13, fontFamily: "Jakarta", color: textSecondary, marginTop: 2 }}
                 >
-                  {shop.description || "No description"}
+                  {shop.description || t("shops.no_description")}
                 </Text>
               </View>
               {shop.is_verified && (
@@ -194,7 +196,7 @@ useEffect(() => {
           <View style={{ padding: 40, alignItems: "center" }}>
             <Ionicons name="storefront-outline" size={48} color={textSecondary} />
             <Text style={{ fontSize: 16, fontFamily: "JakartaMedium", color: textSecondary, marginTop: 12 }}>
-              No shops found
+              {t("shops.empty")}
             </Text>
           </View>
         )}

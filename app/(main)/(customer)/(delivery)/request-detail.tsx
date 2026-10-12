@@ -18,6 +18,7 @@ import { colors } from '@/theme/goRide';
 import { supabase } from '@/lib/supabase';
 import { logger } from '@/lib/logger';
 import { formatBDT } from "@/lib/format";
+import { useTranslation } from 'react-i18next';
 
 interface DeliveryBid {
   id: string;
@@ -40,6 +41,7 @@ interface DeliveryDetail {
 }
 
 export default function RequestDetailScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const isDark = useIsDark();
@@ -94,15 +96,15 @@ export default function RequestDetailScreen() {
       });
 
       if (res.ok) {
-        Alert.alert('Bid Accepted', 'Courier has been assigned!');
+        Alert.alert(t("delivery_detail.bid_accepted_title"), t("delivery_detail.courier_assigned"));
         fetchDetail();
       } else {
         const err = await res.json();
-        Alert.alert('Error', err.message || 'Failed to accept bid');
+        Alert.alert(t("common.error"), err.message || t("delivery_detail.err_accept_failed"));
       }
     } catch (err) {
       logger.error('Accept bid failed', err);
-      Alert.alert('Error', 'Something went wrong');
+      Alert.alert(t("common.error"), t("common.something_went_wrong"));
     } finally {
       setAcceptingBidId(null);
     }
@@ -133,7 +135,7 @@ export default function RequestDetailScreen() {
           {acceptingBidId === item.id ? (
             <ActivityIndicator color="white" size="small" />
           ) : (
-            <Text className="text-white font-JakartaBold text-sm">Accept Bid</Text>
+            <Text className="text-white font-JakartaBold text-sm">{t("delivery_detail.accept_bid")}</Text>
           )}
         </TouchableOpacity>
       )}
@@ -154,7 +156,7 @@ export default function RequestDetailScreen() {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: isDark ? colors.bgDark : colors.bgLight }}>
         <View className="flex-1 items-center justify-center">
-          <Text style={{ color: textPrimary }}>Request not found</Text>
+          <Text style={{ color: textPrimary }}>{t("delivery_detail.not_found")}</Text>
         </View>
       </SafeAreaView>
     );
@@ -178,7 +180,7 @@ export default function RequestDetailScreen() {
           <Ionicons name="arrow-back" size={24} color={textPrimary} />
         </TouchableOpacity>
         <Text className="text-lg font-JakartaBold ml-3" style={{ color: textPrimary }}>
-          Delivery Detail
+          {t("delivery_detail.title")}
         </Text>
       </View>
 
@@ -223,7 +225,7 @@ export default function RequestDetailScreen() {
             {detail.quoted_fee_bdt != null && (
               <View className="rounded-xl p-4 mb-4" style={{ backgroundColor: surfaceBg, borderWidth: 1, borderColor }}>
                 <Text className="text-sm font-Jakarta" style={{ color: textSecondary }}>
-                  Agreed Price
+                  {t("delivery_detail.agreed_price")}
                 </Text>
                 <Text className="text-2xl font-JakartaBold mt-1" style={{ color: colors.primary }}>
                   {formatBDT(detail.quoted_fee_bdt)}
@@ -233,7 +235,7 @@ export default function RequestDetailScreen() {
 
             {/* Bids header */}
             <Text className="text-base font-JakartaBold mb-3" style={{ color: textPrimary }}>
-              {bids.length > 0 ? `${bids.length} Bid${bids.length > 1 ? 's' : ''}` : 'Waiting for bids...'}
+              {bids.length > 0 ? t("delivery_detail.bids_count", { count: bids.length }) : t("delivery_detail.waiting_for_bids")}
             </Text>
           </>
         }
@@ -241,7 +243,7 @@ export default function RequestDetailScreen() {
           <View className="items-center py-8">
             <ActivityIndicator size="small" color={colors.primary} />
             <Text className="text-sm font-Jakarta mt-2" style={{ color: textSecondary }}>
-              Couriers are reviewing your request...
+              {t("delivery_detail.couriers_reviewing")}
             </Text>
           </View>
         }

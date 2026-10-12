@@ -18,6 +18,7 @@ import { useIsDark } from '@/lib/useAppearance';
 import { colors } from '@/theme/goRide';
 import { supabase } from '@/lib/supabase';
 import { logger } from '@/lib/logger';
+import { useTranslation } from 'react-i18next';
 
 const VEHICLE_TYPES = [
   { value: 'bike', label: 'Bike', icon: 'bicycle' as const },
@@ -28,6 +29,7 @@ const VEHICLE_TYPES = [
 ] as const;
 
 export default function RequestCreateScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const isDark = useIsDark();
   const [pickupAddress, setPickupAddress] = useState('');
@@ -44,7 +46,7 @@ export default function RequestCreateScreen() {
 
   const handleSubmit = async () => {
     if (!pickupAddress.trim() || !dropoffAddress.trim()) {
-      Alert.alert('Error', 'Please enter both pickup and dropoff addresses');
+      Alert.alert(t("common.error"), t("delivery_create.err_missing_addresses"));
       return;
     }
 
@@ -52,7 +54,7 @@ export default function RequestCreateScreen() {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.access_token) {
-        Alert.alert('Error', 'Not authenticated');
+        Alert.alert(t("common.error"), t("common.not_authenticated"));
         return;
       }
 
@@ -82,11 +84,11 @@ export default function RequestCreateScreen() {
         router.replace(`/(main)/(customer)/(delivery)/request-detail?id=${data.delivery.id}`);
       } else {
         const err = await res.json();
-        Alert.alert('Error', err.message || 'Failed to create delivery request');
+        Alert.alert(t("common.error"), err.message || t("delivery_create.err_create_failed"));
       }
     } catch (err) {
       logger.error('Delivery request creation failed', err);
-      Alert.alert('Error', 'Something went wrong');
+      Alert.alert(t("common.error"), t("common.something_went_wrong"));
     } finally {
       setSubmitting(false);
     }
@@ -100,14 +102,14 @@ export default function RequestCreateScreen() {
           <Ionicons name="arrow-back" size={24} color={textPrimary} />
         </TouchableOpacity>
         <Text className="text-lg font-JakartaBold ml-3" style={{ color: textPrimary }}>
-          Send a Package
+          {t("delivery_create.title")}
         </Text>
       </View>
 
       <ScrollView className="flex-1 px-4" contentContainerStyle={{ paddingBottom: 40 }}>
         {/* Pickup */}
         <Text className="text-sm font-JakartaBold mb-2 mt-4" style={{ color: textSecondary }}>
-          Pickup Address
+          {t("delivery_create.pickup_address")}
         </Text>
         <TextInput
           className="rounded-xl px-4 py-3 text-base font-Jakarta"
@@ -117,7 +119,7 @@ export default function RequestCreateScreen() {
             borderColor,
             color: textPrimary,
           }}
-          placeholder="Where should the courier pick up?"
+          placeholder={t("delivery_create.pickup_placeholder")}
           placeholderTextColor={textSecondary}
           value={pickupAddress}
           onChangeText={setPickupAddress}
@@ -125,7 +127,7 @@ export default function RequestCreateScreen() {
 
         {/* Dropoff */}
         <Text className="text-sm font-JakartaBold mb-2 mt-4" style={{ color: textSecondary }}>
-          Dropoff Address
+          {t("delivery_create.dropoff_address")}
         </Text>
         <TextInput
           className="rounded-xl px-4 py-3 text-base font-Jakarta"
@@ -135,7 +137,7 @@ export default function RequestCreateScreen() {
             borderColor,
             color: textPrimary,
           }}
-          placeholder="Where should it be delivered?"
+          placeholder={t("delivery_create.dropoff_placeholder")}
           placeholderTextColor={textSecondary}
           value={dropoffAddress}
           onChangeText={setDropoffAddress}
@@ -143,7 +145,7 @@ export default function RequestCreateScreen() {
 
         {/* Package Description */}
         <Text className="text-sm font-JakartaBold mb-2 mt-4" style={{ color: textSecondary }}>
-          Package (optional)
+          {t("delivery_create.package_optional")}
         </Text>
         <TextInput
           className="rounded-xl px-4 py-3 text-base font-Jakarta"
@@ -153,7 +155,7 @@ export default function RequestCreateScreen() {
             borderColor,
             color: textPrimary,
           }}
-          placeholder="What are you sending?"
+          placeholder={t("delivery_create.package_placeholder")}
           placeholderTextColor={textSecondary}
           value={packageDesc}
           onChangeText={setPackageDesc}
@@ -161,7 +163,7 @@ export default function RequestCreateScreen() {
 
         {/* Weight */}
         <Text className="text-sm font-JakartaBold mb-2 mt-4" style={{ color: textSecondary }}>
-          Weight in kg (optional)
+          {t("delivery_create.weight_optional")}
         </Text>
         <TextInput
           className="rounded-xl px-4 py-3 text-base font-Jakarta"
@@ -171,7 +173,7 @@ export default function RequestCreateScreen() {
             borderColor,
             color: textPrimary,
           }}
-          placeholder="Estimated weight"
+          placeholder={t("delivery_create.weight_placeholder")}
           placeholderTextColor={textSecondary}
           keyboardType="numeric"
           value={weight}
@@ -180,7 +182,7 @@ export default function RequestCreateScreen() {
 
         {/* Vehicle Type */}
         <Text className="text-sm font-JakartaBold mb-2 mt-4" style={{ color: textSecondary }}>
-          Vehicle Type (optional)
+          {t("delivery_create.vehicle_type_optional")}
         </Text>
         <View className="flex-row flex-wrap gap-2">
           {VEHICLE_TYPES.map((vt) => (
@@ -218,7 +220,7 @@ export default function RequestCreateScreen() {
             <ActivityIndicator color="white" />
           ) : (
             <Text className="text-white font-JakartaBold text-base">
-              Find Couriers
+              {t("delivery_create.find_couriers")}
             </Text>
           )}
         </TouchableOpacity>

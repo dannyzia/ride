@@ -268,173 +268,173 @@
     "(main)/(customer)/(ambulance)/emergency.tsx": [
       {
         "id": "customer.ambulance.emergency.el-1",
-        "line": 173
+        "line": 177
       },
       {
         "id": "customer.ambulance.emergency.handle-cancel",
-        "line": 229
+        "line": 233
       },
       {
         "id": "customer.ambulance.emergency.set-service-level",
-        "line": 264
+        "line": 268
       },
       {
         "id": "customer.ambulance.emergency.set-requires-paramedic",
-        "line": 291
+        "line": 295
       },
       {
         "id": "customer.ambulance.emergency.set-patient-condition",
-        "line": 325
+        "line": 329
       },
       {
         "id": "customer.ambulance.emergency.set-pickup-address",
-        "line": 338
+        "line": 342
       },
       {
         "id": "customer.ambulance.emergency.set-dropoff-address",
-        "line": 351
+        "line": 355
       },
       {
         "id": "customer.ambulance.emergency.handle-create",
-        "line": 367
+        "line": 371
       }
     ],
     "(main)/(customer)/(delivery)/index.tsx": [
       {
         "id": "customer.delivery.push-request-detail",
-        "line": 88
+        "line": 90
       },
       {
         "id": "customer.delivery.el-1",
-        "line": 117
+        "line": 119
       },
       {
         "id": "customer.delivery.push-request-create",
-        "line": 123
+        "line": 125
       },
       {
         "id": "customer.delivery.push-request-create-2",
-        "line": 145
+        "line": 147
       }
     ],
     "(main)/(customer)/(delivery)/request-create.tsx": [
       {
         "id": "customer.delivery.request-create.el-1",
-        "line": 99
+        "line": 101
       },
       {
         "id": "customer.delivery.request-create.set-pickup-address",
-        "line": 124
+        "line": 126
       },
       {
         "id": "customer.delivery.request-create.set-dropoff-address",
-        "line": 142
+        "line": 144
       },
       {
         "id": "customer.delivery.request-create.set-package-desc",
-        "line": 160
+        "line": 162
       },
       {
         "id": "customer.delivery.request-create.set-weight",
-        "line": 179
+        "line": 181
       },
       {
         "id": "customer.delivery.request-create.set-vehicle-type",
-        "line": 196
+        "line": 198
       },
       {
         "id": "customer.delivery.request-create.handle-submit",
-        "line": 216
+        "line": 218
       }
     ],
     "(main)/(customer)/(delivery)/request-detail.tsx": [
       {
         "id": "customer.delivery.request-detail.handle-accept-bid",
-        "line": 132
+        "line": 134
       },
       {
         "id": "customer.delivery.request-detail.el-1",
-        "line": 177
+        "line": 179
       }
     ],
     "(main)/(customer)/(rental-bidder)/[id].tsx": [
       {
         "id": "customer.rental-bidder.id.el-1",
-        "line": 228
+        "line": 230
       },
       {
         "id": "customer.rental-bidder.id.set-selected-driver",
-        "line": 315
+        "line": 316
       },
       {
         "id": "customer.rental-bidder.id.set-selected-vehicle",
-        "line": 363
+        "line": 368
       },
       {
         "id": "customer.rental-bidder.id.handle-pick",
-        "line": 399
+        "line": 404
       },
       {
         "id": "customer.rental-bidder.id.handle-withdraw",
-        "line": 422
+        "line": 427
       }
     ],
     "(main)/(customer)/(rental-bidder)/bid-submit.tsx": [
       {
         "id": "customer.rental-bidder.bid-submit.el-1",
-        "line": 206
+        "line": 208
       },
       {
         "id": "customer.rental-bidder.bid-submit.set-selected-vehicle-type",
-        "line": 303
+        "line": 305
       },
       {
         "id": "customer.rental-bidder.bid-submit.set-price-input",
-        "line": 340
+        "line": 342
       },
       {
         "id": "customer.rental-bidder.bid-submit.set-overtime-input",
-        "line": 371
+        "line": 373
       },
       {
         "id": "customer.rental-bidder.bid-submit.set-notes",
-        "line": 397
+        "line": 399
       },
       {
         "id": "customer.rental-bidder.bid-submit.handle-submit",
-        "line": 413
+        "line": 415
       }
     ],
     "(main)/(customer)/(rental-bidder)/history.tsx": [
       {
         "id": "customer.rental-bidder.history.el-1",
-        "line": 102
+        "line": 104
       }
     ],
     "(main)/(customer)/(rental-bidder)/index.tsx": [
       {
         "id": "customer.rental-bidder.el-1",
-        "line": 177
+        "line": 185
       },
       {
         "id": "customer.rental-bidder.push-rental-bidder",
-        "line": 253
+        "line": 271
       },
       {
         "id": "customer.rental-bidder.el-2",
-        "line": 344
+        "line": 362
       },
       {
         "id": "customer.rental-bidder.el-3",
-        "line": 367
+        "line": 385
       },
       {
         "id": "customer.rental-bidder.load-more",
-        "line": 381
+        "line": 399
       },
       {
         "id": "customer.rental-bidder.on-press",
-        "line": 423
+        "line": 442
       }
     ],
     "(main)/(customer)/(rental-marketplace)/_components/TruckPicker.tsx": [
@@ -450,173 +450,173 @@
     "(main)/(customer)/(rental-marketplace)/bidding.tsx": [
       {
         "id": "customer.rental-marketplace.bidding.el-1",
-        "line": 134
+        "line": 136
       },
       {
         "id": "customer.rental-marketplace.bidding.set-selected-bid-id",
-        "line": 212
+        "line": 214
       },
       {
         "id": "customer.rental-marketplace.bidding.handle-accept",
-        "line": 282
+        "line": 287
       }
     ],
     "(main)/(customer)/(rental-marketplace)/confirmed.tsx": [
       {
         "id": "customer.rental-marketplace.confirmed.replace-home",
-        "line": 129
+        "line": 130
       },
       {
         "id": "customer.rental-marketplace.confirmed.el-1",
-        "line": 146
+        "line": 147
       }
     ],
     "(main)/(customer)/(rental-marketplace)/index.tsx": [
       {
         "id": "customer.rental-marketplace.on-press",
-        "line": 77
+        "line": 78
       },
       {
         "id": "customer.rental-marketplace.set-cargo-weight",
-        "line": 360
+        "line": 362
       },
       {
         "id": "customer.rental-marketplace.set-cargo-volume",
-        "line": 382
+        "line": 384
       },
       {
         "id": "customer.rental-marketplace.set-cargo-description",
-        "line": 408
+        "line": 410
       },
       {
         "id": "customer.rental-marketplace.set-service-level",
-        "line": 440
+        "line": 442
       },
       {
         "id": "customer.rental-marketplace.set-requires-paramedic",
-        "line": 464
+        "line": 466
       },
       {
         "id": "customer.rental-marketplace.set-patient-condition",
-        "line": 497
+        "line": 499
       },
       {
         "id": "customer.rental-marketplace.set-start-mode",
-        "line": 526
+        "line": 528
       },
       {
         "id": "customer.rental-marketplace.el-1",
-        "line": 593
+        "line": 597
       },
       {
         "id": "customer.rental-marketplace.enter-truck-mode",
-        "line": 666
+        "line": 670
       },
       {
         "id": "customer.rental-marketplace.set-category",
-        "line": 710
+        "line": 714
       },
       {
         "id": "customer.rental-marketplace.set-selected-car-class",
-        "line": 765
+        "line": 773
       },
       {
         "id": "customer.rental-marketplace.set-pickup-address",
-        "line": 822
+        "line": 837
       },
       {
         "id": "customer.rental-marketplace.set-dropoff-address",
-        "line": 843
-      },
-      {
-        "id": "customer.rental-marketplace.set-tracking-required",
         "line": 858
       },
       {
+        "id": "customer.rental-marketplace.set-tracking-required",
+        "line": 873
+      },
+      {
         "id": "customer.rental-marketplace.handle-submit",
-        "line": 887
+        "line": 902
       }
     ],
     "(main)/(customer)/(rental-marketplace)/request-detail.tsx": [
       {
         "id": "customer.rental-marketplace.request-detail.el-1",
-        "line": 186
+        "line": 189
       },
       {
         "id": "customer.rental-marketplace.request-detail.set-selected-bid-id",
-        "line": 331
+        "line": 338
       },
       {
         "id": "customer.rental-marketplace.request-detail.handle-accept",
-        "line": 379
+        "line": 391
       }
     ],
     "(main)/(customer)/(rental-marketplace)/request-history.tsx": [
       {
         "id": "customer.rental-marketplace.request-history.el-1",
-        "line": 107
+        "line": 110
       },
       {
         "id": "customer.rental-marketplace.request-history.push-request-detail",
-        "line": 141
+        "line": 144
       }
     ],
     "(main)/(customer)/(shops)/index.tsx": [
       {
         "id": "customer.shops.el-1",
-        "line": 93
+        "line": 95
       },
       {
         "id": "customer.shops.set-search",
-        "line": 126
+        "line": 128
       },
       {
         "id": "customer.shops.push-shop-detail",
-        "line": 155
+        "line": 157
       }
     ],
     "(main)/(customer)/(shops)/order-create/[id].tsx": [
       {
         "id": "customer.shops.order-create.id.el-1",
-        "line": 96
+        "line": 98
       },
       {
         "id": "customer.shops.order-create.id.set-cart-fulfillment",
-        "line": 124
+        "line": 126
       },
       {
         "id": "customer.shops.order-create.id.set-delivery-address",
-        "line": 160
+        "line": 162
       },
       {
         "id": "customer.shops.order-create.id.set-notes",
-        "line": 207
+        "line": 209
       },
       {
         "id": "customer.shops.order-create.id.handle-submit",
-        "line": 254
+        "line": 256
       }
     ],
     "(main)/(customer)/(shops)/shop-detail/[id].tsx": [
       {
         "id": "customer.shops.shop-detail.id.el-1",
-        "line": 77
+        "line": 79
       },
       {
         "id": "customer.shops.shop-detail.id.remove-from-cart",
-        "line": 132
+        "line": 134
       },
       {
         "id": "customer.shops.shop-detail.id.add-to-cart",
-        "line": 141
+        "line": 143
       },
       {
         "id": "customer.shops.shop-detail.id.add-to-cart-2",
-        "line": 149
+        "line": 151
       },
       {
         "id": "customer.shops.shop-detail.id.push-order-create",
-        "line": 189
+        "line": 191
       }
     ],
     "(main)/(customer)/(tabs)/_layout.tsx": [
@@ -2932,155 +2932,155 @@
       },
       {
         "id": "rider.onboarding.on-select-2",
-        "line": 355
+        "line": 357
       },
       {
         "id": "rider.onboarding.on-dismiss",
-        "line": 489
+        "line": 493
       },
       {
         "id": "rider.onboarding.on-dismiss-2",
-        "line": 530
+        "line": 534
       },
       {
         "id": "rider.onboarding.on-back",
-        "line": 566
-      },
-      {
-        "id": "rider.onboarding.on-retry",
         "line": 570
       },
       {
+        "id": "rider.onboarding.on-retry",
+        "line": 574
+      },
+      {
         "id": "rider.onboarding.go-back",
-        "line": 1064
+        "line": 1068
       },
       {
         "id": "rider.onboarding.set-theme",
-        "line": 1083
+        "line": 1087
       },
       {
         "id": "rider.onboarding.set-name",
-        "line": 1116
+        "line": 1120
       },
       {
         "id": "rider.onboarding.pick-profile-photo",
-        "line": 1124
+        "line": 1128
       },
       {
         "id": "rider.onboarding.pick-profile-photo-2",
-        "line": 1131
+        "line": 1135
       },
       {
         "id": "rider.onboarding.set-body-type-modal-visible",
-        "line": 1148
+        "line": 1152
       },
       {
         "id": "rider.onboarding.set-brand-text",
-        "line": 1161
+        "line": 1165
       },
       {
         "id": "rider.onboarding.set-brand",
-        "line": 1162
+        "line": 1166
       },
       {
         "id": "rider.onboarding.set-picker-modal",
-        "line": 1167
+        "line": 1171
       },
       {
         "id": "rider.onboarding.set-model-text",
-        "line": 1177
+        "line": 1181
       },
       {
         "id": "rider.onboarding.set-model",
-        "line": 1179
+        "line": 1183
       },
       {
         "id": "rider.onboarding.set-picker-modal-2",
-        "line": 1185
+        "line": 1189
       },
       {
         "id": "rider.onboarding.set-picker-modal-3",
-        "line": 1199
+        "line": 1203
       },
       {
         "id": "rider.onboarding.set-engine-cc",
-        "line": 1224
+        "line": 1228
       },
       {
         "id": "rider.onboarding.set-seats",
-        "line": 1244
+        "line": 1248
       },
       {
         "id": "rider.onboarding.set-plate",
-        "line": 1265
+        "line": 1269
       },
       {
         "id": "rider.onboarding.skip-vehicle-step",
-        "line": 1298
+        "line": 1302
       },
       {
         "id": "rider.onboarding.upload-reg-scan-front",
-        "line": 1322
-      },
-      {
-        "id": "rider.onboarding.upload-reg-scan-back",
-        "line": 1323
-      },
-      {
-        "id": "rider.onboarding.upload-brta-certificate",
-        "line": 1324
-      },
-      {
-        "id": "rider.onboarding.upload-vehicle-photo-front",
-        "line": 1325
-      },
-      {
-        "id": "rider.onboarding.upload-vehicle-photo-left",
         "line": 1326
       },
       {
-        "id": "rider.onboarding.upload-vehicle-photo-back",
+        "id": "rider.onboarding.upload-reg-scan-back",
         "line": 1327
       },
       {
-        "id": "rider.onboarding.upload-vehicle-photo-right",
+        "id": "rider.onboarding.upload-brta-certificate",
         "line": 1328
       },
       {
+        "id": "rider.onboarding.upload-vehicle-photo-front",
+        "line": 1329
+      },
+      {
+        "id": "rider.onboarding.upload-vehicle-photo-left",
+        "line": 1330
+      },
+      {
+        "id": "rider.onboarding.upload-vehicle-photo-back",
+        "line": 1331
+      },
+      {
+        "id": "rider.onboarding.upload-vehicle-photo-right",
+        "line": 1332
+      },
+      {
         "id": "rider.onboarding.upload-nid-front",
-        "line": 1338
+        "line": 1342
       },
       {
         "id": "rider.onboarding.upload-nid-back",
-        "line": 1339
+        "line": 1343
       },
       {
         "id": "rider.onboarding.upload-license-front",
-        "line": 1340
+        "line": 1344
       },
       {
         "id": "rider.onboarding.upload-license-back",
-        "line": 1341
+        "line": 1345
       },
       {
         "id": "rider.onboarding.set-legacy-answer",
-        "line": 1353
+        "line": 1357
       },
       {
         "id": "rider.onboarding.set-bkash",
-        "line": 1383
+        "line": 1387
       },
       {
         "id": "rider.onboarding.set-consent",
-        "line": 1416
+        "line": 1420
       },
       {
         "id": "rider.onboarding.go-back-2",
-        "line": 1431
+        "line": 1435
       },
       {
         "id": "rider.onboarding.go-next",
-        "line": 1441
+        "line": 1445
       }
     ],
     "(main)/(rider)/packages.tsx": [

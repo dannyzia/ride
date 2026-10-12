@@ -20,6 +20,7 @@ import { useIsDark } from "@/lib/useAppearance";
 import { colors } from "@/theme/goRide";
 import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
+import { useTranslation } from "react-i18next";
 import { formatBDT } from "@/lib/format";
 
 const SERVER_URL = process.env.EXPO_PUBLIC_SERVER_URL ?? "http://localhost:8080";
@@ -45,6 +46,7 @@ interface BidHistory {
 }
 
 export default function BidHistoryScreen() {
+  const { t } = useTranslation();
   const isDark = useIsDark();
   const bg = isDark ? colors.bgDark : colors.bgLight;
   const surfaceBg = isDark ? colors.surfaceElevatedDark : colors.surfaceLight;
@@ -103,7 +105,7 @@ export default function BidHistoryScreen() {
           <Ionicons name="arrow-back" size={24} color={textPrimary} />
         </TouchableOpacity>
         <Text style={{ flex: 1, fontSize: 20, fontFamily: "JakartaBold", color: textPrimary, marginLeft: 12 }}>
-          Bid History
+          {t("rental_bid_history.title")}
         </Text>
       </View>
 
@@ -115,7 +117,7 @@ export default function BidHistoryScreen() {
           <View style={{ padding: 40, alignItems: "center" }}>
             <Ionicons name="time-outline" size={48} color={textSecondary} />
             <Text style={{ fontSize: 15, fontFamily: "JakartaMedium", color: textSecondary, marginTop: 12 }}>
-              No bid history yet
+              {t("rental_bid_history.empty")}
             </Text>
           </View>
         ) : (
@@ -147,11 +149,15 @@ export default function BidHistoryScreen() {
                   {bid.vehicle_type.replace(/_/g, " ")}
                 </Text>
                 <Text style={{ fontSize: 12, fontFamily: "Jakarta", color: textSecondary, marginTop: 4 }}>
-                  Submitted: {new Date(bid.submitted_at).toLocaleString("en-GB")}
+                  {t("rental_bid_history.submitted_at", {
+                    time: new Date(bid.submitted_at).toLocaleString("en-GB"),
+                  })}
                 </Text>
                 {bid.settled_at && (
                   <Text style={{ fontSize: 12, fontFamily: "Jakarta", color: textSecondary }}>
-                    Settled: {new Date(bid.settled_at).toLocaleString("en-GB")}
+                    {t("rental_bid_history.settled_at", {
+                      time: new Date(bid.settled_at).toLocaleString("en-GB"),
+                    })}
                   </Text>
                 )}
               </View>

@@ -20,15 +20,16 @@ import { colors } from "@/theme/goRide";
 import { useRentalStore } from "@/store/useRentalStore";
 import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
+import { useTranslation } from "react-i18next";
 
 const SERVER_URL = process.env.EXPO_PUBLIC_SERVER_URL ?? "http://localhost:8080";
 
 export default function RentalConfirmedScreen() {
+  const { t } = useTranslation();
   const isDark = useIsDark();
   const bg = isDark ? colors.bgDark : colors.bgLight;
   
   const textPrimary = isDark ? colors.textPrimaryDark : colors.textPrimaryLight;
-  const textSecondary = isDark ? colors.textSecondaryDark : colors.textSecondaryLight;
   const borderColor = isDark ? colors.borderDark : colors.borderLight;
 
   const { activeRequest, updateRequestStatus } = useRentalStore();
@@ -96,21 +97,21 @@ export default function RentalConfirmedScreen() {
         </View>
 
         <Text style={{ fontSize: 22, fontFamily: "JakartaBold", color: textPrimary, textAlign: "center", marginBottom: 8 }}>
-          {isConfirmed ? "Booking Confirmed!" : isCancelled ? "Request Ended" : "Waiting for Confirmation..."}
+          {isConfirmed ? t("rental_confirmed.title_confirmed") : isCancelled ? t("rental_confirmed.title_ended") : t("rental_confirmed.title_waiting")}
         </Text>
 
-        <Text style={{ fontSize: 14, fontFamily: "Jakarta", color: textSecondary, textAlign: "center", marginBottom: 32 }}>
+        <Text style={{ fontSize: 14, fontFamily: "Jakarta", color: isDark ? colors.textSecondaryDark : colors.textSecondaryLight, textAlign: "center", marginBottom: 32 }}>
           {isConfirmed
-            ? "Your driver will arrive shortly. Check the ride screen for live updates."
+            ? t("rental_confirmed.body_confirmed")
             : isCancelled
-              ? "This request has been cancelled or expired."
-              : "The fleet is assigning a driver. This may take a few minutes."}
+              ? t("rental_confirmed.body_ended")
+              : t("rental_confirmed.body_waiting")}
         </Text>
 
         {/* Payment disclosure (§F.3) */}
         <View style={{ backgroundColor: "#FEF3C7", borderRadius: 10, padding: 14, marginBottom: 32, width: "100%" }}>
           <Text style={{ fontSize: 12, fontFamily: "JakartaMedium", color: "#92400E", textAlign: "center" }}>
-            Payment is made directly to the driver — not through the app.
+            {t("rental_marketplace.payment_disclosure")}
           </Text>
         </View>
 
@@ -128,7 +129,7 @@ export default function RentalConfirmedScreen() {
             }}
            testID="customer.rental-marketplace.confirmed.replace-home">
             <Text style={{ color: "#FFFFFF", fontSize: 16, fontFamily: "JakartaSemiBold" }}>
-              Back to Home
+              {t("rental_confirmed.back_home")}
             </Text>
           </TouchableOpacity>
         ) : (
@@ -145,7 +146,7 @@ export default function RentalConfirmedScreen() {
             }}
            testID="customer.rental-marketplace.confirmed.el-1">
             <Text style={{ color: textPrimary, fontSize: 16, fontFamily: "JakartaSemiBold" }}>
-              Go Back
+              {t("rental_confirmed.go_back")}
             </Text>
           </TouchableOpacity>
         )}

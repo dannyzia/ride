@@ -23,6 +23,7 @@ import { colors } from "@/theme/goRide";
 import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
 import { formatBDT } from "@/lib/format";
+import { useTranslation } from "react-i18next";
 
 const SERVER_URL = process.env.EXPO_PUBLIC_SERVER_URL ?? "http://localhost:8080";
 
@@ -35,12 +36,6 @@ const STATUS_COLORS: Record<string, string> = {
   cancelled: "#EF4444",
   expired: "#9CA3AF",
   no_bidders: "#9CA3AF",
-};
-
-const CATEGORY_LABELS: Record<string, string> = {
-  car_rental: "Car Rental",
-  truck_rental: "Truck Rental",
-  ambulance_scheduled: "Ambulance",
 };
 
 interface BroadcastRequest {
@@ -74,6 +69,7 @@ interface BroadcastRequest {
 }
 
 export default function BidderRequestsScreen() {
+  const { t } = useTranslation();
   const isDark = useIsDark();
   const bg = isDark ? colors.bgDark : colors.bgLight;
   const surfaceBg = isDark ? colors.surfaceElevatedDark : colors.surfaceLight;
@@ -89,12 +85,24 @@ export default function BidderRequestsScreen() {
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(false);
 
+  const categoryLabel = useCallback(
+    (category: string) =>
+      category === "car_rental"
+        ? t("rental_bidder.cat_car")
+        : category === "truck_rental"
+          ? t("rental_bidder.cat_truck")
+          : category === "ambulance_scheduled"
+            ? t("rental_bidder.cat_amb")
+            : category,
+    [t],
+  );
+
   const fetchData = useCallback(async (pageNum: number = 1) => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token;
       if (!token) {
-        setError("Session expired — sign in again to load requests.");
+        setError(t("rental_bidder.err_session_expired"));
         return;
       }
 
@@ -112,7 +120,7 @@ export default function BidderRequestsScreen() {
           status: res.status,
           body: body.slice(0, 200),
         });
-        setError(`Could not load requests (${res.status}). Pull down to retry.`);
+        setError(t("rental_bidder.err_load_status", { status: res.status }));
         return;
       }
       const data = await res.json();
@@ -122,11 +130,11 @@ export default function BidderRequestsScreen() {
       setError(null);
     } catch (err) {
       logger.error("[bidder-list] fetch error", err);
-      setError("Could not load requests. Pull down to retry.");
+      setError(t("rental_bidder.err_load"));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   // Refetch on every focus, not just on mount. A bid submitted on bid-submit
   // returns here through router.back(), which does not remount this screen — so
@@ -163,7 +171,7 @@ export default function BidderRequestsScreen() {
         <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
           <ActivityIndicator size="large" color={colors.primary} />
           <Text style={{ fontSize: 14, fontFamily: "JakartaMedium", color: textSecondary, marginTop: 12 }}>
-            Loading requests...
+            {t("rental_bidder.loading")}
           </Text>
         </View>
       </SafeAreaView>
@@ -178,11 +186,11 @@ export default function BidderRequestsScreen() {
           <Ionicons name="arrow-back" size={24} color={textPrimary} />
         </TouchableOpacity>
         <Text style={{ flex: 1, fontSize: 20, fontFamily: "JakartaBold", color: textPrimary, marginLeft: 12 }}>
-          Rental Requests
+          {t("rental_bidder.title")}
         </Text>
         <View style={{ backgroundColor: colors.primary + "20", borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4 }}>
           <Text style={{ fontSize: 13, fontFamily: "JakartaSemiBold", color: colors.primary }}>
-            {requests.length} request{requests.length !== 1 ? "s" : ""}
+            {t("rental_bidder.request_count", { count: requests.length })}
           </Text>
         </View>
       </View>
@@ -194,17 +202,23 @@ export default function BidderRequestsScreen() {
         style={{ paddingHorizontal: 20, marginBottom: 12 }}
       >
         <FilterPill
-          label="All"
+          label={t("rental_bidder.filter_all")}
           selected={filter === null}
           onPress={() => setFilter(null)}
           textPrimary={textPrimary}
           borderColor={borderColor}
           surfaceBg={surfaceBg}
         />
-        {Object.entries(CATEGORY_LABELS).map(([key, label]) => (
+        {(["car_rental", "truck_rental", "ambulance_scheduled"] as const).map((key) => (
           <FilterPill
             key={key}
-            label={label}
+            label={
+              key === "car_rental"
+                ? t("rental_bidder.cat_car")
+                : key === "truck_rental"
+                  ? t("rental_bidder.cat_truck")
+                  : t("rental_bidder.cat_amb")
+            }
             selected={filter === key}
             onPress={() => setFilter(filter === key ? null : key)}
             textPrimary={textPrimary}
@@ -226,11 +240,11 @@ export default function BidderRequestsScreen() {
               color={error ? colors.danger : textSecondary}
             />
             <Text style={{ fontSize: 15, fontFamily: "JakartaMedium", color: error ? colors.danger : textSecondary, marginTop: 12, textAlign: "center" }}>
-              {error ?? "No requests available"}
+              {error ?? t("rental_bidder.empty")}
             </Text>
             {!error && (
               <Text style={{ fontSize: 13, fontFamily: "Jakarta", color: textSecondary, marginTop: 4 }}>
-                New rental requests will appear here
+                {t("rental_bidder.empty_hint")}
               </Text>
             )}
           </View>
@@ -249,7 +263,11 @@ export default function BidderRequestsScreen() {
                   padding: 16,
                   marginBottom: 12,
                 }}
-                accessibilityLabel={`${CATEGORY_LABELS[req.category] ?? req.category} request to ${req.dropoff_address}${req.already_bid ? ' — already bid' : ''}`}
+                accessibilityLabel={t("rental_bidder.a11y_request_row", {
+                  category: categoryLabel(req.category),
+                  dropoff: req.dropoff_address,
+                  suffix: req.already_bid ? t("rental_bidder.a11y_already_bid_suffix") : "",
+                })}
                testID="customer.rental-bidder.push-rental-bidder">
                 <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 8 }}>
                   <View style={{ flexDirection: "row", alignItems: "center" }}>
@@ -259,11 +277,11 @@ export default function BidderRequestsScreen() {
                       color={colors.primary}
                     />
                     <Text style={{ fontSize: 14, fontFamily: "JakartaSemiBold", color: textPrimary, marginLeft: 8 }}>
-                      {CATEGORY_LABELS[req.category] ?? req.category}
+                      {categoryLabel(req.category)}
                     </Text>
                     {req.already_bid && (
                       <View style={{ backgroundColor: colors.primary + "20", borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2, marginLeft: 8 }}>
-                        <Text style={{ fontSize: 10, fontFamily: "JakartaSemiBold", color: colors.primary }}>BIDDED</Text>
+                        <Text style={{ fontSize: 10, fontFamily: "JakartaSemiBold", color: colors.primary }}>{t("rental_bidder.chip_bidded")}</Text>
                       </View>
                     )}
                   </View>
@@ -275,20 +293,20 @@ export default function BidderRequestsScreen() {
                 </View>
                 {req.already_bid && req.own_bid_price != null && (
                   <Text style={{ fontSize: 12, fontFamily: "JakartaSemiBold", color: colors.primary, marginBottom: 4 }}>
-                    Your bid: {formatBDT(req.own_bid_price)}
+                    {t("rental_bidder.your_bid", { amount: formatBDT(req.own_bid_price) })}
                   </Text>
                 )}
 
                 <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 4 }}>
                   <Ionicons name="location" size={14} color={colors.primary} />
                   <Text style={{ fontSize: 13, fontFamily: "Jakarta", color: textSecondary, marginLeft: 6, flex: 1 }} numberOfLines={1}>
-                    {req.pickup_address || "Pickup"}
+                    {req.pickup_address || t("rental_bidder.pickup_fallback")}
                   </Text>
                 </View>
                 <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 8 }}>
                   <Ionicons name="flag" size={14} color={colors.danger} />
                   <Text style={{ fontSize: 13, fontFamily: "Jakarta", color: textSecondary, marginLeft: 6, flex: 1 }} numberOfLines={1}>
-                    {req.dropoff_address || "Dropoff"}
+                    {req.dropoff_address || t("rental_bidder.dropoff_fallback")}
                   </Text>
                 </View>
 
@@ -314,12 +332,12 @@ export default function BidderRequestsScreen() {
                   </Text>
                   {req.urgency === "alarm" && (
                     <View style={{ backgroundColor: colors.danger + "18", borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 }}>
-                      <Text style={{ fontSize: 10, fontFamily: "JakartaSemiBold", color: colors.danger }}>ALARM</Text>
+                      <Text style={{ fontSize: 10, fontFamily: "JakartaSemiBold", color: colors.danger }}>{t("rental_bidder.chip_alarm")}</Text>
                     </View>
                   )}
                   {req.ambulance_eligible === false && (
                     <View style={{ backgroundColor: colors.amber + "18", borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 }}>
-                      <Text style={{ fontSize: 10, fontFamily: "JakartaSemiBold", color: colors.amber }}>CERT NEEDED</Text>
+                      <Text style={{ fontSize: 10, fontFamily: "JakartaSemiBold", color: colors.amber }}>{t("rental_bidder.chip_cert_needed")}</Text>
                     </View>
                   )}
                 </View>
@@ -340,10 +358,10 @@ export default function BidderRequestsScreen() {
                       marginTop: 8,
                     }}
                     accessibilityRole="button"
-                    accessibilityLabel="Submit a bid"
+                    accessibilityLabel={t("rental_bidder.a11y_bid_now")}
                    testID="customer.rental-bidder.el-2">
                     <Text style={{ color: "#FFFFFF", fontSize: 14, fontFamily: "JakartaSemiBold" }}>
-                      Bid Now
+                      {t("rental_bidder.bid_now")}
                     </Text>
                   </TouchableOpacity>
                 )}
@@ -363,10 +381,10 @@ export default function BidderRequestsScreen() {
                       marginTop: 8,
                     }}
                     accessibilityRole="button"
-                    accessibilityLabel="Update your bid"
+                    accessibilityLabel={t("rental_bidder.a11y_update_bid")}
                    testID="customer.rental-bidder.el-3">
                     <Text style={{ color: colors.primary, fontSize: 14, fontFamily: "JakartaSemiBold" }}>
-                      Update Bid
+                      {t("rental_bidder.update_bid")}
                     </Text>
                   </TouchableOpacity>
                 )}
@@ -380,7 +398,7 @@ export default function BidderRequestsScreen() {
             style={{ padding: 14, alignItems: "center" }}
            testID="customer.rental-bidder.load-more">
             <Text style={{ fontSize: 14, fontFamily: "JakartaSemiBold", color: colors.primary }}>
-              Load More
+              {t("rental_bidder.load_more")}
             </Text>
           </TouchableOpacity>
         )}
@@ -405,6 +423,7 @@ function FilterPill({
   borderColor: string;
   surfaceBg: string;
 }) {
+  const { t } = useTranslation();
   return (
     <TouchableOpacity
       onPress={onPress}
@@ -418,7 +437,7 @@ function FilterPill({
         marginRight: 8,
       }}
       accessibilityRole="button"
-      accessibilityLabel={`Filter by ${label}`}
+      accessibilityLabel={t("rental_bidder.a11y_filter_by", { label })}
       accessibilityState={{ selected }}
      testID="customer.rental-bidder.on-press">
       <Text style={{

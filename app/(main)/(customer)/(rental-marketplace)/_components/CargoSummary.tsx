@@ -8,6 +8,7 @@
 import { View, Text } from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useIsDark } from "@/lib/useAppearance";
+import { useTranslation } from "react-i18next";
 import { colors } from "@/theme/goRide";
 import { describeVehicleType } from "@/constants/truckCatalog";
 
@@ -29,6 +30,7 @@ export default function CargoSummary({
   requestedVehicleType,
 }: CargoSummaryProps) {
   const isDark = useIsDark();
+  const { t } = useTranslation();
   const surfaceBg = isDark ? colors.surfaceElevatedDark : colors.surfaceLight;
   const textPrimary = isDark ? colors.textPrimaryDark : colors.textPrimaryLight;
   const textSecondary = isDark ? colors.textSecondaryDark : colors.textSecondaryLight;
@@ -62,7 +64,7 @@ export default function CargoSummary({
         padding: 14,
         marginBottom: 12,
       }}
-      accessibilityLabel="Cargo summary"
+      accessibilityLabel={t("rental_marketplace.a11y_cargo_summary")}
     >
       <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 8 }}>
         <Ionicons name="cube-outline" size={16} color={colors.primary} />
@@ -75,7 +77,7 @@ export default function CargoSummary({
             flex: 1,
           }}
         >
-          Cargo
+          {t("rental_marketplace.cargo_label")}
         </Text>
         {requestedVehicleType ? (
           <View
@@ -85,7 +87,9 @@ export default function CargoSummary({
               paddingHorizontal: 8,
               paddingVertical: 3,
             }}
-            accessibilityLabel={`Requested vehicle: ${describeVehicleType(requestedVehicleType)}`}
+            accessibilityLabel={t("rental_marketplace.a11y_requested_vehicle", {
+              vehicle: describeVehicleType(requestedVehicleType),
+            })}
           >
             <Text style={{ fontSize: 11, fontFamily: "JakartaSemiBold", color: colors.primary }}>
               {describeVehicleType(requestedVehicleType)}

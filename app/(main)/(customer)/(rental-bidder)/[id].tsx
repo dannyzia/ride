@@ -21,6 +21,7 @@ import { useIsDark } from "@/lib/useAppearance";
 import { colors } from "@/theme/goRide";
 import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
+import { useTranslation } from "react-i18next";
 
 const SERVER_URL = process.env.EXPO_PUBLIC_SERVER_URL ?? "http://localhost:8080";
 const SLA_MINUTES = 5;
@@ -56,6 +57,7 @@ interface Vehicle {
 }
 
 export default function AssignmentDetailScreen() {
+  const { t } = useTranslation();
   const isDark = useIsDark();
   const bg = isDark ? colors.bgDark : colors.bgLight;
   const surfaceBg = isDark ? colors.surfaceElevatedDark : colors.surfaceLight;
@@ -153,16 +155,16 @@ export default function AssignmentDetailScreen() {
 
       const data = await res.json();
       if (!res.ok) {
-        Alert.alert("Pick Failed", data.message || "Could not assign driver");
+        Alert.alert(t("rental_assignment.err_pick_title"), data.message || t("rental_assignment.err_pick_body"));
         return;
       }
 
-      Alert.alert("Driver Assigned", "The driver has been assigned. Customer confirmation pending.", [
-        { text: "OK", onPress: () => router.back() },
+      Alert.alert(t("rental_assignment.driver_assigned_title"), t("rental_assignment.driver_assigned_body"), [
+        { text: t("common.ok"), onPress: () => router.back() },
       ]);
     } catch (err) {
       logger.error("[assignment] pick error", err);
-      Alert.alert("Error", "Could not assign driver");
+      Alert.alert(t("common.error"), t("rental_assignment.err_pick_body"));
     } finally {
       setPicking(false);
     }
@@ -170,10 +172,10 @@ export default function AssignmentDetailScreen() {
 
   const handleWithdraw = async () => {
     if (!id) return;
-    Alert.alert("Force Withdraw", "Remove this assignment? The request will return to the customer for re-selection.", [
-      { text: "Cancel", style: "cancel" },
+    Alert.alert(t("rental_assignment.withdraw_title"), t("rental_assignment.withdraw_body"), [
+      { text: t("common.cancel"), style: "cancel" },
       {
-        text: "Withdraw",
+        text: t("rental_assignment.withdraw_confirm"),
         style: "destructive",
         onPress: async () => {
           setWithdrawing(true);
@@ -194,12 +196,12 @@ export default function AssignmentDetailScreen() {
 
             if (!res.ok) {
               const data = await res.json();
-              Alert.alert("Withdraw Failed", data.message || "Could not withdraw");
+              Alert.alert(t("rental_assignment.err_withdraw_title"), data.message || t("rental_assignment.err_withdraw_body"));
               return;
             }
 
-            Alert.alert("Withdrawn", "Assignment released. Customer can re-select.", [
-              { text: "OK", onPress: () => router.back() },
+            Alert.alert(t("rental_assignment.withdrawn_title"), t("rental_assignment.withdrawn_body"), [
+              { text: t("common.ok"), onPress: () => router.back() },
             ]);
           } catch (err) {
             logger.error("[assignment] withdraw error", err);
@@ -229,7 +231,7 @@ export default function AssignmentDetailScreen() {
           <Ionicons name="arrow-back" size={24} color={textPrimary} />
         </TouchableOpacity>
         <Text style={{ flex: 1, fontSize: 20, fontFamily: "JakartaBold", color: textPrimary, marginLeft: 12 }}>
-          {isFulfilled ? "Assignment Complete" : "Assign Driver"}
+          {isFulfilled ? t("rental_assignment.title_complete") : t("rental_assignment.title")}
         </Text>
       </View>
 
@@ -251,10 +253,10 @@ export default function AssignmentDetailScreen() {
               <Text style={{ fontSize: 28, fontFamily: "JakartaBold", color: textPrimary }}>
                 {slaMinutes}:{String(slaSeconds).padStart(2, "0")}
               </Text>
-              <Text style={{ fontSize: 11, fontFamily: "Jakarta", color: textSecondary }}>SLA</Text>
+              <Text style={{ fontSize: 11, fontFamily: "Jakarta", color: textSecondary }}>{t("rental_assignment.sla_label")}</Text>
             </View>
             <Text style={{ fontSize: 12, fontFamily: "Jakarta", color: textSecondary, marginTop: 8 }}>
-              Assign a driver within {SLA_MINUTES} minutes
+              {t("rental_assignment.sla_hint", { minutes: SLA_MINUTES })}
             </Text>
           </View>
         )}
@@ -264,24 +266,23 @@ export default function AssignmentDetailScreen() {
           <View style={{ flexDirection: "row", alignItems: "center" }}>
             <Ionicons name="warning" size={18} color={colors.amber} />
             <Text style={{ fontSize: 13, fontFamily: "JakartaSemiBold", color: colors.amber, marginLeft: 8 }}>
-              Overlap Warning
+              {t("rental_assignment.overlap_warning")}
             </Text>
           </View>
           <Text style={{ fontSize: 12, fontFamily: "Jakarta", color: textSecondary, marginTop: 6 }}>
-            The assigned driver must not have an active ride-hailing, delivery, or emergency commitment.
-            Assigning a committed driver will fail the §B.7 exclusivity check.
+            {t("rental_assignment.overlap_body")}
           </Text>
         </View>
 
         {/* Status */}
         <View style={{ backgroundColor: surfaceBg, borderRadius: 12, padding: 16, marginBottom: 16, borderWidth: 1, borderColor }}>
-          <Text style={{ fontSize: 14, fontFamily: "JakartaSemiBold", color: textPrimary }}>Status</Text>
+          <Text style={{ fontSize: 14, fontFamily: "JakartaSemiBold", color: textPrimary }}>{t("rental_assignment.status_label")}</Text>
           <Text style={{ fontSize: 13, fontFamily: "Jakarta", color: textSecondary, marginTop: 4 }}>
             {isFulfilled
-              ? "✅ Driver assigned — waiting for customer confirmation"
+              ? t("rental_assignment.status_fulfilled")
               : assignment?.driver_user_id
-                ? "Driver already picked — customer must confirm"
-                : "No driver assigned yet — pick below"}
+                ? t("rental_assignment.status_picked")
+                : t("rental_assignment.status_none")}
           </Text>
         </View>
 
@@ -289,11 +290,11 @@ export default function AssignmentDetailScreen() {
         {canPick && (
           <>
             <Text style={{ fontSize: 15, fontFamily: "JakartaSemiBold", color: textPrimary, marginBottom: 8 }}>
-              Select Driver
+              {t("rental_assignment.select_driver")}
             </Text>
             {drivers.length === 0 ? (
               <Text style={{ fontSize: 13, fontFamily: "Jakarta", color: textSecondary, marginBottom: 16 }}>
-                No online drivers available in your fleet
+                {t("rental_assignment.no_online_drivers")}
               </Text>
             ) : (
               drivers.map((d) => {
@@ -329,7 +330,11 @@ export default function AssignmentDetailScreen() {
                         {d.name}
                       </Text>
                       <Text style={{ fontSize: 12, fontFamily: "Jakarta", color: textSecondary }}>
-                        {d.vehicle_type.replace(/_/g, " ")} · ⭐ {d.rating?.toFixed(1) ?? "5.0"} · {d.completed_rides_count} trips
+                        {t("rental_assignment.driver_meta", {
+                          vehicle: d.vehicle_type.replace(/_/g, " "),
+                          rating: d.rating?.toFixed(1) ?? "5.0",
+                          trips: d.completed_rides_count,
+                        })}
                       </Text>
                     </View>
                     {isSelected && <Ionicons name="checkmark-circle" size={22} color={colors.primary} />}
@@ -342,7 +347,7 @@ export default function AssignmentDetailScreen() {
             {selectedDriver && (
               <>
                 <Text style={{ fontSize: 15, fontFamily: "JakartaSemiBold", color: textPrimary, marginBottom: 8, marginTop: 12 }}>
-                  Select Vehicle
+                  {t("rental_assignment.select_vehicle")}
                 </Text>
                 {vehicles.map((v) => {
                   const isSelected = selectedVehicle === v.id;
@@ -400,9 +405,9 @@ export default function AssignmentDetailScreen() {
             {picking ? (
               <ActivityIndicator size="small" color="#FFFFFF" />
             ) : (
-              <Text style={{ color: "#FFFFFF", fontSize: 16, fontFamily: "JakartaSemiBold" }}>
-                Assign Driver
-              </Text>
+            <Text style={{ color: "#FFFFFF", fontSize: 16, fontFamily: "JakartaSemiBold" }}>
+              {t("rental_assignment.assign_driver")}
+            </Text>
             )}
           </TouchableOpacity>
         )}
@@ -421,7 +426,7 @@ export default function AssignmentDetailScreen() {
             }}
            testID="customer.rental-bidder.id.handle-withdraw">
             <Text style={{ color: colors.danger, fontSize: 16, fontFamily: "JakartaSemiBold" }}>
-              Cannot Fulfill → Withdraw
+              {t("rental_assignment.withdraw_cta")}
             </Text>
           </TouchableOpacity>
         )}

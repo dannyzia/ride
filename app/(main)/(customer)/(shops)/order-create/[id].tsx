@@ -19,12 +19,14 @@ import { colors } from "@/theme/goRide";
 import { useShopStore } from "@/store/useShopStore";
 import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
+import { useTranslation } from "react-i18next";
 import { formatBDT } from "@/lib/format";
 
 const SERVER_URL = process.env.EXPO_PUBLIC_SERVER_URL ?? "http://localhost:8080";
 
 export default function OrderCreateScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const { t } = useTranslation();
   const isDark = useIsDark();
   const bg = isDark ? colors.bgDark : colors.bgLight;
   const surfaceBg = isDark ? colors.surfaceElevatedDark : colors.surfaceLight;
@@ -48,7 +50,7 @@ const {
 
   const handleSubmit = async () => {
     if (cartFulfillment === "delivery" && !deliveryAddress) {
-      Alert.alert("Delivery Address", "Please enter a delivery address");
+      Alert.alert(t("shops_order.address_title"), t("shops_order.address_body"));
       return;
     }
 
@@ -74,17 +76,17 @@ const {
 
       const data = await res.json();
       if (!res.ok) {
-        Alert.alert("Order Failed", data.message || "Could not place order");
+        Alert.alert(t("shops_order.err_title"), data.message || t("shops_order.err_body"));
         return;
       }
 
       clearCart();
-      Alert.alert("Order Placed", "Your order has been placed successfully", [
-        { text: "OK", onPress: () => router.replace(`/(main)/(customer)/(shops)/shop-detail/${id}`) },
+      Alert.alert(t("shops_order.placed_title"), t("shops_order.placed_body"), [
+        { text: t("common.ok"), onPress: () => router.replace(`/(main)/(customer)/(shops)/shop-detail/${id}`) },
       ]);
     } catch (err) {
       logger.error("[order-create] error", err);
-      Alert.alert("Error", "Could not place order");
+      Alert.alert(t("common.error"), t("shops_order.err_body"));
     } finally {
       setSubmitting(false);
     }
@@ -97,14 +99,14 @@ const {
           <Ionicons name="arrow-back" size={24} color={textPrimary} />
         </TouchableOpacity>
         <Text style={{ flex: 1, fontSize: 20, fontFamily: "JakartaBold", color: textPrimary, marginLeft: 12 }}>
-          Checkout
+          {t("shops_order.title")}
         </Text>
       </View>
 
       <ScrollView style={{ flex: 1, paddingHorizontal: 20 }}>
         {/* Fulfillment toggle */}
         <Text style={{ fontSize: 15, fontFamily: "JakartaSemiBold", color: textPrimary, marginBottom: 8 }}>
-          Fulfillment
+          {t("shops_order.fulfillment")}
         </Text>
         <View style={{ flexDirection: "row", marginBottom: 16 }}>
           {(["delivery", "pickup"] as const).map((f) => (
@@ -129,7 +131,7 @@ const {
                   color: cartFulfillment === f ? "#FFFFFF" : textPrimary,
                 }}
               >
-                {f === "delivery" ? "Delivery" : "Pickup"}
+                {f === "delivery" ? t("shops_order.delivery") : t("shops_order.pickup")}
               </Text>
             </TouchableOpacity>
           ))}
@@ -139,7 +141,7 @@ const {
         {cartFulfillment === "delivery" && (
           <View style={{ marginBottom: 16 }}>
             <Text style={{ fontSize: 15, fontFamily: "JakartaSemiBold", color: textPrimary, marginBottom: 8 }}>
-              Delivery Address
+              {t("shops_order.delivery_address")}
             </Text>
             <TextInput
               style={{
@@ -152,7 +154,7 @@ const {
                 fontSize: 15,
                 minHeight: 60,
               }}
-              placeholder="Enter delivery address..."
+              placeholder={t("shops_order.delivery_address_placeholder")}
               placeholderTextColor={textSecondary}
               value={deliveryAddress ?? ""}
               onChangeText={(t) => setDeliveryAddress(t || null)}
@@ -163,7 +165,7 @@ const {
 
         {/* Cart items */}
         <Text style={{ fontSize: 15, fontFamily: "JakartaSemiBold", color: textPrimary, marginBottom: 8 }}>
-          Order Items
+          {t("shops_order.order_items")}
         </Text>
         {cart.map((item) => (
           <View
@@ -200,7 +202,7 @@ const {
             fontSize: 15,
             marginTop: 8,
           }}
-          placeholder="Any notes for the shop?"
+          placeholder={t("shops_order.notes_placeholder")}
           placeholderTextColor={textSecondary}
           value={notes}
           onChangeText={setNotes}
@@ -232,11 +234,11 @@ const {
             textAlign: "center",
           }}
         >
-          Payment is made directly to the driver/shop — not through the app.
+          {t("shops_order.payment_disclosure")}
         </Text>
         <View style={{ flexDirection: "row", alignItems: "center" }}>
           <View style={{ flex: 1 }}>
-            <Text style={{ fontSize: 14, fontFamily: "JakartaMedium", color: textSecondary }}>Total</Text>
+            <Text style={{ fontSize: 14, fontFamily: "JakartaMedium", color: textSecondary }}>{t("shops_order.total")}</Text>
             <Text style={{ fontSize: 20, fontFamily: "JakartaBold", color: colors.primary }}>
               {formatBDT(subtotal)}
             </Text>
@@ -256,7 +258,7 @@ const {
               <ActivityIndicator size="small" color="#FFFFFF" />
             ) : (
               <Text style={{ color: "#FFFFFF", fontSize: 16, fontFamily: "JakartaSemiBold" }}>
-                Place Order
+                {t("shops_order.place_order")}
               </Text>
             )}
           </TouchableOpacity>

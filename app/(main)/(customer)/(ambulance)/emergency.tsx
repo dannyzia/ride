@@ -20,21 +20,25 @@ import { router } from "expo-router";
 import { useIsDark } from "@/lib/useAppearance";
 import { colors } from "@/theme/goRide";
 import { useEmergencyStore } from "@/store/useEmergencyStore";
+import { useTranslation } from "react-i18next";
 import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
 
 const SERVER_URL = process.env.EXPO_PUBLIC_SERVER_URL ?? "http://localhost:8080";
 
-const STATUS_STEPS = [
-  { key: "broadcasting", label: "Finding ambulance…" },
-  { key: "assigned", label: "Ambulance assigned" },
-  { key: "en_route_pickup", label: "Ambulance en route" },
-  { key: "arrived", label: "Ambulance arrived" },
-  { key: "en_route_dropoff", label: "Transporting patient" },
-  { key: "completed", label: "Trip complete" },
+// Labels resolved at render time via ambulance.status_* — t() inside the map
+// component body, not at module scope.
+const STATUS_STEPS: { key: string; labelKey: string }[] = [
+  { key: "broadcasting", labelKey: "ambulance.status_broadcasting" },
+  { key: "assigned", labelKey: "ambulance.status_assigned" },
+  { key: "en_route_pickup", labelKey: "ambulance.status_en_route_pickup" },
+  { key: "arrived", labelKey: "ambulance.status_arrived" },
+  { key: "en_route_dropoff", labelKey: "ambulance.status_en_route_dropoff" },
+  { key: "completed", labelKey: "ambulance.status_completed" },
 ];
 
 export default function EmergencyAmbulanceScreen() {
+  const { t } = useTranslation();
   const isDark = useIsDark();
   const bg = isDark ? colors.bgDark : colors.bgLight;
   const surfaceBg = isDark ? colors.surfaceElevatedDark : colors.surfaceLight;
@@ -89,7 +93,7 @@ export default function EmergencyAmbulanceScreen() {
 
   const handleCreate = async () => {
     if (!pickupAddress || !patientCondition) {
-      Alert.alert("Missing Info", "Pickup location and patient condition are required");
+      Alert.alert(t("ambulance.err_missing_title"), t("ambulance.err_missing_body"));
       return;
     }
     setSubmitting(true);
@@ -117,14 +121,14 @@ export default function EmergencyAmbulanceScreen() {
 
       const data = await res.json();
       if (!res.ok) {
-        Alert.alert("Error", data.message || "Could not broadcast emergency");
+        Alert.alert(t("common.error"), data.message || t("ambulance.err_broadcast"));
         return;
       }
 
       setActiveEmergency(data.request);
     } catch (err) {
       logger.error("[emergency] create error", err);
-      Alert.alert("Error", "Could not broadcast emergency");
+      Alert.alert(t("common.error"), t("ambulance.err_broadcast"));
     } finally {
       setSubmitting(false);
     }
@@ -151,7 +155,7 @@ export default function EmergencyAmbulanceScreen() {
         stopPolling();
       } else {
         const data = await res.json();
-        Alert.alert("Error", data.message || "Could not cancel");
+        Alert.alert(t("common.error"), data.message || t("ambulance.err_cancel"));
       }
     } catch (err) {
       logger.error("[emergency] cancel error", err);
@@ -170,11 +174,11 @@ export default function EmergencyAmbulanceScreen() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: bg }}>
       <View style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: 20, paddingTop: 8, paddingBottom: 12 }}>
-        <TouchableOpacity onPress={() => router.back()} hitSlop={8} accessibilityRole="button" accessibilityLabel="Back" testID="customer.ambulance.emergency.el-1">
+        <TouchableOpacity onPress={() => router.back()} hitSlop={8} accessibilityRole="button" accessibilityLabel={t("common.back")} testID="customer.ambulance.emergency.el-1">
           <Ionicons name="arrow-back" size={24} color={textPrimary} />
         </TouchableOpacity>
         <Text style={{ flex: 1, fontSize: 20, fontFamily: "JakartaBold", color: colors.danger, marginLeft: 12 }}>
-          Emergency Ambulance
+          {t("ambulance.title")}
         </Text>
       </View>
 
@@ -187,10 +191,10 @@ export default function EmergencyAmbulanceScreen() {
                 {isTerminal ? (
                   <Text style={{ fontSize: 16, fontFamily: "JakartaSemiBold", color: textPrimary }}>
                     {activeEmergency.status === "completed"
-                      ? "Trip complete"
+                      ? t("ambulance.status_completed")
                       : activeEmergency.status === "cancelled"
-                        ? "Emergency cancelled"
-                        : "No ambulance accepted in time"}
+                        ? t("ambulance.terminal_cancelled")
+                        : t("ambulance.terminal_no_accept")}
                   </Text>
                 ) : (
                   STATUS_STEPS.map((step, i) => (
@@ -208,7 +212,7 @@ export default function EmergencyAmbulanceScreen() {
                           marginLeft: 8,
                         }}
                       >
-                        {step.label}
+                        {t(step.labelKey)}
                       </Text>
                     </View>
                   ))
@@ -225,13 +229,13 @@ export default function EmergencyAmbulanceScreen() {
                 disabled={cancelling}
                 style={{ backgroundColor: surfaceBg, borderWidth: 1, borderColor: colors.danger, borderRadius: 12, height: 48, alignItems: "center", justifyContent: "center", marginBottom: 40 }}
                 accessibilityRole="button"
-                accessibilityLabel="Cancel emergency request"
+                accessibilityLabel={t("ambulance.a11y_cancel")}
                testID="customer.ambulance.emergency.handle-cancel">
                 {cancelling ? (
                   <ActivityIndicator size="small" color={colors.danger} />
                 ) : (
                   <Text style={{ color: colors.danger, fontSize: 15, fontFamily: "JakartaSemiBold" }}>
-                    Cancel Emergency
+                    {t("ambulance.cancel_cta")}
                   </Text>
                 )}
               </TouchableOpacity>
@@ -241,7 +245,7 @@ export default function EmergencyAmbulanceScreen() {
           <>
             {/* Service level */}
             <Text style={{ fontSize: 15, fontFamily: "JakartaSemiBold", color: textPrimary, marginBottom: 8 }}>
-              Service level
+              {t("ambulance.service_level")}
             </Text>
             <View style={{ flexDirection: "row", marginBottom: 16 }}>
               {(["BLS", "ALS"] as const).map((lvl) => (
@@ -266,7 +270,7 @@ export default function EmergencyAmbulanceScreen() {
                     {lvl}
                   </Text>
                   <Text style={{ fontSize: 11, fontFamily: "Jakarta", color: textSecondary, marginTop: 2 }}>
-                    {lvl === "BLS" ? "Basic life support" : "Advanced + paramedic"}
+                    {lvl === "BLS" ? t("ambulance.bls_desc") : t("ambulance.als_desc")}
                   </Text>
                 </TouchableOpacity>
               ))}
@@ -286,7 +290,7 @@ export default function EmergencyAmbulanceScreen() {
                 marginBottom: 16,
               }}
               accessibilityRole="button"
-              accessibilityLabel="Requires paramedic"
+              accessibilityLabel={t("ambulance.a11y_paramedic")}
               accessibilityState={{ selected: requiresParamedic }}
              testID="customer.ambulance.emergency.set-requires-paramedic">
               <Ionicons
@@ -295,13 +299,13 @@ export default function EmergencyAmbulanceScreen() {
                 color={requiresParamedic ? colors.danger : textSecondary}
               />
               <Text style={{ fontSize: 15, fontFamily: "JakartaMedium", color: textPrimary, marginLeft: 12 }}>
-                Paramedic required
+                {t("ambulance.paramedic_required")}
               </Text>
             </TouchableOpacity>
 
             {/* Patient condition — stored, NEVER broadcast (F41) */}
             <Text style={{ fontSize: 15, fontFamily: "JakartaSemiBold", color: textPrimary, marginBottom: 8 }}>
-              Patient condition
+              {t("ambulance.patient_condition")}
             </Text>
             <TextInput
               style={{
@@ -316,38 +320,38 @@ export default function EmergencyAmbulanceScreen() {
                 textAlignVertical: "top",
                 marginBottom: 16,
               }}
-              placeholder="Visible only to you and the responding crew"
+              placeholder={t("ambulance.patient_condition_placeholder")}
               placeholderTextColor={textSecondary}
               value={patientCondition}
               onChangeText={setPatientCondition}
               multiline
-              accessibilityLabel="Patient condition"
+              accessibilityLabel={t("ambulance.patient_condition")}
              testID="customer.ambulance.emergency.set-patient-condition"/>
 
             {/* Pickup */}
             <Text style={{ fontSize: 15, fontFamily: "JakartaSemiBold", color: textPrimary, marginBottom: 8 }}>
-              Pickup Location
+              {t("ambulance.pickup_location")}
             </Text>
             <TextInput
               style={{ backgroundColor: surfaceBg, borderWidth: 1, borderColor, borderRadius: 12, padding: 14, color: textPrimary, fontSize: 15, marginBottom: 16 }}
-              placeholder="Enter pickup address"
+              placeholder={t("ambulance.pickup_placeholder")}
               placeholderTextColor={textSecondary}
               value={pickupAddress}
               onChangeText={setPickupAddress}
-              accessibilityLabel="Pickup address"
+              accessibilityLabel={t("ambulance.pickup_address")}
              testID="customer.ambulance.emergency.set-pickup-address"/>
 
             {/* Dropoff (optional) */}
             <Text style={{ fontSize: 15, fontFamily: "JakartaSemiBold", color: textPrimary, marginBottom: 8 }}>
-              Dropoff (optional)
+              {t("ambulance.dropoff_optional")}
             </Text>
             <TextInput
               style={{ backgroundColor: surfaceBg, borderWidth: 1, borderColor, borderRadius: 12, padding: 14, color: textPrimary, fontSize: 15, marginBottom: 20 }}
-              placeholder="Hospital / destination"
+              placeholder={t("ambulance.dropoff_placeholder")}
               placeholderTextColor={textSecondary}
               value={dropoffAddress}
               onChangeText={setDropoffAddress}
-              accessibilityLabel="Dropoff address"
+              accessibilityLabel={t("ambulance.dropoff_address")}
              testID="customer.ambulance.emergency.set-dropoff-address"/>
 
             <TouchableOpacity
@@ -363,13 +367,13 @@ export default function EmergencyAmbulanceScreen() {
                 marginBottom: 40,
               }}
               accessibilityRole="button"
-              accessibilityLabel="Call ambulance now"
+              accessibilityLabel={t("ambulance.a11y_call_now")}
              testID="customer.ambulance.emergency.handle-create">
               {submitting ? (
                 <ActivityIndicator size="small" color="#FFFFFF" />
               ) : (
                 <Text style={{ color: "#FFFFFF", fontSize: 16, fontFamily: "JakartaSemiBold" }}>
-                  Call Ambulance Now
+                  {t("ambulance.call_now")}
                 </Text>
               )}
             </TouchableOpacity>

@@ -17,12 +17,14 @@ import { colors } from "@/theme/goRide";
 import { useShopStore } from "@/store/useShopStore";
 
 import { logger } from "@/lib/logger";
+import { useTranslation } from "react-i18next";
 import { formatBDT } from "@/lib/format";
 
 const SERVER_URL = process.env.EXPO_PUBLIC_SERVER_URL ?? "http://localhost:8080";
 
 export default function ShopDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const { t } = useTranslation();
   const isDark = useIsDark();
   const bg = isDark ? colors.bgDark : colors.bgLight;
   const surfaceBg = isDark ? colors.surfaceElevatedDark : colors.surfaceLight;
@@ -65,7 +67,7 @@ useEffect(() => {
   if (!selectedShop) {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: bg, alignItems: "center", justifyContent: "center" }}>
-        <Text style={{ color: textPrimary, fontSize: 16 }}>Shop not found</Text>
+        <Text style={{ color: textPrimary, fontSize: 16 }}>{t("shops_detail.not_found")}</Text>
       </SafeAreaView>
     );
   }
@@ -91,7 +93,7 @@ useEffect(() => {
           <View style={{ padding: 40, alignItems: "center" }}>
             <Ionicons name="bag-outline" size={48} color={textSecondary} />
             <Text style={{ fontSize: 16, fontFamily: "JakartaMedium", color: textSecondary, marginTop: 12 }}>
-              No products yet
+              {t("shops_detail.no_products")}
             </Text>
           </View>
         ) : (
@@ -175,7 +177,7 @@ useEffect(() => {
         >
           <View style={{ flex: 1 }}>
             <Text style={{ fontSize: 14, fontFamily: "JakartaMedium", color: textPrimary }}>
-              {cartCount} item{cartCount > 1 ? "s" : ""} — {formatBDT(cartTotal)}
+              {t("shops_detail.cart_count", { count: cartCount, amount: formatBDT(cartTotal) })}
             </Text>
           </View>
           <TouchableOpacity
@@ -188,7 +190,7 @@ useEffect(() => {
             }}
            testID="customer.shops.shop-detail.id.push-order-create">
             <Text style={{ color: "#FFFFFF", fontSize: 15, fontFamily: "JakartaSemiBold" }}>
-              Checkout
+              {t("shops_detail.checkout")}
             </Text>
           </TouchableOpacity>
         </View>

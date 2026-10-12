@@ -20,6 +20,7 @@ import { useIsDark } from "@/lib/useAppearance";
 import { colors } from "@/theme/goRide";
 import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
+import { useTranslation } from "react-i18next";
 import CargoSummary from "./_components/CargoSummary";
 import { describeVehicleType } from "@/constants/truckCatalog";
 import { formatBDT } from "@/lib/format";
@@ -32,15 +33,16 @@ const RANK_COLORS: Record<string, string> = {
   "3rd": "#F59E0B",
 };
 
+// Status key carriers; labels resolve at render via rental_marketplace.st_*.
 const STATUS_LABELS: Record<string, string> = {
-  broadcasting: "Collecting Bids",
-  collecting: "Collecting Bids",
-  awarded: "Awarded",
-  confirmed: "Confirmed",
-  completed: "Completed",
-  cancelled: "Cancelled",
-  expired: "Expired",
-  no_bidders: "No Bids Received",
+  broadcasting: "rental_marketplace.st_collecting",
+  collecting: "rental_marketplace.st_collecting",
+  awarded: "rental_marketplace.st_awarded",
+  confirmed: "rental_marketplace.st_confirmed",
+  completed: "rental_marketplace.st_completed",
+  cancelled: "rental_marketplace.st_cancelled",
+  expired: "rental_marketplace.st_expired",
+  no_bidders: "rental_marketplace.st_no_bidders",
 };
 
 interface RequestDetail {
@@ -81,6 +83,7 @@ interface Bid {
 }
 
 export default function RequestDetailScreen() {
+  const { t } = useTranslation();
   const isDark = useIsDark();
   const bg = isDark ? colors.bgDark : colors.bgLight;
   const surfaceBg = isDark ? colors.surfaceElevatedDark : colors.surfaceLight;
@@ -187,7 +190,7 @@ export default function RequestDetailScreen() {
           <Ionicons name="arrow-back" size={24} color={textPrimary} />
         </TouchableOpacity>
         <Text style={{ flex: 1, fontSize: 18, fontFamily: "JakartaBold", color: textPrimary, marginLeft: 12 }}>
-          {STATUS_LABELS[request?.status ?? ""] ?? request?.status}
+          {STATUS_LABELS[request?.status ?? ""] ? t(STATUS_LABELS[request?.status ?? ""]) : request?.status}
         </Text>
         {deadline > 0 && isActive && (
           <View style={{ backgroundColor: surfaceBg, borderWidth: 1, borderColor, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4 }}>
@@ -208,11 +211,11 @@ export default function RequestDetailScreen() {
             <View style={{ flexDirection: "row", alignItems: "center" }}>
               <Ionicons name="refresh" size={18} color={colors.amber} />
               <Text style={{ fontSize: 13, fontFamily: "JakartaSemiBold", color: colors.amber, marginLeft: 8 }}>
-                Fleet couldn't assign a driver
+                {t("rental_marketplace.reselect_title")}
               </Text>
             </View>
             <Text style={{ fontSize: 12, fontFamily: "Jakarta", color: textSecondary, marginTop: 6 }}>
-              Pick another bid. Prices unchanged.
+              {t("rental_marketplace.reselect_body")}
             </Text>
           </View>
         )}
@@ -240,7 +243,9 @@ export default function RequestDetailScreen() {
               <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 4 }}>
                 <Ionicons name="calendar" size={14} color={colors.primary} />
                 <Text style={{ fontSize: 13, fontFamily: "JakartaMedium", color: textPrimary, marginLeft: 8 }}>
-                  Starts {new Date(request.scheduled_start_at).toLocaleString("en-GB", { timeZone: "Asia/Dhaka" })}
+                  {t("rental_marketplace.starts_at", {
+                    time: new Date(request.scheduled_start_at).toLocaleString("en-GB", { timeZone: "Asia/Dhaka" }),
+                  })}
                 </Text>
               </View>
             )}
@@ -248,7 +253,7 @@ export default function RequestDetailScreen() {
               <View style={{ flexDirection: "row", alignItems: "center" }}>
                 <Ionicons name="time" size={14} color={colors.primary} />
                 <Text style={{ fontSize: 13, fontFamily: "JakartaMedium", color: textPrimary, marginLeft: 8 }}>
-                  Duration: {request.duration_hours}h
+                  {t("rental_bid_submit.duration_label", { hours: request.duration_hours })}
                 </Text>
               </View>
             )}
@@ -285,7 +290,7 @@ export default function RequestDetailScreen() {
           <View style={{ flexDirection: "row", alignItems: "center", backgroundColor: colors.primary + "18", borderRadius: 10, padding: 10, marginBottom: 16 }}>
             <Ionicons name="navigate" size={16} color={colors.primary} />
             <Text style={{ fontSize: 12, fontFamily: "JakartaMedium", color: colors.primary, marginLeft: 8 }}>
-              Live Tracking Required — fleet names driver+vehicle at bid time
+              {t("rental_marketplace.tracking_full")}
             </Text>
           </View>
         )}
@@ -293,20 +298,20 @@ export default function RequestDetailScreen() {
         {/* Payment disclosure (§F.3) */}
         <View style={{ backgroundColor: "#FEF3C7", borderRadius: 10, padding: 12, marginBottom: 16 }}>
           <Text style={{ fontSize: 12, fontFamily: "JakartaMedium", color: "#92400E" }}>
-            Payment is made directly to the driver — not through the app.
+            {t("rental_marketplace.payment_disclosure")}
           </Text>
         </View>
 
         {/* Bid feed */}
         <Text style={{ fontSize: 16, fontFamily: "JakartaSemiBold", color: textPrimary, marginBottom: 10 }}>
-          Bids ({bids.length})
+          {t("rental_marketplace.bids_count", { count: bids.length })}
         </Text>
 
         {bids.length === 0 && isActive ? (
           <View style={{ padding: 30, alignItems: "center" }}>
             <ActivityIndicator size="large" color={colors.primary} />
             <Text style={{ fontSize: 14, fontFamily: "JakartaMedium", color: textSecondary, marginTop: 12 }}>
-              Waiting for fleet bids...
+              {t("rental_marketplace.waiting_fleet_bids")}
             </Text>
           </View>
         ) : (
@@ -327,7 +332,9 @@ export default function RequestDetailScreen() {
                   flexDirection: "row",
                   alignItems: "center",
                 }}
-                accessibilityLabel={`Bid from fleet: ${formatBDT(bid.quoted_price_bdt)} taka`}
+                accessibilityLabel={t("rental_marketplace.a11y_bid_row", {
+                  amount: formatBDT(bid.quoted_price_bdt),
+                })}
                testID="customer.rental-marketplace.request-detail.set-selected-bid-id">
                 {/* Rank badge */}
                 {bid.rank_badge && (
@@ -349,13 +356,18 @@ export default function RequestDetailScreen() {
                     <View style={{ flexDirection: "row", alignItems: "center", marginTop: 4 }}>
                       <Ionicons name="star" size={12} color="#F59E0B" />
                       <Text style={{ fontSize: 12, fontFamily: "Jakarta", color: textSecondary, marginLeft: 4 }}>
-                        {bid.fleet_rating.toFixed(1)} · {bid.fleet_completed_count ?? 0} trips
+                        {t("rental_marketplace.bid_meta", {
+                          rating: bid.fleet_rating.toFixed(1),
+                          trips: bid.fleet_completed_count ?? 0,
+                        })}
                       </Text>
                     </View>
                   )}
                   {bid.overtime_rate_bdt != null && (
                     <Text style={{ fontSize: 11, fontFamily: "Jakarta", color: textSecondary, marginTop: 2 }}>
-                      +{formatBDT(bid.overtime_rate_bdt)}/hr overtime
+                      {t("rental_marketplace.overtime_suffix", {
+                        amount: formatBDT(bid.overtime_rate_bdt),
+                      })}
                     </Text>
                   )}
                 </View>
@@ -381,7 +393,7 @@ export default function RequestDetailScreen() {
               <ActivityIndicator size="small" color="#FFFFFF" />
             ) : (
               <Text style={{ color: "#FFFFFF", fontSize: 16, fontFamily: "JakartaSemiBold" }}>
-                Accept This Bid
+                {t("rental_marketplace.accept_bid")}
               </Text>
             )}
           </TouchableOpacity>

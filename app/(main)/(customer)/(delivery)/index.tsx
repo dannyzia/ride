@@ -18,6 +18,7 @@ import { colors } from '@/theme/goRide';
 import { supabase } from '@/lib/supabase';
 import { logger } from '@/lib/logger';
 import { formatBDT } from "@/lib/format";
+import { useTranslation } from 'react-i18next';
 
 interface DeliveryRequest {
   id: string;
@@ -29,6 +30,7 @@ interface DeliveryRequest {
 }
 
 export default function DeliveryListScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const isDark = useIsDark();
   const [deliveries, setDeliveries] = useState<DeliveryRequest[]>([]);
@@ -118,7 +120,7 @@ export default function DeliveryListScreen() {
           <Ionicons name="arrow-back" size={24} color={textPrimary} />
         </TouchableOpacity>
         <Text className="text-lg font-JakartaBold" style={{ color: textPrimary }}>
-          Delivery
+          {t("delivery.title")}
         </Text>
         <TouchableOpacity onPress={() => router.push('/(main)/(customer)/(delivery)/request-create')} testID="customer.delivery.push-request-create">
           <Ionicons name="add-circle" size={28} color={colors.primary} />
@@ -133,17 +135,17 @@ export default function DeliveryListScreen() {
         <View className="flex-1 items-center justify-center px-6">
           <Ionicons name="bicycle-outline" size={64} color={textSecondary} />
           <Text className="text-lg font-JakartaBold mt-4" style={{ color: textPrimary }}>
-            No deliveries yet
+            {t("delivery.empty_title")}
           </Text>
           <Text className="text-sm font-Jakarta mt-2 text-center" style={{ color: textSecondary }}>
-            Send a package anywhere in the city
+            {t("delivery.empty_body")}
           </Text>
           <TouchableOpacity
             className="mt-6 px-8 py-3 rounded-xl"
             style={{ backgroundColor: colors.primary }}
             onPress={() => router.push('/(main)/(customer)/(delivery)/request-create')}
            testID="customer.delivery.push-request-create-2">
-            <Text className="text-white font-JakartaBold">Send a Package</Text>
+            <Text className="text-white font-JakartaBold">{t("delivery.empty_cta")}</Text>
           </TouchableOpacity>
         </View>
       ) : (

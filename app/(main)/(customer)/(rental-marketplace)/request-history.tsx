@@ -19,6 +19,7 @@ import { useIsDark } from "@/lib/useAppearance";
 import { colors } from "@/theme/goRide";
 import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
+import { useTranslation } from "react-i18next";
 
 const SERVER_URL = process.env.EXPO_PUBLIC_SERVER_URL ?? "http://localhost:8080";
 
@@ -33,10 +34,11 @@ const STATUS_COLORS: Record<string, string> = {
   no_bidders: "#9CA3AF",
 };
 
+// Category key carriers; labels resolve at render via rental_marketplace.cat_*.
 const CATEGORY_LABELS: Record<string, string> = {
-  car_rental: "Car Rental",
-  truck_rental: "Truck Rental",
-  ambulance_scheduled: "Ambulance",
+  car_rental: "rental_marketplace.cat_car",
+  truck_rental: "rental_marketplace.cat_truck",
+  ambulance_scheduled: "rental_marketplace.cat_amb",
 };
 
 interface HistoryRequest {
@@ -50,6 +52,7 @@ interface HistoryRequest {
 }
 
 export default function RequestHistoryScreen() {
+  const { t } = useTranslation();
   const isDark = useIsDark();
   const bg = isDark ? colors.bgDark : colors.bgLight;
   const surfaceBg = isDark ? colors.surfaceElevatedDark : colors.surfaceLight;
@@ -108,7 +111,7 @@ export default function RequestHistoryScreen() {
           <Ionicons name="arrow-back" size={24} color={textPrimary} />
         </TouchableOpacity>
         <Text style={{ flex: 1, fontSize: 20, fontFamily: "JakartaBold", color: textPrimary, marginLeft: 12 }}>
-          Request History
+          {t("rental_history.title")}
         </Text>
       </View>
 
@@ -120,7 +123,7 @@ export default function RequestHistoryScreen() {
           <View style={{ padding: 40, alignItems: "center" }}>
             <Ionicons name="time-outline" size={48} color={textSecondary} />
             <Text style={{ fontSize: 15, fontFamily: "JakartaMedium", color: textSecondary, marginTop: 12 }}>
-              No requests yet
+              {t("rental_history.empty")}
             </Text>
           </View>
         ) : (
@@ -147,7 +150,7 @@ export default function RequestHistoryScreen() {
                       color={colors.primary}
                     />
                     <Text style={{ fontSize: 14, fontFamily: "JakartaSemiBold", color: textPrimary, marginLeft: 8 }}>
-                      {CATEGORY_LABELS[req.category] ?? req.category}
+                      {CATEGORY_LABELS[req.category] ? t(CATEGORY_LABELS[req.category]) : req.category}
                     </Text>
                   </View>
                   <View style={{ backgroundColor: statusColor + "18", borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 }}>
