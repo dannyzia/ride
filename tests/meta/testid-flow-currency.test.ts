@@ -147,7 +147,7 @@ describe("testid-flow-currency: live repo selector set (TRAP 1 regression guard)
     }
   });
 
-  it("agrees with the measured pre-commit index-mode count of 99 flow-selected ids", () => {
+  it("agrees with the measured pre-commit index-mode count of 100 flow-selected ids", () => {
     // Exact count is pinned deliberately: it makes a silent parser regression
     // impossible to miss. It moved 91 -> 93 when the B-3 flow rebuild landed
     // (one selector replaced by three, net +2) — a legitimate flow edit must
@@ -162,11 +162,14 @@ describe("testid-flow-currency: live repo selector set (TRAP 1 regression guard)
     // flow-selected elsewhere (_go-offline.yaml:12), so the count is unchanged
     // by it. Re-pinned to the MEASURED value, not a guess; the assertion is
     // exact as before, so the canary keeps its full force.
-    // This 99-pin is the pre-commit INDEX-mode canary (git grep --cached across maestro/flows).
-    // The CI's --head-vs-worktree mode reads the worktree and reports 100 here - two views of
-    // one consistent selector set; the canary asserts the index count never drifts. Replace 99
+    // This 100-pin is the pre-commit INDEX-mode canary (git grep --cached across maestro/flows).
+    // The CI's --head-vs-worktree mode reads the worktree and reports 100 here - both views of
+    // one consistent selector set; the canary asserts the index count never drifts. Replace 100
     // only if the committed flow selector set itself changes.
-    expect(gate.flowSelectors().size).toBe(99);
+    // 2026-10-12: re-pinned 99 -> 100 (measured in BOTH modes) after the
+    // committed flow set moved again — ISSUE-77's marketplace-family flow
+    // rewiring (d9ea7e6) plus the driver-onboarding wizard rebuild (2d4f3f4).
+    expect(gate.flowSelectors().size).toBe(100);
   });
 });
 

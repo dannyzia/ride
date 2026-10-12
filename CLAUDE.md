@@ -233,8 +233,8 @@ grep -ri "clerk\|stripe" app/ lib/ utils-server/           # must return nothing
 # regex with the POSIX class `[[:space:]]` is VALID in the `git grep -E` pattern but NOT in JavaScript
 # (it means "one of [ : s p a c e then a literal ]"), which yields ZERO selectors and turns this into
 # a gate that silently passes every commit forever. `tests/meta/testid-flow-currency.test.ts` pins the
-# pre-commit INDEX-mode count at exactly 99 for that reason (its fixture tree is a copy of the
-# shipped CLI; the open tree's worktree-mode count is 100). Replace 93/99 only if a committed
+# pre-commit INDEX-mode count at exactly 100 for that reason (its fixture tree is a copy of the
+# shipped CLI; the open tree's worktree-mode count is also 100). Replace 93/99/100 only if a committed
 # flow selector set itself changes.
 # CI MODES (2026-10-05, owner ruling): both tools gained `--head-vs-worktree`, and the
 # `maestro-drift` job runs them on every PR — on a clean checkout the index modes above compare
@@ -285,7 +285,7 @@ grep -ri "clerk\|stripe" app/ lib/ utils-server/           # must return nothing
 # shared/auth/_logout.yaml) now surface in the advisory MASKED tier, where the orphan `auth.login`
 # ("Log in") had been silently exact-rescuing them; they still match on device via the live
 # "Sign up or log in to continue" sentence. This is a live-copy rule, not a locale-only tightening:
-# source literals keep rescuing exactly as before.
+# source literals keep rescuing exactly as before. The notes in CLAUDE.md and the flow-xcheck.cjs header that quote these hard-coded examples must be updated to match the same phrasing: "Enter your phone number to continue" in phone-entry.tsx and "Tap to replace document" in components/DocumentUploadCard.tsx.
 # 2026-10-05, extractor widened: assertions written block-style (the keyword on one line,
 # `text: "…"` on the next) matched no regex and were UNCHECKED — 57 lines / 51 checkable claims
 # across ~20 flows, 4 of them dead. Disposition (owner ruling): the 3 Barikoi result-row claims
