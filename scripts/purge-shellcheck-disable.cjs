@@ -81,6 +81,7 @@ for (const file of files) {
   let src = fs.readFileSync(abs, 'utf8');
   const lines = src.split(/\r?\n/);
   let changed = false;
+  let removedInFile = 0;
   const out = [];
   for (const raw of lines) {
     const line = raw.trim();
@@ -95,6 +96,7 @@ for (const file of files) {
     if (kept.length === keys.length) { out.push(raw); continue; }
     changed = true;
     purged += keys.length - kept.length;
+    removedInFile += keys.length - kept.length;
     if (kept.length > 0) {
       out.push(`# shellcheck disable=${kept.join(',')}`);
     }
@@ -102,7 +104,7 @@ for (const file of files) {
   }
   if (changed) {
     fs.writeFileSync(abs, out.join('\n') + '\n', 'utf8');
-    console.log(`[purge] ${path.relative(root, abs)} — removed ${keys.length - kept.length} stale disable key(s)`);
+    console.log(`[purge] ${path.relative(root, abs)} — removed ${removedInFile} stale disable key(s)`);
   }
 }
 
