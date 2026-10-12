@@ -11,6 +11,8 @@
   <a href="#"><img src="https://img.shields.io/badge/EAS-Build-blueviolet" alt="EAS Build"></a>
   <a href="#"><img src="https://img.shields.io/badge/ORM-Drizzle-yellow" alt="Drizzle ORM"></a>
   <a href="#"><img src="https://img.shields.io/badge/Auth-Clerk-orange" alt="Clerk Auth"></a>
+  <a href="https://github.com/dannyzia/ride/actions/workflows/ci.yml"><img src="https://github.com/dannyzia/ride/actions/workflows/ci.yml/badge.svg" alt="CI status"></a>
+  <a href="#"><img src="https://img.shields.io/badge/tests--concurrency-SCRATCH--DB--policy-green" alt="concurrency scratch policy"></a>
 </p>
 
 

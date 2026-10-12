@@ -19135,7 +19135,7 @@
       ]
     },
     {
-      "file": "app/admin/sample-media.tsx",
+      "file": "admin/sample-media.tsx"
       "defaultExport": true,
       "elements": [
         {
