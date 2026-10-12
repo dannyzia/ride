@@ -1,0 +1,590 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ride — User Flows &amp; Workflows (Full Library)</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.min.js"></script>
+<script>
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: "dark",
+    securityLevel: "loose",
+    fontFamily: "Segoe UI, system-ui, sans-serif",
+    themeVariables: {
+      primaryColor: "#1c2740", primaryTextColor: "#e8eefc", primaryBorderColor: "#4f7cff",
+      lineColor: "#7fa4ff", secondaryColor: "#152238", tertiaryColor: "#101828",
+      noteBkgColor: "#2b2410", noteTextColor: "#ffe9a8", noteBorderColor: "#8a6d1a",
+      actorBkg: "#1c2740", actorBorder: "#4f7cff", actorTextColor: "#e8eefc",
+      signalColor: "#c9d8f5", signalTextColor: "#c9d8f5"
+    },
+    flowchart: { curve: "basis", htmlLabels: true }
+  });
+</script>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #0b0f17; color: #dbe4f5; font-family: "Segoe UI", system-ui, sans-serif; }
+  a { color: #7fa4ff; text-decoration: none; }
+  .layout { display: grid; grid-template-columns: 280px 1fr; min-height: 100vh; }
+  nav { position: sticky; top: 0; align-self: start; max-height: 100vh; overflow-y: auto; padding: 18px 14px; background: #0e1420; border-right: 1px solid #1d2a44; }
+  nav h1 { font-size: 15px; margin: 0 0 12px; color: #e8eefc; }
+  nav .group { margin: 14px 0 4px; font-size: 10.5px; letter-spacing: .12em; text-transform: uppercase; color: #6d84b4; }
+  nav a { display: block; padding: 6px 8px; border-radius: 8px; font-size: 12.5px; line-height: 1.35; margin-bottom: 2px; }
+  nav a:hover { background: #16203a; }
+  main { padding: 26px 34px 80px; max-width: 1100px; }
+  header.top { margin-bottom: 26px; }
+  header.top h2 { margin: 0 0 6px; font-size: 22px; color: #e8eefc; }
+  header.top p { margin: 0; color: #8ea3c8; font-size: 13px; }
+  .banner { background: #241a06; border: 1px solid #6b5416; color: #ffd98a; padding: 10px 14px; border-radius: 10px; font-size: 12.5px; margin-bottom: 8px; }
+  section.card { background: #0f1626; border: 1px solid #1d2a44; border-radius: 14px; padding: 20px 22px 26px; margin: 0 0 26px; }
+  section.card h3 { margin: 0 0 4px; font-size: 16px; color: #e8eefc; }
+  section.card .meta { color: #7d92ba; font-size: 12px; margin-bottom: 14px; }
+  .mermaid { background: #0b1120; border: 1px solid #182238; border-radius: 10px; padding: 16px; display: flex; justify-content: center; overflow-x: auto; }
+  code { background: #131c30; padding: 1px 6px; border-radius: 6px; font-size: 12px; color: #9fc1ff; }
+</style>
+</head>
+<body>
+<div class="layout">
+<nav>
+  <h1>Ride — User Flows</h1>
+      <a href="#f-02">F-02 · 🔨 Login &amp; multi-role "Login as" chooser</a>
+      <a href="#f-03">F-03 · 🔨 My verification status</a>
+      <a href="#f-04">F-04 · 🔨 Customer ride booking → dispatch → match</a>
+      <a href="#f-05">F-05 · 🔨 Ride lifecycle — start → finish → cash</a>
+      <a href="#f-06">F-06 · 🔨 Cancellation, no-show &amp; driver-no-show</a>
+      <a href="#f-07">F-07 · 🔨 Scheduled ride &amp; book-for-other</a>
+      <a href="#f-08">F-08 · 🔨 In-ride chat</a>
+      <a href="#f-10">F-10 · 🔨 Dispute / report issue / lost item</a>
+      <a href="#f-11">F-11 · 🔨 Shop order → delivery dispatch</a>
+      <a href="#f-12">F-12 · 🔨 Delivery exhaustion — retry, bump, self-deliver, cancel</a>
+      <a href="#f-13">F-13 · 🔨 Workshop — products AND services</a>
+      <a href="#f-14">F-14 · 🔨 P2P delivery</a>
+      <a href="#f-15">F-15 · 🔨 Delivery Man day</a>
+      <a href="#f-16">F-16 · 🔨 Shop Owner / Staff day</a>
+      <a href="#f-17">F-17 · 🔨 Fleet Owner — onboarding → dashboard</a>
+      <a href="#f-18">F-18 · 🔨 Car rental — request → broadcast → bid → award → lifecycle</a>
+      <a href="#f-19">F-19 · 🔨 Ambulance — emergency request</a>
+      <a href="#f-21">F-21 · 🔨 Driver earnings, dues &amp; payouts — repay channels NAMED</a>
+      <a href="#f-22">F-22 · 🔨 Driver vehicle management &amp; min-rate</a>
+      <a href="#f-23">F-23 · 🔨 Driver performance, hotspots, promos, referral</a>
+      <a href="#f-24">F-24 · 🔨 Break mode, safety center, support</a>
+      <a href="#f-26">F-26 · 💤 Wallet top-up &amp; rider passes</a>
+      <a href="#f-27">F-27 · 🔨 Apply promos</a>
+      <a href="#f-28">F-28 · 🔨 Customer referral — with anti-fraud</a>
+      <a href="#f-29">F-29 · 🔨 Notifications — hub spec</a>
+      <a href="#f-30">F-30 · 🔨 Admin verification queues — CANONICAL admin side</a>
+      <a href="#f-31">F-31 · 🔨 Admin marketplace ops — ledger-consistent</a>
+      <a href="#f-32">F-32 · 🔨 Admin fare &amp; platform config — launch DEFAULTS, all editable, nothing hardcoded</a>
+      <a href="#f-33">F-33 · 🔨 COD collection &amp; remittance — the settlement core</a>
+      <a href="#f-34">F-34 · 🔨 Invite acceptance — shop staff &amp; fleet dispatcher</a>
+      <a href="#f-35">F-35 · 🔨 Courier subscription — Delivery Man + driver-courier</a>
+      <a href="#f-36">F-36 · 🔨 Account &amp; device management</a>
+      <a href="#f-38">F-38 · 🔨 Cash receipt &amp; dispute</a>
+</nav>
+<main>
+<header class="top">
+  <h2>Ride — User Flows &amp; Workflows</h2>
+  <p>Full library · 33 diagrams · all personas · mirrors <code>docs/Plan/27-SHOP-FLEET-STAFF-DELIVERY-SURFACES-PLAN.md</code> + <code>docs/FeatureList/FEATURES.md</code> · source: <code>docs/FeatureList/USER-FLOWS.md</code> · regenerate: <code>node docs/FeatureList/build-user-flows-html.cjs</code></p>
+</header>
+<div class="banner">Rendered via Mermaid CDN — first view needs internet. 💤 = descoped by owner ruling (payments — COD launch). 🔨 = in development (Plan 27).</div>
+<section class="card" id="f-02"><h3>F-02 · 🔨 Login &amp; multi-role "Login as" chooser</h3><pre class="mermaid">
+flowchart TD
+  A["Phone + OTP — session re-auth every N hours"] --&gt; B{"Roles held (ACTIVE only — pending roles are NOT listed)"}
+  B --&gt;|"one active role"| C["Land directly — last-used role preselected next time"]
+  B --&gt;|"multiple"| D["Login as buttons — only active held roles"]
+  D --&gt; E["Customer home — shops + ride"]
+  D --&gt; F["Driver home"]
+  D --&gt; G["Shop dashboard — banner: Acting as staff · Shop name (staff = orders-only)"]
+  D --&gt; H["Fleet dashboard"]
+  D --&gt; I["Delivery offers inbox"]
+  E &amp; F &amp; G &amp; H &amp; I --&gt; S["Settings — Add a role"] --&gt; T{"Gate?"}
+  T --&gt;|"Customer"| U["Instant"]
+  T --&gt;|"Others"| V["Pending — see F-03 status; NOT selectable in chooser"]
+  E &amp; F &amp; G &amp; H &amp; I --&gt; W["Logout / Switch role (returns to chooser, no new OTP)"]
+  X["Locked/suspended account"] --&gt; Y["Locked screen — reason + support contact"]
+</pre>
+</section>
+<section class="card" id="f-03"><h3>F-03 · 🔨 My verification status</h3><pre class="mermaid">
+flowchart TD
+  A["Verification status screen — per pending role"] --&gt; B["Submitted (timestamp)"] --&gt; C["Docs received"] --&gt; D["Under review — expected within 24h (30-day auto-decision)"]
+  D --&gt; E{"Decision"}
+  E --&gt;|"Approve"| F["Active — notified — role appears in Login-as"]
+  E --&gt;|"Reject — STRUCTURED: failed field highlighted + example of acceptable document"| G["One-tap Fix &amp; resubmit — prefilled with prior answers (max 3, then admin unblock)"]
+  G --&gt; D
+  E --&gt;|"Suspend / revoke"| H["Suspended — reason + support contact — re-submit path"]
+  D --&gt;|"Withdraw"| I["Withdrawn — data purged per policy"]
+</pre>
+</section>
+<section class="card" id="f-04"><h3>F-04 · 🔨 Customer ride booking → dispatch → match</h3><pre class="mermaid">
+sequenceDiagram
+  participant U as Rider
+  participant APP as App
+  participant GEO as Barikoi
+  participant SYS as Dispatch
+  participant D as Driver
+  U-&gt;&gt;APP: Pickup (GPS — fail → pick on map) + destination
+  APP-&gt;&gt;GEO: Geocode
+  GEO--&gt;&gt;APP: fail → rider picks manually on map
+  U-&gt;&gt;APP: Select vehicle type + Apply promo (F-27)
+  APP-&gt;&gt;U: Stage-aware fare estimate (config snapshot — R-A9)
+  U-&gt;&gt;APP: Confirm — cancel-window chip visible with exact fee
+  APP-&gt;&gt;SYS: Ride requested — rider may cancel (fee per window; cancel edge from here)
+  SYS-&gt;&gt;SYS: matching_but_filtered reported separately (product telemetry)
+  Note over U,D: Matched → driver en route (arriving state, ETA live) → continue at F-05
+  alt drivers online
+    loop sequential offers — 45s window, max suggestions (config)
+      SYS-&gt;&gt;D: Offer (min-rate filter respected; filtered counts reported, never shown as "no drivers")
+      D-&gt;&gt;SYS: Accept → debit-on-offer (PROVISIONAL — reversal rules F-06) → matched
+      SYS-&gt;&gt;U: Matched — active-ride card: driver photo/name/plate, ETA, masked call, chat, share-trip, PIN
+    end
+  else no drivers
+    SYS-&gt;&gt;APP: No-drivers — auto-retry with backoff (3) + "notify me" + one-tap re-book
+  end
+  SYS--&gt;&gt;SYS: offer budget exhausted → rider informed: keep waiting (radius expands) or free-cancel
+</pre>
+</section>
+<section class="card" id="f-05"><h3>F-05 · 🔨 Ride lifecycle — start → finish → cash</h3><pre class="mermaid">
+sequenceDiagram
+  participant R as Rider
+  participant D as Driver
+  participant SYS as System
+  R-&gt;&gt;D: App shows PIN to driver (one view)
+  D-&gt;&gt;SYS: Enter PIN — mismatch ×3 → ride locked + admin notified
+  SYS--&gt;&gt;D: START (ride ledger opens)
+  D-&gt;&gt;R: Arrive at stop(s) — multi-stop
+  opt Mid-ride changes (owner-confirmed)
+    R-&gt;&gt;SYS: Change destination / add stop — re-estimate shown
+  end
+  opt Tolls / waiting (G2 — in-ride approval)
+    D-&gt;&gt;SYS: Extra charge — toll/parking/waiting + reason
+    SYS-&gt;&gt;R: Approve / Decline (in-ride card)
+    SYS--&gt;&gt;SYS: Approved → ledger entry · Declined → driver may record, flagged for admin review
+  end
+  D-&gt;&gt;D: Finish guard (accidental-press confirm)
+  SYS-&gt;&gt;R: Breakdown — every deviation explained: +৳40 toll (approved in-ride) · +৳25 detour +3 km
+  R-&gt;&gt;D: Cash + change-making noted
+  D-&gt;&gt;SYS: Cash-received confirmation (amount)
+  SYS-&gt;&gt;R: Receipt issued
+  D--&gt;SYS: Off-route / early-finish anomaly → flagged → trip-issue queue (F-25/F-10)
+  opt Post-ride privacy
+    R-&gt;&gt;SYS: Masked call / chat — expires 24h
+  end
+  R-&gt;&gt;R: Rate driver (+ tip)
+  D-&gt;&gt;D: Rate rider
+</pre>
+</section>
+<section class="card" id="f-06"><h3>F-06 · 🔨 Cancellation, no-show &amp; driver-no-show</h3><pre class="mermaid">
+flowchart TD
+  A["Ride matched"] --&gt; B{"Rider cancels"}
+  B --&gt;|"Inside window — countdown chip visible, exact fee in dialog"| C["Free / paid cancel per stage — driver notified"]
+  B --&gt;|"After window"| D["Cancel fee — owed via ledger (F-33 dues)"]
+  A --&gt; E{"Driver cancels"}
+  E --&gt; F["Rider NOTIFIED + choice: free-cancel OR auto-accept next match (toggle)"] --&gt; G["Re-dispatch — capped attempts → auto-cancel + both notified"]
+  E --&gt; H["Driver penalties — debit-on-offer REVERSED"]
+  F --&gt; I["Micro-survey: why cancelled — feeds driver ranking"]
+  A --&gt; J["Driver matched but NOT ARRIVING (G1)"] --&gt; K["Rider waiting timer — visible countdown — 'Driver not here' button"]
+  A --&gt; ST["Driver STALE mid-pickup (no movement / heartbeat &gt;120s)"] --&gt; ST1["Auto re-dispatch — driver excluded this ride"]
+  K --&gt; L{"Driver responds to status check?"}
+  L --&gt;|"Yes — genuine delay"| M["Ride continues"]
+  L --&gt;|"No — timeout"| N["Auto-cancel — FREE for rider — re-dispatch offered — driver record flagged (evidence: geofence + call attempt + minimum wait)"]
+  N --&gt; O["Rider dispute → F-10"]
+</pre>
+</section>
+<section class="card" id="f-07"><h3>F-07 · 🔨 Scheduled ride &amp; book-for-other</h3><pre class="mermaid">
+flowchart TD
+  A["Schedule ride — date/time window"] --&gt; B["Overlap check"] --&gt; C["Scheduled — quote shown"] --&gt; D["Reminders T-30min + T-5min"]
+  D --&gt; E["At window — AUTO-ENTERS dispatch (F-04), no rider re-confirm"]
+  E --&gt;|"No driver at window"| F["Fallback — expand radius / notify / free-cancel"]
+  C --&gt;|"Cancel scheduled"| G["Cancel — fee rules by time-to-window"]
+  C --&gt;|"Edit"| H["Re-validate overlap"]
+  I["Book-for-other"] --&gt; J["Rider consent + freshness check"] --&gt; K["Other's phone + name"] --&gt; L["Ride booked on their behalf"]
+  L --&gt; M["PIN delivered to PASSENGER via SMS"] --&gt; N["Passenger SOS parity"]
+  K --&gt;|"Passenger not on app"| O["SMS + call fallback — consent recorded"]
+</pre>
+</section>
+<section class="card" id="f-08"><h3>F-08 · 🔨 In-ride chat</h3><pre class="mermaid">
+flowchart LR
+  A["Ride active"] --&gt; B["Chat thread — offline indicator; queued messages show sent-when-online"]
+  B --&gt; C["WS messages — persisted per ride"]
+  B --&gt; D["System messages — driver arrived, OTP wrong"]
+  C --&gt; E["Report message → moderation queue"]
+  A --&gt; F["Ride ends — thread archived (24h masked-call/chat expiry)"]
+</pre>
+<pre class="mermaid">
+flowchart TD
+  A["Hold-to-confirm ~1.5s + confirm sheet (UI debounce — backend keeps no-cooldown)"] --&gt; B["Alert raised — alert ID shown"]
+  B --&gt; C["Status chain: raised → acknowledged → responding → resolved | false-alarm — VISIBLE in-app"]
+  B --&gt; D["Location shared — dispatch + trusted contacts (live link, 5-min TTL)"]
+  B --&gt; E["Call 999 button + optional audio recording (config)"]
+  B --&gt; F["Offline → queued, sent on reconnect — NEVER batched"]
+  C --&gt;|"Ack timeout"| G["Escalate — next tier / admin emergency path"]
+  N2["Note: 10s polling exists because push is best-effort on Android — polling is the reliable fallback, offers/SOS are never batched"]
+  N3["Auto-triggers (harsh-brake, prolonged no-motion) — P2 deferred (§15 D)"]
+  C --&gt;|"False alarm"| H["Closed + logged + user notified"]
+  I["Counterparty banner semantics: rider SOS → driver sees alert banner; driver SOS → rider sees 'driver triggered an emergency — you may exit safely'"]
+</pre>
+</section>
+<section class="card" id="f-10"><h3>F-10 · 🔨 Dispute / report issue / lost item</h3><pre class="mermaid">
+flowchart TD
+  A["Ride detail — 'Report an issue — available 24h after ride' (shown)"] --&gt; B["Lost item — masked direct call to driver BEFORE filing"]
+  A --&gt; C["Fare dispute / report issue — categorised + evidence (photos, GPS)"]
+  C --&gt; D["Status visible to BOTH parties"] --&gt; E["Admin SLA — 72h"] --&gt; F["Outcome + ledger adjustments"]
+  C --&gt; G["GPS anomaly auto-check — partial auto-credit before admin review"]
+</pre>
+</section>
+<section class="card" id="f-11"><h3>F-11 · 🔨 Shop order → delivery dispatch</h3><pre class="mermaid">
+sequenceDiagram
+  participant U as Customer
+  participant S as Shop (owner / staff)
+  participant SYS as Dispatch system
+  participant C as Courier (Delivery Man / Driver)
+  U-&gt;&gt;SYS: Place order — items + parcel class + COD total (offline → queued)
+  SYS-&gt;&gt;S: New order (shop closed → REJECTED server-side; response timeout → auto-reject + customer notified with reason)
+  opt out of stock after accept
+    S-&gt;&gt;SYS: Partial — confirm missing items with customer (split or cancel)
+  end
+  opt customer edits before pickup
+    U-&gt;&gt;SYS: Address change / cancel — state-dependent fee
+  end
+  Note over U,S: customer ↔ shop chat — P2 deferred (§15 D)
+  alt shop rejects — reason to customer
+    S-&gt;&gt;SYS: Reject (out of stock / closed early)
+    SYS-&gt;&gt;U: Order rejected + reason — nothing charged
+  else shop accepts
+    S-&gt;&gt;SYS: Accept + prep-time picker (10/20/30 min)
+    S-&gt;&gt;SYS: Confirm assignment → preparing (dispatch starts at ready_time − travel_time)
+    SYS-&gt;&gt;SYS: Rank couriers — nearest → rating → subscription active (delivery men + drivers with toggle)
+    loop sequential offers — 45s window × max 3 (platform_config)
+      SYS-&gt;&gt;C: Offer — shop, pickup, contact number, dropoff, ORDER VALUE, fee, parcel class
+      C-&gt;&gt;SYS: Accept (single-claim) / Reject / timeout
+    end
+    SYS-&gt;&gt;S: Courier assigned — notified
+    SYS-&gt;&gt;U: Courier assigned — notified + ORDER TRACKING VIEW
+    S-&gt;&gt;S: Preparing → ready
+    S-&gt;&gt;C: Handover — 4-digit pickup CODE (shop shows, courier enters)
+    C-&gt;&gt;SYS: "Picked up" — valid only with matching code (liability shifts to courier)
+    SYS-&gt;&gt;S: Picked-up notification
+    SYS-&gt;&gt;U: Picked-up notification
+    alt delivered
+      C-&gt;&gt;U: Deliver — collect items + fee (COD)
+      C-&gt;&gt;SYS: "Delivered" + AMOUNT COLLECTED (short-pay recorded → F-38)
+      SYS-&gt;&gt;S: Settlement credit — items (0% commission)
+      SYS-&gt;&gt;C: Earnings — fee (100%)
+      SYS-&gt;&gt;U: Receipt
+    else failed / refused
+      C-&gt;&gt;SYS: Delivery failed + reason (receiver absent → call → wait → attempted)
+      SYS-&gt;&gt;S: Item returned → retry or self-deliver (F-12)
+      SYS-&gt;&gt;U: Notified — retry or cancel
+    end
+  end
+  U-&gt;&gt;SYS: Customer cancel — pre-pickup only, state-dependent fee (post-pickup: refuse-at-door → F-14 return path)
+  U-&gt;&gt;SYS: Dispute (wrong/missing item) → F-38
+</pre>
+</section>
+<section class="card" id="f-12"><h3>F-12 · 🔨 Delivery exhaustion — retry, bump, self-deliver, cancel</h3><pre class="mermaid">
+flowchart TD
+  A["Offers exhausted"] --&gt; B0["First: retry-wait N min (config) → re-offer to refreshed courier pool"]
+  B0 --&gt; B{"Still nothing at 30-min timeout — shop chooses"}
+  B --&gt;|"Retry / bump fee (config)"| C["Re-offer at higher fee"]
+  B --&gt;|"Self-deliver"| D["Mark delivered-self — customer CONFIRMS receipt (dispute path F-38) — shop keeps the fee"]
+  B --&gt;|"Cancel"| E["Cancelled — customer notified WITH reason — no money moved (COD) — noted"]
+</pre>
+</section>
+<section class="card" id="f-13"><h3>F-13 · 🔨 Workshop — products AND services</h3><pre class="mermaid">
+flowchart TD
+  A["Workshop shop screen"] --&gt; B["Products → courier delivery (F-11)"]
+  A --&gt; C["Service request — service + vehicle details + requested window"]
+  C --&gt; D{"Shop response — 2h SLA auto-decline"}
+  D --&gt;|"Confirm window"| E["In progress — extra-repair upsell: mechanic logs → customer approves cost in-app → resumes"] --&gt; F["Done — customer confirms — COD at shop — settlement entry (service fee)"] --&gt; G["Rate workshop"]
+  D --&gt;|"Auto-declined"| H["Customer notified — pick another window or cancel"]
+  C --&gt; I["Reschedule / mutual no-show — re-request"]
+</pre>
+</section>
+<section class="card" id="f-14"><h3>F-14 · 🔨 P2P delivery</h3><pre class="mermaid">
+flowchart TD
+  A["Any logged-in role — Send a parcel"] --&gt; B["Prohibited-items declaration checkbox"]
+  B --&gt; B2["Parcel class: Small ≤5 kg (base tier) / Large-heavy or Fragile (higher tier) — stored on the request, shown to the courier"]
+  B --&gt; C["Pickup + dropoff + item note + DECLARED VALUE (cap; liability = declared)"]
+  C --&gt; D["Receiver phone verification + payer choice: receiver-pays (default, cash on delivery) / sender-pays (cash at pickup)"]
+  D --&gt; D2["Non-app receiver gets the delivery CODE via SMS"]
+  D --&gt; E["Fee tier — fresh-read platform_config (launch: 80 within 3 km / 120 beyond)"]
+  E --&gt; F["Dispatch engine (F-11 offers)"]
+  F --&gt; G{"Delivered?"}
+  G --&gt;|"Yes — proof: photo + receiver OTP"| H["Entries + notifications"]
+  G --&gt;|"Receiver refuses fee / absent"| I["Return-to-originator — return fee applies — originator notified"]
+  G --&gt;|"Chain exhausted"| J["Originator notified — request cancelled"]
+</pre>
+</section>
+<section class="card" id="f-15"><h3>F-15 · 🔨 Delivery Man day</h3><pre class="mermaid">
+flowchart TD
+  A["Login as Delivery Man"] --&gt; B["Online gates: location permission ON (denied → forced offline + banner) · subscription active (expired → read-only inbox, no accept)"]
+  B --&gt; C["Dispatched-offers inbox — one offer at a time (mid-delivery ride offers EXCLUDED — one active job)"]
+  C --&gt; D{"Response — 45s window"}
+  D --&gt;|"Accept"| E["Pickup code entry → picked up → attempted-delivery state if receiver absent (call → wait → return/second attempt) → delivery PROOF (photo or receiver OTP) → delivered + amount-collected entry"] --&gt; F["Earnings — fee × 100%"]
+  E --&gt; C
+  F --&gt; FR["Delivery rating — feeds courier dispatch ranking"]
+  D --&gt;|"Reject / timeout"| C
+  F --&gt; G["Subscription ৳100/month — see F-35"]
+  X["Driver — Deliveries toggle ON"] --&gt; C
+  X --&gt;|"Carrying a rider"| Y["Deliveries auto-OFF while on-trip"]
+</pre>
+</section>
+<section class="card" id="f-16"><h3>F-16 · 🔨 Shop Owner / Staff day</h3><pre class="mermaid">
+flowchart TD
+  A["Login as Shop OWNER"] --&gt; B["Full dashboard — orders by state"]
+  B --&gt; C["New order — accept (with PREP-TIME PICKER 10/20/30) / reject with reason — 2-min timeout auto-rejects"]
+  C --&gt; D["Preparing → ready → handover code to courier (F-11)"]
+  B --&gt; E["Catalog — products CRUD, availability"]
+  B --&gt; F["Workshop requests inbox — 2h SLA (F-13)"]
+  B --&gt; G["Staff — invite by phone"]
+  B --&gt; H["Open/Closed toggle + business-hours auto-schedule"]
+  B --&gt; I["Busy mode — throttles new orders (accept one at a time)"]
+  B --&gt; J["Settlement — daily cutoff"]
+  A2["Login as STAFF"] --&gt; B2["ORDERS-ONLY dashboard — accept/prepare/ready/handoff — banner: Acting as staff · Shop name"]
+  B2 -.-&gt;|"NO access: catalog, payouts, staff, settlement"| B
+</pre>
+</section>
+<section class="card" id="f-17"><h3>F-17 · 🔨 Fleet Owner — onboarding → dashboard</h3><pre class="mermaid">
+flowchart TD
+  A["Register as Fleet Owner"] --&gt; B["Business + fleet docs → admin verifies"] --&gt; C["Fleet dashboard"]
+  C --&gt; D["Add vehicles"] --&gt; E["Invite drivers by phone"]
+  E --&gt; F{"Driver has account?"}
+  F --&gt;|"Existing — WITH driver consent"| G["Role expanded — no second account"]
+  F --&gt;|"Already in another fleet"| G2["REJECTED — single-fleet rule"]
+  F --&gt;|"New"| H["Driver onboarding — docs → platform verifies"]
+  G --&gt; I["Assign vehicle ↔ driver — unassign returns vehicle to pool"]
+  H --&gt; I
+  C --&gt; J["Rental bids — submit/track"]
+  C --&gt; K["Ambulance requests — accept"]
+  C --&gt; L["Fleet statement"]
+  C --&gt; M["Invite Dispatcher — no payouts (server-enforced)"]
+  I --&gt; N["Remove driver — settle dues → vehicle returns to pool"]
+  L --&gt; O["Payout split owner ↔ driver — config (§12)"]
+</pre>
+</section>
+<section class="card" id="f-18"><h3>F-18 · 🔨 Car rental — request → broadcast → bid → award → lifecycle</h3><pre class="mermaid">
+sequenceDiagram
+  participant U as Customer
+  participant SYS as Dispatch system
+  participant F as Fleet Owner / Dispatcher
+  U-&gt;&gt;SYS: Rental request — NOW/SCHEDULED, duration, car class, options
+  SYS-&gt;&gt;F: Broadcast to zone fleets (eligible type)
+  alt zero bids at close
+    SYS-&gt;&gt;U: No bids — relax class or cancel (customer notified, friendly copy)
+  else bids received
+    F-&gt;&gt;SYS: Sealed bid (withdrawable before close)
+    SYS-&gt;&gt;U: Bids ready (sealed until close)
+    U-&gt;&gt;SYS: Accept a bid
+    SYS-&gt;&gt;F: Awarded — 5-minute SLA
+    alt fleet acknowledges in SLA
+      F-&gt;&gt;SYS: Acknowledge → confirm
+      SYS-&gt;&gt;U: Confirmed — assignment tracking
+      F-&gt;&gt;U: Handover → rental period
+      U-&gt;&gt;F: Return — late/extension fees → damage/deposit dispute → settlement
+      U-&gt;&gt;SYS: Cancel post-award — fee per stage
+    else SLA expires
+      SYS-&gt;&gt;U: "Fleet didn't respond in time — confirm another bid or re-request"
+    end
+  end
+</pre>
+</section>
+<section class="card" id="f-19"><h3>F-19 · 🔨 Ambulance — emergency request</h3><pre class="mermaid">
+flowchart TD
+  A["Emergency request — location + need"] --&gt; B["999 national hotline shown IN PARALLEL at request time"]
+  B --&gt; C["Broadcast to certification + equipment-checked ambulance fleets"]
+  C --&gt; D{"Ack within 60s — immediate ack shows ETA"}
+  D --&gt;|"Accepted"| E["Assigned — LIVE vehicle location to requester — en route → on scene → hospital transport (multi-stop) → complete"]
+  D --&gt;|"60s silence"| F["Escalate — next fleet + requester notified of delay"]
+  E --&gt; G["Patient privacy — minimal info shared; hospital pre-notified"]
+  A --&gt; H["Requester cancel — before accept, no penalty"]
+</pre>
+<pre class="mermaid">
+flowchart TD
+  A["Driver — subscription screen"] --&gt; B["Plans VISIBLE = role-filtered (driver plans only)"]
+  B --&gt; C["launch_free shown as: Free launch access · GRANTED · expiry + renew terms"]
+  C --&gt; D{"Payments ON?"}
+  D --&gt;|"OFF at launch"| E["Comped/granted — offers active"]
+  D --&gt;|"ON later"| F["launch_free cutover: grace period → then checkout (PortPos)"]
+  F --&gt; G{"Callback — idempotent"}
+  G --&gt;|"Verified"| H["Active"]
+  G --&gt;|"Failed / abandoned checkout"| I["PENDING state — retry"]
+  E --&gt;|"Expiry T-3 days"| J["Offers PAUSED — banner — pay / get comp"]
+</pre>
+</section>
+<section class="card" id="f-21"><h3>F-21 · 🔨 Driver earnings, dues &amp; payouts — repay channels NAMED</h3><pre class="mermaid">
+flowchart TD
+  A["Earnings — rides + delivery legs (source-tagged)"] --&gt; B["Breakdown per ride/leg"]
+  A --&gt; C["Due amounts — commissions owed (debit-on-offer)"]
+  C --&gt; D{"Repay — NAMED CHANNELS: office cash / bKash agent / auto-deduct from earnings credit"}
+  D --&gt; E["Overdue &gt; threshold → reminders → DISPATCH HOLD"]
+  A --&gt; F["Commission statement — export CSV/PDF"]
+  A --&gt; G["Disputed earning → admin queue (F-10 path)"]
+</pre>
+</section>
+<section class="card" id="f-22"><h3>F-22 · 🔨 Driver vehicle management &amp; min-rate</h3><pre class="mermaid">
+flowchart TD
+  A["Vehicle management — my vehicles"] --&gt; B["Add / edit vehicle (type enum, docs)"]
+  B --&gt; C{"Docs expiring / expired?"}
+  C --&gt;|"Expiring T days"| D["Warning banner"]
+  C --&gt;|"Expired"| E["Offers BLOCKED — banner — re-submit docs"]
+  B --&gt; F["Vehicle-type change — request → admin queue (F-30) — approve/reject"]
+  A --&gt; G["Min-rate — bounded by platform floor"]
+</pre>
+</section>
+<section class="card" id="f-23"><h3>F-23 · 🔨 Driver performance, hotspots, promos, referral</h3><pre class="mermaid">
+flowchart TD
+  A["Performance stats — acceptance, completion, ratings"] --&gt; B["LOW RATING over N weeks → dispatch DE-PRIORITIZED (shown to driver)"]
+  A --&gt; C["Hotspot map — aggregated zone-level (opt-in view)"]
+  A --&gt; D["Driver promos — applicable campaigns"]
+  A --&gt; E["Referral — anti-fraud: device + bank + IP dedupe; reward REVERSED on refunded ride"]
+</pre>
+</section>
+<section class="card" id="f-24"><h3>F-24 · 🔨 Break mode, safety center, support</h3><pre class="mermaid">
+flowchart TD
+  A["Break mode — pauses BOTH ride and delivery offers"] --&gt; B["Auto-end after X hours (config)"] --&gt; C["Resume — presence restored"]
+  D["Safety center — emergency contacts (multiple)"] --&gt; E["SOS (F-09)"]
+  F["Support — FAQ + ticket with SLA + status"]
+</pre>
+</section>
+<section class="card" id="f-26"><h3>F-26 · 💤 Wallet top-up &amp; rider passes</h3><pre class="mermaid">
+flowchart TD
+  A["Wallet / passes entry"] --&gt; B["Rendered as DISABLED rows: Coming soon — cash accepted now"]
+  B --&gt; C["Pass usage (granted via admin/promo — no purchase rail at launch)"]
+  B --&gt;|"When payments ON"| D["PortPos checkout → callback verifies → wallet/pass credited"]
+</pre>
+</section>
+<section class="card" id="f-27"><h3>F-27 · 🔨 Apply promos</h3><pre class="mermaid">
+flowchart TD
+  A["Estimate — Apply promos"] --&gt; B["Vehicle-type + coords sent — SERVER validates"]
+  B --&gt; C{"Eligible?"}
+  C --&gt;|"Yes — pass-first precedence, then promo"| D["Applied — fare adjusted"]
+  C --&gt;|"No — reason NAMES the failing criterion (vehicle type / zone / time / expired)"| E["Shown to user"]
+</pre>
+</section>
+<section class="card" id="f-28"><h3>F-28 · 🔨 Customer referral — with anti-fraud</h3><pre class="mermaid">
+flowchart TD
+  A["Referral — my code"] --&gt; B["Share invite"] --&gt; C["Referred signup + first ride"]
+  C --&gt; D["Anti-fraud — device + bank + IP dedupe"] --&gt; E["Reward credited"]
+  E --&gt;|"Referred ride refunded"| F["Reward REVERSED"]
+</pre>
+</section>
+<section class="card" id="f-29"><h3>F-29 · 🔨 Notifications — hub spec</h3><pre class="mermaid">
+flowchart LR
+  A["Event sources — ride, delivery, shop order, subscription, promo, SOS"] --&gt; B["Hub — SOS/offer/match NEVER batched; others batched + deduped"]
+  B --&gt; C["Push (Expo, Bangla locale) + in-app list + read/read-all"]
+  B --&gt; D["Per-category mutes (promos OFF by default) — token revocation on logout/role switch"]
+  B --&gt; E["SMS fallback for NON-APP receivers (P2P delivery code, ambulance link)"]
+</pre>
+</section>
+<section class="card" id="f-30"><h3>F-30 · 🔨 Admin verification queues — CANONICAL admin side</h3><pre class="mermaid">
+flowchart TD
+  A["Verification dashboard — counts + SLA tracking"] --&gt; B["Driver documents"]
+  A --&gt; C["Shop licenses (+food cert)"]
+  A --&gt; D["Fleet business docs"]
+  A --&gt; E["Delivery-man NID/license"]
+  A --&gt; E2["Vehicle-type change requests"]
+  B --&gt; F{"Decision — approve / reject (STRUCTURED reason: code + field + example) / bulk ops / internal notes vs applicant-visible reason"}
+  C --&gt; F
+  D --&gt; F
+  E --&gt; F
+  E2 --&gt; F
+  F --&gt;|"Approve"| G["Active — applicant notified"]
+  F --&gt;|"Reject"| H["Reason in-app — re-submit"]
+  F --&gt; I["audit_logs — actor, entity, decision"]
+</pre>
+</section>
+<section class="card" id="f-31"><h3>F-31 · 🔨 Admin marketplace ops — ledger-consistent</h3><pre class="mermaid">
+flowchart TD
+  A["Marketplace order browser — read + force-cancel"] --&gt; A1["Force-cancel: reason CODE required + customer notified + ledger reversal (matches F-12)"]
+  C["Shop types — add/edit/deactivate (shoptypes.manage)"] --&gt; D["Good-morning updates with zero client change"]
+  E["Monitoring — pending verifications, active shops, legs today, couriers online — alert thresholds (couriers &lt; N)"]
+  F["audit log export"]
+</pre>
+</section>
+<section class="card" id="f-32"><h3>F-32 · 🔨 Admin fare &amp; platform config — launch DEFAULTS, all editable, nothing hardcoded</h3><pre class="mermaid">
+flowchart TD
+  A["Fare config — stages, zones, night multiplier, fuel engine"] --&gt; B["PATCH config — versioned + rollback + validation (no negatives, no zero-radius) — effect: next quote/order (in-flight work keeps its SNAPSHOT — R-A9)"]
+  C["Delivery economics — commission 0%, fee tiers 80/120, radius 3 km, subscription 100 — LAUNCH DEFAULTS"] --&gt; B
+  D["Subscription plans — create/edit/suspend/delete (role multi-select; delete blocked with active subscribers; mid-cycle edit grandfathered)"] --&gt; B
+  B --&gt; E["All values fresh-read platform_config at request time"]
+</pre>
+</section>
+<section class="card" id="f-33"><h3>F-33 · 🔨 COD collection &amp; remittance — the settlement core</h3><pre class="mermaid">
+flowchart TD
+  A["Courier collects COD — item value + fee in cash"] --&gt; B["Courier cash-liability entry: +items, −fee earned"]
+  B --&gt; C{"Remit — mobile banking / bKash agent / office cash drop"}
+  C --&gt; D["Platform reconciles vs order value"] --&gt; E{"Match?"}
+  E --&gt;|"Yes"| F["Shop settlement — items credited (0% commission)"]
+  E --&gt;|"Short / dispute"| G["Admin queue (F-10 style) — adjustment + audit_logs"]
+  B --&gt; H{"Overdue &gt; threshold?"}
+  H --&gt;|"Yes"| I["Reminders → DISPATCH HOLD → admin enforcement"]
+  H --&gt;|"No"| B
+</pre>
+</section>
+<section class="card" id="f-34"><h3>F-34 · 🔨 Invite acceptance — shop staff &amp; fleet dispatcher</h3><pre class="mermaid">
+flowchart TD
+  A["Owner invites by phone (F-16 / F-17)"] --&gt; B{"Invitee has an account?"}
+  B --&gt;|"Yes — WITH consent"| C["Accept invite — sub-role attached (no admin gate)"]
+  B --&gt;|"No"| D["Register via invite — phone + OTP (customer-grade)"] --&gt; C
+  C --&gt; E["Login as → scoped dashboard (staff: orders-only · dispatcher: no payouts)"]
+  F["Owner revokes / member leaves"] --&gt; G["Role detached — access ends immediately — dues settled first"]
+</pre>
+</section>
+<section class="card" id="f-35"><h3>F-35 · 🔨 Courier subscription — Delivery Man + driver-courier</h3><pre class="mermaid">
+flowchart TD
+  A["Delivery Man / driver-courier — subscription screen (role-filtered)"] --&gt; B{"Payments ON?"}
+  B --&gt;|"OFF — launch"| C["৳100 plan comped — dispatch-eligible — GRANT SOURCE shown"]
+  B --&gt;|"ON"| D["Checkout — PortPos webview"] --&gt; E{"Callback — idempotent"}
+  E --&gt;|"Verified"| F["Active — included in dispatch ranking"]
+  E --&gt;|"Failed / abandoned"| G["Pending — retry (not blocked while comped)"]
+  H["Expiry T-3 days"] --&gt; I["Grace period"] --&gt; J{"Renewed?"}
+  J --&gt;|"Yes"| F
+  J --&gt;|"Past grace"| K["EXCLUDED from courier ranking — renewal reminders"]
+</pre>
+</section>
+<section class="card" id="f-36"><h3>F-36 · 🔨 Account &amp; device management</h3><pre class="mermaid">
+flowchart TD
+  A["Settings — Account"] --&gt; B["Change phone — OTP to NEW number (roles stay with the internal ID)"]
+  A --&gt; C["Device sessions — list + revoke single / log out everywhere"]
+  A --&gt; D["Delete account — data purge per policy (dues/settlements must be zero)"]
+  A --&gt; E["Data export"]
+</pre>
+</section>
+<section class="card" id="f-38"><h3>F-38 · 🔨 Cash receipt &amp; dispute</h3><pre class="mermaid">
+flowchart TD
+  A["COD handover — cash exchanged"] --&gt; B["Handler enters amount received"]
+  B --&gt; C{"Amount matches?"}
+  C --&gt;|"Yes"| D["Closed — receipt to payer"]
+  C --&gt;|"Short"| E["Shortfall recorded (who was short, amount) → visible in settlement (F-33) — prevents 'never paid' disputes"]
+  C --&gt;|"Over"| F["Change recorded"]
+  A --&gt; G{"Payer disputes later"} --&gt; H["Admin queue (F-10 pattern) — evidence: entries + timestamps"]
+</pre>
+<pre class="mermaid">
+stateDiagram-v2
+  [*] --&gt; Placed: customer checkout (COD)
+  Placed --&gt; Accepted: shop accepts (2-min timeout → auto-reject)
+  Placed --&gt; Rejected: shop rejects with reason
+  Placed --&gt; CancelledByCustomer: pre-pickup cancel (state-dependent fee)
+  Accepted --&gt; Preparing: prep-time set
+  Preparing --&gt; Dispatching: at ready_time − travel_time
+  Dispatching --&gt; CourierAssigned: accept (single-claim)
+  Dispatching --&gt; Exhausted: chain done
+  Exhausted --&gt; SelfDelivery: shop choice (customer confirms)
+  Exhausted --&gt; CancelledByShop: reversal + reason
+  CourierAssigned --&gt; ReadyForPickup
+  ReadyForPickup --&gt; PickedUp: handover CODE
+  PickedUp --&gt; Delivered: COD collected (amount entry)
+  PickedUp --&gt; Failed: receiver absent / refuses
+  Failed --&gt; Returned: return to shop
+  Delivered --&gt; [*]
+  Returned --&gt; [*]
+  CancelledByCustomer --&gt; [*]
+  CancelledByShop --&gt; [*]
+  SelfDelivery --&gt; [*]
+</pre>
+</section>
+</main>
+</div>
+</body>
+</html>
