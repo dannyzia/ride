@@ -152,6 +152,17 @@ const ALLOWED_KEYS = new Set([
   'expected_billed_minutes_cng',
   'expected_billed_minutes_car',
 
+  // Launch surfaces (Amendment 3 D4) — delivery economics. Server-computed
+  // courier earnings; commission is a percent, fee is integer paisa.
+  // §12 (OWNER-DECISION, refined): launch defaults are SEEDED, never hardcoded
+  // — these are the admin-editable knobs they are edited through.
+  'delivery_commission_percent',
+  'delivery_fee_within_3km_bdt',
+  'delivery_fee_beyond_3km_bdt',
+  'delivery_fee_tier_radius_km',
+  'delivery_man_subscription_bdt_monthly',
+  'shop_commission_percent',
+
   // Fare engine — joma recovery (taka-scale)
   'joma_bike_eco_monthly_bdt',
   'joma_bike_std_monthly_bdt',
@@ -250,6 +261,23 @@ function validateKeyValue(key: string, value: string): string | null {
   // Reference pool size: positive integer
   if (key === 'pickup_reference_pool_size') {
     if (!Number.isInteger(v) || v < 1) return `${key} must be a positive integer`;
+  }
+
+  // Delivery economics (Amendment 3 D4)
+  if (key === 'delivery_commission_percent') {
+    if (v < 0 || v > 100) return `${key} must be between 0 and 100`;
+  }
+  if (key === 'delivery_fee_within_3km_bdt' || key === 'delivery_fee_beyond_3km_bdt') {
+    if (!Number.isInteger(v) || v < 0) return `${key} must be a non-negative integer (paisa)`;
+  }
+  if (key === 'delivery_man_subscription_bdt_monthly') {
+    if (!Number.isInteger(v) || v < 0) return `${key} must be a non-negative integer (paisa)`;
+  }
+  if (key === 'delivery_fee_tier_radius_km') {
+    if (!(v > 0)) return `${key} must be > 0 (km)`;
+  }
+  if (key === 'shop_commission_percent') {
+    if (v < 0 || v > 100) return `${key} must be between 0 and 100`;
   }
 
   // Reference quantile: 0–1

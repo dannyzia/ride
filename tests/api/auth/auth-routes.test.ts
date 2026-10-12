@@ -44,6 +44,13 @@ jest.mock("@/lib/supabaseServer", () => ({
     from: jest.fn(),
   },
 }));
+// check-user calls heldRoles (launchRoles) once the account exists; mock it
+// so this suite's db.select assertions stay single-purpose.
+jest.mock("@/lib/launchRoles", () => ({
+  heldRoles: jest.fn(async () => [
+    { role: "driver", status: "active", reason: null, is_primary: true },
+  ]),
+}));
 
 import { sendOtp as dpSendOtp, verifyOtp as dpVerifyOtp } from "@/lib/dprelay";
 import {
@@ -221,7 +228,7 @@ describe("POST /api/auth/check-user", () => {
     });
     const res = await checkUser(jsonRequest({ phone: "+8801712345678" }));
     expect(res.status).toBe(200);
-    expect(await getJson(res)).toEqual({ exists: false, role: null });
+    expect(await getJson(res)).toEqual({ exists: false, role: null, roles: [] });
   });
 
   test("exists=true with the user's role", async () => {
@@ -237,7 +244,11 @@ describe("POST /api/auth/check-user", () => {
       return chain;
     });
     const res = await checkUser(jsonRequest({ phone: "+8801712345678" }));
-    expect(await getJson(res)).toEqual({ exists: true, role: "driver" });
+    expect(await getJson(res)).toEqual({
+      exists: true,
+      role: "driver",
+      roles: [{ role: "driver", status: "active", reason: null, is_primary: true }],
+    });
   });
 });
 

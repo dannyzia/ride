@@ -51,6 +51,7 @@ export type AdminPermission =
   | 'finance.write' // refunds, payment recovery, tax reports — owner, admin
   | 'support.write' // tickets, lost-items, broadcast, events — owner, admin, ops_manager
   | 'staff.manage' // user management, RBAC assignment — owner, admin
+  | 'shoptypes.manage' // shop category lookup CRUD (add/edit/deactivate) — owner, admin
   | 'marketplace.write'; // shops, rental, delivery, ambulance admin CRUD — owner, admin
 
 const PERMISSION_ROLES: Record<AdminPermission, AdminRole[]> = {
@@ -64,6 +65,7 @@ const PERMISSION_ROLES: Record<AdminPermission, AdminRole[]> = {
   'finance.write': ['owner', 'admin'],
   'support.write': ['owner', 'admin', 'ops_manager'],
   'staff.manage': ['owner', 'admin'],
+  'shoptypes.manage': ['owner', 'admin'],
   'marketplace.write': ['owner', 'admin'],
 };
 

@@ -50,6 +50,8 @@ const EMERGENCY_CONTACTS_ROUTE = "/(main)/(customer)/(tabs)/settings/emergency-c
 // to the hub, so screens that only live there (loyalty, ride pass, top-up,
 // linked accounts, data controls) were unreachable in-app and QA had to deep-link.
 const SETTINGS_HUB_ROUTE = "/(main)/(customer)/(tabs)/settings";
+// S2 §2 (OWNER-DECISION #8/#9): add another role to this EXISTING account (R9).
+const ADD_ROLE_ROUTE = "/(main)/(customer)/add-role";
 const FAQ_ROUTE = "/(main)/(customer)/(tabs)/settings/faq";
 const CONTACT_SUPPORT_ROUTE = "/(main)/(customer)/(tabs)/settings/contact-support";
 const REPORT_ISSUE_ROUTE = "/(main)/(customer)/report-issue";
@@ -281,6 +283,12 @@ const Profile = () => {
               label={t('settings.title')}
               onPress={() => router.push(SETTINGS_HUB_ROUTE)}
               testID="customer.profile.push-settings-hub"
+            />
+            <SettingsRow
+              icon="person-add-outline"
+              label={t('auth.add_role.title')}
+              onPress={() => router.push(ADD_ROLE_ROUTE)}
+              testID="customer.profile.push-add-role"
             />
             <SettingsRow
               icon="sunny-outline"

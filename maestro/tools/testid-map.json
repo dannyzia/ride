@@ -1,5 +1,5 @@
 {
-  "total": 1101,
+  "total": 1137,
   "screens": {
     "(auth)/_layout.tsx": [
       {
@@ -103,6 +103,16 @@
         "line": 297
       }
     ],
+    "(auth)/login-as.tsx": [
+      {
+        "id": "login-as.push-verification-status",
+        "line": 156
+      },
+      {
+        "id": "login-as.resubmit",
+        "line": 177
+      }
+    ],
     "(auth)/login.tsx": [
       {
         "id": "login.set-phone",
@@ -138,55 +148,129 @@
     "(auth)/otp-verify.tsx": [
       {
         "id": "otp-verify.set-otp",
-        "line": 137
+        "line": 156
       },
       {
         "id": "otp-verify.handle-verify-otp",
-        "line": 153
+        "line": 172
       },
       {
         "id": "otp-verify.send-otp",
-        "line": 159
+        "line": 178
       }
     ],
     "(auth)/phone-entry.tsx": [
       {
         "id": "phone-entry.set-phone",
-        "line": 169
+        "line": 170
       },
       {
         "id": "phone-entry.set-role",
-        "line": 183
+        "line": 188
       },
       {
         "id": "phone-entry.set-role-2",
-        "line": 197
+        "line": 205
+      },
+      {
+        "id": "phone-entry.set-role-3",
+        "line": 222
+      },
+      {
+        "id": "phone-entry.set-role-4",
+        "line": 239
+      },
+      {
+        "id": "phone-entry.set-role-5",
+        "line": 256
       },
       {
         "id": "phone-entry.handle-login",
-        "line": 218
+        "line": 277
       },
       {
         "id": "phone-entry.handle-register",
-        "line": 224
+        "line": 283
+      }
+    ],
+    "(auth)/register-delivery-man.tsx": [
+      {
+        "id": "register-delivery-man.upload-nid",
+        "line": 132
+      },
+      {
+        "id": "register-delivery-man.upload-license",
+        "line": 139
+      },
+      {
+        "id": "register-delivery-man.set-vehicle-note",
+        "line": 150
+      },
+      {
+        "id": "register-delivery-man.submit",
+        "line": 166
+      }
+    ],
+    "(auth)/register-fleet-owner.tsx": [
+      {
+        "id": "register-fleet-owner.set-fleet-name",
+        "line": 132
+      },
+      {
+        "id": "register-fleet-owner.set-business-name",
+        "line": 141
+      },
+      {
+        "id": "register-fleet-owner.set-license-number",
+        "line": 150
+      },
+      {
+        "id": "register-fleet-owner.upload-trade-license",
+        "line": 157
+      },
+      {
+        "id": "register-fleet-owner.submit",
+        "line": 174
+      }
+    ],
+    "(auth)/register-shop-owner.tsx": [
+      {
+        "id": "register-shop-owner.set-shop-name",
+        "line": 179
+      },
+      {
+        "id": "register-shop-owner.set-address",
+        "line": 188
+      },
+      {
+        "id": "register-shop-owner.upload-trade-license",
+        "line": 214
+      },
+      {
+        "id": "register-shop-owner.upload-food-cert",
+        "line": 222
+      },
+      {
+        "id": "register-shop-owner.submit",
+        "line": 240
       }
     ],
     "(auth)/register.tsx": [
       {
         "id": "register.set-name",
-        "line": 120
+        "line": 138
       },
       {
         "id": "register.set-password",
-        "line": 136
+        "line": 154
       },
       {
         "id": "register.set-confirm-password",
-        "line": 152
+        "line": 170
       },
       {
         "id": "register.handle-register",
-        "line": 168
+        "line": 186
       }
     ],
     "(auth)/walkthrough-1.tsx": [
@@ -870,59 +954,63 @@
     "(main)/(customer)/(tabs)/profile/index.tsx": [
       {
         "id": "customer.profile.set-theme",
-        "line": 202
+        "line": 204
       },
       {
         "id": "customer.profile.el-1",
-        "line": 223
+        "line": 225
       },
       {
         "id": "customer.profile.push-edit-profile",
-        "line": 253
+        "line": 255
       },
       {
         "id": "customer.profile.push-change-password",
-        "line": 270
+        "line": 272
       },
       {
         "id": "customer.profile.push-settings-hub",
-        "line": 283
+        "line": 285
+      },
+      {
+        "id": "customer.profile.push-add-role",
+        "line": 291
       },
       {
         "id": "customer.profile.push-appearance",
-        "line": 289
+        "line": 297
       },
       {
         "id": "customer.profile.push-notifications",
-        "line": 295
+        "line": 303
       },
       {
         "id": "customer.profile.push-saved-addresses",
-        "line": 301
+        "line": 309
       },
       {
         "id": "customer.profile.push-emergency-contacts",
-        "line": 307
+        "line": 315
       },
       {
         "id": "customer.profile.push-faq",
-        "line": 316
+        "line": 324
       },
       {
         "id": "customer.profile.push-contact-support",
-        "line": 321
+        "line": 329
       },
       {
         "id": "customer.profile.push-report-issue",
-        "line": 328
+        "line": 336
       },
       {
         "id": "customer.profile.confirm-sign-out",
-        "line": 339
+        "line": 347
       },
       {
         "id": "customer.profile.el-2",
-        "line": 347
+        "line": 355
       }
     ],
     "(main)/(customer)/(tabs)/referral/index.tsx": [
@@ -1541,6 +1629,12 @@
         "line": 328
       }
     ],
+    "(main)/(customer)/add-role/index.tsx": [
+      {
+        "id": "customer.add-role.push-push",
+        "line": 148
+      }
+    ],
     "(main)/(customer)/add-tip/index.tsx": [
       {
         "id": "customer.add-tip.el-1",
@@ -2037,6 +2131,16 @@
       {
         "id": "customer.user-arrived.replace-home",
         "line": 56
+      }
+    ],
+    "(main)/(customer)/verification-status.tsx": [
+      {
+        "id": "customer.verification-status.resubmit",
+        "line": 169
+      },
+      {
+        "id": "customer.verification-status.el-1",
+        "line": 183
       }
     ],
     "(main)/(fleet)/(tabs)/dashboard/index.tsx": [
@@ -2912,175 +3016,175 @@
     "(main)/(rider)/onboarding/index.tsx": [
       {
         "id": "rider.onboarding.on-close",
-        "line": 204
+        "line": 206
       },
       {
         "id": "rider.onboarding.on-close-2",
-        "line": 236
+        "line": 238
       },
       {
         "id": "rider.onboarding.on-select",
-        "line": 262
+        "line": 264
       },
       {
         "id": "rider.onboarding.on-close-3",
-        "line": 311
+        "line": 315
       },
       {
         "id": "rider.onboarding.on-close-4",
-        "line": 326
+        "line": 330
       },
       {
         "id": "rider.onboarding.on-select-2",
-        "line": 357
+        "line": 361
       },
       {
         "id": "rider.onboarding.on-dismiss",
-        "line": 493
+        "line": 497
       },
       {
         "id": "rider.onboarding.on-dismiss-2",
-        "line": 534
+        "line": 538
       },
       {
         "id": "rider.onboarding.on-back",
-        "line": 570
-      },
-      {
-        "id": "rider.onboarding.on-retry",
         "line": 574
       },
       {
+        "id": "rider.onboarding.on-retry",
+        "line": 578
+      },
+      {
         "id": "rider.onboarding.go-back",
-        "line": 1068
+        "line": 1072
       },
       {
         "id": "rider.onboarding.set-theme",
-        "line": 1087
+        "line": 1091
       },
       {
         "id": "rider.onboarding.set-name",
-        "line": 1120
+        "line": 1124
       },
       {
         "id": "rider.onboarding.pick-profile-photo",
-        "line": 1128
+        "line": 1132
       },
       {
         "id": "rider.onboarding.pick-profile-photo-2",
-        "line": 1135
+        "line": 1139
       },
       {
         "id": "rider.onboarding.set-body-type-modal-visible",
-        "line": 1152
+        "line": 1156
       },
       {
         "id": "rider.onboarding.set-brand-text",
-        "line": 1165
+        "line": 1169
       },
       {
         "id": "rider.onboarding.set-brand",
-        "line": 1166
+        "line": 1170
       },
       {
         "id": "rider.onboarding.set-picker-modal",
-        "line": 1171
+        "line": 1175
       },
       {
         "id": "rider.onboarding.set-model-text",
-        "line": 1181
+        "line": 1185
       },
       {
         "id": "rider.onboarding.set-model",
-        "line": 1183
+        "line": 1187
       },
       {
         "id": "rider.onboarding.set-picker-modal-2",
-        "line": 1189
+        "line": 1193
       },
       {
         "id": "rider.onboarding.set-picker-modal-3",
-        "line": 1203
+        "line": 1207
       },
       {
         "id": "rider.onboarding.set-engine-cc",
-        "line": 1228
+        "line": 1232
       },
       {
         "id": "rider.onboarding.set-seats",
-        "line": 1248
+        "line": 1252
       },
       {
         "id": "rider.onboarding.set-plate",
-        "line": 1269
+        "line": 1273
       },
       {
         "id": "rider.onboarding.skip-vehicle-step",
-        "line": 1302
+        "line": 1306
       },
       {
         "id": "rider.onboarding.upload-reg-scan-front",
-        "line": 1326
-      },
-      {
-        "id": "rider.onboarding.upload-reg-scan-back",
-        "line": 1327
-      },
-      {
-        "id": "rider.onboarding.upload-brta-certificate",
-        "line": 1328
-      },
-      {
-        "id": "rider.onboarding.upload-vehicle-photo-front",
-        "line": 1329
-      },
-      {
-        "id": "rider.onboarding.upload-vehicle-photo-left",
         "line": 1330
       },
       {
-        "id": "rider.onboarding.upload-vehicle-photo-back",
+        "id": "rider.onboarding.upload-reg-scan-back",
         "line": 1331
       },
       {
-        "id": "rider.onboarding.upload-vehicle-photo-right",
+        "id": "rider.onboarding.upload-brta-certificate",
         "line": 1332
       },
       {
+        "id": "rider.onboarding.upload-vehicle-photo-front",
+        "line": 1333
+      },
+      {
+        "id": "rider.onboarding.upload-vehicle-photo-left",
+        "line": 1334
+      },
+      {
+        "id": "rider.onboarding.upload-vehicle-photo-back",
+        "line": 1335
+      },
+      {
+        "id": "rider.onboarding.upload-vehicle-photo-right",
+        "line": 1336
+      },
+      {
         "id": "rider.onboarding.upload-nid-front",
-        "line": 1342
+        "line": 1346
       },
       {
         "id": "rider.onboarding.upload-nid-back",
-        "line": 1343
+        "line": 1347
       },
       {
         "id": "rider.onboarding.upload-license-front",
-        "line": 1344
+        "line": 1348
       },
       {
         "id": "rider.onboarding.upload-license-back",
-        "line": 1345
+        "line": 1349
       },
       {
         "id": "rider.onboarding.set-legacy-answer",
-        "line": 1357
+        "line": 1361
       },
       {
         "id": "rider.onboarding.set-bkash",
-        "line": 1387
+        "line": 1391
       },
       {
         "id": "rider.onboarding.set-consent",
-        "line": 1420
+        "line": 1424
       },
       {
         "id": "rider.onboarding.go-back-2",
-        "line": 1435
+        "line": 1439
       },
       {
         "id": "rider.onboarding.go-next",
-        "line": 1445
+        "line": 1449
       }
     ],
     "(main)/(rider)/packages.tsx": [
@@ -4769,6 +4873,60 @@
       {
         "id": "admin.vehicle-models.handle-save",
         "line": 582
+      }
+    ],
+    "admin/verification.tsx": [
+      {
+        "id": "admin.verification.kind-tabs",
+        "line": 144
+      },
+      {
+        "id": "admin.verification.set-kind",
+        "line": 156
+      },
+      {
+        "id": "admin.verification.row-item",
+        "line": 172
+      },
+      {
+        "id": "admin.verification.el-1",
+        "line": 195
+      },
+      {
+        "id": "admin.verification.set-reject-reason",
+        "line": 224
+      },
+      {
+        "id": "admin.verification.set-reject-code",
+        "line": 236
+      },
+      {
+        "id": "admin.verification.set-reject-field",
+        "line": 249
+      },
+      {
+        "id": "admin.verification.set-reject-example",
+        "line": 257
+      },
+      {
+        "id": "admin.verification.set-reject-note",
+        "line": 264
+      },
+      {
+        "id": "admin.verification.submit-reject",
+        "line": 270
+      },
+      {
+        "id": "admin.verification.reset-reject-form",
+        "line": 279
+      },
+      {
+        "id": "admin.verification.handle-approve",
+        "line": 291
+      },
+      {
+        "id": "admin.verification.set-rejecting-id",
+        "line": 300
       }
     ],
     "admin/zone-pnl.tsx": [

@@ -251,9 +251,23 @@ function processFile(absPath, rel, globalSeen) {
 
         if (existing) {
           if (existingVal !== id) {
-            const start = existing.initializer.getStart(sf) + 1; // inside quotes
-            const len = existing.initializer.getWidth() - 2;
-            edits.push({ pos: start, len, text: id });
+            if (existingVal !== null) {
+              // Quoted string literal: swap the value in place, inside the quotes.
+              const start = existing.initializer.getStart(sf) + 1; // inside quotes
+              const len = existing.initializer.getWidth() - 2;
+              edits.push({ pos: start, len, text: id });
+            } else {
+              // B-1 fixed-point fix: the value is NOT a string literal
+              // (template literal or identifier expression). Splicing inside
+              // the braces emits `{my.id}` — an unquoted JS expression that
+              // re-parses as "no testID", so every subsequent run re-assigns
+              // (run-2 filesTouched never reaches 0) and tsc fails on the
+              // undefined names. Replace the WHOLE attribute with a static
+              // string attribute so the output is re-parseable input.
+              const start = existing.getStart(sf);
+              const len = existing.getEnd() - start;
+              edits.push({ pos: start, len, text: `testID="${id}"` });
+            }
           }
         } else {
           const insertPos = node.end - 1;

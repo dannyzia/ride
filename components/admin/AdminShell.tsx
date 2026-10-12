@@ -58,6 +58,16 @@ const NAV: NavItem[] = [
     roles: OWNER_ADMIN_OPS, // verification.write
   },
   {
+    // S2 §7: shop / fleet / delivery-man verification queue. The list is
+    // admin.read (all roles); approve/reject are marketplace.write — the
+    // server enforces that, so ops_manager and moderator render read-only.
+    route: "/admin/verification",
+    label: "Verification",
+    icon: "account-check",
+    group: "Operations",
+    roles: OWNER_ADMIN_OPS, // admin.read
+  },
+  {
     route: "/admin/monitoring",
     label: "Monitoring",
     icon: "chart-line",

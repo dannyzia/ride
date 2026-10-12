@@ -5,6 +5,7 @@ import { users } from "@/src/db/schema";
 import { eq } from "drizzle-orm";
 import { parseJsonBody } from "@/lib/parseBody";
 import { logger } from "@/lib/logger";
+import { heldRoles } from "@/lib/launchRoles";
 
 const checkUserSchema = z
   .object({
@@ -26,10 +27,15 @@ export async function POST(request: Request) {
       .limit(1);
 
     if (user.length === 0) {
-      return Response.json({ exists: false, role: null }, { status: 200 });
+      return Response.json({ exists: false, role: null, roles: [] }, { status: 200 });
     }
 
-    return Response.json({ exists: true, role: user[0].role }, { status: 200 });
+    // OWNER-DECISION #9: the post-OTP "Login as [Role]" chooser needs the full
+    // set of roles the account holds. Only ROLE LABELS + verification state
+    // cross this public boundary — no ids, names or documents.
+    const roles = await heldRoles(user[0].id);
+
+    return Response.json({ exists: true, role: user[0].role, roles }, { status: 200 });
   } catch (error) {
     logger.error("[check-user] error", error);
     return Response.json(

@@ -1,6 +1,8 @@
 import { db } from '@/src/db';
+
 import { platformConfig } from '@/src/db/schema';
 import { inArray, eq } from 'drizzle-orm';
+import { logger } from './logger';
 
 /**
  * Plan 05 feature-gate keys in platform_config.
@@ -89,13 +91,43 @@ export async function getPlan05Int<K extends Plan05ConfigKey>(
 }
 
 /**
- * Convenience: parse a boolean config key ("true"/"false").
+ * Convenience: parse a boolean config key (\"true\"/\"false\").
  */
 export async function getPlan05Bool<K extends Plan05ConfigKey>(
   key: K,
 ): Promise<boolean> {
   const raw = await getPlan05Value(key);
   return raw.toLowerCase() === 'true';
+}
+
+/**
+ * Read an admin-managed system_config JSON blob (e.g. sos_contacts) by key,
+ * returning the parsed value or the fallback if the row is missing/unparseable.
+ * Unlike platform_config, system_config is NOT a Plan 05 feature-gate table,
+ * so this is deliberately generic (any key → any JSON) rather than typed to
+ * PLAN05_CONFIG_KEYS.
+ */
+export async function getSystemConfig<T>(keys: string[]): Promise<Record<string, T>> {
+  const rows = await db
+    .select({ key: platformConfig.key, value: platformConfig.value })
+    .from(platformConfig)
+    .where(inArray(platformConfig.key, keys));
+
+  const map = new Map(rows.map((r) => [r.key, r.value]));
+  const result = {} as Record<string, T>;
+  for (const key of keys) {
+    const raw = map.get(key);
+    if (!raw) {
+      result[key] = undefined as unknown as T;
+      continue;
+    }
+    try {
+      result[key] = JSON.parse(raw) as T;
+    } catch {
+      result[key] = undefined as unknown as T;
+    }
+  }
+  return result;
 }
 
 // ══════════════════════════════════════════════════════════════════════
@@ -150,6 +182,21 @@ export async function getConfigValue(
 export const MARKETPLACE_CONFIG_KEYS = [
   // Shop→delivery bridge bidding window; default 600 (10 minutes).
   'food_delivery_bidding_window_seconds',
+  // Launch surfaces (Amendment 3 D4) — delivery economics. Percentage the
+  // platform takes from each delivered leg (0–100). Server computes courier
+  // earnings from these; never the client.
+  'delivery_commission_percent',
+  // §12 (OWNER-DECISION 2026-10-12, refined): launch economics are SEEDS,
+  // never code constants — every consumer fresh-reads these keys from
+  // platform_config at request time, so an admin edit takes effect with no
+  // deploy. Values live in scripts/seed-platform-config.js only.
+  'delivery_fee_within_3km_bdt',   // customer-paid fee, integer paisa, within the tier radius
+  'delivery_fee_beyond_3km_bdt',   // customer-paid fee, integer paisa, beyond the tier radius
+  'delivery_fee_tier_radius_km',   // distance (km) separating the two fee tiers
+  'delivery_man_subscription_bdt_monthly', // delivery-man subscription, integer paisa/month
+  'shop_commission_percent',       // marketplace commission on shop revenue (a percentage; zero at launch)
+  // delivery_fee_default_bdt was DROPPED (§12): superseded by the distance
+  // tier above. It had no consumer on disk; the row it seeded is inert.
 ] as const;
 
 /**
@@ -163,3 +210,30 @@ export async function getConfigInt(
   const n = parseInt(raw, 10);
   return Number.isFinite(n) ? n : fallback;
 }
+
+/**
+ * Read a platform_config integer that MUST exist in the DB — for the §12
+ * economics keys, whose values are seeded by scripts/seed-platform-config.js
+ * and are never duplicated as a code literal (the stage-order
+ * \"seeds, not constants\" rule).
+ *
+ * A missing/unreadable key is a deployment defect, not a silent zero: it logs
+ * loudly and throws so the request fails instead of pricing a delivery off an
+ * invented number.
+ */
+export async function requireConfigInt(key: string): Promise<number> {
+  const rows = await db
+    .select({ value: platformConfig.value })
+    .from(platformConfig)
+    .where(eq(platformConfig.key, key))
+    .limit(1);
+
+  const raw = rows[0]?.value;
+  const n = raw === undefined ? NaN : parseInt(raw, 10);
+  if (raw === undefined || !Number.isFinite(n)) {
+    logger.error('[platformConfig] required key missing or not numeric', { key, value: raw ?? null });
+    throw Object.assign(new Error(`Missing platform_config key: ${key}`), { status: 500 });
+  }
+  return n;
+}
+

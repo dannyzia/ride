@@ -15,7 +15,8 @@ export default function PhoneEntryScreen() {
   const { t } = useTranslation();
 
   const [phone, setPhone] = useState("");
-  const [role, setRole] = useState<"rider" | "driver">("rider");
+  // §0 #8: the register screen shows ALL five public roles as visible buttons.
+  const [role, setRole] = useState<"rider" | "driver" | "shop_owner" | "fleet_owner" | "delivery_man">("rider");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -169,37 +170,95 @@ export default function PhoneEntryScreen() {
          testID="phone-entry.set-phone"/>
       </View>
 
-      {/* Role Selector - Pill Shape */}
+      {/* Role Selector — §0 #8: every public signup role is a visible button. */}
       <View
-        className="flex-row mb-6 rounded-full p-1"
-        style={{ backgroundColor: surfaceBg, borderWidth: 1, borderColor: borderColor }}
-      >
+        className="flex-row flex-wrap gap-2 mb-6"
+      >        {/* §0 #8: every public signup role is a visible button. One element
+            per pill (not a .map) so each keeps its own derivable testID —
+            driver flows select phone-entry.set-role-2. */}
         <TouchableOpacity
-          className="flex-1 py-3 rounded-full items-center justify-center"
+          key="rider"
+          className="py-3 px-4 rounded-full items-center justify-center"
           style={{
-            backgroundColor: role === "rider" ? colors.primary : "transparent",
+            backgroundColor: role === "rider" ? colors.primary : surfaceBg,
+            borderWidth: 1,
+            borderColor: role === "rider" ? colors.primary : borderColor,
           }}
           onPress={() => setRole("rider")}
          testID="phone-entry.set-role">
           <Text
-            className="text-[14px] font-JakartaBold font-bold"
+            className="text-[13px] font-JakartaBold font-bold"
             style={{ color: role === "rider" ? colors.white : textSecondary }}
           >
-            Rider
+            {t("auth.roles.rider")}
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
-          className="flex-1 py-3 rounded-full items-center justify-center"
+          key="driver"
+          className="py-3 px-4 rounded-full items-center justify-center"
           style={{
-            backgroundColor: role === "driver" ? colors.primary : "transparent",
+            backgroundColor: role === "driver" ? colors.primary : surfaceBg,
+            borderWidth: 1,
+            borderColor: role === "driver" ? colors.primary : borderColor,
           }}
           onPress={() => setRole("driver")}
          testID="phone-entry.set-role-2">
           <Text
-            className="text-[14px] font-JakartaBold font-bold"
+            className="text-[13px] font-JakartaBold font-bold"
             style={{ color: role === "driver" ? colors.white : textSecondary }}
           >
-            Driver
+            {t("auth.roles.driver")}
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          key="shop_owner"
+          className="py-3 px-4 rounded-full items-center justify-center"
+          style={{
+            backgroundColor: role === "shop_owner" ? colors.primary : surfaceBg,
+            borderWidth: 1,
+            borderColor: role === "shop_owner" ? colors.primary : borderColor,
+          }}
+          onPress={() => setRole("shop_owner")}
+         testID="phone-entry.set-role-3">
+          <Text
+            className="text-[13px] font-JakartaBold font-bold"
+            style={{ color: role === "shop_owner" ? colors.white : textSecondary }}
+          >
+            {t("auth.roles.shop_owner")}
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          key="fleet_owner"
+          className="py-3 px-4 rounded-full items-center justify-center"
+          style={{
+            backgroundColor: role === "fleet_owner" ? colors.primary : surfaceBg,
+            borderWidth: 1,
+            borderColor: role === "fleet_owner" ? colors.primary : borderColor,
+          }}
+          onPress={() => setRole("fleet_owner")}
+         testID="phone-entry.set-role-4">
+          <Text
+            className="text-[13px] font-JakartaBold font-bold"
+            style={{ color: role === "fleet_owner" ? colors.white : textSecondary }}
+          >
+            {t("auth.roles.fleet_owner")}
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          key="delivery_man"
+          className="py-3 px-4 rounded-full items-center justify-center"
+          style={{
+            backgroundColor: role === "delivery_man" ? colors.primary : surfaceBg,
+            borderWidth: 1,
+            borderColor: role === "delivery_man" ? colors.primary : borderColor,
+          }}
+          onPress={() => setRole("delivery_man")}
+         testID="phone-entry.set-role-5">
+          <Text
+            className="text-[13px] font-JakartaBold font-bold"
+            style={{ color: role === "delivery_man" ? colors.white : textSecondary }}
+          >
+            {t("auth.roles.delivery_man")}
           </Text>
         </TouchableOpacity>
       </View>

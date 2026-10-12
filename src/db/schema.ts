@@ -9,6 +9,7 @@ import {
   numeric,
   smallint,
   date,
+  time,
   jsonb,
   primaryKey,
   uniqueIndex,
@@ -52,6 +53,10 @@ export const userRoleEnum = pgEnum("user_role", [
   "owner",
   "ops_manager",
   "moderator",
+  // Launch surfaces (S1, mission §1): pre-launch enum expansion — cheap now.
+  "shop_owner",
+  "fleet_owner",
+  "delivery_man",
 ]);
 export const driverStatusEnum = pgEnum("driver_status", [
   "pending",
@@ -300,6 +305,44 @@ export const users = pgTable(
   ],
 );
 
+/**
+ * LAUNCH SURFACES (S2 F3) — multi-role accounts (OWNER-DECISION #8/#9 + the
+ * identity-model ruling).
+ *
+ * Identity model (binding):
+ *   users.phone = the unique LOGIN identity (what OTP authenticates).
+ *   users.id    = the system-assigned internal User ID — the key EVERY internal
+ *                 reference uses (orders, shops, fleets, deliveries, ledgers;
+ *                 never phone).
+ *   user_roles  = (user_id, role) UNIQUE — logically "phone | role", physically
+ *                 keyed by the internal ID, so a future phone-number change
+ *                 never orphans a role.
+ *
+ * WRITE OWNERSHIP: membership rows are written ONLY by the auth paths
+ * (app/api/register+api.ts and the add-a-role path) and by migration 0062's
+ * seed backfill. Per-role APPROVAL state lives in each role's own table
+ * (drivers.status, shops.status, fleets) — this table holds MEMBERSHIP only.
+ * users.role remains the primary/default role for legacy requireRole checks.
+ *
+ * RLS: enabled + forced + REVOKE from anon/authenticated in migration 0062
+ * (same D1 posture as every launch table); server-side access only.
+ */
+export const userRoles = pgTable(
+  "user_roles",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    user_id: uuid("user_id")
+      .notNull()
+      .references(() => users.id),
+    role: userRoleEnum("role").notNull(),
+    created_at: timestamptz("created_at").notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("user_roles_user_role_uq").on(t.user_id, t.role),
+    index("user_roles_role_idx").on(t.role),
+  ],
+);
+
 export const drivers = pgTable(
   "drivers",
   {
@@ -455,6 +498,12 @@ export const packages = pgTable(
     is_active: boolean("is_active").notNull().default(true),
     daily_cap: integer("daily_cap").notNull().default(200),
     vehicle_type: vehicleTypeEnum("vehicle_type"),
+    // §14 role-based subscription engine (S2 F4): which account roles this plan
+    // may be sold to / shown to, resolved against user_roles. Additive, every
+    // existing row defaults to the driver base.
+    // Divergence recorded in migration 0063: §14 names `subscription_plans`,
+    // which does not exist on disk — `packages` is the purchasable-plan table.
+    roles: text("roles").array().notNull().default(sql`'{driver}'`),
     created_at: timestamptz("created_at").notNull().defaultNow(),
     updated_at: timestamptz("updated_at").notNull().defaultNow(),
     deleted_at: timestamptz("deleted_at"),
@@ -2529,6 +2578,20 @@ export const fleets = pgTable("fleets", {
   business_name: varchar("business_name", { length: 150 }),
   trade_license_number: varchar("trade_license_number", { length: 100 }),
   tax_identifier: varchar("tax_identifier", { length: 100 }),
+  // S2 §7 verification queue + R6: the admin DECISION, kept separate from the
+  // operational `status` enum above (pending → approved|rejected).
+  verification_status: varchar("verification_status", { length: 20 }).notNull().default("pending"),
+  verification_reason: text("verification_reason"),
+  verification_decided_at: timestamptz("verification_decided_at"),
+  // F-30/F-03 structured rejection: { code, field, example, internal_note } —
+  // internal_note is admin-only and never returned to the applicant.
+  verification_reject: jsonb("verification_reject"),
+  // F-03 "Fix & resubmit — max 3, then admin unblock".
+  verification_resubmit_count: integer("verification_resubmit_count").notNull().default(0),
+  verification_decided_by: uuid("verification_decided_by").references((): any => users.id),
+  // S2 §2d: the uploaded fleet business documents the queue reviews.
+  trade_license_url: text("trade_license_url"),
+  tax_doc_url: text("tax_doc_url"),
   subscription_plan_id: uuid("subscription_plan_id").references(
     (): any => fleetSubscriptionPlans.id,
   ),
@@ -2823,6 +2886,11 @@ export const shopOrderStatusEnum = pgEnum("shop_order_status", [
   "delivered",
   "cancelled",
   "refunded",
+  // Launch surfaces (S1): workshop service-booking states (mission B2)
+  "booked",
+  "confirmed",
+  "in_progress",
+  "done",
 ]);
 
 export const shopMemberRoleEnum = pgEnum("shop_member_role", [
@@ -2841,6 +2909,26 @@ export const shopRfqStatusEnum = pgEnum("shop_rfq_status", [
 ]);
 
 /**
+ * LAUNCH SURFACES (S1) — admin-extensible shop category lookup.
+ * Owner ruling: categories are a SEEDED LOOKUP TABLE the admin extends,
+ * NOT a Postgres enum. The customer good-morning screen reads this table
+ * (GET /api/shop/types) so new admin-added types appear with zero client change.
+ */
+export const shopTypes = pgTable("shop_types", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  slug: varchar("slug", { length: 60 }).notNull().unique(),
+  label_en: varchar("label_en", { length: 120 }).notNull(),
+  label_bn: varchar("label_bn", { length: 120 }).notNull(),
+  is_restaurant: boolean("is_restaurant").notNull().default(false), // drives the food-ordering listing UX
+  sort_order: integer("sort_order").notNull().default(0),
+  active: boolean("active").notNull().default(true),
+  created_at: timestamptz("created_at").notNull().defaultNow(),
+  updated_at: timestamptz("updated_at").notNull().defaultNow(),
+}, (t) => [
+  index("shop_types_active_sort_idx").on(t.active, t.sort_order),
+]);
+
+/**
  * Shops — fixed-price product catalogs + RFQ services.
  * No fleet dependency. Soft-deleted via deleted_at.
  */
@@ -2856,14 +2944,42 @@ export const shops = pgTable("shops", {
   address_line: text("address_line"),
   lat: numeric("lat", { precision: 9, scale: 6 }),
   lng: numeric("lng", { precision: 9, scale: 6 }),
-  status: varchar("status", { length: 20 }).notNull().default("active"), // active | suspended | closed
+  status: varchar("status", { length: 20 }).notNull().default("active"), // pending | active (verified/live) | suspended | closed
   is_verified: boolean("is_verified").notNull().default(false),
+  // Launch surfaces (S1, mission §1): category + verification docs + rating.
+  // Divergence recorded per protocol: the ruling says "status enum
+  // (pending → verified → suspended)"; the LIVE shops table uses varchar
+  // status + is_verified. Mapping: pending = status 'pending' & !is_verified,
+  // verified = status 'active' & is_verified, suspended = status 'suspended'.
+  // Converting the live column to a Postgres enum would break 6 live
+  // verticals — recorded, not silently reconciled.
+  shop_type_id: uuid("shop_type_id").references((): any => shopTypes.id),
+  license_url: text("license_url"),
+  food_safety_cert_url: text("food_safety_cert_url"),
+  rating: numeric("rating", { precision: 3, scale: 2 }),
+  rating_count: integer("rating_count").notNull().default(0),
+  // R5: server-side open/closed toggle — closed shops reject new orders
+  // (enforced in order routes, not just hidden in the UI).
+  is_open: boolean("is_open").notNull().default(true),
+  // S2 §7 verification queue + R6: the admin DECISION, kept separate from the
+  // operational `status` above. pending → approved|rejected; a reject stores
+  // the reason the applicant sees in-app, and R6 lets them RESUBMIT.
+  verification_status: varchar("verification_status", { length: 20 }).notNull().default("pending"),
+  verification_reason: text("verification_reason"),
+  verification_decided_at: timestamptz("verification_decided_at"),
+  // F-30/F-03 structured rejection: { code, field, example, internal_note } —
+  // internal_note is admin-only and never returned to the applicant.
+  verification_reject: jsonb("verification_reject"),
+  // F-03 "Fix & resubmit — max 3, then admin unblock".
+  verification_resubmit_count: integer("verification_resubmit_count").notNull().default(0),
+  verification_decided_by: uuid("verification_decided_by").references((): any => users.id),
   created_at: timestamptz("created_at").notNull().defaultNow(),
   updated_at: timestamptz("updated_at").notNull().defaultNow(),
   deleted_at: timestamptz("deleted_at"),
 }, (t) => [
   index("shops_owner_idx").on(t.owner_user_id),
   index("shops_status_idx").on(t.status),
+  index("shops_type_idx").on(t.shop_type_id),
 ]);
 
 /**
@@ -2874,8 +2990,9 @@ export const shopMembers = pgTable("shop_members", {
   id: uuid("id").defaultRandom().primaryKey(),
   shop_id: uuid("shop_id").notNull().references(() => shops.id),
   user_id: uuid("user_id").notNull().references(() => users.id),
-  role: shopMemberRoleEnum("role").notNull(),
+  role: shopMemberRoleEnum("role").notNull(), // R10: invites are MANAGER|STAFF; OWNER = creator row only (shops.owner_user_id is the owner)
   status: varchar("status", { length: 20 }).notNull().default("active"),
+  invited_by: uuid("invited_by").references((): any => users.id),
   joined_at: timestamptz("joined_at").notNull().defaultNow(),
   removed_at: timestamptz("removed_at"),
 }, (t) => [
@@ -2922,6 +3039,11 @@ export const shopOrders = pgTable("shop_orders", {
   delivery_fee_bdt: integer("delivery_fee_bdt"),
   total_bdt: integer("total_bdt").notNull(),
   category: varchar("category", { length: 30 }).notNull().default("general"), // general | food
+  // Launch surfaces (S1): order kind distinguishes catalog purchases from
+  // workshop service bookings. R4: the booking itself is a workshop_requests
+  // row (requested window + shop confirm) linked to this order via
+  // workshop_requests.order_id — no slot grid, no slot_id column.
+  order_kind: varchar("order_kind", { length: 20 }).notNull().default("catalog"), // catalog | service_booking
   fulfillment: varchar("fulfillment", { length: 20 }).notNull().default("delivery"), // delivery | pickup
   delivery_address: text("delivery_address"),
   delivery_lat: numeric("delivery_lat", { precision: 9, scale: 6 }),
@@ -2941,6 +3063,7 @@ export const shopOrders = pgTable("shop_orders", {
   index("shop_orders_shop_idx").on(t.shop_id),
   index("shop_orders_rider_idx").on(t.rider_user_id),
   index("shop_orders_status_idx").on(t.status),
+  index("shop_orders_kind_idx").on(t.shop_id, t.order_kind),
 ]);
 
 /** Line items within a shop order. */
@@ -2977,6 +3100,63 @@ export const shopRfqs = pgTable("shop_rfqs", {
   index("shop_rfqs_shop_idx").on(t.shop_id),
   index("shop_rfqs_rider_idx").on(t.rider_user_id),
   index("shop_rfqs_status_idx").on(t.status),
+]);
+
+/**
+ * LAUNCH SURFACES (S1) — workshop bookable services (mission §1).
+ * Rows only for shops whose shop_type has workshop capability.
+ * Money: price_bdt = integer paisa.
+ */
+export const workshopServices = pgTable("workshop_services", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  shop_id: uuid("shop_id").notNull().references(() => shops.id),
+  name: varchar("name", { length: 200 }).notNull(),
+  description: text("description"),
+  price_bdt: integer("price_bdt").notNull(),
+  duration_minutes: integer("duration_minutes").notNull(),
+  created_at: timestamptz("created_at").notNull().defaultNow(),
+  updated_at: timestamptz("updated_at").notNull().defaultNow(),
+}, (t) => [
+  index("workshop_services_shop_idx").on(t.shop_id),
+]);
+
+/**
+ * LAUNCH SURFACES (S1) — workshop service-booking request states (§1 + R4:
+ * requested → confirmed → in_progress → done).
+ */
+export const workshopRequestStatusEnum = pgEnum("workshop_request_status", [
+  "requested",
+  "confirmed",
+  "in_progress",
+  "done",
+]);
+
+/**
+ * LAUNCH SURFACES (S1) — workshop booking requests (R4 simplification):
+ * the customer requests a WINDOW (date + time range) for a service and the
+ * shop confirms. NO slot-capacity grid (§11 R4 — supersedes the earlier
+ * workshop_slots design). Linked to a shop_orders row via order_id when the
+ * booking carries products (order linkage, §1).
+ */
+export const workshopRequests = pgTable("workshop_requests", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  shop_id: uuid("shop_id").notNull().references(() => shops.id),
+  service_id: uuid("service_id").notNull().references(() => workshopServices.id),
+  customer_user_id: uuid("customer_user_id").notNull().references(() => users.id),
+  requested_date: date("requested_date").notNull(),
+  window_start: time("window_start").notNull(),
+  window_end: time("window_end").notNull(),
+  note: text("note"),
+  status: workshopRequestStatusEnum("status").notNull().default("requested"),
+  order_id: uuid("order_id").references((): any => shopOrders.id),
+  created_at: timestamptz("created_at").notNull().defaultNow(),
+  updated_at: timestamptz("updated_at").notNull().defaultNow(),
+}, (t) => [
+  check("workshop_requests_window_check", sql`window_end > window_start`),
+  index("workshop_requests_shop_status_idx").on(t.shop_id, t.status),
+  index("workshop_requests_customer_idx").on(t.customer_user_id),
+  index("workshop_requests_service_idx").on(t.service_id),
+  index("workshop_requests_order_idx").on(t.order_id),
 ]);
 
 // ══════════════════════════════════════════════════════════════════════
@@ -3313,7 +3493,24 @@ export const couriers = pgTable("couriers", {
   id: uuid("id").defaultRandom().primaryKey(),
   user_id: uuid("user_id").notNull().references((): any => users.id),
   courier_type: courierTypeEnum("courier_type").notNull(),
-  status: varchar("status", { length: 20 }).notNull().default("active"), // active | suspended
+  // S2 (§2e): a launch Delivery Man signs up PENDING and is activated by the
+  // admin queue (§7); the pre-existing self-signup path still creates 'active'.
+  status: varchar("status", { length: 20 }).notNull().default("active"), // pending | active | suspended
+  // S2 §7 verification queue + R6: the admin DECISION, kept separate from the
+  // operational `status` above (pending → approved|rejected).
+  verification_status: varchar("verification_status", { length: 20 }).notNull().default("pending"),
+  verification_reason: text("verification_reason"),
+  verification_decided_at: timestamptz("verification_decided_at"),
+  // F-30/F-03 structured rejection: { code, field, example, internal_note } —
+  // internal_note is admin-only and never returned to the applicant.
+  verification_reject: jsonb("verification_reject"),
+  // F-03 "Fix & resubmit — max 3, then admin unblock".
+  verification_resubmit_count: integer("verification_resubmit_count").notNull().default(0),
+  verification_decided_by: uuid("verification_decided_by").references((): any => users.id),
+  // S2 §2e: the delivery-man identity documents the queue reviews.
+  nid_url: text("nid_url"),
+  license_url: text("license_url"),
+  vehicle_note: text("vehicle_note"),
   // Food-hero presence (no drivers row for them; parcel couriers use drivers.*)
   is_online: boolean("is_online").notNull().default(false),
   last_lat: numeric("last_lat", { precision: 10, scale: 7 }),
@@ -3428,6 +3625,69 @@ export const deliveryLegs = pgTable("delivery_legs", {
   // F42: hot-path index for §B.7 scans
   index("delivery_legs_courier_state_idx").on(t.courier_user_id, t.leg_state),
   index("delivery_legs_request_idx").on(t.request_id),
+]);
+
+// ══════════════════════════════════════════════════════════════════════
+// LAUNCH SURFACES — universal delivery legs (THE one legs table)
+// First-accept-wins, NO chain, NO bidding, NO debit-on-offer. ALL verticals
+// emit legs here (restaurant food, catalog orders, workshop products,
+// parcels) — owner ruling: one delivery man sees EVERYTHING, no per-vertical
+// segregation. RFQ-based courier flow (delivery_requests/delivery_bids)
+// stays separate (D2: RFQ = custom quotes, a different order kind).
+// ══════════════════════════════════════════════════════════════════════
+
+export const deliverySourceEnum = pgEnum("delivery_source", [
+  "food_order",
+  "shop_order",
+  "workshop_booking", // superseded by workshop_product (pre-R4 mission text) — never emitted; Postgres cannot drop enum values
+  "parcel",
+  "workshop_product", // §1 source_vertical value (added by 0060 — D5: own file)
+]);
+
+export const deliveryLegStatusEnum = pgEnum("delivery_leg_status", [
+  "created",
+  "offered",
+  "accepted",
+  "picked_up",
+  "delivered",
+  "failed",
+]);
+
+export const deliveries = pgTable("deliveries", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  source_vertical: deliverySourceEnum("source_vertical").notNull(), // §1: food_order | shop_order | workshop_product | parcel
+  // Polymorphic parent: shop_orders (catalog + service_booking) or
+  // delivery_requests (parcel). No FK by design — `source_vertical` names it.
+  order_id: uuid("order_id").notNull(),
+  pickup_shop_id: uuid("pickup_shop_id").references((): any => shops.id),
+  pickup_address: text("pickup_address").notNull(),
+  pickup_lat: numeric("pickup_lat", { precision: 9, scale: 6 }).notNull(),
+  pickup_lng: numeric("pickup_lng", { precision: 9, scale: 6 }).notNull(),
+  dropoff_address: text("dropoff_address").notNull(),
+  dropoff_lat: numeric("dropoff_lat", { precision: 9, scale: 6 }).notNull(),
+  dropoff_lng: numeric("dropoff_lng", { precision: 9, scale: 6 }).notNull(),
+  // §1: dropoff customer ref (the ordering customer)
+  dropoff_user_id: uuid("dropoff_user_id").references((): any => users.id),
+  delivery_fee_bdt: integer("delivery_fee_bdt").notNull(), // paisa, customer-paid at order time
+  status: deliveryLegStatusEnum("status").notNull().default("created"),
+  // Delivery man OR driver with the Deliveries toggle on (Amendment 2).
+  delivery_man_user_id: uuid("delivery_man_user_id").references((): any => users.id),
+  accepted_at: timestamptz("accepted_at"),
+  delivered_at: timestamptz("delivered_at"),
+  created_at: timestamptz("created_at").notNull().defaultNow(),
+  updated_at: timestamptz("updated_at").notNull().defaultNow(),
+}, (t) => [
+  // D3: composite geo indexes for the bounding-box nearby-legs query
+  index("deliveries_pickup_geo_idx").on(t.pickup_lat, t.pickup_lng),
+  index("deliveries_dropoff_geo_idx").on(t.dropoff_lat, t.dropoff_lng),
+  index("deliveries_status_created_idx").on(t.status, t.created_at),
+  index("deliveries_order_idx").on(t.order_id),
+  index("deliveries_claimer_idx").on(t.delivery_man_user_id),
+  // API-B: one ACTIVE leg per claimer. Terminal states (delivered/failed)
+  // are excluded so completed history never blocks the next accept.
+  uniqueIndex("deliveries_active_claimer_uidx")
+    .on(t.delivery_man_user_id)
+    .where(sql`status IN ('accepted','picked_up')`),
 ]);
 
 /**

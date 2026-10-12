@@ -45,6 +45,22 @@ export default function RegisterScreen() {
     setLoading(true);
     setError("");
 
+    // §2c/d/e: the three verification-gated roles have their own onboarding
+    // wizard (documents → PENDING → admin queue, §7). The wizard owns the
+    // submit for those roles because the payload carries the documents.
+    const ROLE_WIZARD: Record<string, string> = {
+      shop_owner: "/(auth)/register-shop-owner",
+      fleet_owner: "/(auth)/register-fleet-owner",
+      delivery_man: "/(auth)/register-delivery-man",
+    };
+    if (roleParam && ROLE_WIZARD[roleParam]) {
+      router.push(
+        `${ROLE_WIZARD[roleParam]}?phone=${encodeURIComponent(phoneParam ?? "")}&name=${encodeURIComponent(name)}&password=${encodeURIComponent(password)}`,
+      );
+      setLoading(false);
+      return;
+    }
+
     try {
       const response = await fetch(`${API_URL}/api/register`, {
         method: "POST",
@@ -52,6 +68,8 @@ export default function RegisterScreen() {
         body: JSON.stringify({
           phone: phoneParam ?? "",
           name,
+          // Only rider/driver reach this POST — the wizard branch above owns
+          // the other three roles (they submit their documents themselves).
           role: (roleParam ?? "rider") as "rider" | "driver",
           password,
         }),

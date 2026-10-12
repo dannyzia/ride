@@ -92,6 +92,25 @@ export default function OtpVerifyScreen() {
         return;
       }
 
+      // OWNER-DECISION #9: after OTP, a MULTI-role account chooses which role
+      // to log in as. A single-role account keeps the existing path untouched
+      // (no account held more than one role before user_roles existed).
+      try {
+        const checkRes = await fetch(`${API_URL}/api/auth/check-user`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ phone }),
+        });
+        const check = await checkRes.json();
+        if (checkRes.ok && Array.isArray(check.roles) && check.roles.length > 1) {
+          router.push(`/(auth)/login-as?phone=${encodeURIComponent(phone)}`);
+          return;
+        }
+      } catch (checkErr) {
+        // The chooser is an affordance, never a gate: fall through to register.
+        logger.warn("[auth] check-user failed, continuing to register", checkErr);
+      }
+
       router.push(`/(auth)/register?phone=${encodeURIComponent(phone)}&role=${roleParam ?? "rider"}`);
     } catch (e) {
       setError("Failed to verify OTP. Please try again.");

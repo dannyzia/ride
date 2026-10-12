@@ -1,0 +1,26 @@
+-- Plan 27 §14 (role-based subscription engine) + §13 STAGE 2 item F4.
+-- Additive column: every existing plan row defaults to '{driver}', matching
+-- today's only subscriber base (drivers). Role FILTERING — §14 visibility: a
+-- plan is SHOWN only to users holding one of its roles, checked against
+-- user_roles — is built with the plan screen/checkout, not here.
+--
+-- DIVERGENCE RECORDED (§14 names a table that does not exist on disk; the
+-- ruling's INTENT is applied to the real table, per the file-is-truth rule):
+--   §14 says "subscription_plans gains roles text[]". There is no
+--   `subscription_plans` table in src/db/schema.ts. The purchasable-plan table
+--   this codebase actually has is `packages` (0048 — driver call packages,
+--   which §14 itself calls "existing driver plans"). `fleet_subscription_plans`
+--   is a separate fleet-era table and stays so until the S5 extend-vs-create
+--   audit (§14 defers that decision to S5).
+--
+-- Idempotent: guarded for BOTH a migration-applied history and a
+-- `drizzle-kit push`-built database.
+--
+-- NOTE the deliberately ABSENT security line: unlike the new launch tables,
+-- `packages` is read directly by the authenticated mobile client
+-- (store/usePackageStore.ts → supabase.from('packages')), so REVOKE ALL FROM
+-- anon, authenticated here would break the driver's active-package screen.
+-- Zero-grant posture is for new server-only tables; this one stays as-is.
+
+ALTER TABLE "packages" ADD COLUMN IF NOT EXISTS "roles" text[] NOT NULL DEFAULT '{driver}';
+--> statement-breakpoint

@@ -93,7 +93,69 @@
     "login": "Log In",
     "get_started": "Get Started",
     "tagline": "Your ride, your way",
-    "welcome_title": "Welcome to Ride"
+    "welcome_title": "Welcome to Ride",
+    "roles": {
+      "rider": "Customer",
+      "driver": "Driver",
+      "shop_owner": "Shop Owner",
+      "fleet_owner": "Fleet Owner",
+      "delivery_man": "Delivery Man"
+    },
+    "login_as": {
+      "title": "Login as",
+      "subtitle": "This number holds more than one role",
+      "missing_phone": "Phone number is required",
+      "load_failed": "Could not load your roles",
+      "status_pending": "Pending verification",
+      "status_rejected": "Rejected",
+      "resubmit": "Resubmit",
+      "resubmitting": "Resubmitting…"
+    },
+    "shop_owner": {
+      "title": "Shop Owner",
+      "subtitle": "Set up your shop — it goes live after admin verification",
+      "shop_name": "Shop name",
+      "address": "Shop address",
+      "category": "Category",
+      "trade_license": "Trade license",
+      "food_cert": "Food safety certificate",
+      "submit": "Submit for verification",
+      "submit_failed": "Could not submit. Please try again.",
+      "added_title": "Submitted",
+      "added_body": "Your shop is pending admin verification."
+    },
+    "fleet_owner": {
+      "title": "Fleet Owner",
+      "subtitle": "Register your fleet business",
+      "fleet_name": "Fleet name",
+      "business_name": "Business name (optional)",
+      "license_number": "Trade license number (optional)",
+      "trade_license": "Trade license document",
+      "submit": "Submit for verification",
+      "submit_failed": "Could not submit. Please try again.",
+      "added_title": "Submitted",
+      "added_body": "Your fleet is pending admin verification."
+    },
+    "delivery_man": {
+      "title": "Delivery Man",
+      "subtitle": "Deliver for every shop and customer",
+      "nid": "National ID (NID)",
+      "driving_license": "Driving license",
+      "vehicle_note": "Vehicle note (optional)",
+      "submit": "Submit for verification",
+      "submit_failed": "Could not submit. Please try again.",
+      "added_title": "Submitted",
+      "added_body": "Your delivery-man account is pending admin verification."
+    },
+    "add_role": {
+      "title": "Add a role",
+      "subtitle": "One account can hold several roles",
+      "your_roles": "Your roles",
+      "primary": "primary",
+      "add_more": "Add another role",
+      "instant": "Instant — no verification",
+      "verification_gated": "Needs admin verification"
+    }
   },
   "driver": {
     "home": "Home",
