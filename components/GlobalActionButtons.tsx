@@ -27,6 +27,7 @@ import { logger } from "@/lib/logger";
 import { supabase } from "@/lib/supabase";
 import { enqueueSosAlert } from "@/lib/sosQueue";
 import NetInfo from "@react-native-community/netinfo";
+import { getSystemConfig } from "@/lib/platformConfig";
 
 // ─── Role Detection ───────────────────────────────────────────────
 
@@ -101,10 +102,17 @@ const GROUP_ORDER_ADMIN = ["Admin"];
 
 // ─── SOS ──────────────────────────────────────────────────────────
 
-interface SOSContact {
+interface SosContact {
   label: string;
   number: string;
 }
+
+interface SosState {
+  contact: SosContact;
+  number: string;
+}
+
+const SOS_POLICE_PREDEFAULT: SosContact = { label: "National Emergency", number: "999" };
 
 // API base follows the app-wide resolver in lib/config.ts (dev LAN IP,
 // emulator loopback, or EXPO_PUBLIC_SERVER_URL in production).
@@ -159,7 +167,9 @@ export default function GlobalActionButtons() {
 
   // ── SOS state ──
   const [sosOpen, setSosOpen] = useState(false);
-  const [sosContacts, setSosContacts] = useState<SOSContact[]>([]);
+  const [sosContacts, setSosContacts] = useState<SosContact[]>([]);
+  const [sosContactsLoaded, setSosContactsLoaded] = useState(false);
+  const [sosContactsLoadError, setSosContactsLoadError] = useState(false);
   const [sosLoading, setSosLoading] = useState(false);
   const [sosSending, setSosSending] = useState(false);
   const [sosQueued, setSosQueued] = useState(false);
@@ -292,6 +302,28 @@ export default function GlobalActionButtons() {
     router.push(route as never);
   }, []);
 
+  // ── SOS contact loading (no inline blocker) ──
+  const loadSosContacts = useCallback(async () => {
+    try {
+      const config = await getSystemConfig(["sos_contacts"]);
+      const raw = config.sos_contacts;
+      if (Array.isArray(raw) && raw.length > 0 && raw.every((c: unknown) => typeof (c as SosContact).label === "string" && typeof (c as SosContact).number === "string")) {
+        setSosContacts(raw as SosContact[]);
+      } else {
+        setSosContacts([SOS_POLICE_PREDEFAULT]);
+      }
+    } catch {
+      setSosContacts([SOS_POLICE_PREDEFAULT]);
+    } finally {
+      setSosContactsLoaded(true);
+      setSosContactsLoadError(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadSosContacts();
+  }, [loadSosContacts]);
+
   // ── SOS handlers ──
   const startCooldown = useCallback(() => {
     setCooldownRemaining(SOS_COOLDOWN_SECONDS);
@@ -317,22 +349,26 @@ export default function GlobalActionButtons() {
     setSosOpen(true);
     setSosLoading(true);
     try {
-      const res = await fetch(`${SOS_API_URL}/api/sos/contacts`);
-      if (res.ok) {
-        const data = await res.json();
-        setSosContacts(data.contacts ?? []);
-      } else {
-        setSosContacts([{ label: "National Emergency", number: "999" }]);
+      if (!sosContactsLoaded) {
+        await loadSosContacts();
+      }
+      if (!sosContacts.length) {
+        setSosContacts([SOS_POLICE_PREDEFAULT]);
       }
     } catch {
-      setSosContacts([{ label: "National Emergency", number: "999" }]);
+      setSosContacts([SOS_POLICE_PREDEFAULT]);
     } finally {
       setSosLoading(false);
     }
-  }, [cooldownRemaining]);
+  }, [cooldownRemaining, sosContactsLoaded, sosContacts.length, loadSosContacts]);
+
+  const getSosPoliceNumber = useCallback(() => {
+    if (!sosContacts.length) return SOS_POLICE_PREDEFAULT.number;
+    return sosContacts.find((c) => c.label.toLowerCase().includes("police") || c.label.toLowerCase().includes("emergency"))?.number ?? sosContacts[0].number;
+  }, [sosContacts]);
 
   const handleSosSelect = useCallback(
-    async (contact: SOSContact) => {
+    async (contact: SosContact) => {
       if (sosSending) return;
       setSosSending(true);
       try {
@@ -351,7 +387,9 @@ export default function GlobalActionButtons() {
           // Location unavailable
         }
 
-        // DIAL FIRST: emergency call must never depend on network
+        // DIAL FIRST for emergency contacts: the emergency call must never
+        // depend on network. Non-emergency action contacts still can't
+        // through the same gab because there is no action-contact source.
         const phoneUrl = `tel:${contact.number}`;
         const canOpen = await Linking.canOpenURL(phoneUrl);
         if (canOpen) {
@@ -416,6 +454,9 @@ export default function GlobalActionButtons() {
 
   // ── Menu title by role ──
   const menuTitle = role === "customer" ? "Menu" : role === "driver" ? "Driver Menu" : "Admin Menu";
+
+  // ── SOS police number to dial ──
+  const sosPoliceNumber = getSosPoliceNumber();
 
   return (
     <>
@@ -618,8 +659,7 @@ export default function GlobalActionButtons() {
             ) : (
               <FlatList
                 data={sosContacts}
-                keyExtractor={(_, index) => index.toString()}
-                scrollEnabled={false}
+                keyExtractor={(item, index) => item.number + index}
                 renderItem={({ item }) => (
                   <TouchableOpacity
                     onPress={() => handleSosSelect(item)}
