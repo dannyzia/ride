@@ -167,7 +167,8 @@
         "rideshare_experience": "Rideshare Experience",
         "payout": "Payout",
         "review_consent": "Review & Consent"
-      }
+      },
+      "body_type_others": "Others"
     }
   },
   "tabs": {

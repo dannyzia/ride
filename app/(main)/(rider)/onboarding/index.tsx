@@ -124,7 +124,9 @@ const YEARS: number[] = Array.from(
   (_, i) => CURRENT_YEAR - i,
 );
 
-const STEP_TITLES = [
+// Resolved at render time via the caller's `t` (never module scope) so a
+// language toggle re-renders the step titles in the active locale.
+const getStepTitles = (t: (key: string) => string) => [
   t("driver.onboarding.steps.profile"),
   t("driver.onboarding.steps.vehicle"),
   t("driver.onboarding.steps.vehicle_documents"),
@@ -298,6 +300,8 @@ function BodyTypePickerModal({
   onClose: () => void;
 }) {
   const isDark = useIsDark();
+  const { t } = useTranslation();
+  const othersLabel = t("driver.onboarding.body_type_others");
   const surfaceBg = isDark ? colors.surfaceElevatedDark : colors.surfaceLight;
   const borderColor = isDark ? colors.borderDark : colors.borderLight;
   const textPrimary = isDark ? colors.textPrimaryDark : colors.textPrimaryLight;
@@ -336,7 +340,7 @@ function BodyTypePickerModal({
                   {group.group}
                 </Text>
                 {group.items.map((item) => {
-                  const isOthers = item.value === OTHERS;
+                  const isOthers = (item.value as string) === OTHERS;
                   const displayLabel = isOthers ? othersLabel : item.en;
                   const selected = item.value === selectedValue;
                   return (
@@ -1092,12 +1096,12 @@ export default function OnboardingWizard() {
       {/* Progress bar */}
       <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.lg }}>
         <View style={{ flexDirection: "row", gap: spacing.xs }}>
-          {STEP_TITLES.map((_, i) => (
+          {getStepTitles(t).map((_, i) => (
             <View key={i} style={{ flex: 1, height: 4, borderRadius: radii.pill, backgroundColor: i < step ? colors.primary : borderColor }} />
           ))}
         </View>
         <Text style={{ fontFamily: "Jakarta-SemiBold", fontSize: 12, color: textSecondary, marginTop: spacing.sm }}>
-          {`Step ${step} of 7 \u2014 ${STEP_TITLES[step - 1]}`}
+          {`Step ${step} of 7 \u2014 ${getStepTitles(t)[step - 1]}`}
         </Text>
       </View>
 
