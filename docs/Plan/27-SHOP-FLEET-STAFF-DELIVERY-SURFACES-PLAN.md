@@ -368,6 +368,29 @@ Legend expanded (Courier definition · roles taxonomy · state vocabulary · [no
 
 **Stage order: this revision is STAGE 2.5 (flow-library pass) — executed after S2's auth code lands, before S3 screen work consumes the diagrams. Gates: unchanged + a mermaid-syntax lint pass on all blocks.**
 
+---
+
+## §16 SKEPTIC-AUDIT REMEDIATION — S2.1 (2026-10-13; BLOCKS S3)
+
+The code-skeptic audit of S1+S2 found 3 material defects + 6 moderates. Orchestrator verified all three material defects on disk (D-1 auth-gate routing `_layout.tsx:143-148`; D-2 oldest-fleet read `launchRoles.ts:239-253` + NATIVE mint `:115`; D-3 public `check-user` returning full heldRoles incl. reject details). **Disclosure:** the earlier S2 "advanced" verdict predates this audit and is superseded — S2 is REJECTED-with-remediation. S3 is BLOCKED until S2.1 verifies.
+
+**S2.1 REMEDIATION ORDER (builder — before S3):**
+1. **D-1 CHOOSER UNREACHABLE (§0 ruling #9 violated):** the auth gate routes on `users.role` alone and existing phones never reach otp-verify → a multi-role account NEVER sees the Login-as chooser (S2 acceptance unpassable). FIX: verify-token returns `heldRoles` (ACTIVE only); the auth gate routes `>1 active role → /(auth)/login-as`; single role → direct. Acceptance: a real login (password path AND OTP path) for a 2-role account lands on the chooser; 1-role accounts land direct.
+2. **D-2 FLEET STATUS READ:** scope the fleet status query to the fleet created BY THE ROLE RECORD (store fleet_id on the role verification record or join fleet_members OWNER) — oldest-wins reads the implicit solo NATIVE fleet and reports wrong states. ALSO: business fleets mint as `fleet_type 'BUSINESS'` (not 'NATIVE') + backfill note.
+3. **D-3 PUBLIC LEAK:** `check-user` (unauthenticated) returns full heldRoles incl. admin reject reason/code/field/example/resubmit_count/prefill. FIX: `{role, status}` pairs only; full payload stays behind authenticated `GET /api/user/roles`.
+4. **M-1:** fleet approve (UPDATE fleet + INSERT membership + audit) wrapped in ONE transaction.
+5. **M-5:** resubmit clears `verification_reject` alongside `verification_reason`; login-as resubmit deep-links to the PREFILLED wizard (never burns an attempt on unchanged docs).
+6. **M-6:** password OUT of route params (register.tsx → wizards) — secure param, session state, or re-prompt inside the wizard.
+7. **MINORS:** per-role static testIDs on the Login-as rows (never shared ids); dynamic testIDs replaced with static ones (map visibility); drop the dead `delivery_fee_default_bdt` row from dev; `shopStatus('closed')` surfaces a distinct label.
+
+**PLAN AMENDMENTS (tracked, NOT S2.1):**
+- **M-4 RULING (now, executes by S4):** delivery-man verification state is RE-HOMED off the `couriers` table (to user_roles-adjacent storage or a dedicated table) BEFORE `couriers` is dropped in S4. S2's shipped verification machinery must migrate, not break. The §1.1 KEEP verdict for `couriers`/`delivery_requests`/`delivery_bids` is SUPERSEDED by §6.1's retire for the parts S2 depends on.
+- **M-2:** §14 remainder is MAPPED: role-filtered plan listing + checkout eligibility → S3 (shop) / S5 (fleet) / S6 (delivery); delivery-man ৳100/month plan seed → S6; admin plan screen role multi-select + suspend/delete → admin stage (S7). Added to §13 lines.
+- **M-3:** admin order browser (A1) + monitoring rows (A5) → S7; a Playwright admin lane is created in S7 (none exists today).
+- Minors (per-role testIDs excepted — that is S2.1 item 7): scratch-file cleanup and display approximations ride with later stages.
+
+**ACCEPTANCE:** D-1/D-2/D-3 verified fixed by my own reads + runtime probe; M-1/M-5/M-6 fixed; multi-role acceptance (§10) now passes at real login. S3 starts only after my VERIFIED.
+
 ### STAGE 2 ORDER (detailed — S1 addendum + auth expansion)
 
 Scope: four S1 leftovers, then auth expansion (plan §2 + OWNER-DECISION #8/#9).
@@ -449,3 +472,24 @@ create/update/deactivate).
 the order-flow stage), R8 bridge rewire (S4), verification queues (S2), screens
 (first device gate = §10 acceptance). **HOLD for orchestrator verification
 before S2.**
+
+---
+
+## BUILDER STEP NOTES (S2.1 remediation — appended per the header rule; orchestrator verifies D-1/D-2/D-3 + M-1/M-5/M-6 + runtime)
+
+**STEP 1 (S2.1) — D-2 fleet status read + BUSINESS mint.**
+Migration `src/db/migrations/0066_fleet_business_type.sql` (journal idx 64): `ALTER TYPE "fleet_type" ADD VALUE 'BUSINESS'` as its own statement (D5) + backfill (role-minted fleets = trade_license_url IS NOT NULL, NATIVE → BUSINESS). Applied to the dev DB through a one-off DNS workaround (internal resolver SERVFAILs the pooler host; resolved via 8.8.8.8, script deleted after use): both statements ok, enum_range = NATIVE|EXTERNAL|HYBRID|BUSINESS, backfilled role fleets = 0 (none existed), implicit solo NATIVE = 2 (unmoved). `schema.ts` fleetTypeEnum += BUSINESS; `lib/launchRoles.ts` createRoleRecord(fleet_owner) mints BUSINESS; heldRoles' fleet query scoped to `owner = caller AND fleet_type = 'BUSINESS'` — the fleet created BY THE ROLE RECORD; oldest-wins read of the implicit solo NATIVE fleet eliminated.
+
+**STEP 2 (S2.1) — M-1 transactional approve + M-5 server + D-3.**
+`lib/roleVerification.ts` approve() fleet branch: UPDATE fleet + INSERT fleetMembers OWNER + audit_logs write in ONE `db.transaction`; the in-tx audit insert does NOT swallow (a failed compliance write rolls the decision back). `resubmit(userId, kind, updates?)`: clears `verification_reject` alongside `verification_reason` in ALL THREE branches, and applies the wizard's edited fields (RoleRecordPayload shape reused from launchRoles; shops.name re-derives the UNIQUE slug). `app/api/user/roles/resubmit+api.ts` accepts the same payload keys as POST /api/user/roles (Zod, same shapes); only the kind's own object applies. D-3: `check-user` returns `{role, status}` pairs ONLY; full payload remains behind authenticated GET /api/user/roles.
+
+**STEP 3 (S2.1) — D-1 chooser reachable, both gates.**
+`verify-token` now returns `active_roles: string[]` (ACTIVE-only projection of heldRoles; pending/rejected roles can never gate-redirect into the chooser). Auth gate (`app/_layout.tsx`) and splash forwarder (`app/index.tsx`) route `>1 active role → /(auth)/login-as?phone=…`, single role → role surface (unchanged). OTP path (`§2 phone → OTP → role routing`): phone-entry REGISTER with an existing phone holding >1 roles pushes otp-verify instead of erroring; otp-verify routes an EXISTING account to the password screen (register branch was a duplicate-phone API error) — SIGNED_IN fires there and the gate lands the chooser with a live session. Note (physics, disclosed): the dpRelay OTP proves phone ownership only; NO passwordless session mint exists in supabase-js 2.108 (generateLink is email-only), so the OTP path completes on the password screen and the CHOOSER itself is always session-ful. login-as reworked: primary data = authenticated GET /api/user/roles (reject details + prefill for the deep-link), public check-user pairs as session-less display fallback; resubmit button deep-links `mode=resubmit&resubmit=1` into the prefilled wizard (M-5 client) — the attempt is burned by the wizard's submit carrying fixes, never by tapping the button; five explicit role rows with static per-role testIDs.
+
+**STEP 4 (S2.1) — M-6 + minors + gates.**
+M-6: `lib/registrationHandoff.ts` (in-memory, peek/clear — StrictMode-safe); register.tsx sets it before pushing a wizard (name/password OUT of route params, phone+role remain); the three wizards re-prompt (bounce back to register) when the handoff is missing, and clear it after the account is created. Minors: per-role static testIDs everywhere (login-as five rows `login-as.enter-*`, add-role `add-role.row-*` / `add-role.add-*`, shop types keyed map for the 3 seeded slugs — admin-created categories render without one); `shopStatus('closed')` → distinct `RoleStatus` value `closed` + `auth.login_as.status_closed` labels; dead `delivery_fee_default_bdt` verified ABSENT from allowlist, seed file AND dev DB (0 deleted, 0 remaining — tombstone comments only; nothing to drop). i18n: new keys en+bn (status_closed, session_less_hint, resubmitted_title/body ×3); the rewrite orphaned `auth.login_as.resubmitting` → purged from both locales + baseline via scripts/purge-orphan-keys.cjs --new (1647 → 1646). testid map regenerated (1,139 ids / 221 screens).
+
+**STEP 5 (S2.1) — gates.**
+`npm run lint` → 0 errors; the 19 touched files lint 0-warnings/0-errors under the legacy env; repo-wide warnings are pre-existing pool (441-446 fluctuates with the full-repo run order — the S1 435 baseline is no longer reproducible exactly; NOT introduced by this change). `npx tsc --noEmit` → exit 0. Full `npx jest --watchAll=false` → 203 suites passed / 0 failed (4 skipped pre-existing), 2,580 tests passed (9 pre-existing skips) — after updating auth-routes (verify-token shapes), multi-role (D-3 pairs-only assertion), verification (db.transaction in the mock reusing the same queues). check:i18n-orphans gate clean (96 baselined, none new). app/api/register flow sign-in gap (wizard register-mode replace-home without a session) PRE-EXISTS and is untouched — flagged for S3.
+
+**Runtime acceptance (left to the orchestrator's probe):** password path = phone-entry LOGIN → password → gate → chooser for a 2-role account; OTP path = phone-entry REGISTER → OTP verify → password screen → gate → chooser; 1-role accounts land direct (gate + forwarder scope to ≤1 active role); no emulator/device session was available in this workspace, so device verification (Maestro/execbro) was SKIPPED — explicitly stated per protocol.

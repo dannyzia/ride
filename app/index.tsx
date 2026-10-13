@@ -24,6 +24,9 @@ import { API_URL } from "@/lib/config";
 interface VerifyTokenResponse {
   exists: boolean;
   role?: string;
+  /** S2.1 D-1: ACTIVE-only role list — >1 routes to the Login-as chooser. */
+  active_roles?: string[];
+  phone?: string | null;
 }
 
 type CheckStatus = "idle" | "checking" | "error";
@@ -111,6 +114,12 @@ export default function Splash() {
         // Signed in via Supabase but the users row never landed — the
         // registration flow picks up at phone-entry.
         redirect("/(auth)/phone-entry");
+      } else if (data.active_roles && data.active_roles.length > 1) {
+        // S2.1 D-1 (§16): a cold boot with a persisted session routes multi-
+        // role accounts through the chooser too — same authority as the gate.
+        redirect(
+          `/(auth)/login-as?phone=${encodeURIComponent(data.phone ?? "")}`,
+        );
       } else if (data.role === "driver") {
         redirect("/(main)/(rider)/d");
       } else {

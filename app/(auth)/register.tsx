@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { API_URL } from "@/lib/config";
+import { setRegistrationHandoff } from "@/lib/registrationHandoff";
 import { View, Text, TextInput } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { supabase } from "@/lib/supabase";
@@ -54,8 +55,12 @@ export default function RegisterScreen() {
       delivery_man: "/(auth)/register-delivery-man",
     };
     if (roleParam && ROLE_WIZARD[roleParam]) {
+      // M-6 (§16): the password rides the registrationHandoff (never route
+      // params — URLs leak into history/devtools/crash reports). A missing
+      // handoff on the wizard side re-prompts here.
+      setRegistrationHandoff({ phone: phoneParam ?? "", name, password });
       router.push(
-        `${ROLE_WIZARD[roleParam]}?phone=${encodeURIComponent(phoneParam ?? "")}&name=${encodeURIComponent(name)}&password=${encodeURIComponent(password)}`,
+        `${ROLE_WIZARD[roleParam]}?phone=${encodeURIComponent(phoneParam ?? "")}&role=${encodeURIComponent(roleParam)}`,
       );
       setLoading(false);
       return;

@@ -1,14 +1,20 @@
 /**
  * Login as [Role] — OWNER-DECISION #9.
  *
- * After OTP, an account holding MORE THAN ONE role picks which surface to land
- * in. The screen shows EXACTLY the roles the account holds (never a role it
- * doesn't), with each role's verification state: a pending role explains itself
- * and a REJECTED role shows the admin's reason in-app (R6) with a one-tap
- * resubmit. Single-role accounts never reach this screen (otp-verify branches).
+ * An account holding MORE THAN ONE ACTIVE role picks which surface to land in.
+ * Reached ONLY from the auth gate / splash forwarder (S2.1 D-1): the caller
+ * always holds a Supabase session here, so resubmit and role entry run
+ * authenticated. Single-role accounts never reach this screen (the gate routes
+ * them direct; otp-verify sends existing accounts to the password screen).
+ *
+ * Data source (S2.1 D-3): the FULL per-role payload (reject details, prefill,
+ * resubmit_count) comes from the authenticated GET /api/user/roles — the
+ * public check-user returns {role, status} pairs only and is kept solely as a
+ * display fallback for a session-less deep-link. A session-less chooser hides
+ * the resubmit affordance because the wizard's submit needs the token.
  */
 import { useState, useEffect, useCallback } from "react";
-import { Text, TouchableOpacity, ActivityIndicator, ScrollView } from "react-native";
+import { Text, TouchableOpacity, ActivityIndicator, ScrollView, View } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { useTranslation } from "react-i18next";
 import { API_URL } from "@/lib/config";
@@ -29,17 +35,19 @@ const ROLE_HOME: Record<string, string> = {
   delivery_man: "/(main)/(customer)/home",
 };
 
-const RESUBMIT_KIND: Record<string, "shop" | "fleet" | "delivery_man"> = {
-  shop_owner: "shop",
-  fleet_owner: "fleet",
-  delivery_man: "delivery_man",
+/** M-5 (§16): the resubmit button deep-links into the role's prefilled
+ *  wizard (mode=resubmit) — the attempt is burned by the wizard's submit,
+ *  never by merely tapping this button on unchanged documents. */
+const RESUBMIT_WIZARD: Record<string, string> = {
+  shop_owner: "/(auth)/register-shop-owner",
+  fleet_owner: "/(auth)/register-fleet-owner",
+  delivery_man: "/(auth)/register-delivery-man",
 };
 
 interface HeldRole {
   role: string;
-  status: "active" | "pending" | "suspended";
-  reason: string | null;
-  is_primary: boolean;
+  status: "active" | "pending" | "suspended" | "closed";
+  reason?: string | null;
 }
 
 export default function LoginAsScreen() {
@@ -48,10 +56,10 @@ export default function LoginAsScreen() {
   const { t } = useTranslation();
   const isDark = useIsDark();
 
-  const [roles, setRoles] = useState<HeldRole[]>([]);
+  const [roles, setRoles] = useState<Record<string, HeldRole>>({});
+  const [authenticated, setAuthenticated] = useState(true);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [resubmitting, setResubmitting] = useState<string | null>(null);
 
   const bg = isDark ? colors.bgDark : colors.bgLight;
   const textPrimary = isDark ? colors.textPrimaryDark : colors.textPrimaryLight;
@@ -67,17 +75,38 @@ export default function LoginAsScreen() {
     }
     setLoading(true);
     try {
+      // PRIMARY: authenticated GET /api/user/roles — full payload.
+      const { data: session } = await supabase.auth.getSession();
+      const token = session.session?.access_token;
+      if (token) {
+        const res = await fetch(`${API_URL}/api/user/roles`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          const list = Array.isArray(data.roles) ? data.roles : [];
+          const map: Record<string, HeldRole> = {};
+          for (const r of list) map[r.role] = r;
+          setRoles(map);
+          setAuthenticated(true);
+          return;
+        }
+      }
+      // FALLBACK: session-less deep-link — public pairs keep the rows visible.
       const res = await fetch(`${API_URL}/api/auth/check-user`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ phone }),
       });
       const data = await res.json();
-      if (!res.ok || !Array.isArray(data.roles)) {
-        setError(t("auth.login_as.load_failed"));
+      if (res.ok && Array.isArray(data.roles)) {
+        const map: Record<string, HeldRole> = {};
+        for (const r of data.roles) map[r.role] = r;
+        setRoles(map);
+        setAuthenticated(false);
         return;
       }
-      setRoles(data.roles as HeldRole[]);
+      setError(t("auth.login_as.load_failed"));
     } catch (e) {
       logger.error("[login-as] load failed", e);
       setError(t("auth.login_as.load_failed"));
@@ -90,30 +119,61 @@ export default function LoginAsScreen() {
     load();
   }, [load]);
 
-  const resubmit = async (role: string) => {
-    const kind = RESUBMIT_KIND[role];
-    if (!kind) return;
-    setResubmitting(role);
-    try {
-      const { data: session } = await supabase.auth.getSession();
-      const token = session.session?.access_token;
-      const res = await fetch(`${API_URL}/api/user/roles/resubmit`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token ?? ""}` },
-        body: JSON.stringify({ kind }),
-      });
-      if (res.ok) await load();
-    } catch (e) {
-      logger.error("[login-as] resubmit failed", e);
-    } finally {
-      setResubmitting(null);
-    }
-  };
-
   const statusLabel = (r: HeldRole) => {
     if (r.status === "active") return null;
     if (r.status === "pending") return t("auth.login_as.status_pending");
+    if (r.status === "closed") return t("auth.login_as.status_closed");
     return t("auth.login_as.status_rejected");
+  };
+
+  const enter = (role: string) => router.replace(ROLE_HOME[role] ?? "/(main)/(customer)/home");
+  const openStatus = () => router.push("/(main)/(customer)/verification-status");
+  const deepLinkResubmit = (role: string) =>
+    router.push(`${RESUBMIT_WIZARD[role]}?mode=resubmit&resubmit=1`);
+
+  const rowProps = (role: string) => {
+    const r = roles[role];
+    if (!r) return null;
+    const label = statusLabel(r);
+    const enterable = r.status === "active" && authenticated;
+    const rejected = r.status !== "active";
+    const resubmitable = !!RESUBMIT_WIZARD[role] && rejected && authenticated;
+    return (
+      <TouchableOpacity
+        onPress={() => (enterable ? enter(role) : openStatus())}
+        className="rounded-xl border px-4 py-4 mb-3"
+        style={{
+          backgroundColor: surfaceBg,
+          borderColor: enterable ? colors.primary : borderColor,
+          opacity: enterable ? 1 : 0.85,
+        }}
+       testID="login-as.enter">
+        <Text className="text-[16px] font-JakartaBold" style={{ color: textPrimary }}>
+          {t(`auth.roles.${role}`)}
+        </Text>
+        {label ? (
+          <Text className="text-[13px] mt-1" style={{ color: colors.danger }}>
+            {label}
+          </Text>
+        ) : null}
+        {r.reason ? (
+          <Text className="text-[13px] mt-1" style={{ color: textSecondary }}>
+            {r.reason}
+          </Text>
+        ) : null}
+        {resubmitable ? (
+          <TouchableOpacity
+            onPress={() => deepLinkResubmit(role)}
+            className="mt-3 self-start rounded-lg px-4 py-2"
+            style={{ backgroundColor: colors.primary }}
+           testID="login-as.deep-link-resubmit">
+            <Text className="text-[13px] font-JakartaBold" style={{ color: colors.white }}>
+              {t("auth.login_as.resubmit")}
+            </Text>
+          </TouchableOpacity>
+        ) : null}
+      </TouchableOpacity>
+    );
   };
 
   return (
@@ -133,58 +193,23 @@ export default function LoginAsScreen() {
             {error}
           </Text>
         ) : (
-          roles.map((r) => {
-            const label = statusLabel(r);
-            const enterable = r.status === "active";
-            return (
-              <TouchableOpacity
-                key={r.role}
-                onPress={() =>
-                  enterable
-                    ? router.replace(ROLE_HOME[r.role] ?? "/(main)/(customer)/home")
-                    : // F-02 → F-03: a pending/rejected role is not enterable;
-                      // its row opens the verification-status screen.
-                      router.push("/(main)/(customer)/verification-status")
-                }
-               
-                className="rounded-xl border px-4 py-4 mb-3"
-                style={{
-                  backgroundColor: surfaceBg,
-                  borderColor: enterable ? colors.primary : borderColor,
-                  opacity: enterable ? 1 : 0.85,
-                }}
-               testID="login-as.push-verification-status">
-                <Text className="text-[16px] font-JakartaBold" style={{ color: textPrimary }}>
-                  {t(`auth.roles.${r.role}`)}
-                </Text>
-                {label ? (
-                  <Text className="text-[13px] mt-1" style={{ color: colors.danger }}>
-                    {label}
-                  </Text>
-                ) : null}
-                {r.reason ? (
-                  <Text className="text-[13px] mt-1" style={{ color: textSecondary }}>
-                    {r.reason}
-                  </Text>
-                ) : null}
-                {!enterable && RESUBMIT_KIND[r.role] ? (
-                  <TouchableOpacity
-                    onPress={() => resubmit(r.role)}
-                    disabled={resubmitting === r.role}
-                   
-                    className="mt-3 self-start rounded-lg px-4 py-2"
-                    style={{ backgroundColor: colors.primary }}
-                   testID="login-as.resubmit">
-                    <Text className="text-[13px] font-JakartaBold" style={{ color: colors.white }}>
-                      {resubmitting === r.role
-                        ? t("auth.login_as.resubmitting")
-                        : t("auth.login_as.resubmit")}
-                    </Text>
-                  </TouchableOpacity>
-                ) : null}
-              </TouchableOpacity>
-            );
-          })
+          <>
+            {/* Five fixed launch roles, ONE row block each — the testIDs are
+                static literals (never shared, never dynamic), per S2.1. */}
+            <View testID="login-as.enter-rider">{rowProps("rider")}</View>
+            <View testID="login-as.enter-driver">{rowProps("driver")}</View>
+            <View testID="login-as.enter-shop-owner">{rowProps("shop_owner")}</View>
+            <View testID="login-as.enter-fleet-owner">{rowProps("fleet_owner")}</View>
+            <View testID="login-as.enter-delivery-man">{rowProps("delivery_man")}</View>
+            {!authenticated ? (
+              <Text
+                className="text-[12px] mt-2"
+                style={{ color: textSecondary }}
+              >
+                {t("auth.login_as.session_less_hint")}
+              </Text>
+            ) : null}
+          </>
         )}
       </ScrollView>
     </SafeAreaView>

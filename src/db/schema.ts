@@ -2501,6 +2501,9 @@ export const fleetTypeEnum = pgEnum("fleet_type", [
   "NATIVE",
   "EXTERNAL",
   "HYBRID",
+  // S2.1 D-2 (§16): the fleet-owner ROLE application mints BUSINESS; NATIVE
+  // stays the implicit solo fleet from registration.
+  "BUSINESS",
 ]);
 export const fleetStatusEnum = pgEnum("fleet_status", [
   "PENDING",

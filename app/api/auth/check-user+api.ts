@@ -30,12 +30,21 @@ export async function POST(request: Request) {
       return Response.json({ exists: false, role: null, roles: [] }, { status: 200 });
     }
 
-    // OWNER-DECISION #9: the post-OTP "Login as [Role]" chooser needs the full
-    // set of roles the account holds. Only ROLE LABELS + verification state
-    // cross this public boundary — no ids, names or documents.
-    const roles = await heldRoles(user[0].id);
+    // OWNER-DECISION #9: the post-OTP "Login as [Role]" chooser needs the set
+    // of roles the account holds. This endpoint is UNAUTHENTICATED (S2.1 D-3,
+    // §16): only {role, status} pairs cross the boundary — reject reason/code/
+    // field/example, resubmit_count and prefill stay behind the
+    // authenticated GET /api/user/roles (full heldRoles payload).
+    const held = await heldRoles(user[0].id);
 
-    return Response.json({ exists: true, role: user[0].role, roles }, { status: 200 });
+    return Response.json(
+      {
+        exists: true,
+        role: user[0].role,
+        roles: held.map((r) => ({ role: r.role, status: r.status })),
+      },
+      { status: 200 },
+    );
   } catch (error) {
     logger.error("[check-user] error", error);
     return Response.json(

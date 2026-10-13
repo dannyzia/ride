@@ -12,6 +12,7 @@ import { router, useLocalSearchParams } from "expo-router";
 import { useTranslation } from "react-i18next";
 import { API_URL } from "@/lib/config";
 import { supabase } from "@/lib/supabase";
+import { getRegistrationHandoff, clearRegistrationHandoff } from "@/lib/registrationHandoff";
 import { logger } from "@/lib/logger";
 import { colors } from "@/theme/goRide";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -20,14 +21,16 @@ import CustomButton from "@/components/CustomButton";
 import DocumentUploadCard from "@/components/DocumentUploadCard";
 
 export default function RegisterFleetOwnerScreen() {
+  // M-6 (§16): phone stays a param (not a secret); name/password arrive via
+  // the in-memory registrationHandoff and never in the URL.
   const params = useLocalSearchParams<{
     phone?: string;
-    name?: string;
-    password?: string;
+    role?: string;
     mode?: string;
     resubmit?: string;
   }>();
-  const mode = params.mode === "addRole" ? "addRole" : "register";
+  const mode =
+    params.mode === "addRole" ? "addRole" : params.mode === "resubmit" ? "resubmit" : "register";
   const { t } = useTranslation();
   const isDark = useIsDark();
 
@@ -56,7 +59,7 @@ export default function RegisterFleetOwnerScreen() {
         /* prefill is best-effort */
       }
     })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [params.resubmit]);
   const [licenseUrl, setLicenseUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -68,10 +71,33 @@ export default function RegisterFleetOwnerScreen() {
   const surfaceBg = isDark ? colors.surfaceElevatedDark : colors.surfaceLight;
   const borderColor = isDark ? colors.borderDark : colors.borderLight;
 
+  // M-6 re-prompt fallback: in register mode the wizard is only reachable with
+  // the handoff register.tsx left behind — a deep-link/killed app bounces back
+  // to re-collect name + password (never silent failure). The submit PEEKS the
+  // handoff itself; nothing is consumed until the account is created.
+  useEffect(() => {
+    if (mode !== "register" || getRegistrationHandoff()) return;
+    router.replace(
+      `/(auth)/register?phone=${encodeURIComponent(params.phone ?? "")}&role=${encodeURIComponent(params.role ?? "fleet_owner")}`,
+    );
+     
+  }, [mode]);
+
   const canSubmit = fleetName.trim().length >= 2 && !!licenseUrl;
+
+  // addRole/resubmit modes call authenticated endpoints (existing session).
+  async function bearer(): Promise<string | null> {
+    const { data: session } = await supabase.auth.getSession();
+    return session.session?.access_token ?? null;
+  }
 
   const submit = async () => {
     if (!canSubmit) return;
+    const creds = mode === "register" ? getRegistrationHandoff() : null;
+    if (!creds) {
+      setError(t("auth.fleet_owner.submit_failed"));
+      return;
+    }
     setLoading(true);
     setError("");
     try {
@@ -81,15 +107,35 @@ export default function RegisterFleetOwnerScreen() {
         ...(licenseNumber.trim() ? { trade_license_number: licenseNumber.trim() } : {}),
         trade_license_url: licenseUrl,
       };
-      const url = mode === "addRole" ? `${API_URL}/api/user/roles` : `${API_URL}/api/register`;
+      // M-5 (§16): mode=resubmit pushes the EDITED record into
+      // POST /api/user/roles/resubmit — fields re-applied server-side and the
+      // re-queue is one action with the fix, never a bare re-queue.
+      const url =
+        mode === "addRole"
+          ? `${API_URL}/api/user/roles`
+          : mode === "resubmit"
+            ? `${API_URL}/api/user/roles/resubmit`
+            : `${API_URL}/api/register`;
+      const authHeader = mode !== "register" ? await bearer() : null;
       const body =
         mode === "addRole"
           ? { role: "fleet_owner", fleet }
-          : { phone: params.phone, name: params.name, password: params.password, role: "fleet_owner", fleet };
+          : mode === "resubmit"
+            ? { kind: "fleet", fleet }
+            : {
+                phone: creds.phone,
+                name: creds.name,
+                password: creds.password,
+                role: "fleet_owner",
+                fleet,
+              };
 
       const res = await fetch(url, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(authHeader ? { Authorization: `Bearer ${authHeader}` } : {}),
+        },
         body: JSON.stringify(body),
       });
       const data = await res.json();
@@ -97,8 +143,12 @@ export default function RegisterFleetOwnerScreen() {
         setError(data.message || t("auth.fleet_owner.submit_failed"));
         return;
       }
+      if (mode === "register") clearRegistrationHandoff();
       if (mode === "addRole") {
         Alert.alert(t("auth.fleet_owner.added_title"), t("auth.fleet_owner.added_body"));
+        router.back();
+      } else if (mode === "resubmit") {
+        Alert.alert(t("auth.fleet_owner.resubmitted_title"), t("auth.fleet_owner.resubmitted_body"));
         router.back();
       } else {
         router.replace("/(main)/(customer)/home");

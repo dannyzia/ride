@@ -112,7 +112,11 @@ export async function createRoleRecord(
     await tx.insert(fleets).values({
       owner_user_id: userId,
       name: fleet.fleet_name,
-      fleet_type: 'NATIVE',
+      // S2.1 D-2 (§16): the ROLE application mints BUSINESS — NATIVE is the
+      // implicit solo fleet from registration (app/api/register+api.ts), and
+      // Business-NATIVE ambiguity made the heldRoles status read pick the
+      // wrong fleet (the implicit solo NATIVE fleet is always the older one).
+      fleet_type: 'BUSINESS',
       status: 'PENDING', // §2d: business profile + docs → pending → verified.
       business_name: fleet.business_name ?? null,
       trade_license_number: fleet.trade_license_number ?? null,
@@ -145,8 +149,12 @@ export async function createRoleRecord(
   throw Object.assign(new Error(`unhandled launch role: ${role}`), { status: 400 });
 }
 
-/** Verification state as the applicant and the Login-as chooser see it (R6). */
-export type RoleStatus = 'active' | 'pending' | 'suspended';
+/**
+ * Verification state as the applicant and the Login-as chooser see it (R6).
+ * 'closed' is distinct (S2.1 minor, §16): a CLOSED shop operationally is not
+ * suspended by decision — the surface shows it differently.
+ */
+export type RoleStatus = 'active' | 'pending' | 'suspended' | 'closed';
 
 export interface HeldRole {
   role: LaunchRole;
@@ -178,7 +186,8 @@ function applicantReject(raw: unknown): HeldRole['reject'] {
 function shopStatus(status: string): RoleStatus {
   if (status === 'active') return 'active';
   if (status === 'pending') return 'pending';
-  return 'suspended'; // suspended | closed
+  if (status === 'closed') return 'closed'; // S2.1 minor (§16): distinct label
+  return 'suspended';
 }
 
 function fleetStatus(status: string): RoleStatus {
@@ -248,7 +257,11 @@ export async function heldRoles(userId: string): Promise<HeldRole[]> {
         trade_license_number: fleets.trade_license_number,
       })
       .from(fleets)
-      .where(eq(fleets.owner_user_id, userId))
+      // S2.1 D-2 (§16): scope to the fleet created BY THE ROLE RECORD — the
+      // BUSINESS fleet minted at fleet-owner signup. Oldest-wins over ALL owned
+      // fleets picked the implicit solo NATIVE fleet (registration-era) and
+      // reported the wrong verification status for the role.
+      .where(and(eq(fleets.owner_user_id, userId), eq(fleets.fleet_type, 'BUSINESS')))
       .orderBy(fleets.created_at)
       .limit(1),
     db

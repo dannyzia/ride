@@ -24,6 +24,10 @@ import { db } from '@/src/db';
 import { shops, fleets, fleetMembers, couriers, users, auditLogs } from '@/src/db/schema';
 import { and, eq, asc, isNull } from 'drizzle-orm';
 import { logger } from './logger';
+// M-5 (§16): the resubmission carries the wizard's edited fields — shared
+// payload shape + slug derivation live in launchRoles (no cycle: it never
+// imports this module).
+import { RoleRecordPayload, shopSlug } from './launchRoles';
 
 export const VERIFICATION_KINDS = ['shop', 'fleet', 'delivery_man'] as const;
 export type VerificationKind = (typeof VERIFICATION_KINDS)[number];
@@ -219,48 +223,61 @@ export async function approve(
     if (!before) notFound('fleet');
     if (before.verification_status !== 'pending') alreadyDecided('fleet');
 
-    const [updated] = await db
-      .update(fleets)
-      .set({
-        status: 'ACTIVE',
-        verification_status: 'approved',
-        verification_reason: null,
-        verification_reject: null,
-        verification_decided_at: new Date(),
-        verification_decided_by: adminUserId,
-        updated_at: new Date(),
-      })
-      .where(and(eq(fleets.id, id), eq(fleets.verification_status, 'pending')))
-      .returning({ id: fleets.id, owner: fleets.owner_user_id });
-    if (!updated) notFound('fleet');
+    // S2.1 M-1 (§16): UPDATE fleet + INSERT OWNER membership + audit land in
+    // ONE transaction — a failed membership mint must not leave an ACTIVE
+    // fleet whose owner has no fleet_members row (that row is the auth scope
+    // for every fleet route, so the missing write alone bricks the surface).
+    const decided = await db.transaction(async (tx) => {
+      const [updated] = await tx
+        .update(fleets)
+        .set({
+          status: 'ACTIVE',
+          verification_status: 'approved',
+          verification_reason: null,
+          verification_reject: null,
+          verification_decided_at: new Date(),
+          verification_decided_by: adminUserId,
+          updated_at: new Date(),
+        })
+        .where(and(eq(fleets.id, id), eq(fleets.verification_status, 'pending')))
+        .returning({ id: fleets.id, owner: fleets.owner_user_id });
+      if (!updated) notFound('fleet');
 
-    // §2d: the OWNER membership is minted by approval ("→ admin verifies →
-    // fleet + OWNER membership → dashboard"). Idempotent: the membership may
-    // already exist if the fleet was created through another path.
-    const existingMember = await db
-      .select({ id: fleetMembers.id })
-      .from(fleetMembers)
-      .where(and(eq(fleetMembers.fleet_id, updated.id), eq(fleetMembers.user_id, updated.owner)))
-      .limit(1);
-    if (existingMember.length === 0) {
-      await db.insert(fleetMembers).values({
-        fleet_id: updated.id,
-        user_id: updated.owner,
-        role: 'OWNER',
-        status: 'active',
+      // §2d: the OWNER membership is minted by approval ("→ admin verifies →
+      // fleet + OWNER membership → dashboard"). Idempotent: the membership may
+      // already exist if the fleet was created through another path.
+      const existingMember = await tx
+        .select({ id: fleetMembers.id })
+        .from(fleetMembers)
+        .where(and(eq(fleetMembers.fleet_id, updated.id), eq(fleetMembers.user_id, updated.owner)))
+        .limit(1);
+      if (existingMember.length === 0) {
+        await tx.insert(fleetMembers).values({
+          fleet_id: updated.id,
+          user_id: updated.owner,
+          role: 'OWNER',
+          status: 'active',
+        });
+      }
+
+      // Audit inside the transaction — unlike the swallow-below writeAudit
+      // posture for the other kinds, a failed compliance write rolls the
+      // whole decision back (money-adjacent lifecycle, §7 A3).
+      await tx.insert(auditLogs).values({
+        actor_user_id: adminUserId,
+        action: 'verification_fleet_approved',
+        entity_type: 'fleet',
+        entity_id: updated.id,
+        old_value: { status: before.status, verification_status: before.verification_status },
+        new_value: { status: 'ACTIVE', verification_status: 'approved' },
+        ip_address: meta.ip ?? null,
+        user_agent: meta.userAgent ?? null,
       });
-    }
 
-    await writeAudit({
-      adminUserId,
-      action: 'verification_fleet_approved',
-      entityType: 'fleet',
-      entityId: updated.id,
-      oldValue: { status: before.status, verification_status: before.verification_status },
-      newValue: { status: 'ACTIVE', verification_status: 'approved' },
-      meta,
+      return { id: updated.id, owner: updated.owner };
     });
-    return { id: updated.id, user_id: updated.owner };
+
+    return { id: decided.id, user_id: decided.owner };
   }
 
   const [before] = await db
@@ -438,10 +455,18 @@ export async function reject(
  * R6 re-submission: the applicant sends the record back into the queue after
  * fixing whatever the admin rejected. Scoped to the caller's OWN record, and
  * only from 'rejected' — there is no way to sneak a live role back into review.
+ *
+ * S2.1 M-5 (§16): the payload is the wizard's APPLICANT-EDITED fields (only
+ * the kind's own object is applied, and only when provided) — the deep-linked
+ * prefilled wizard is where fixes happen, so a resubmission carries the new
+ * picture, not just a re-queue. The clear now covers BOTH reject columns:
+ * `verification_reject` used to survive a resubmit, leaving every reader
+ * (heldRoles reject surface, queue filters) the stale structured block.
  */
 export async function resubmit(
   userId: string,
   kind: VerificationKind,
+  updates?: RoleRecordPayload,
 ): Promise<{ status: 'pending'; resubmit_count: number }> {
   if (kind === 'shop') {
     const [row] = await db
@@ -452,9 +477,27 @@ export async function resubmit(
     if (!row) throw Object.assign(new Error('No rejected shop to resubmit'), { status: 409 });
     if (row.n >= MAX_RESUBMITS)
       throw Object.assign(new Error('Resubmit limit reached — contact support'), { status: 409 });
+    const s = updates?.shop;
     await db
       .update(shops)
-      .set({ verification_status: 'pending', verification_reason: null, verification_resubmit_count: row.n + 1, updated_at: new Date() })
+      .set({
+        ...(s
+          ? {
+              name: s.shop_name,
+              // slug is UNIQUE and derived per user — a renamed shop re-slices it.
+              slug: shopSlug(s.shop_name, userId),
+              shop_type_id: s.shop_type_id,
+              address_line: s.address_line,
+              license_url: s.license_url,
+              ...(s.food_safety_cert_url ? { food_safety_cert_url: s.food_safety_cert_url } : {}),
+            }
+          : {}),
+        verification_status: 'pending',
+        verification_reason: null,
+        verification_reject: null,
+        verification_resubmit_count: row.n + 1,
+        updated_at: new Date(),
+      })
       .where(eq(shops.id, row.id));
     return { status: 'pending', resubmit_count: row.n + 1 };
   }
@@ -468,9 +511,25 @@ export async function resubmit(
     if (!row) throw Object.assign(new Error('No rejected fleet to resubmit'), { status: 409 });
     if (row.n >= MAX_RESUBMITS)
       throw Object.assign(new Error('Resubmit limit reached — contact support'), { status: 409 });
+    const f = updates?.fleet;
     await db
       .update(fleets)
-      .set({ verification_status: 'pending', verification_reason: null, verification_resubmit_count: row.n + 1, updated_at: new Date() })
+      .set({
+        ...(f
+          ? {
+              name: f.fleet_name,
+              ...(f.business_name ? { business_name: f.business_name } : {}),
+              ...(f.trade_license_number ? { trade_license_number: f.trade_license_number } : {}),
+              trade_license_url: f.trade_license_url,
+              ...(f.tax_doc_url ? { tax_doc_url: f.tax_doc_url } : {}),
+            }
+          : {}),
+        verification_status: 'pending',
+        verification_reason: null,
+        verification_reject: null,
+        verification_resubmit_count: row.n + 1,
+        updated_at: new Date(),
+      })
       .where(eq(fleets.id, row.id));
     return { status: 'pending', resubmit_count: row.n + 1 };
   }
@@ -483,9 +542,23 @@ export async function resubmit(
   if (!crow) throw Object.assign(new Error('No rejected delivery-man record to resubmit'), { status: 409 });
   if (crow.n >= MAX_RESUBMITS)
     throw Object.assign(new Error('Resubmit limit reached — contact support'), { status: 409 });
+  const d = updates?.delivery;
   await db
     .update(couriers)
-    .set({ verification_status: 'pending', verification_reason: null, verification_resubmit_count: crow.n + 1, updated_at: new Date() })
+    .set({
+      ...(d
+        ? {
+            nid_url: d.nid_url,
+            license_url: d.license_url,
+            ...(d.vehicle_note !== undefined ? { vehicle_note: d.vehicle_note } : {}),
+          }
+        : {}),
+      verification_status: 'pending',
+      verification_reason: null,
+      verification_reject: null,
+      verification_resubmit_count: crow.n + 1,
+      updated_at: new Date(),
+    })
     .where(eq(couriers.id, crow.id));
   return { status: 'pending', resubmit_count: crow.n + 1 };
 }

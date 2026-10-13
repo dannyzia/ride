@@ -108,8 +108,9 @@
       "load_failed": "Could not load your roles",
       "status_pending": "Pending verification",
       "status_rejected": "Rejected",
-      "resubmit": "Resubmit",
-      "resubmitting": "Resubmitting…"
+      "status_closed": "Closed",
+      "session_less_hint": "Sign in again to switch in.",
+      "resubmit": "Resubmit"
     },
     "shop_owner": {
       "title": "Shop Owner",
@@ -122,7 +123,9 @@
       "submit": "Submit for verification",
       "submit_failed": "Could not submit. Please try again.",
       "added_title": "Submitted",
-      "added_body": "Your shop is pending admin verification."
+      "added_body": "Your shop is pending admin verification.",
+      "resubmitted_title": "Resubmitted",
+      "resubmitted_body": "Your shop is back in the review queue with your fixes."
     },
     "fleet_owner": {
       "title": "Fleet Owner",
@@ -134,7 +137,9 @@
       "submit": "Submit for verification",
       "submit_failed": "Could not submit. Please try again.",
       "added_title": "Submitted",
-      "added_body": "Your fleet is pending admin verification."
+      "added_body": "Your fleet is pending admin verification.",
+      "resubmitted_title": "Resubmitted",
+      "resubmitted_body": "Your fleet is back in the review queue with your fixes."
     },
     "delivery_man": {
       "title": "Delivery Man",
@@ -145,7 +150,9 @@
       "submit": "Submit for verification",
       "submit_failed": "Could not submit. Please try again.",
       "added_title": "Submitted",
-      "added_body": "Your delivery-man account is pending admin verification."
+      "added_body": "Your delivery-man account is pending admin verification.",
+      "resubmitted_title": "Resubmitted",
+      "resubmitted_body": "Your delivery-man record is back in the review queue with your fixes."
     },
     "add_role": {
       "title": "Add a role",

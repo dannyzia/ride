@@ -72,6 +72,34 @@ jest.mock("@/src/db", () => ({
         })),
       }),
     })),
+    // M-1 (§16): the fleet approve branch runs inside db.transaction — the tx
+    // callback reuses the SAME select/update/insert queues (and the same
+    // mockChain shape) so existing queue setups keep working unchanged.
+    transaction: jest.fn(async (fn: (tx: unknown) => Promise<unknown>) =>
+      fn({
+        select: jest.fn(() => {
+          const rows = mockSelectQueue.length > 0 ? mockSelectQueue.shift()!() : [];
+          return mockChain(rows);
+        }),
+        insert: jest.fn(() => ({
+          values: jest.fn((payload: Record<string, unknown>) => {
+            mockInsertedPayloads.push(payload);
+            const rows = mockInsertQueue.length > 0 ? mockInsertQueue.shift()!() : [{ id: "mock" }];
+            return { then: (r: (v: unknown) => unknown) => r(rows) };
+          }),
+        })),
+        update: jest.fn(() => ({
+          set: jest.fn().mockReturnValue({
+            where: jest.fn().mockImplementation(() => ({
+              returning: jest.fn().mockImplementation(() => {
+                const rows = mockUpdateQueue.length > 0 ? mockUpdateQueue.shift()!() : [];
+                return { then: (r: (v: unknown) => unknown) => r(rows) };
+              }),
+            })),
+          }),
+        })),
+      }),
+    ),
   },
 }));
 

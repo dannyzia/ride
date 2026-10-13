@@ -1,5 +1,5 @@
 {
-  "total": 1137,
+  "total": 1142,
   "screens": {
     "(auth)/_layout.tsx": [
       {
@@ -105,12 +105,32 @@
     ],
     "(auth)/login-as.tsx": [
       {
-        "id": "login-as.push-verification-status",
-        "line": 156
+        "id": "login-as.enter",
+        "line": 150
       },
       {
-        "id": "login-as.resubmit",
-        "line": 177
+        "id": "login-as.deep-link-resubmit",
+        "line": 169
+      },
+      {
+        "id": "login-as.enter-rider",
+        "line": 199
+      },
+      {
+        "id": "login-as.enter-driver",
+        "line": 200
+      },
+      {
+        "id": "login-as.enter-shop-owner",
+        "line": 201
+      },
+      {
+        "id": "login-as.enter-fleet-owner",
+        "line": 202
+      },
+      {
+        "id": "login-as.enter-delivery-man",
+        "line": 203
       }
     ],
     "(auth)/login.tsx": [
@@ -148,129 +168,129 @@
     "(auth)/otp-verify.tsx": [
       {
         "id": "otp-verify.set-otp",
-        "line": 156
+        "line": 161
       },
       {
         "id": "otp-verify.handle-verify-otp",
-        "line": 172
+        "line": 177
       },
       {
         "id": "otp-verify.send-otp",
-        "line": 178
+        "line": 183
       }
     ],
     "(auth)/phone-entry.tsx": [
       {
         "id": "phone-entry.set-phone",
-        "line": 170
+        "line": 180
       },
       {
         "id": "phone-entry.set-role",
-        "line": 188
+        "line": 198
       },
       {
         "id": "phone-entry.set-role-2",
-        "line": 205
+        "line": 215
       },
       {
         "id": "phone-entry.set-role-3",
-        "line": 222
+        "line": 232
       },
       {
         "id": "phone-entry.set-role-4",
-        "line": 239
+        "line": 249
       },
       {
         "id": "phone-entry.set-role-5",
-        "line": 256
+        "line": 266
       },
       {
         "id": "phone-entry.handle-login",
-        "line": 277
+        "line": 287
       },
       {
         "id": "phone-entry.handle-register",
-        "line": 283
+        "line": 293
       }
     ],
     "(auth)/register-delivery-man.tsx": [
       {
         "id": "register-delivery-man.upload-nid",
-        "line": 132
+        "line": 175
       },
       {
         "id": "register-delivery-man.upload-license",
-        "line": 139
+        "line": 182
       },
       {
         "id": "register-delivery-man.set-vehicle-note",
-        "line": 150
+        "line": 193
       },
       {
         "id": "register-delivery-man.submit",
-        "line": 166
+        "line": 209
       }
     ],
     "(auth)/register-fleet-owner.tsx": [
       {
         "id": "register-fleet-owner.set-fleet-name",
-        "line": 132
+        "line": 182
       },
       {
         "id": "register-fleet-owner.set-business-name",
-        "line": 141
+        "line": 191
       },
       {
         "id": "register-fleet-owner.set-license-number",
-        "line": 150
+        "line": 200
       },
       {
         "id": "register-fleet-owner.upload-trade-license",
-        "line": 157
+        "line": 207
       },
       {
         "id": "register-fleet-owner.submit",
-        "line": 174
+        "line": 224
       }
     ],
     "(auth)/register-shop-owner.tsx": [
       {
         "id": "register-shop-owner.set-shop-name",
-        "line": 179
+        "line": 223
       },
       {
         "id": "register-shop-owner.set-address",
-        "line": 188
+        "line": 232
       },
       {
         "id": "register-shop-owner.upload-trade-license",
-        "line": 214
+        "line": 258
       },
       {
         "id": "register-shop-owner.upload-food-cert",
-        "line": 222
+        "line": 266
       },
       {
         "id": "register-shop-owner.submit",
-        "line": 240
+        "line": 284
       }
     ],
     "(auth)/register.tsx": [
       {
         "id": "register.set-name",
-        "line": 138
+        "line": 143
       },
       {
         "id": "register.set-password",
-        "line": 154
+        "line": 159
       },
       {
         "id": "register.set-confirm-password",
-        "line": 170
+        "line": 175
       },
       {
         "id": "register.handle-register",
-        "line": 186
+        "line": 191
       }
     ],
     "(auth)/walkthrough-1.tsx": [
@@ -1632,7 +1652,7 @@
     "(main)/(customer)/add-role/index.tsx": [
       {
         "id": "customer.add-role.push-push",
-        "line": 148
+        "line": 168
       }
     ],
     "(main)/(customer)/add-tip/index.tsx": [
@@ -4976,7 +4996,7 @@
     "index.tsx": [
       {
         "id": ".run-auth-check",
-        "line": 182
+        "line": 191
       }
     ],
     "track/[rideId].tsx": [

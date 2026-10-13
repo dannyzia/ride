@@ -1,5 +1,6 @@
 // [public]
 import { supabaseAdmin } from '../../../lib/supabaseServer';
+import { heldRoles } from '@/lib/launchRoles';
 
 export async function POST(request: Request) {
   const authHeader = request.headers.get('Authorization') ?? '';
@@ -30,20 +31,25 @@ export async function POST(request: Request) {
     if (!retryUser) {
       return Response.json({ exists: false });
     }
-    return Response.json({
-      exists: true,
-      user_id: retryUser.id,
-      role: retryUser.role,
-      phone: retryUser.phone,
-      name: retryUser.name,
-    });
+    return respond(retryUser);
   }
 
-  return Response.json({
-    exists: true,
-    user_id: dbUser.id,
-    role: dbUser.role,
-    phone: dbUser.phone,
-    name: dbUser.name,
-  });
+  return respond(dbUser);
+
+  // S2.1 D-1 (§16): the auth gate routes on the ACTIVE role set (OWNER-DECISION
+  // #9) — a single-role account lands in its surface directly, an account with
+  // MORE THAN ONE active role hits the Login-as chooser. The projection is
+  // ACTIVE-only on purpose: gating on pending/rejected roles would bounce a
+  // fully-unverified multi-holder straight into the chooser forever.
+  async function respond(row: { id: string; role: string; phone: string | null; name: string | null }) {
+    const held = await heldRoles(row.id);
+    return Response.json({
+      exists: true,
+      user_id: row.id,
+      role: row.role,
+      phone: row.phone,
+      name: row.name,
+      active_roles: held.filter((r) => r.status === 'active').map((r) => r.role),
+    });
+  }
 }

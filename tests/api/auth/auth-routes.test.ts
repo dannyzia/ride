@@ -232,8 +232,12 @@ describe("POST /api/auth/check-user", () => {
   });
 
   test("exists=true with the user's role", async () => {
+    // S2.1 D-3 (§16): this endpoint is PUBLIC — every held role crosses as a
+    // {role, status} PAIR only. Reject reason/code/field/example, resubmit
+    // counts and prefill stay behind the authenticated GET /api/user/roles.
+    // The rows carry status: 'active' so heldRoles' driver read sees it.
     (db.select as jest.Mock).mockImplementation(() => {
-      const rows = [{ id: "u-1", role: "driver" }];
+      const rows = [{ id: "u-1", role: "driver", status: "active" }];
       const chain: any = {
         from: () => chain,
         where: () => chain,
@@ -247,7 +251,7 @@ describe("POST /api/auth/check-user", () => {
     expect(await getJson(res)).toEqual({
       exists: true,
       role: "driver",
-      roles: [{ role: "driver", status: "active", reason: null, is_primary: true }],
+      roles: [{ role: "driver", status: "active" }],
     });
   });
 });
@@ -316,6 +320,9 @@ describe("POST /api/auth/verify-token", () => {
       role: "rider",
       phone: "+8801712345678",
       name: "Zia",
+      // S2.1 D-1 (§16): the ACTIVE-only role set the auth gate routes on; the
+      // suite's heldRoles mock holds one active driver role.
+      active_roles: ["driver"],
     });
   });
 

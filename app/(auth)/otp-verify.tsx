@@ -92,9 +92,13 @@ export default function OtpVerifyScreen() {
         return;
       }
 
-      // OWNER-DECISION #9: after OTP, a MULTI-role account chooses which role
-      // to log in as. A single-role account keeps the existing path untouched
-      // (no account held more than one role before user_roles existed).
+      // S2.1 D-1 (§16): this app has exactly ONE session mechanism —
+      // signInWithPassword (the custom dpRelay OTP proves phone ownership,
+      // never mints a Supabase session). So for an EXISTING account the OTP
+      // completes on the password screen, where SIGNED_IN fires and the auth
+      // gate routes: multi-role → Login-as chooser (OWNER-DECISION #9),
+      // single-role → its surface directly. Previously an existing phone that
+      // reached this screen pushed register — a duplicate-phone API error.
       try {
         const checkRes = await fetch(`${API_URL}/api/auth/check-user`, {
           method: "POST",
@@ -102,12 +106,13 @@ export default function OtpVerifyScreen() {
           body: JSON.stringify({ phone }),
         });
         const check = await checkRes.json();
-        if (checkRes.ok && Array.isArray(check.roles) && check.roles.length > 1) {
-          router.push(`/(auth)/login-as?phone=${encodeURIComponent(phone)}`);
+        if (checkRes.ok && check.exists) {
+          router.replace(`/(auth)/login?phone=${encodeURIComponent(phone)}`);
           return;
         }
       } catch (checkErr) {
-        // The chooser is an affordance, never a gate: fall through to register.
+        // fall through to register — check-user failing must not strand a
+        // genuine first-time registration.
         logger.warn("[auth] check-user failed, continuing to register", checkErr);
       }
 

@@ -141,11 +141,19 @@ export default function RootLayout() {
             registerPushForUser(session.access_token).catch(() => {});
 
             if (data.exists && inAuthGroup && !isPublicRoute) {
-              router.replace(
-                data.role === "driver"
-                  ? "/(main)/(rider)"
-                  : "/(main)/(customer)/services-hub",
-              );
+              // S2.1 D-1 (§16): >1 ACTIVE role → the Login-as chooser
+              // (OWNER-DECISION #9); a single-role account lands directly.
+              if (Array.isArray(data.active_roles) && data.active_roles.length > 1) {
+                router.replace(
+                  `/(auth)/login-as?phone=${encodeURIComponent(data.phone ?? "")}`,
+                );
+              } else {
+                router.replace(
+                  data.role === "driver"
+                    ? "/(main)/(rider)"
+                    : "/(main)/(customer)/services-hub",
+                );
+              }
             } else if (!data.exists && !isPublicRoute) {
               router.replace("/(auth)/phone-entry");
             }

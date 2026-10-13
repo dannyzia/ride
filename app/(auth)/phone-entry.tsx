@@ -96,6 +96,16 @@ export default function PhoneEntryScreen() {
       }
 
       if (checkData.exists) {
+        // S2.1 D-1 (§16): a MULTI-role phone taps Register → the §2 login
+        // contract (phone → OTP → role routing) — otp-verify completes the
+        // phone-ownership proof, then the password screen holds the session
+        // and the auth gate routes to the Login-as chooser. Single-role
+        // keepers get the unchanged login hint.
+        const held = Array.isArray(checkData.roles) ? checkData.roles : [];
+        if (held.length > 1) {
+          router.push(`/(auth)/otp-verify?phone=${encodeURIComponent(fullPhone)}&role=${role}`);
+          return;
+        }
         setError("An account with this phone already exists. Please login.");
       } else {
         router.push(`/(auth)/otp-verify?phone=${encodeURIComponent(fullPhone)}&role=${role}`);

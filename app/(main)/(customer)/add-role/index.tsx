@@ -23,7 +23,7 @@ import { supabase } from "@/lib/supabase";
 
 interface HeldRole {
   role: string;
-  status: "active" | "pending" | "suspended";
+  status: "active" | "pending" | "suspended" | "closed";
   reason: string | null;
   is_primary: boolean;
 }
@@ -34,6 +34,22 @@ const ADDABLE: { role: string; route?: string; instant?: boolean }[] = [
   { role: "fleet_owner", route: "/(auth)/register-fleet-owner" },
   { role: "delivery_man", route: "/(auth)/register-delivery-man" },
 ];
+
+// S2.1 minor (§16): static testIDs — one literal per role everywhere, never a
+// shared id and never a dynamic template (testid-map visibility).
+const ROW_TESTID: Record<string, string> = {
+  rider: "add-role.row-rider",
+  driver: "add-role.row-driver",
+  shop_owner: "add-role.row-shop-owner",
+  fleet_owner: "add-role.row-fleet-owner",
+  delivery_man: "add-role.row-delivery-man",
+};
+const ADDABLE_TESTID: Record<string, string> = {
+  rider: "add-role.add-rider",
+  shop_owner: "add-role.add-shop-owner",
+  fleet_owner: "add-role.add-fleet-owner",
+  delivery_man: "add-role.add-delivery-man",
+};
 
 export default function AddRoleScreen() {
   const { t } = useTranslation();
@@ -109,7 +125,7 @@ export default function AddRoleScreen() {
             {roles.map((r) => (
               <View
                 key={r.role}
-                testID={`add-role.row-${r.role}`}
+                testID={ROW_TESTID[r.role]}
                 className="rounded-xl border px-4 py-3 mb-2"
                 style={{ backgroundColor: surfaceBg, borderColor }}
               >
@@ -119,7 +135,11 @@ export default function AddRoleScreen() {
                 </Text>
                 {r.status !== "active" ? (
                   <Text className="text-[13px] mt-1" style={{ color: colors.danger }}>
-                    {r.status === "pending" ? t("auth.login_as.status_pending") : t("auth.login_as.status_rejected")}
+                    {r.status === "pending"
+                      ? t("auth.login_as.status_pending")
+                      : r.status === "closed"
+                        ? t("auth.login_as.status_closed")
+                        : t("auth.login_as.status_rejected")}
                   </Text>
                 ) : null}
                 {r.reason ? (

@@ -194,12 +194,12 @@ describe("POST /api/user/roles (add a role)", () => {
 });
 
 describe("GET /api/auth/check-user (chooser payload)", () => {
-  it("returns every held role for an existing account", async () => {
+  it("returns every held role for an existing account as {role, status} PAIRS ONLY (S2.1 D-3)", async () => {
     mockSelectQueue.push(() => [{ id: USER, role: "rider" }]); // phone lookup
     queueHeldRoles({
       primary: "rider",
       heldRoles: [{ role: "rider" }, { role: "shop_owner" }],
-      shop: { status: "pending" },
+      shop: { status: "pending", reason: "License unreadable" },
     });
 
     const res = await checkUserPost(
@@ -213,6 +213,11 @@ describe("GET /api/auth/check-user (chooser payload)", () => {
     const body = (await res.json()) as { exists: boolean; roles: { role: string; status: string }[] };
     expect(body.exists).toBe(true);
     expect(body.roles.map((r) => r.role)).toEqual(["rider", "shop_owner"]);
+    // D-3 (§16): the PUBLIC boundary carries {role, status} pairs only — no
+    // reason/code/field/example, no resubmit_count, no prefill, no ids.
+    for (const pair of body.roles) {
+      expect(Object.keys(pair).sort()).toEqual(["role", "status"]);
+    }
   });
 
   it("reports exists:false with an empty role list for a new number", async () => {

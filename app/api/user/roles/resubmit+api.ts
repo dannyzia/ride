@@ -16,8 +16,34 @@ import { logger } from '@/lib/logger';
 import * as errors from '@/lib/errors';
 import { resubmit } from '@/lib/roleVerification';
 
+const shopSchema = z.object({
+  shop_name: z.string().min(2).max(150),
+  shop_type_id: z.string().uuid(),
+  address_line: z.string().min(3).max(500),
+  license_url: z.string().url().max(500),
+  food_safety_cert_url: z.string().url().max(500).optional(),
+});
+const fleetSchema = z.object({
+  fleet_name: z.string().min(2).max(150),
+  business_name: z.string().min(2).max(150).optional(),
+  trade_license_number: z.string().min(1).max(100).optional(),
+  trade_license_url: z.string().url().max(500),
+  tax_doc_url: z.string().url().max(500).optional(),
+});
+const deliverySchema = z.object({
+  nid_url: z.string().url().max(500),
+  license_url: z.string().url().max(500),
+  vehicle_note: z.string().max(300).optional(),
+});
+
+// S2.1 M-5 (§16): the prefilled wizard is where an applicant EDITS the record
+// before re-queueing, so this route accepts the same payload keys as
+// POST /api/user/roles. Only the kind's own object is applied server-side.
 const bodySchema = z.object({
   kind: z.enum(['shop', 'fleet', 'delivery_man']),
+  shop: shopSchema.optional(),
+  fleet: fleetSchema.optional(),
+  delivery: deliverySchema.optional(),
 });
 
 export async function POST(request: Request) {
@@ -35,7 +61,11 @@ export async function POST(request: Request) {
     const parsed = await parseJsonBody(request, bodySchema);
     if (!parsed.ok) return parsed.response;
 
-    const result = await resubmit(dbUser.id, parsed.data.kind);
+    const result = await resubmit(dbUser.id, parsed.data.kind, {
+      shop: parsed.data.shop,
+      fleet: parsed.data.fleet,
+      delivery: parsed.data.delivery,
+    });
     logger.info('[user/roles] resubmitted', { user_id: dbUser.id, kind: parsed.data.kind });
 
     return Response.json({ kind: parsed.data.kind, verification_status: result.status });
