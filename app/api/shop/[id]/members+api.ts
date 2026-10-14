@@ -2,7 +2,9 @@
  * Shop members management.
  *
  * GET    /api/shop/[id]/members — list active members
- * POST   /api/shop/[id]/members — add member (OWNER only)
+ * POST   /api/shop/[id]/members — add member (OWNER only) — by user_id OR by
+ *        phone (S3 §3/R10: invite-by-phone resolves the users row; a phone
+ *        with no account returns 404 user_not_found, never a dangling row).
  * DELETE /api/shop/[id]/members?user_id=... — remove member or leave-shop
  */
 import { db } from "@/src/db";
@@ -16,7 +18,7 @@ import { z } from "zod";
 
 export async function GET(request: Request, { id }: { id: string }) {
   try {
-    const { supabaseUser, dbUser } = await requireShopMember(id)(request);
+    const { dbUser } = await requireShopMember(id)(request);
 
     const rows = await db
       .select({
@@ -55,10 +57,15 @@ export async function GET(request: Request, { id }: { id: string }) {
   }
 }
 
-const addMemberSchema = z.object({
-  user_id: z.string().uuid(),
-  role: z.enum(["OWNER", "MANAGER", "STAFF"]),
-});
+const addMemberSchema = z
+  .object({
+    user_id: z.string().uuid().optional(),
+    phone: z.string().min(6).max(20).optional(),
+    role: z.enum(["OWNER", "MANAGER", "STAFF"]),
+  })
+  .refine((d) => d.user_id !== undefined || d.phone !== undefined, {
+    message: "user_id or phone required",
+  });
 
 export async function POST(request: Request, { id }: { id: string }) {
   try {
@@ -67,13 +74,49 @@ export async function POST(request: Request, { id }: { id: string }) {
     const result = await parseJsonBody(request, addMemberSchema);
     if (!result.ok) return result.response;
 
-    await db.insert(shopMembers).values({
-      shop_id: id,
-      user_id: result.data.user_id,
-      role: result.data.role,
-    });
+    // S3 §3/R10: invite-by-phone. The account must already exist (the R9
+    // account-upgrade pattern is the FLEET flow; shop staff are invited
+    // onto registered accounts only).
+    let targetUserId = result.data.user_id;
+    if (!targetUserId && result.data.phone) {
+      const [target] = await db
+        .select({ id: users.id, has_role: users.role })
+        .from(users)
+        .where(eq(users.phone, result.data.phone))
+        .limit(1);
+      if (!target) {
+        return Response.json(
+          {
+            error: "user_not_found",
+            message: "No registered account with this phone number",
+          },
+          { status: 404 },
+        );
+      }
+      targetUserId = target.id;
+    }
 
-    return Response.json({ message: "Member added" }, { status: 201 });
+    if (result.data.role === "OWNER" || (targetUserId === undefined)) {
+      return Response.json(
+        { error: "forbidden", message: "Invites are MANAGER|STAFF only (OWNER = the shop creator row)" },
+        { status: 403 },
+      );
+    }
+
+    const inserted = await db
+      .insert(shopMembers)
+      .values({
+        shop_id: id,
+        user_id: targetUserId,
+        role: result.data.role,
+        invited_by: membership.user_id,
+      })
+      .returning({ id: shopMembers.id });
+
+    return Response.json(
+      { member_id: inserted[0]?.id ?? null, message: "Member added" },
+      { status: 201 },
+    );
   } catch (err: unknown) {
     const status = errors.getErrorStatus(err);
     if (status === 401)
@@ -105,7 +148,7 @@ export async function POST(request: Request, { id }: { id: string }) {
  */
 export async function DELETE(request: Request, { id }: { id: string }) {
   try {
-    const { supabaseUser, dbUser, membership } = await requireShopMember(id)(
+    const { dbUser, membership } = await requireShopMember(id)(
       request,
     );
 

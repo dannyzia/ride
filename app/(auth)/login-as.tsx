@@ -24,13 +24,12 @@ import { colors } from "@/theme/goRide";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useIsDark } from "@/lib/useAppearance";
 
-/** Where each role lands TODAY. The dedicated shop/fleet/delivery-man
- *  surfaces arrive with S3/S5/S6; until then those roles land on the customer
- *  home with their verification state shown here. */
+/** Where each role lands TODAY. S3 adds the dedicated shop surface;
+ *  fleet/delivery-man stay on the customer home until S5/S6. */
 const ROLE_HOME: Record<string, string> = {
   rider: "/(main)/(customer)/home",
   driver: "/(main)/(rider)/home",
-  shop_owner: "/(main)/(customer)/home",
+  shop_owner: "/(main)/(shop-owner)",
   fleet_owner: "/(main)/(customer)/home",
   delivery_man: "/(main)/(customer)/home",
 };

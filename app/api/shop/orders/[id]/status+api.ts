@@ -16,6 +16,7 @@ import { notifyWs } from "@/lib/wsNotify";
 import * as errors from "@/lib/errors";
 import { eq, and } from "drizzle-orm";
 import { z } from "zod";
+import { settleShopOrder } from "@/lib/shopLedger";
 
 const statusSchema = z.object({
   status: z.enum([
@@ -27,6 +28,8 @@ const statusSchema = z.object({
     "cancelled",
   ]),
   cancel_reason: z.string().max(500).optional(),
+  // S3: prep-time picker — set WITH the accept transition (§3 dashboard).
+  prep_minutes: z.number().int().min(5).max(720).optional(),
 });
 
 const VALID_TRANSITIONS: Record<string, string[]> = {
@@ -109,7 +112,13 @@ export async function PATCH(request: Request, { id }: { id: string }) {
         updated_at: new Date(),
       };
 
-      if (targetStatus === "accepted") updates.accepted_at = new Date();
+      if (targetStatus === "accepted") {
+        updates.accepted_at = new Date();
+        // S3 prep-time picker: the estimate rides with the accept.
+        if (result.data.prep_minutes !== undefined) {
+          updates.prep_minutes = result.data.prep_minutes;
+        }
+      }
       if (targetStatus === "preparing") updates.prepared_at = new Date();
       if (targetStatus === "ready_for_pickup") updates.ready_at = new Date();
       if (targetStatus === "out_for_delivery") updates.picked_up_at = new Date();
@@ -135,6 +144,17 @@ export async function PATCH(request: Request, { id }: { id: string }) {
           { status: 409 },
         );
         return;
+      }
+
+      // S3/§12: order revenue + commission land in the SAME tx as the
+      // delivered transition — a settle failure rolls the status back (no
+      // delivered order without its ledger entries). Audit (§11 review 1).
+      if (targetStatus === "delivered") {
+        await settleShopOrder(tx, {
+          id: order.id,
+          shop_id: order.shop_id,
+          subtotal_bdt: order.subtotal_bdt,
+        });
       }
 
       newStatus = targetStatus;

@@ -151,7 +151,9 @@ export default function RootLayout() {
                 router.replace(
                   data.role === "driver"
                     ? "/(main)/(rider)"
-                    : "/(main)/(customer)/services-hub",
+                    : data.role === "shop_owner"
+                      ? "/(main)/(shop-owner)"
+                      : "/(main)/(customer)/services-hub",
                 );
               }
             } else if (!data.exists && !isPublicRoute) {

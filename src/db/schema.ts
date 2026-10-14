@@ -2964,6 +2964,10 @@ export const shops = pgTable("shops", {
   // R5: server-side open/closed toggle — closed shops reject new orders
   // (enforced in order routes, not just hidden in the UI).
   is_open: boolean("is_open").notNull().default(true),
+  // S3/F-16: busy mode THROTTLES, it does not close — the server still
+  // accepts orders for a busy shop; is_open=false is what rejects new orders
+  // server-side (R5, enforced in the order-creation routes).
+  busy: boolean("busy").notNull().default(false),
   // S2 §7 verification queue + R6: the admin DECISION, kept separate from the
   // operational `status` above. pending → approved|rejected; a reject stores
   // the reason the applicant sees in-app, and R6 lets them RESUBMIT.
@@ -3054,6 +3058,9 @@ export const shopOrders = pgTable("shop_orders", {
   rider_notes: text("rider_notes"),
   shop_notes: text("shop_notes"),
   accepted_at: timestamptz("accepted_at"),
+  // S3: set with the accepted transition (prep-time picker, §3). Estimate for
+  // the customer + dispatch-trigger timing; nullable for legacy rows.
+  prep_minutes: integer("prep_minutes"),
   prepared_at: timestamptz("prepared_at"),
   ready_at: timestamptz("ready_at"),
   picked_up_at: timestamptz("picked_up_at"),
@@ -3117,6 +3124,9 @@ export const workshopServices = pgTable("workshop_services", {
   description: text("description"),
   price_bdt: integer("price_bdt").notNull(),
   duration_minutes: integer("duration_minutes").notNull(),
+  // S3 (§3): soft-delete support for the workshop services CRUD — the S1
+  // table shipped without the column; added with 0067.
+  deleted_at: timestamptz("deleted_at"),
   created_at: timestamptz("created_at").notNull().defaultNow(),
   updated_at: timestamptz("updated_at").notNull().defaultNow(),
 }, (t) => [
@@ -3136,6 +3146,45 @@ export const workshopRequestStatusEnum = pgEnum("workshop_request_status", [
 
 /**
  * LAUNCH SURFACES (S1) — workshop booking requests (R4 simplification):
+ * the customer requests a WINDOW (date + time range) for a service and the
+ * shop confirms. NO slot-capacity grid (§11 R4 — supersedes the earlier
+ * workshop_slots design). Linked to a shop_orders row via order_id when the
+ * booking carries products (order linkage, §1).
+ */
+/**
+ * S3 settlement ledger (§12/R1) — the shop money system of record.
+ * APPEND-ONLY (no updated_at). amount_bdt is SIGNED integer paisa:
+ * order_revenue/reversal adjustments credit positive, commission/payout/
+ * negative-amount adjustments debit negative. Written ONLY by
+ * lib/shopLedger.ts inside shop-order/workshop transactions; unique index
+ * (order_id, entry_type) WHERE order_id IS NOT NULL is the double-settlement
+ * backstop (payout rows are order-scoped-NULL and exempt).
+ */
+export const shopLedgerEntryTypeEnum = pgEnum("shop_ledger_entry_type", [
+  "order_revenue",
+  "commission",
+  "payout",
+  "adjustment",
+  "reversal",
+]);
+
+export const shopLedger = pgTable("shop_ledger", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  shop_id: uuid("shop_id").notNull().references(() => shops.id),
+  order_id: uuid("order_id").references((): any => shopOrders.id),
+  entry_type: shopLedgerEntryTypeEnum("entry_type").notNull(),
+  amount_bdt: integer("amount_bdt").notNull(),
+  note: text("note"),
+  created_at: timestamptz("created_at").notNull().defaultNow(),
+}, (t) => [
+  uniqueIndex("shop_ledger_order_entry_uq")
+    .on(t.order_id, t.entry_type)
+    .where(sql`${t.order_id} IS NOT NULL`),
+  index("shop_ledger_shop_idx").on(t.shop_id, t.created_at),
+]);
+
+/**
+ * Launch surfaces (S1) — workshop booking requests (R4 simplification):
  * the customer requests a WINDOW (date + time range) for a service and the
  * shop confirms. NO slot-capacity grid (§11 R4 — supersedes the earlier
  * workshop_slots design). Linked to a shop_orders row via order_id when the

@@ -35,6 +35,9 @@ jest.mock("@/lib/paymentEvents", () => ({
 jest.mock("@/lib/activateSubscription", () => ({
   activateSubscription: jest.fn(),
 }));
+jest.mock("@/lib/launchRoles", () => ({
+  heldRoles: jest.fn(async () => [{ role: "driver", status: "active" }]),
+}));
 jest.mock("@/lib/fareFrameworkConfig", () => ({
   getFareFrameworkConfig: jest.fn(async () => ({})),
   parseConfigNumber: jest.fn((_v: string, fallback: number) => fallback),
@@ -51,6 +54,7 @@ import {
 } from "@/lib/paymentEvents";
 import { activateSubscription } from "@/lib/activateSubscription";
 import { packages } from "@/src/db/schema";
+import { heldRoles } from "@/lib/launchRoles";
 import { GET } from "@/app/api/package/list+api";
 import { POST } from "@/app/api/package/purchase+api";
 
@@ -120,7 +124,7 @@ beforeEach(() => {
 
 describe("GET /api/package/list — vehicle-type scoping (SQL-level)", () => {
   test("driver with a vehicle type sees universal OR own-type packages, never soft-deleted", async () => {
-    mockSelectQueue([[{ vehicle_type: "bike_basic" }], []]);
+    mockSelectQueue([[{ id: USER_ID }], [{ vehicle_type: "bike_basic" }], []]);
     const res = await GET(request());
     expect(res.status).toBe(200);
 
@@ -134,7 +138,7 @@ describe("GET /api/package/list — vehicle-type scoping (SQL-level)", () => {
   });
 
   test("caller with no driver record sees universal packages ONLY", async () => {
-    mockSelectQueue([[], []]);
+    mockSelectQueue([[{ id: USER_ID }], [], []]);
     const res = await GET(request());
     expect(res.status).toBe(200);
 
@@ -142,6 +146,18 @@ describe("GET /api/package/list — vehicle-type scoping (SQL-level)", () => {
     expect(sql).toContain('"packages"."vehicle_type" is null');
     expect(sql).not.toContain('"packages"."vehicle_type" = ');
     expect(params).not.toContain("bike_basic");
+  });
+
+  test("caller with NO active roles sees an EMPTY listing (M-2 divergence)", async () => {
+    (heldRoles as jest.Mock).mockResolvedValueOnce([]);
+    mockSelectQueue([[{ id: USER_ID }], [{ vehicle_type: "bike_basic" }], []]);
+    const res = await GET(request());
+    expect(res.status).toBe(200);
+
+    const { sql } = capturedListSql();
+    // The role filter collapses to a literal false — no plan is purchasable
+    // for a zero-role caller, so none is listed.
+    expect(sql).toContain("false");
   });
 });
 
@@ -167,13 +183,15 @@ describe("POST /api/package/purchase — branch matrix", () => {
           vehicle_type: opts.driverVehicleType ?? "bike_basic",
         },
       ],
-      opts.fraudFlag ?? [],
-      [opts.rideCounts ?? { completed: 0, driver_cancelled: 0, proximity_cancels: 0 }],
+      // Package load runs BEFORE the driver rail (M-2: role eligibility
+      // first), so the pkg fixture moves up ahead of the gate reads.
       opts.pkg === undefined
-        ? [{ id: PKG_ID, is_active: true, is_trial: false, price_bdt: 50_000, vehicle_type: null, name: "Starter 50" }]
+        ? [{ id: PKG_ID, is_active: true, is_trial: false, price_bdt: 50_000, vehicle_type: null, name: "Starter 50", roles: ["driver"] }]
         : opts.pkg === null
           ? []
           : [opts.pkg],
+      opts.fraudFlag ?? [],
+      [opts.rideCounts ?? { completed: 0, driver_cancelled: 0, proximity_cancels: 0 }],
       opts.activeSub ?? [],
       opts.trialSub ?? [],
     ]);
@@ -212,7 +230,7 @@ describe("POST /api/package/purchase — branch matrix", () => {
   });
 
   test("403 vehicle_type_mismatch when the package is scoped to another vehicle type", async () => {
-    queuePurchase({ pkg: { id: PKG_ID, is_active: true, is_trial: false, price_bdt: 50_000, vehicle_type: "car_economy", name: "Car pack" } });
+    queuePurchase({ pkg: { id: PKG_ID, is_active: true, is_trial: false, price_bdt: 50_000, vehicle_type: "car_economy", name: "Car pack", roles: ["driver"] } });
     const res = await POST(request(BODY, HEADERS));
     expect(res.status).toBe(403);
     expect((await getJson(res)).error).toBe("vehicle_type_mismatch");
@@ -244,7 +262,7 @@ describe("POST /api/package/purchase — branch matrix", () => {
 
   test("trial ৳0 package: zero-amount payment event + direct activation, no gateway", async () => {
     queuePurchase({
-      pkg: { id: PKG_ID, is_active: true, is_trial: true, price_bdt: 0, vehicle_type: null, name: "Trial" },
+      pkg: { id: PKG_ID, is_active: true, is_trial: true, price_bdt: 0, vehicle_type: null, name: "Trial", roles: ["driver"] },
     });
     (createZeroAmountPaymentEvent as jest.Mock).mockResolvedValue({ id: "pe-trial" });
 
@@ -260,7 +278,7 @@ describe("POST /api/package/purchase — branch matrix", () => {
 
   test("trial already used → 409 trial_already_used", async () => {
     queuePurchase({
-      pkg: { id: PKG_ID, is_active: true, is_trial: true, price_bdt: 0, vehicle_type: null, name: "Trial" },
+      pkg: { id: PKG_ID, is_active: true, is_trial: true, price_bdt: 0, vehicle_type: null, name: "Trial", roles: ["driver"] },
       trialSub: [{ id: "sub-trial" }],
     });
     const res = await POST(request(BODY, HEADERS));

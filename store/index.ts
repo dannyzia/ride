@@ -461,7 +461,7 @@ export const useWSStore = create<WSStore>((set) => ({
     ws: null,
     socketRole: null,
     socketUserId: null,
-    setWebSocket: (ws: WebSocket, role: 'rider' | 'driver', userId: string) =>
+    setWebSocket: (ws: WebSocket, role: 'rider' | 'driver' | 'shop', userId: string) =>
         set({ ws, socketRole: role, socketUserId: userId }),
     resetWebSocket: () => set({ ws: null, socketRole: null, socketUserId: null }),
 }))

@@ -1,5 +1,5 @@
 {
-  "total": 1142,
+  "total": 1194,
   "screens": {
     "(auth)/_layout.tsx": [
       {
@@ -106,31 +106,31 @@
     "(auth)/login-as.tsx": [
       {
         "id": "login-as.enter",
-        "line": 150
+        "line": 149
       },
       {
         "id": "login-as.deep-link-resubmit",
-        "line": 169
+        "line": 168
       },
       {
         "id": "login-as.enter-rider",
-        "line": 199
+        "line": 198
       },
       {
         "id": "login-as.enter-driver",
-        "line": 200
+        "line": 199
       },
       {
         "id": "login-as.enter-shop-owner",
-        "line": 201
+        "line": 200
       },
       {
         "id": "login-as.enter-fleet-owner",
-        "line": 202
+        "line": 201
       },
       {
         "id": "login-as.enter-delivery-man",
-        "line": 203
+        "line": 202
       }
     ],
     "(auth)/login.tsx": [
@@ -3863,6 +3863,224 @@
         "line": 608
       }
     ],
+    "(main)/(shop-owner)/catalog.tsx": [
+      {
+        "id": "shop-owner.catalog.el-1",
+        "line": 207
+      },
+      {
+        "id": "shop-owner.catalog.toggle-active",
+        "line": 253
+      },
+      {
+        "id": "shop-owner.catalog.open-edit",
+        "line": 262
+      },
+      {
+        "id": "shop-owner.catalog.open-create",
+        "line": 280
+      },
+      {
+        "id": "shop-owner.catalog.set-form",
+        "line": 300
+      },
+      {
+        "id": "shop-owner.catalog.set-form-2",
+        "line": 310
+      },
+      {
+        "id": "shop-owner.catalog.set-form-3",
+        "line": 321
+      },
+      {
+        "id": "shop-owner.catalog.set-form-4",
+        "line": 331
+      },
+      {
+        "id": "shop-owner.catalog.set-form-5",
+        "line": 341
+      },
+      {
+        "id": "shop-owner.catalog.set-form-6",
+        "line": 350
+      },
+      {
+        "id": "shop-owner.catalog.set-form-7",
+        "line": 360
+      },
+      {
+        "id": "shop-owner.catalog.set-modal-visible",
+        "line": 368
+      },
+      {
+        "id": "shop-owner.catalog.save",
+        "line": 377
+      }
+    ],
+    "(main)/(shop-owner)/index.tsx": [
+      {
+        "id": "shop-owner.push-settlement",
+        "line": 328
+      },
+      {
+        "id": "shop-owner.push-staff",
+        "line": 334
+      },
+      {
+        "id": "shop-owner.push-workshop",
+        "line": 340
+      },
+      {
+        "id": "shop-owner.push-catalog",
+        "line": 346
+      },
+      {
+        "id": "shop-owner.patch-availability",
+        "line": 368
+      },
+      {
+        "id": "shop-owner.patch-availability-2",
+        "line": 381
+      },
+      {
+        "id": "shop-owner.push-payout-method",
+        "line": 424
+      },
+      {
+        "id": "shop-owner.push-workshop-2",
+        "line": 445
+      },
+      {
+        "id": "shop-owner.purchase-plan",
+        "line": 494
+      },
+      {
+        "id": "shop-owner.set-segment",
+        "line": 519
+      },
+      {
+        "id": "shop-owner.set-prep-target",
+        "line": 567
+      },
+      {
+        "id": "shop-owner.set-reject-reason",
+        "line": 581
+      },
+      {
+        "id": "shop-owner.patch-status",
+        "line": 596
+      },
+      {
+        "id": "shop-owner.patch-status-2",
+        "line": 610
+      },
+      {
+        "id": "shop-owner.patch-status-3",
+        "line": 624
+      },
+      {
+        "id": "shop-owner.set-prep-target-2",
+        "line": 659
+      },
+      {
+        "id": "shop-owner.set-reject-reason-2",
+        "line": 691
+      },
+      {
+        "id": "shop-owner.set-reject-target",
+        "line": 698
+      },
+      {
+        "id": "shop-owner.set-reject-target-2",
+        "line": 713
+      }
+    ],
+    "(main)/(shop-owner)/settlement.tsx": [
+      {
+        "id": "shop-owner.settlement.el-1",
+        "line": 85
+      }
+    ],
+    "(main)/(shop-owner)/staff.tsx": [
+      {
+        "id": "shop-owner.staff.el-1",
+        "line": 141
+      },
+      {
+        "id": "shop-owner.staff.remove-member",
+        "line": 180
+      },
+      {
+        "id": "shop-owner.staff.set-invite-phone",
+        "line": 206
+      },
+      {
+        "id": "shop-owner.staff.set-invite-role",
+        "line": 219
+      },
+      {
+        "id": "shop-owner.staff.invite",
+        "line": 235
+      }
+    ],
+    "(main)/(shop-owner)/workshop.tsx": [
+      {
+        "id": "shop-owner.workshop.el-1",
+        "line": 204
+      },
+      {
+        "id": "shop-owner.workshop.set-mode",
+        "line": 224
+      },
+      {
+        "id": "shop-owner.workshop.transition",
+        "line": 297
+      },
+      {
+        "id": "shop-owner.workshop.transition-2",
+        "line": 310
+      },
+      {
+        "id": "shop-owner.workshop.transition-3",
+        "line": 323
+      },
+      {
+        "id": "shop-owner.workshop.set-service-form",
+        "line": 377
+      },
+      {
+        "id": "shop-owner.workshop.delete-service",
+        "line": 387
+      },
+      {
+        "id": "shop-owner.workshop.set-service-form-2",
+        "line": 405
+      },
+      {
+        "id": "shop-owner.workshop.set-service-form-3",
+        "line": 429
+      },
+      {
+        "id": "shop-owner.workshop.set-service-form-4",
+        "line": 439
+      },
+      {
+        "id": "shop-owner.workshop.set-service-form-5",
+        "line": 450
+      },
+      {
+        "id": "shop-owner.workshop.set-service-form-6",
+        "line": 460
+      },
+      {
+        "id": "shop-owner.workshop.set-service-modal",
+        "line": 468
+      },
+      {
+        "id": "shop-owner.workshop.save-service",
+        "line": 477
+      }
+    ],
     "+not-found.tsx": [
       {
         "id": "not-found.handle-go-home",
@@ -4996,7 +5214,7 @@
     "index.tsx": [
       {
         "id": ".run-auth-check",
-        "line": 191
+        "line": 194
       }
     ],
     "track/[rideId].tsx": [

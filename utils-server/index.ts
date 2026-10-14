@@ -167,7 +167,7 @@ interface WSClient {
   ws: WebSocket;
   userId?: string;
   supabaseUid?: string;
-  role?: "driver" | "rider" | "admin";
+  role?: "driver" | "rider" | "admin" | "shop";
   driverId?: string;
   subscribedRideId?: string; // rider: which ride they are tracking
   lastSeen?: number; // epoch ms of last heartbeat (for stale-connection cleanup)
@@ -951,7 +951,11 @@ wss.on("connection", (ws: WebSocket) => {
       case "auth": {
         if (action === "hello") {
           const supabaseAccessToken = msg.access_token as string;
-          const role = msg.role as "driver" | "rider" | "admin";
+          // S3: "shop" — the shop-owner/staff dashboard socket. Notifications
+          // fan out per-user_id through the bidder registry (the same map
+          // internal/ws/notify reads), so shop screens get shop:order_status /
+          // shop:availability / shop:workshop_request_status pushes.
+          const role = msg.role as "driver" | "rider" | "admin" | "shop";
           if (!supabaseAccessToken || !role) {
             send(ws, { type: "auth:error", message: "missing_credentials" });
             return;
@@ -988,9 +992,41 @@ wss.on("connection", (ws: WebSocket) => {
               return;
             }
 
+            if (role === "shop") {
+              // Any ACTIVE shop member may connect as the shop dashboard
+              // (OWNER | MANAGER | STAFF — orders-only is enforced per-route,
+              // not per-socket). No users.role check: a multi-role customer
+              // keeps their signup role as users.role primary.
+              const [memberRow] = await withTimeout(
+                db
+                  .select({ id: shopMembers.id })
+                  .from(shopMembers)
+                  .where(
+                    and(
+                      eq(shopMembers.user_id, user.id),
+                      eq(shopMembers.status, "active"),
+                    ),
+                  )
+                  .limit(1),
+                AUTH_DB_TIMEOUT_MS,
+              );
+              if (!memberRow) {
+                send(ws, { type: "auth:error", message: "role_mismatch" });
+                return;
+              }
+            }
+
             client.userId = user.id;
             client.supabaseUid = supabaseUser.id;
             client.role = role;
+
+            if (role === "shop") {
+              // S3: register into the per-user fan-out registry the internal
+              // notify path reads (kind 'user' and kind 'shop_staff' both
+              // deliver through it). Same map the rental clients use.
+              const { registerBidder } = await import("./rentalHandler");
+              registerBidder(user.id, ws);
+            }
 
             if (role === "driver") {
               const [driver] = await withTimeout(
@@ -1856,6 +1892,13 @@ async function handleDisconnect(client: WSClient) {
     // the registered one — a newer reconnect must not be wiped.
     if (connectedAdmins.get(client.userId) === client) {
       connectedAdmins.delete(client.userId);
+    }
+  }
+  if (client.role === "shop" && client.userId) {
+    // S3: same guarded teardown for the shop dashboard socket.
+    const { getBidderSocket, unregisterBidder } = await import("./rentalHandler");
+    if (getBidderSocket(client.userId) === client.ws) {
+      unregisterBidder(client.userId);
     }
   }
   logger.info("[ws] connection closed", {

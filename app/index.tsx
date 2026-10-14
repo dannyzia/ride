@@ -122,6 +122,9 @@ export default function Splash() {
         );
       } else if (data.role === "driver") {
         redirect("/(main)/(rider)/d");
+      } else if (data.role === "shop_owner") {
+        // S3: the shop surface is live — a single-any-role owner lands here.
+        redirect("/(main)/(shop-owner)");
       } else {
         redirect("/(main)/(customer)/services-hub");
       }

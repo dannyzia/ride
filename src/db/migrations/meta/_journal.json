@@ -456,6 +456,13 @@
       "when": 1792160400000,
       "tag": "0066_fleet_business_type",
       "breakpoints": true
+    },
+    {
+      "idx": 65,
+      "version": "7",
+      "when": 1792031400000,
+      "tag": "0067_shop_ledger_busy_prep",
+      "breakpoints": true
     }
   ]
 }

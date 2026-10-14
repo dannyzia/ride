@@ -6,6 +6,7 @@ import { usePackageStore } from "@/store/usePackageStore";
 import { useCallLedgerStore } from "@/store/useCallLedgerStore";
 import { useDriverFlowStore } from "@/store/useDriverFlowStore";
 import { teardownRiderSocket } from "@/lib/riderSocket";
+import { teardownShopSocket } from "@/lib/shopSocket";
 import { clearQueue } from "@/lib/sosQueue";
 import { supabase } from "@/lib/supabase";
 
@@ -31,6 +32,8 @@ export function authCleanup(): void {
   // previous user) must never be adopted by the next sign-in — the shared
   // WS slot is identity-tagged for exactly this.
   teardownRiderSocket();
+  // S3: the shop dashboard socket also dies with the session.
+  teardownShopSocket();
   const riderReset = useRiderStore.getState().reset;
   if (riderReset) riderReset();
   const driverReset = useDriverStore.getState().reset;

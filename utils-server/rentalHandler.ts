@@ -31,6 +31,14 @@ export function unregisterBidder(userId: string) {
 }
 
 /**
+ * Guarded getter (F-15 teardown rule): the caller compares identity so a
+ * newer reconnect's registration is never wiped by an older socket's close.
+ */
+export function getBidderSocket(userId: string): WebSocket | undefined {
+  return bidderSockets.get(userId);
+}
+
+/**
  * Get all connected bidder user IDs (for activation job broadcasts).
  */
 export function getConnectedBidderIds(): string[] {

@@ -16,6 +16,7 @@ import {
 } from "@/src/db/schema";
 import { eq, and, gte, inArray, sql } from "drizzle-orm";
 import { verifySupabaseToken } from "@/lib/auth";
+import { heldRoles } from "@/lib/launchRoles";
 import { isConfigured } from "@/lib/portpos";
 import { initiatePortposPayment, createZeroAmountPaymentEvent } from "@/lib/paymentEvents";
 import {
@@ -111,6 +112,10 @@ export async function POST(request: Request) {
     if (!user)
       return Response.json({ error: 'user_not_found', message: 'User not found' }, { status: 404 });
 
+    // M-2 ordering: the driver record is a SOFT lookup here — the §14
+    // eligibility gate (below, after the package load) must fire with a role
+    // error for a shop/fleet/delivery-man holder, not with the driver-shaped
+    // 404 that a hard lookup produced before the plan is even seen.
     const [driver] = await db
       .select({
         id: drivers.id,
@@ -120,35 +125,6 @@ export async function POST(request: Request) {
       .from(drivers)
       .where(eq(drivers.user_id, user.id))
       .limit(1);
-    if (!driver)
-      return Response.json({ error: 'driver_not_found', message: 'Driver not found' }, { status: 404 });
-
-    if (!["active", "temporary"].includes(driver.status)) {
-      return Response.json(
-        {
-          error: "driver_status_invalid",
-          message: "Driver must be active or temporary",
-        },
-        { status: 403 },
-      );
-    }
-
-    // ── Fare Framework fraud gate (Phase F/G) — pre-check before any
-    // purchase processing. Blocks drivers with an active 'blocked' fraud
-    // flag (dawdle/off-platform 3rd offense, admin review pending) or a
-    // trailing-30-day proximity-cancel rate above
-    // cancel_rate_package_gate_pct. Transaction-free reads.
-    const gateBlocked = await checkPackageGate(driver.id);
-    if (gateBlocked) {
-      return Response.json(
-        {
-          error: "package_gate_blocked",
-          message:
-            "Your account requires review before purchasing. Contact support.",
-        },
-        { status: 403 },
-      );
-    }
 
     // Raw body captured for the idempotency fingerprint BEFORE parseJsonBody
     // consumes the stream; Zod validation runs on a re-parse.
@@ -198,6 +174,75 @@ export async function POST(request: Request) {
           message: "Package not found or inactive",
         },
         { status: 422 },
+      );
+    }
+
+    // M-2 (§16) CHECKOUT ELIGIBILITY (§14): the caller must hold an ACTIVE
+    // role in pkg.roles. Placement is BEFORE the driver hard gate: a
+    // shop/fleet/delivery-man holder — no drivers row — must get the typed
+    // role error for their role's plans, not a driver-shaped 404. Only after
+    // eligibility passes do the driver-rail requirements apply.
+    const activeRoleNames: string[] = (await heldRoles(user.id))
+      .filter((r) => r.status === "active")
+      .map((r) => r.role);
+    if (!pkg.roles.some((r) => activeRoleNames.includes(r))) {
+      return Response.json(
+        {
+          error: "role_not_eligible",
+          message: "This plan is not available to any of your active roles",
+        },
+        { status: 403 },
+      );
+    }
+
+    // Divergence recorded (not silently reconciled): non-driver-only plans
+    // (roles without 'driver') ride subscription rails — subscriptions.
+    // driver_id + call_ledger — that have no shape for shop/fleet/delivery-
+    // man holders yet, and §14 maps those rails to S5/S6. The no-driver-row
+    // case stops with a typed 409 INSTEAD of inventing ledger writes.
+    const nonDriverOnly =
+      pkg.roles.length > 0 &&
+      !pkg.roles.some((r) => r === "driver");
+    if (nonDriverOnly && !driver) {
+      return Response.json(
+        {
+          error: "plan_purchase_unavailable",
+          message:
+            "Checkout for this plan type is not live yet — available to drivers only at launch",
+        },
+        { status: 409 },
+      );
+    }
+
+    // ── THE DRIVER GATE — the driver checkout rail's requirements ──
+    // (after §14 eligibility, see the M-2 ordering note above).
+    if (!driver)
+      return Response.json({ error: 'driver_not_found', message: 'Driver not found' }, { status: 404 });
+
+    if (!["active", "temporary"].includes(driver.status)) {
+      return Response.json(
+        {
+          error: "driver_status_invalid",
+          message: "Driver must be active or temporary",
+        },
+        { status: 403 },
+      );
+    }
+
+    // ── Fare Framework fraud gate (Phase F/G) — pre-check before any
+    // purchase processing. Blocks drivers with an active 'blocked' fraud
+    // flag (dawdle/off-platform 3rd offense, admin review pending) or a
+    // trailing-30-day proximity-cancel rate above
+    // cancel_rate_package_gate_pct. Transaction-free reads.
+    const gateBlocked = await checkPackageGate(driver.id);
+    if (gateBlocked) {
+      return Response.json(
+        {
+          error: "package_gate_blocked",
+          message:
+            "Your account requires review before purchasing. Contact support.",
+        },
+        { status: 403 },
       );
     }
 

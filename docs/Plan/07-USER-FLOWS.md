@@ -565,3 +565,122 @@ Post-ride closure sequence:
 6. User taps "Redeem". App calls `POST /api/points/redeem`.
 7. System deducts points and credits the user's wallet.
 8. Success modal shown.
+
+---
+
+> **S3 addendum (2026-10-13, stage 3 of plan 27).** The flows below cover the Shop
+> Owner surface. They use the plan's F-numbering where the plan assigned it
+> (F-16) — the global library renumber (§15 F-33+ slots for the other flows) is
+> the S7 flow-library pass and renumbers without changing content. Statuses:
+> 🔨 in development · every step names the REST route that owns the state
+> (F25 — WS is notification-only).
+
+## Flow 12 (F-16): Shop Owner Dashboard — Orders, Availability, Staff Split
+
+**Status:** 🔨 S3 (plan 27 §3 · §15.B F-16) — owner/staff SPLIT views, business-
+hours auto-schedule noted below, daily settlement cutoff, busy mode (throttle).
+
+### Entry points
+- Auth gate / splash forwarder: single-any-role shop_owner → `/(main)/(shop-owner)`; >1 active role → the Login-as chooser → `shop_owner` row.
+- Invited STAFF/MANAGER: same landing; the server role array scopes what they see.
+
+### Happy path (OWNER/MANAGER)
+1. Dashboard loads `GET /api/shop/mine` → `{ shop, role, dashboard }`. A shop still `pending` verification shows the awaiting-verification banner (no orders reachable yet).
+2. Availability card: `PATCH /api/shop/{id}/availability` sets `is_open` and/or `busy` and emits `shop:availability` to the shop's staff sockets.
+3. Orders-by-state counts render from the same response; the queue is segmented new/active/ready/history from `GET /api/shop/orders?shop_id=`.
+4. New order (customer side `POST /api/shop/orders`) → shop gets it (dashboard + `shop:order_status`).
+5. Shop ACCEPTS via the prep-time picker → `PATCH /api/shop/orders/{id}/status` `{status:"accepted", preminutes}` (5–720 min). The estimate rides the row for the customer and dispatch timing.
+6. Shop REJECTS (from `pending` only) → `{status:"cancelled", cancel_reason}` — the reason is customer-visible (R6).
+7. `preparing` → **Mark ready** (`POST /api/shop/orders/{id}/mark-ready`). Food DELIVERY orders hand the order to the dispatch system in the SAME transaction (bridge; §6.1 reworks the trigger timing and the sequential courier chain — no courier bidding).
+8. `out_for_delivery` → shop marks `delivered`. **The delivered transition settles IN THE SAME TRANSACTION**: `order_revenue` credit + commission debit land in `shop_ledger` (§12 — fresh-read `shop_commission_percent`, never cached).
+9. WS `shop:order_status` / `shop:availability` events are re-fetch hints only (F25 — REST is canonical).
+
+### Happy path (STAFF — the split view)
+- Same orders queue and actions (accept/prepare/ready/handoff) — the routes admit OWNER|MANAGER|STAFF.
+- NEVER rendered, and never server-accepted: availability toggles, catalog CRUD, workshop services/requests, settlement (money), staff invite/remove. §3: the denial is per-route role arrays; the UI absence only mirrors it.
+
+### Alternate paths / rules
+| Case | Behavior |
+|------|----------|
+| Order arrives while shop CLOSED | Server rejects at creation: `409 shop_closed` (R5 — not UI hiding). |
+| Order arrives while shop BUSY | Accepted normally. Busy THROTTLES, never blocks (F-16 ruling); checkout surfaces the slower promise. |
+| Ineligible plan purchase | M-2 checkout gate: `403 role_not_eligible` before any driver-shaped error; driver-rail plans proceed through the existing PortPos flow. |
+| WS socket down | Dashboard still correct on next fetch; events are hints, not state. |
+
+### Post-conditions
+- Shop state transitions all REST-owned; WS informs; ledger rows accompany `delivered` in one tx.
+
+### Notes (honest scope markers)
+- **Business-hours auto-schedule** (F-16 line): NOT built in S3 — the toggle is manual. Scheduled open/close needs a clock actor (scheduler job) — candidate for a later stage; recorded, not silently promised.
+- **Daily settlement cutoff / payout**: `payout` and `adjustment` ledger entry types exist in the schema for the admin-side cycle, but S3 wires no payout writer — the shop sees balance + entries, and manages its payout ACCOUNT via the reused payout-method screens. The settlement/disbursement rail ships with the S4/S5 stages per §12/§15.
+
+---
+
+## Flow 13: Shop Catalog Management (S3 §3)
+
+**Status:** 🔨 S3. Server: `GET/POST/PATCH/DELETE /api/shop/{id}/products` (OWNER|MANAGER).
+
+### Happy path
+1. Owner opens Catalog (`dashboard` header icon → `/(main)/(shop-owner)/catalog`).
+2. Full live catalog loads from the member-scoped GET — including `is_active=false` rows (the PUBLIC `/api/shop/{id}` route stays active-only for shoppers).
+3. "Add product" (FAB) opens the form: name, description, price (TAKA input; stored integer paisa ×100), stock, category, availability toggle, RFQ flag.
+4. `POST` creates; `PATCH` (id in body) edits; the per-row switch PATCHes `is_active` only.
+5. Delete = soft delete (`deleted_at`, no hard deletes).
+
+### Error states
+| Case | Behavior |
+|------|----------|
+| Name empty / price ≤ 0 | Client-side validation alert; server Zod rejects with 400 regardless. |
+| Not OWNER/MANAGER | `403 forbidden` — route role array. |
+
+---
+
+## Flow 14: Workshop Requests Inbox — 2h Confirm SLA (S3 §3, R4)
+
+**Status:** 🔨 S3. Server: `GET /api/shop/{id}/workshop/requests` + `PATCH` transitions (OWNER|MANAGER). NO slot-capacity grid (R4).
+
+### Happy path
+1. Customer books a service window (`workshop_requests` row, `requested`).
+2. Shop inbox lists requests with service + customer + window; each row carries an SLA badge computed from `created_at + 2h`.
+3. Shop CONFIRMS within the window → `confirmed` → **Start work** → `in_progress` → **Mark done** → `done`.
+4. When the booking carries an order (`order_id`), `done` settles THE SAME WAY `delivered` does (F-13 same settlement as catalog orders): the linked order flips to `delivered` and its `shop_ledger` entries write in the same transaction.
+
+### SLA + overdue
+- overdue = `status === 'requested'` AND `created_at + 2h < now`. Dashboard shows the overdue count.
+- **QUESTION logged on the hub:** the 2h SLA is TRACKED (badge + counter) but nothing yet ENFORCES it — a hard auto-expiry/cancel needs a scheduled reaper + a cancelled/expired state value. That is an owner decision; recorded rather than silently deferred.
+
+---
+
+## Flow 15: Shop Staff Invite — Orders-Only (S3 §3, R10)
+
+**Status:** 🔨 S3. Server: `POST /api/shop/{id}/members` (OWNER only), body `{phone, role: MANAGER|STAFF}` or `{user_id, role}`.
+
+### Happy path
+1. Owner opens Staff screen; lists active `shop_members` with name/phone/role.
+2. Invite: phone + role picker → `POST` resolves `users` BY PHONE.
+3. Member row created (role MANAGER or STAFF; OWNER reserved for the creator row), `invited_by` stamped.
+4. The invitee's next login sees the shop surface (role home via chooser or single-role landing), scoped by the server role arrays.
+
+### Error states
+| Case | Behavior |
+|------|----------|
+| Phone not registered | `404 user_not_found` — no account; R9-style account-upgrade creation is the FLEET flow (S5), not this route. |
+| Already a member | unique index → `409 already_member`. |
+| Non-OWNER attempts invite/remove | `403 forbidden`. STAFF/Managers see no invite form; the route denies regardless. |
+
+---
+
+## Flow 16: Shop Settlement — shop_ledger (S3 §12/R1)
+
+**Status:** 🔨 S3. Writer: `lib/shopLedger.ts` ONLY (write-ownership rule as `call_ledger`). Route: `GET /api/shop/{id}/settlement` (OWNER|MANAGER).
+
+### Happy path
+1. Order `delivered` (catalog) or workshop `done` with linked order → SAME transaction writes:
+   - `order_revenue` credit: items total (`subtotal_bdt`) — the delivery fee is the courier's COD remittance, NOT shop revenue (§12).
+   - `commission` debit: `round(subtotal × shop_commission_percent / 100)` — read fresh from `platform_config` at settlement time (seeds-not-constants rule); skipped when the fresh value is 0 (launch default).
+2. Double settlement is impossible twice over: the state machine admits `delivered` once, and the DB backstop is the partial unique index `(order_id, entry_type) WHERE order_id IS NOT NULL`.
+3. Shop opens Settlement: balance card (sum of SIGNED `amount_bdt`) + entries (revenue / commission / payout / adjustment / reversal) newest-first; cents styled from paisa ÷ 100 at render.
+
+### Post-conditions
+- `shop_ledger` is append-only; the money trail for every delivered item exists
+  at the moment the customer-facing state flips.

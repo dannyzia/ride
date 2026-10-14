@@ -5,7 +5,7 @@
  * GET  /api/shop/orders?shop_id=... — list orders for a shop (owner/member)
  */
 import { db } from "@/src/db";
-import { shopOrders, shopOrderItems, shopProducts, shopMembers } from "@/src/db/schema";
+import { shopOrders, shopOrderItems, shopProducts, shopMembers, shops } from "@/src/db/schema";
 import { requireAnyRole } from "@/lib/auth";
 import { requireShopMember } from "@/lib/marketplaceRbac";
 import { parseJsonBody } from "@/lib/parseBody";
@@ -56,6 +56,29 @@ export async function POST(request: Request) {
     }
 
     const { order, items } = await db.transaction(async (tx) => {
+      // R5 (§3): closed is REJECTED SERVER-SIDE, not just hidden in UI. The
+      // shops row is read inside the tx; busy (F-16) does NOT block orders
+      // (throttle-not-close) and only surfaces as a checkout signal.
+      const [shopRow] = await tx
+        .select({ is_open: shops.is_open })
+        .from(shops)
+        .where(and(eq(shops.id, body.shop_id), isNull(shops.deleted_at)))
+        .limit(1)
+        .for("update");
+
+      if (!shopRow) {
+        throw Object.assign(new Error("Shop not found"), {
+          status: 404,
+          code: "shop_not_found",
+        });
+      }
+      if (!shopRow.is_open) {
+        throw Object.assign(new Error("Shop is closed"), {
+          status: 409,
+          code: "shop_closed",
+        });
+      }
+
       // Look up products and compute totals
       const productIds = body.items.map((i) => i.product_id);
       const products = await tx
@@ -149,6 +172,18 @@ export async function POST(request: Request) {
         { error: "forbidden", message: "Not authorized" },
         { status: 403 },
       );
+    if (status === 404) {
+      return Response.json(
+        { error: "shop_not_found", message: "Shop not found" },
+        { status: 404 },
+      );
+    }
+    if (err instanceof Error && (err as { code?: string }).code === "shop_closed") {
+      return Response.json(
+        { error: "shop_closed", message: "Shop is closed and not accepting orders" },
+        { status: 409 },
+      );
+    }
     if (status === 400)
       return Response.json(
         { error: "invalid_order", message: (err as Error).message },

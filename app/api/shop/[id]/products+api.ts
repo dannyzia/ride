@@ -1,6 +1,9 @@
 /**
  * Shop products management.
  *
+ * GET    /api/shop/[id]/products — FULL live catalog incl. is_active=false
+ *        rows (S3 catalog screen needs them to re-enable a paused item; the
+ *        PUBLIC /api/shop/[id] detail route stays active-only).
  * POST   /api/shop/[id]/products — add product (OWNER/MANAGER)
  * PATCH  /api/shop/[id]/products?id=... — update product
  * DELETE /api/shop/[id]/products?id=... — soft-delete product
@@ -11,8 +14,49 @@ import { requireShopMember } from "@/lib/marketplaceRbac";
 import { parseJsonBody } from "@/lib/parseBody";
 import { logger } from "@/lib/logger";
 import * as errors from "@/lib/errors";
-import { eq, and, isNull } from "drizzle-orm";
+import { eq, and, isNull, desc } from "drizzle-orm";
 import { z } from "zod";
+
+export async function GET(request: Request, { id }: { id: string }) {
+  try {
+    // B7/L1: UUID guard before any DB access
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
+      return Response.json({ error: "invalid_uuid", message: "Invalid shop id" }, { status: 400 });
+    }
+
+    await requireShopMember(id, ["OWNER", "MANAGER"])(request);
+
+    const rows = await db
+      .select()
+      .from(shopProducts)
+      .where(
+        and(
+          eq(shopProducts.shop_id, id),
+          isNull(shopProducts.deleted_at),
+        ),
+      )
+      .orderBy(desc(shopProducts.created_at));
+
+    return Response.json({ products: rows });
+  } catch (err: unknown) {
+    const status = errors.getErrorStatus(err);
+    if (status === 401)
+      return Response.json(
+        { error: "unauthorized", message: "Authentication required" },
+        { status: 401 },
+      );
+    if (status === 403)
+      return Response.json(
+        { error: "forbidden", message: "Not authorized" },
+        { status: 403 },
+      );
+    logger.error("[shop/products GET] error", err);
+    return Response.json(
+      { error: "internal_error", message: "An internal server error occurred" },
+      { status: 500 },
+    );
+  }
+}
 
 const createProductSchema = z.object({
   name: z.string().min(1).max(200),

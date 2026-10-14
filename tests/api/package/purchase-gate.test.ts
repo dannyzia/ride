@@ -53,6 +53,10 @@ jest.mock("@/lib/fareFrameworkConfig", () => ({
   },
 }));
 
+jest.mock("@/lib/launchRoles", () => ({
+  heldRoles: jest.fn(async () => [{ role: "driver", status: "active" }]),
+}));
+
 import { db } from "@/src/db";
 import { initiatePortposPayment } from "@/lib/paymentEvents";
 import { POST } from "@/app/api/package/purchase+api";
@@ -75,6 +79,7 @@ const PACKAGE_ROW = [
     is_trial: false,
     price_bdt: 10000,
     name: "Starter",
+    roles: ["driver"],
   },
 ];
 
@@ -127,6 +132,7 @@ describe("package purchase — fraud gate", () => {
     mockSelectQueue([
       USER_ROW, // user lookup
       DRIVER_ROW, // driver lookup
+      PACKAGE_ROW, // package load — BEFORE the gate (M-2 ordering)
       [{ id: "flag-1" }], // blocked fraud flag → gate trips
     ]);
     const res = await POST(makeRequest());
@@ -144,6 +150,7 @@ describe("package purchase — fraud gate", () => {
     mockSelectQueue([
       USER_ROW,
       DRIVER_ROW,
+      PACKAGE_ROW,
       [], // no blocked flag
       gateCounts(4, 6, 4),
     ]);
@@ -159,9 +166,9 @@ describe("package purchase — fraud gate", () => {
     mockSelectQueue([
       USER_ROW,
       DRIVER_ROW,
+      PACKAGE_ROW,
       [],
       gateCounts(3, 7, 3),
-      PACKAGE_ROW,
       [], // no active subscription
     ]);
     const res = await POST(makeRequest());
@@ -178,9 +185,9 @@ describe("package purchase — fraud gate", () => {
     mockSelectQueue([
       USER_ROW,
       DRIVER_ROW,
+      PACKAGE_ROW,
       [],
       gateCounts(0, 0, 0),
-      PACKAGE_ROW,
       [],
     ]);
     const res = await POST(makeRequest());
@@ -194,9 +201,9 @@ describe("package purchase — fraud gate", () => {
     mockSelectQueue([
       USER_ROW,
       DRIVER_ROW,
+      PACKAGE_ROW,
       [],
       gateCounts(8, 2, 1),
-      PACKAGE_ROW,
       [],
     ]);
     const res = await POST(makeRequest());
@@ -210,10 +217,12 @@ describe("package purchase — fraud gate", () => {
     mockSelectQueue([
       USER_ROW,
       DRIVER_ROW,
+      PACKAGE_ROW,
       [{ id: "flag-1" }],
     ]);
     await POST(makeRequest());
-    // Third select call is the flag lookup — it ran before any payment work.
-    expect(db.select).toHaveBeenCalledTimes(3);
+    // Fourth select call is the flag lookup — the fraud gate runs AFTER the
+    // package load (M-2: role eligibility first, then the driver rail).
+    expect(db.select).toHaveBeenCalledTimes(4);
   });
 });
