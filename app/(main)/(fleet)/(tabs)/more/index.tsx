@@ -51,6 +51,7 @@ export default function FleetMore() {
         </View>
 
         <Text style={{ fontFamily: "Jakarta-Bold", fontSize: 13, color: textSecondary, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 8 }}>Operations</Text>
+        <MenuItem icon="storefront" label="Shops" onPress={() => router.push("/(main)/(customer)/(shops)")} isDark={isDark} />
         <MenuItem icon="notifications" label="Alerts" onPress={() => router.push("/(main)/(fleet)/alerts")} isDark={isDark} />
         <MenuItem icon="card" label="Subscription" onPress={() => router.push("/(main)/(fleet)/subscription")} isDark={isDark} />
         <MenuItem icon="build" label="Maintenance" onPress={() => {}} isDark={isDark} />

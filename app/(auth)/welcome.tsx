@@ -64,7 +64,7 @@ export default function WelcomeScreen() {
       {/* Buttons */}
       <View className="w-full pb-10 gap-3">
         <CustomButton
-          title="Sign In"
+          title={t("auth.sign_in")}
           onPress={() => router.replace("/(auth)/phone-entry")}
          testID="welcome.replace-phone-entry"/>
         <CustomButton

@@ -323,6 +323,12 @@ export default function ShopDashboardScreen() {
           </View>
           <View className="flex-row items-center gap-2">
             <TouchableOpacity
+              onPress={() => router.push("/(main)/(customer)/(shops)")}
+             
+             testID="shop-owner.push-shops">
+              <Ionicons name="storefront-outline" size={24} color={C.text} />
+            </TouchableOpacity>
+            <TouchableOpacity
               onPress={() => router.push("/(main)/(shop-owner)/settlement")}
              
              testID="shop-owner.push-settlement">

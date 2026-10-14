@@ -5,11 +5,21 @@
  * GET  /api/shop/orders?shop_id=... — list orders for a shop (owner/member)
  */
 import { db } from "@/src/db";
-import { shopOrders, shopOrderItems, shopProducts, shopMembers, shops } from "@/src/db/schema";
+import { shopOrders, shopOrderItems, shopProducts, shopMembers, shops, shopTypes } from "@/src/db/schema";
 import { requireAnyRole } from "@/lib/auth";
 import { requireShopMember } from "@/lib/marketplaceRbac";
 import { parseJsonBody } from "@/lib/parseBody";
 import { isVerticalEnabled } from "@/lib/platformConfig";
+import { quoteDeliveryFee } from "@/lib/shopDeliveryFee";
+import { createDeliveryLegFromOrder } from "@/lib/shopDeliveryBridge";
+import { notifyShopNewOrder } from "@/lib/shopNotify";
+import {
+  extractIdempotencyKey,
+  beginIdempotencyClaim,
+  storeIdempotencyOutcome,
+  sha256Fingerprint,
+  IDEMPOTENCY_ROUTES,
+} from "@/lib/idempotency";
 import { logger } from "@/lib/logger";
 import * as errors from "@/lib/errors";
 import { eq, and, isNull, count, desc, sql } from "drizzle-orm";
@@ -20,17 +30,30 @@ const orderItemSchema = z.object({
   quantity: z.number().int().positive(),
 });
 
-const createOrderSchema = z.object({
-  shop_id: z.string().uuid(),
-  items: z.array(orderItemSchema).min(1),
-  fulfillment: z.enum(["delivery", "pickup"]).default("delivery"),
-  delivery_address: z.string().max(500).optional(),
-  delivery_lat: z.number().min(-90).max(90).optional(),
-  delivery_lng: z.number().min(-180).max(180).optional(),
-  rider_notes: z.string().max(500).optional(),
-});
+const createOrderSchema = z
+  .object({
+    shop_id: z.string().uuid(),
+    items: z.array(orderItemSchema).min(1),
+    fulfillment: z.enum(["delivery", "pickup"]).default("delivery"),
+    delivery_address: z.string().max(500).optional(),
+    delivery_lat: z.number().min(-90).max(90).optional(),
+    delivery_lng: z.number().min(-180).max(180).optional(),
+    rider_notes: z.string().max(500).optional(),
+  })
+  .refine(
+    (d) =>
+      d.fulfillment !== "delivery" ||
+      (d.delivery_address !== undefined &&
+        d.delivery_lat !== undefined &&
+        d.delivery_lng !== undefined),
+    { message: "delivery address and coordinates required for delivery orders" },
+  );
 
 export async function POST(request: Request) {
+  // §8 + decision 01M23628A1566SK1D5XXV1NT5G: optional Idempotency-Key —
+  // absent → legacy behavior; present → (route, key) barrier replays the
+  // stored outcome instead of double-charging stock.
+  let idempotencyKey: string | null = null;
   try {
     if (!(await isVerticalEnabled("marketplace_shops_enabled"))) {
       return Response.json(
@@ -43,9 +66,29 @@ export async function POST(request: Request) {
       request,
     );
 
-    const result = await parseJsonBody(request, createOrderSchema);
+    // Raw body captured BEFORE parseJsonBody consumes the stream (the
+    // idempotency fingerprint); Zod runs on a re-parse — same pattern as
+    // package/purchase.
+    const rawBody: string = await request.text();
+    const bodyForParse = new Request("http://internal/parse", {
+      method: "POST",
+      body: rawBody,
+      headers: { "content-type": "application/json" },
+    });
+    const result = await parseJsonBody(bodyForParse, createOrderSchema);
     if (!result.ok) return result.response;
     const body = result.data;
+
+    idempotencyKey = extractIdempotencyKey(request);
+    if (idempotencyKey) {
+      const claim = await beginIdempotencyClaim({
+        route: IDEMPOTENCY_ROUTES.shopOrderCreate,
+        key: idempotencyKey,
+        userId: dbUser.id,
+        requestFingerprint: sha256Fingerprint("POST", rawBody),
+      });
+      if (claim.kind !== "execute") return claim.response;
+    }
 
     // Delivery orders require address
     if (body.fulfillment === "delivery" && !body.delivery_address) {
@@ -55,12 +98,17 @@ export async function POST(request: Request) {
       );
     }
 
-    const { order, items } = await db.transaction(async (tx) => {
+    const { order, items, feeBdt, totalBdt } = await db.transaction(async (tx) => {
       // R5 (§3): closed is REJECTED SERVER-SIDE, not just hidden in UI. The
       // shops row is read inside the tx; busy (F-16) does NOT block orders
       // (throttle-not-close) and only surfaces as a checkout signal.
       const [shopRow] = await tx
-        .select({ is_open: shops.is_open })
+        .select({
+          is_open: shops.is_open,
+          lat: shops.lat,
+          lng: shops.lng,
+          shop_type_id: shops.shop_type_id,
+        })
         .from(shops)
         .where(and(eq(shops.id, body.shop_id), isNull(shops.deleted_at)))
         .limit(1)
@@ -77,6 +125,37 @@ export async function POST(request: Request) {
           status: 409,
           code: "shop_closed",
         });
+      }
+
+      // §5: the food-vs-general split is DATA-DRIVEN from the shop's type —
+      // never a client-supplied or hard-coded category.
+      const [shopTypeRow] = shopRow.shop_type_id
+        ? await tx
+            .select({ is_restaurant: shopTypes.is_restaurant })
+            .from(shopTypes)
+            .where(eq(shopTypes.id, shopRow.shop_type_id))
+            .limit(1)
+        : [];
+      const isRestaurant = shopTypeRow?.is_restaurant ?? false;
+
+      // §12: the delivery fee is QUOTED fresh from platform_config and
+      // SNAPSHOT onto the order (R-A9 — a mid-flight admin edit never
+      // changes a placed order). Pickup orders carry no fee.
+      let deliveryFeeBdt: number | null = null;
+      if (body.fulfillment === "delivery") {
+        if (!shopRow.lat || !shopRow.lng) {
+          throw Object.assign(new Error("shop has no pickup coordinates"), {
+            status: 400,
+            code: "shop_location_missing",
+          });
+        }
+        const quote = await quoteDeliveryFee({
+          shopLat: Number(shopRow.lat),
+          shopLng: Number(shopRow.lng),
+          dropLat: body.delivery_lat as number,
+          dropLng: body.delivery_lng as number,
+        });
+        deliveryFeeBdt = quote.fee_bdt;
       }
 
       // Look up products and compute totals
@@ -129,7 +208,10 @@ export async function POST(request: Request) {
           shop_id: body.shop_id,
           rider_user_id: dbUser.id,
           subtotal_bdt: subtotal,
-          total_bdt: subtotal, // delivery_fee_bdt set later for food
+          delivery_fee_bdt: deliveryFeeBdt,
+          total_bdt:
+            deliveryFeeBdt === null ? subtotal : subtotal + deliveryFeeBdt,
+          category: isRestaurant ? "food" : "general",
           fulfillment: body.fulfillment,
           delivery_address: body.delivery_address,
           delivery_lat: body.delivery_lat ? String(body.delivery_lat) : null,
@@ -153,47 +235,117 @@ export async function POST(request: Request) {
         )
         .returning();
 
-      return { order, items: insertedItems };
+      // §6.1 step 1 + R8: the delivery leg is created in the SAME tx as the
+      // order, fee snapshot carried over. null ⇒ 409 + full rollback (never
+      // an order without its leg). Pickup orders have no leg.
+      if (body.fulfillment === "delivery") {
+        const leg = await createDeliveryLegFromOrder(
+          {
+            id: order.id,
+            rider_user_id: dbUser.id,
+            shop_id: body.shop_id,
+            order_kind: "catalog",
+            category: isRestaurant ? "food" : "general",
+            delivery_address: body.delivery_address ?? null,
+            delivery_lat:
+              body.delivery_lat !== undefined ? String(body.delivery_lat) : null,
+            delivery_lng:
+              body.delivery_lng !== undefined ? String(body.delivery_lng) : null,
+            delivery_fee_bdt: deliveryFeeBdt,
+          },
+          tx,
+        );
+        if (!leg) {
+          throw Object.assign(new Error("delivery leg unavailable"), {
+            status: 409,
+            code: "leg_unavailable",
+          });
+        }
+      }
+
+      return {
+        order,
+        items: insertedItems,
+        feeBdt: deliveryFeeBdt,
+        totalBdt:
+          deliveryFeeBdt === null ? subtotal : subtotal + deliveryFeeBdt,
+      };
     });
 
-    return Response.json(
-      { order_id: order.id, items: items.length, message: "Order placed" },
+    // F-29: new order → shop staff (fire-and-forget, never fails placement).
+    void notifyShopNewOrder(order.id, body.shop_id, totalBdt);
+
+    const successResponse = Response.json(
+      {
+        order_id: order.id,
+        items: items.length,
+        delivery_fee_bdt: feeBdt,
+        total_bdt: totalBdt,
+        message: "Order placed",
+      },
       { status: 201 },
     );
+    if (idempotencyKey) {
+      await storeIdempotencyOutcome(
+        { route: IDEMPOTENCY_ROUTES.shopOrderCreate, key: idempotencyKey },
+        successResponse,
+      );
+    }
+    return successResponse;
   } catch (err: unknown) {
     const status = errors.getErrorStatus(err);
+    const code =
+      err instanceof Error ? (err as { code?: string }).code : undefined;
+    let errorResponse: Response;
     if (status === 401)
-      return Response.json(
+      errorResponse = Response.json(
         { error: "unauthorized", message: "Authentication required" },
         { status: 401 },
       );
-    if (status === 403)
-      return Response.json(
+    else if (status === 403)
+      errorResponse = Response.json(
         { error: "forbidden", message: "Not authorized" },
         { status: 403 },
       );
-    if (status === 404) {
-      return Response.json(
+    else if (status === 404)
+      errorResponse = Response.json(
         { error: "shop_not_found", message: "Shop not found" },
         { status: 404 },
       );
-    }
-    if (err instanceof Error && (err as { code?: string }).code === "shop_closed") {
-      return Response.json(
+    else if (code === "shop_closed")
+      errorResponse = Response.json(
         { error: "shop_closed", message: "Shop is closed and not accepting orders" },
         { status: 409 },
       );
-    }
-    if (status === 400)
-      return Response.json(
+    else if (code === "leg_unavailable")
+      errorResponse = Response.json(
+        {
+          error: "delivery_leg_unavailable",
+          message: "Could not create the delivery leg for this order",
+        },
+        { status: 409 },
+      );
+    else if (status === 400)
+      errorResponse = Response.json(
         { error: "invalid_order", message: (err as Error).message },
         { status: 400 },
       );
-    logger.error("[shop/orders POST] error", err);
-    return Response.json(
-      { error: "internal_error", message: "An internal server error occurred" },
-      { status: 500 },
-    );
+    else {
+      logger.error("[shop/orders POST] error", err);
+      errorResponse = Response.json(
+        { error: "internal_error", message: "An internal server error occurred" },
+        { status: 500 },
+      );
+    }
+    // §8: the TYPED failure is stored so a retry with the same key replays
+    // it instead of re-entering the flow.
+    if (idempotencyKey) {
+      await storeIdempotencyOutcome(
+        { route: IDEMPOTENCY_ROUTES.shopOrderCreate, key: idempotencyKey },
+        errorResponse,
+      );
+    }
+    return errorResponse;
   }
 }
 

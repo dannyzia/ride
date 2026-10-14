@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, type ComponentProps } from "react";
 import { View, Text, TouchableOpacity, ScrollView, StatusBar } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
@@ -7,8 +7,34 @@ import { colors } from "@/theme/goRide";
 import { useIsDark, useAppearance } from "@/lib/useAppearance";
 import { useTranslation } from "react-i18next";
 import { useCustomer } from "@/store";
+import { logger } from "@/lib/logger";
 import { ensureRiderSocket } from "@/lib/riderSocket";
 import { VEHICLE_CATEGORIES } from "@/lib/vehicleTypes";
+
+const SERVER_URL = process.env.EXPO_PUBLIC_SERVER_URL ?? "http://localhost:8080";
+
+interface ShopTypeTile {
+  id: string;
+  slug: string;
+  label_en: string;
+  label_bn: string;
+  is_restaurant: boolean;
+}
+
+// Client-side icon heuristic for the admin-extensible category lookup — an
+// unknown slug falls back to storefront so a NEW admin category always
+// renders (§5: zero client change on category addition).
+function shopTypeIcon(slug: string): ComponentProps<typeof Ionicons>["name"] {
+  const s = slug.toLowerCase();
+  if (s.includes("restaur") || s.includes("food") || s.includes("bak")) return "restaurant";
+  if (s.includes("grocer") || s.includes("mart") || s.includes("super")) return "cart";
+  if (s.includes("pharm") || s.includes("medicine")) return "medkit";
+  if (s.includes("workshop") || s.includes("service")) return "construct";
+  if (s.includes("part") || s.includes("lubricant") || s.includes("auto")) return "build";
+  if (s.includes("fashion") || s.includes("cloth")) return "shirt";
+  if (s.includes("electro") || s.includes("mobile")) return "phone-portrait";
+  return "storefront";
+}
 
 // Greeting bucket by hour; the string itself is resolved through i18n.
 function getGreetingKey(): string {
@@ -25,6 +51,7 @@ export default function ServicesHub() {
   const { language, setTheme } = useAppearance();
   const { userAddress } = useCustomer();
   const [greetingKey, setGreetingKey] = useState("services_hub.good_morning");
+  const [shopTypes, setShopTypes] = useState<ShopTypeTile[]>([]);
   const bg = isDark ? colors.bgDark : colors.bgLight;
   const textPrimary = isDark ? colors.textPrimaryDark : colors.textPrimaryLight;
   const textSecondary = isDark ? colors.textSecondaryDark : colors.textSecondaryLight;
@@ -36,6 +63,14 @@ export default function ServicesHub() {
     // L8: open the rider session's WS singleton here (the driver side opens
     // its singleton on driver home). Ride screens subscribe per ride.
     ensureRiderSocket();
+    // §5 R3: shop-category tiles come from the admin-extensible lookup — a
+    // category the admin adds appears here with ZERO client change.
+    fetch(`${SERVER_URL}/api/shop/types`)
+      .then((res) => (res.ok ? res.json() : { shop_types: [] }))
+      .then((data) =>
+        setShopTypes(Array.isArray(data.shop_types) ? data.shop_types : []),
+      )
+      .catch((err: unknown) => logger.error("[services-hub] shop types fetch", err));
   }, []);
 
   const handleSelect = (serviceKey: string) => {
@@ -213,6 +248,56 @@ export default function ServicesHub() {
             </Text>
           </TouchableOpacity>
         </View>
+
+        {/* §5 R3: shop-category tiles from shop_types — ride booking above
+            stays the primary surface; these are ADDED beside it. */}
+        {shopTypes.length > 0 && (
+          <>
+            <Text
+              className="text-lg font-JakartaSemiBold mt-6 mb-3"
+              style={{ color: textPrimary }}
+            >
+              {t("services_hub.shop_categories")}
+            </Text>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              className="mb-2"
+            >
+              {shopTypes.map((st) => (
+                <TouchableOpacity
+                  key={st.id}
+                  className="rounded-2xl px-4 py-3 mr-3 flex-row items-center"
+                  style={{
+                    backgroundColor: surfaceBg,
+                    borderWidth: 1,
+                    borderColor: borderColor,
+                  }}
+                  activeOpacity={0.8}
+                  onPress={() =>
+                    router.push({
+                      pathname: "/(main)/(customer)/(shops)",
+                      params: { type: st.slug },
+                    })
+                  }
+                 
+                 testID="customer.services-hub.el-1">
+                  <Ionicons
+                    name={shopTypeIcon(st.slug)}
+                    size={20}
+                    color={colors.primary}
+                  />
+                  <Text
+                    className="ml-2 font-JakartaSemiBold text-sm"
+                    style={{ color: textPrimary }}
+                  >
+                    {language === "bn" ? st.label_bn : st.label_en}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </>
+        )}
 
         {/* Delivery */}
         <View className="flex-row justify-between mb-4">

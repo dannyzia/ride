@@ -463,6 +463,34 @@
       "when": 1792031400000,
       "tag": "0067_shop_ledger_busy_prep",
       "breakpoints": true
+    },
+    {
+      "idx": 66,
+      "version": "7",
+      "when": 1792246800000,
+      "tag": "0068_shop_order_dispatch_states",
+      "breakpoints": true
+    },
+    {
+      "idx": 67,
+      "version": "7",
+      "when": 1792300000000,
+      "tag": "0069_workshop_request_declined",
+      "breakpoints": true
+    },
+    {
+      "idx": 68,
+      "version": "7",
+      "when": 1792300001000,
+      "tag": "0070_workshop_request_vehicle_details",
+      "breakpoints": true
+    },
+    {
+      "idx": 69,
+      "version": "7",
+      "when": 1792300002000,
+      "tag": "0071_shop_order_cancel_partial",
+      "breakpoints": true
     }
   ]
 }

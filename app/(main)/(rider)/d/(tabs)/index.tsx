@@ -1116,6 +1116,24 @@ export default function DriverHome() {
 
           <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.sm }}>
             <TouchableOpacity
+              onPress={() => router.push("/(main)/(customer)/(shops)")}
+              accessibilityRole="button"
+              accessibilityLabel={t("driver_home.shops")}
+              style={{
+                width: 36,
+                height: 36,
+                borderRadius: 18,
+                backgroundColor: surfaceBg,
+                borderWidth: 1,
+                borderColor: borderColor,
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+             testID="rider.d.push-shops">
+              <Ionicons name="storefront-outline" size={18} color={textPrimary} />
+            </TouchableOpacity>
+
+            <TouchableOpacity
               onPress={() => setTheme(isDark ? "light" : "dark")}
               accessibilityRole="button"
               accessibilityLabel={isDark ? t('driver_home.switch_light_theme') : t('driver_home.switch_dark_theme')}

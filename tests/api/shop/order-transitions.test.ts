@@ -2,8 +2,10 @@
 // is what's under test (house pattern: tests/api/rental/security-fix.test.ts).
 /**
  * A2 + B2 — Shop order transition tests.
- * A2 (audit #2/#11): mark-ready runs the food-delivery bridge INSIDE the same
- * tx behind a conditional status guard.
+ * A2 (audit #2/#11): mark-ready is a PURE conditional transition (S4/§6.1
+ * rework — the delivery leg is created in the ORDER PLACEMENT tx, never at
+ * mark-ready; the RFQ bridge is retired). These tests pin that mark-ready
+ * performs ZERO leg/delivery writes for every cell, food or not.
  * B2 (audit #10): PATCH status locks the row and uses a conditional UPDATE.
  */
 import { jest } from "@jest/globals";
@@ -157,25 +159,24 @@ beforeEach(() => {
 // A2 — POST mark-ready
 // ══════════════════════════════════════════════════════════════════════
 describe("A2 — POST /api/shop/orders/[id]/mark-ready", () => {
-  it("food delivery: order ready + delivery row created in the same tx-run", async () => {
+  it("food delivery: order ready with ZERO leg writes (leg belongs to placement — §6.1)", async () => {
     mockOrderRows = [{ ...foodDeliveryOrder }];
     mockShopRows = [{ id: shopRowUuid, ...shopRow }];
 
     const res = await markReady(makeRequest("POST", null), { id: orderId });
     expect(res.status).toBe(200);
 
-    // BOTH writes happened in the single mocked tx commit set
+    // The conditional status write happened…
     const readyUpdate = mockUpdateCalls.find((c) => c.vals.status === "ready_for_pickup");
     expect(readyUpdate).toBeDefined();
-    const deliveryInsert = mockInsertCalls.find((v) => v.source_shop_order_id === orderId);
-    expect(deliveryInsert).toBeDefined();
-    // A5 regression: pickup coords are the SHOP's, not the customer's
-    expect(deliveryInsert.pickup_lat).toBe("23.7925");
-    expect(deliveryInsert.pickup_lat).not.toBe("23.8103");
+    // …and NOTHING else: the `deliveries` leg was created (with its fee
+    // snapshot) at order placement — mark-ready never touches leg storage.
+    expect(mockInsertCalls).toHaveLength(0);
   });
 
-  it("non-food pickup order: ready, NO bridge call, no delivery insert", async () => {
-    mockOrderRows = [{ ...foodDeliveryOrder, category: "general", fulfillment: "pickup" }];
+  it("food delivery with shop coords missing: STILL ready (coords are a placement-time concern)", async () => {
+    mockOrderRows = [{ ...foodDeliveryOrder }];
+    mockShopRows = [{ id: shopRowUuid, ...shopRow, lat: null, lng: null }];
 
     const res = await markReady(makeRequest("POST", null), { id: orderId });
     expect(res.status).toBe(200);
@@ -183,14 +184,12 @@ describe("A2 — POST /api/shop/orders/[id]/mark-ready", () => {
     expect(mockInsertCalls).toHaveLength(0);
   });
 
-  it("bridge returns null (shop coords missing) → 409 food_delivery_unavailable, zero delivery writes", async () => {
-    mockOrderRows = [{ ...foodDeliveryOrder }];
-    mockShopRows = [{ id: shopRowUuid, ...shopRow, lat: null, lng: null }];
+  it("non-food pickup order: ready, no leg/delivery insert", async () => {
+    mockOrderRows = [{ ...foodDeliveryOrder, category: "general", fulfillment: "pickup" }];
 
     const res = await markReady(makeRequest("POST", null), { id: orderId });
-    expect(res.status).toBe(409);
-    const json = await res.json();
-    expect(json.error).toBe("food_delivery_unavailable");
+    expect(res.status).toBe(200);
+    expect(mockUpdateCalls.find((c) => c.vals.status === "ready_for_pickup")).toBeDefined();
     expect(mockInsertCalls).toHaveLength(0);
   });
 

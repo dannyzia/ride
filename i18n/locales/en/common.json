@@ -83,7 +83,8 @@
     "delivery_subtitle": "Send a package",
     "ambulance": "Ambulance",
     "ambulance_subtitle": "Emergency & scheduled",
-    "a11y_emergency_ambulance": "Emergency ambulance"
+    "a11y_emergency_ambulance": "Emergency ambulance",
+    "shop_categories": "Shop by category"
   },
   "auth": {
     "phone_entry": "Enter your phone number",
@@ -162,7 +163,8 @@
       "add_more": "Add another role",
       "instant": "Instant — no verification",
       "verification_gated": "Needs admin verification"
-    }
+    },
+    "sign_in": "Sign In"
   },
   "driver": {
     "home": "Home",
@@ -505,7 +507,8 @@
     "fleets_available": "{{count}} fleets available",
     "low_demand": "Low demand",
     "moderate_demand": "Moderate demand",
-    "high_demand": "High demand"
+    "high_demand": "High demand",
+    "shops": "Shops"
   },
   "rider_home": {
     "pickup": "Pickup",
@@ -1830,13 +1833,42 @@
     "title": "Shops",
     "search_placeholder": "Search shops...",
     "no_description": "No description",
-    "empty": "No shops found"
+    "empty": "No shops found",
+    "closed": "Closed",
+    "food_badge": "Food",
+    "empty_category": "No shops here yet"
   },
   "shops_detail": {
     "not_found": "Shop not found",
     "no_products": "No products yet",
     "cart_count": "{{count}} item(s) — {{amount}}",
-    "checkout": "Checkout"
+    "checkout": "Checkout",
+    "tab_products": "Products",
+    "tab_services": "Services",
+    "request": "Request",
+    "request_form_title": "Request this service",
+    "vehicle_details": "Vehicle details",
+    "vehicle_placeholder": "Make, model, registration number",
+    "date": "Date",
+    "date_placeholder": "YYYY-MM-DD",
+    "window_start": "From",
+    "window_end": "To",
+    "window_placeholder": "HH:MM",
+    "note_placeholder": "Describe the issue (optional)",
+    "send_request": "Send request",
+    "sla_hint": "The shop has 2h to confirm your window.",
+    "sent_title": "Request sent",
+    "sent_body": "Your request is with the shop. You'll be notified when it's confirmed.",
+    "invalid_fields": "Check the date (YYYY-MM-DD) and times (HH:MM), and fill in vehicle details.",
+    "my_requests": "Your requests",
+    "status_requested": "Awaiting confirmation",
+    "status_confirmed": "Confirmed",
+    "status_in_progress": "In progress",
+    "status_done": "Done",
+    "status_declined": "Declined — pick another window",
+    "declined_hint": "The shop did not confirm in time — send a new request for another window.",
+    "request_error": "Could not send the request. Try again.",
+    "duration_minutes": "{{minutes}} min"
   },
   "shops_order": {
     "title": "Checkout",
@@ -1855,7 +1887,11 @@
     "err_title": "Order Failed",
     "err_body": "Could not place order",
     "placed_title": "Order Placed",
-    "placed_body": "Your order has been placed successfully"
+    "placed_body": "Your order has been placed successfully",
+    "coords_title": "Location needed",
+    "coords_body": "Set your current location so we can calculate the delivery fee.",
+    "fee_hint": "Delivery fee is added by distance when you place the order (cash on delivery).",
+    "placed_body_total": "Order placed. Pay {{total}} cash on delivery (items + {{fee}} delivery)."
   },
   "shop": {
     "dashboard": {
@@ -1968,5 +2004,64 @@
       "entry_adjustment": "Adjustment",
       "entry_reversal": "Reversal"
     }
+  },
+  "shops_track": {
+    "title": "Order tracking",
+    "my_orders": "My orders",
+    "load_error": "Could not load this order.",
+    "retry": "Retry",
+    "empty_title": "No orders yet",
+    "empty_body": "Orders you place from any shop will show up here.",
+    "timeline": "Order status",
+    "items": "Order items",
+    "missing": "unavailable",
+    "subtotal": "Subtotal",
+    "delivery_fee": "Delivery fee",
+    "total": "COD total",
+    "cod_hint": "Pay cash when your order arrives.",
+    "cancelled_fee": "Cancellation fee: {{fee}}",
+    "dispute": "Report a problem",
+    "cancel": "Cancel order",
+    "cancel_confirm_title": "Cancel this order?",
+    "cancel_confirm_free": "You will not be charged anything.",
+    "cancel_confirm_fee": "A cancellation fee of {{fee}} will apply.",
+    "cancel_keep": "Keep order",
+    "cancel_fail": "Could not cancel the order.",
+    "partial_title": "Some items are unavailable",
+    "partial_body": "{{names}} is out of stock. Confirm the reduced order, or cancel free of charge.",
+    "partial_confirm": "Confirm reduced order",
+    "partial_done": "You confirmed the reduced order.",
+    "partial_fail": "Could not confirm the reduced order.",
+    "courier_searching": "Finding a courier...",
+    "courier_assigned": "Courier assigned",
+    "courier_picked_up": "Courier picked up your order",
+    "courier_delivered": "Order delivered",
+    "courier_failed": "No courier available - the shop will arrange delivery",
+    "prep_estimate": "Prep: about {{minutes}} min",
+    "step_placed": "Order placed",
+    "step_accepted": "Shop accepted",
+    "step_preparing": "Preparing",
+    "step_ready": "Ready for pickup",
+    "step_courier": "Courier assigned",
+    "step_picked_up": "Picked up",
+    "step_delivered": "Delivered",
+    "step_service_confirmed": "Service confirmed",
+    "step_service_progress": "Work in progress",
+    "status_pending": "Placed",
+    "status_accepted": "Accepted",
+    "status_preparing": "Preparing",
+    "status_ready_for_pickup": "Ready for pickup",
+    "status_out_for_delivery": "Out for delivery",
+    "status_delivered": "Delivered",
+    "status_cancelled": "Cancelled",
+    "status_refunded": "Refunded",
+    "status_booked": "Booked",
+    "status_confirmed": "Confirmed",
+    "status_in_progress": "In progress",
+    "status_done": "Completed",
+    "status_dispatched": "Finding a courier",
+    "status_courier_assigned": "Courier assigned",
+    "status_picked_up": "Picked up",
+    "status_self_delivered": "Delivered by the shop"
   }
 }

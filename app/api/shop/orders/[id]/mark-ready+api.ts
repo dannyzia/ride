@@ -1,14 +1,14 @@
 /**
  * POST /api/shop/orders/[id]/mark-ready
  * Shop staff marks order as ready.
- * - Food DELIVERY orders: shopDeliveryBridge runs INSIDE the same tx (§C.1) —
- *   a bridge failure rolls the status write back (no orphan ready_for_pickup)
- * - Pickup orders: order sits ready_for_pickup until shop marks delivered
+ * - PURE conditional transition (S4/§6.1): the delivery leg is created in
+ *   the ORDER PLACEMENT tx (lib/shopDeliveryBridge.ts) — no leg write here
+ * - Pickup + delivery orders alike: order sits ready_for_pickup until shop
+ *   marks delivered
  */
 import { db } from "@/src/db";
 import { shopOrders } from "@/src/db/schema";
 import { requireShopMember } from "@/lib/marketplaceRbac";
-import { createFromShopOrder } from "@/lib/shopDeliveryBridge";
 import { logger } from "@/lib/logger";
 import { notifyWs } from "@/lib/wsNotify";
 import * as errors from "@/lib/errors";
@@ -78,38 +78,10 @@ export async function POST(request: Request, { id }: { id: string }) {
         return;
       }
 
-      // Phase 4: food delivery orders → create delivery request via bridge
-      // (F8) INSIDE the tx. null ⇒ 409 and full rollback: the order stays
-      // 'preparing' with no orphan ready_for_pickup state.
-      if (order.category === "food" && order.fulfillment === "delivery") {
-        const delivery = await createFromShopOrder(
-          {
-            id: order.id,
-            rider_user_id: order.rider_user_id,
-            shop_id: order.shop_id,
-            delivery_address: order.delivery_address,
-            delivery_lat: order.delivery_lat,
-            delivery_lng: order.delivery_lng,
-            rider_notes: order.rider_notes,
-            subtotal_bdt: order.subtotal_bdt,
-            total_bdt: order.total_bdt,
-          },
-          tx,
-        );
-
-        if (!delivery) {
-          throw Object.assign(new Error("food_delivery_unavailable"), {
-            status: 409,
-          });
-        }
-
-        logger.info("[shop/mark-ready] food delivery bridge created", {
-          orderId: id,
-          deliveryRequestId: delivery.id,
-        });
-        // Note: shop:delivery_created WS event will be emitted by the deliveryHandler
-        // when the delivery request is broadcast to couriers.
-      }
+      // S4/§6.1 RETIREMENT: the RFQ bridge (delivery_requests insert for the
+      // courier-bidding marketplace) is gone. The universal `deliveries` leg
+      // is created in the ORDER PLACEMENT tx (lib/shopDeliveryBridge.ts, R8)
+      // and dispatches from here via the sequential offer chain (S6).
     });
 
     if (guard) return guard;
@@ -152,16 +124,12 @@ export async function POST(request: Request, { id }: { id: string }) {
         { status: 403 },
       );
     if (status === 409) {
-      const code = (err as Error).message === "food_delivery_unavailable"
-        ? "food_delivery_unavailable"
-        : "invalid_transition";
+      // S4/§6.1: the food_delivery_unavailable arm is retired with the RFQ
+      // bridge — a 409 from the tx is a transition conflict.
       return Response.json(
         {
-          error: code,
-          message:
-            code === "food_delivery_unavailable"
-              ? "Food delivery is unavailable for this order"
-              : "Order must be in 'preparing' status",
+          error: "invalid_transition",
+          message: "Order must be in 'preparing' status",
         },
         { status: 409 },
       );

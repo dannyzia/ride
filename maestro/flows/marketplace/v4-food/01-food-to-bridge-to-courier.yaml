@@ -1,11 +1,18 @@
-# marketplace/v4-food/01-food-to-bridge-to-courier — V4 Food Bridge end-to-end:
-# food order placed in customer UI → shop marks ready (COUNTERPART) →
-# lib/shopDeliveryBridge.ts creates the delivery (source_shop_order_id idempotent,
-# §C.4) → courier accepts (COUNTERPART) → courier/leg flow reflected to customer.
+# marketplace/v4-food/01-food-to-bridge-to-courier — Food order end-to-end:
+# food order placed in customer UI (the `deliveries` leg is created in the
+# PLACEMENT tx — S4/§6.1, idempotent on order_id) → shop marks ready
+# (COUNTERPART, pure transition) → courier accepts (COUNTERPART) →
+# courier/leg flow reflected to customer.
+#
+# ⚠ S4 STATUS: the placement + mark-ready legs of this flow match the new
+# model, but the courier-accept step still targets the RETIRED RFQ
+# delivery_requests row (LATEST_DELIVERY_REQUEST) — order-derived legs now
+# dispatch sequentially via the offers chain (§6.1). That step is SUPERSEDED
+# until the S6 dispatched-offers inbox lands; rework this flow in S7.
 #
 # COUNTERPART-API calls:
-#   1. _counterpart-shop-ready     → POST /api/shop/orders/{id}/mark-ready (triggers bridge)
-#   2. _counterpart-courier-accept → POST /api/delivery/requests/{id}/accept
+#   1. _counterpart-shop-ready     → POST /api/shop/orders/{id}/mark-ready (pure transition)
+#   2. _counterpart-courier-accept → POST /api/delivery/requests/{id}/accept (RETIRED path)
 # Gate 1 REWIRE: home chip ("Food"), add-to-cart, checkout, order submit = semantic
 # IDs (same derivation as v3-shops/01; food rides the shops screens). Class:
 # AUTOMATABLE + COUNTERPART-API. BLOCKED until roster fixtures land.

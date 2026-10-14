@@ -17,12 +17,10 @@ import {
   users,
 } from "@/src/db/schema";
 import { verifySupabaseToken } from "@/lib/auth";
+import { WORKSHOP_CONFIRM_SLA_HOURS, applyWorkshopSla } from "@/lib/workshopSla";
 import { logger } from "@/lib/logger";
 import * as errors from "@/lib/errors";
 import { eq, and, isNull, asc, count, sql, sum } from "drizzle-orm";
-
-/** F-16/§6.1-S3: a `requested` workshop booking must be confirmed within 2h. */
-const WORKSHOP_CONFIRM_SLA_HOURS = 2;
 
 export async function GET(request: Request) {
   try {
@@ -94,6 +92,10 @@ export async function GET(request: Request) {
     if (role !== "OWNER" && role !== "MANAGER") {
       return Response.json(base);
     }
+
+    // S4/F-13: enforce the 2h SLA before counting — expired rows are already
+    // `declined`, so `pending` is truthful and `overdue` never lingers.
+    await applyWorkshopSla({ shopId: shop.id });
 
     const [orderCounts, workshopCounts, balanceRows] = await Promise.all([
       db

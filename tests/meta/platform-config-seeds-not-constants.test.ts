@@ -29,6 +29,9 @@ const ECONOMICS_KEYS = [
   "delivery_fee_tier_radius_km",
   "delivery_man_subscription_bdt_monthly",
   "shop_commission_percent",
+  // S4 (plan 27 §5, F-11): customer cancel fee — also a seed, never a
+  // literal (lib/shopOrderCancel.ts fresh-reads it at cancel time).
+  "shop_order_cancel_fee_after_accept_bdt",
 ] as const;
 
 /** Launch DEFAULTS as Zia set them — asserted against the SEED, never lib code. */
@@ -39,6 +42,9 @@ const LAUNCH_SEEDS: Record<string, string> = {
   delivery_fee_tier_radius_km: "3",
   delivery_man_subscription_bdt_monthly: "10000",
   shop_commission_percent: "0",
+  // S4: free cancel while the order is still pending is state logic; the
+  // post-accept fee itself is a seed (0 at launch — COD is post-2.5).
+  shop_order_cancel_fee_after_accept_bdt: "0",
 };
 
 function* walk(dir: string): Generator<string> {

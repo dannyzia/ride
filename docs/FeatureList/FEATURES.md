@@ -314,7 +314,7 @@
 | 16 | Courier presence (heartbeat, stale sweep job 52) | YES | — | YES — throttle ≥15s/100m; 90s offline threshold |
 | 17 | Delivery TTL sweep (job 51) | YES | — | YES — expires pending requests past deadline |
 | **Food Bridge (Phase 4)** | | | | |
-| 18 | `shopDeliveryBridge.createFromShopOrder()` | YES | — | YES — idempotent on `source_shop_order_id`; mark-ready triggers for food delivery |
+| 18 | `shopDeliveryBridge.createDeliveryLegFromOrder()` | YES | — | YES — S4/§6.1: inserts the universal `deliveries` leg idempotent on `order_id` in the ORDER PLACEMENT tx with the fee snapshot (source_vertical: food_order/shop_order/workshop_product); the RFQ `delivery_requests` bridge + mark-ready trigger are retired |
 | 19 | F40 fee write (delivery_fee_bdt + total_bdt recompute) | YES | — | YES — in delivery accept-bid tx |
 | 20 | `shop:delivery_created` WS event + push to customer | YES | — | YES — F24 via activation job 55 |
 | **Truck Rental (Phase 5)** | | | | |

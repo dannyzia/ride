@@ -83,7 +83,8 @@
     "delivery_subtitle": "প্যাকেজ পাঠান",
     "ambulance": "অ্যাম্বুলেন্স",
     "ambulance_subtitle": "ইমার্জেন্সি ও নির্ধারিত",
-    "a11y_emergency_ambulance": "ইমার্জেন্সি অ্যাম্বুলেন্স"
+    "a11y_emergency_ambulance": "ইমার্জেন্সি অ্যাম্বুলেন্স",
+    "shop_categories": "শপ ক্যাটাগরি অনুযায়ী"
   },
   "auth": {
     "phone_entry": "আপনার ফোন নম্বর লিখুন",
@@ -162,7 +163,8 @@
       "add_more": "আরেকটি রোল যোগ করুন",
       "instant": "তাৎক্ষণিক — যাচাই লাগবে না",
       "verification_gated": "অ্যাডমিন যাচাই প্রয়োজন"
-    }
+    },
+    "sign_in": "সাইন ইন"
   },
   "driver": {
     "home": "হোম",
@@ -505,7 +507,8 @@
     "fleets_available": "{{count}} টি ফ্লিট উপলব্ধ",
     "low_demand": "নিম্ন চাহিদা",
     "moderate_demand": "মাঝারি চাহিদা",
-    "high_demand": "উচ্চ চাহিদা"
+    "high_demand": "উচ্চ চাহিদা",
+    "shops": "শপসমূহ"
   },
   "rider_home": {
     "pickup": "পিকআপ",
@@ -1830,13 +1833,42 @@
     "title": "দোকান",
     "search_placeholder": "দোকান খুঁজুন...",
     "no_description": "বিবরণ নেই",
-    "empty": "কোনো দোকান পাওয়া যায়নি"
+    "empty": "কোনো দোকান পাওয়া যায়নি",
+    "closed": "বন্ধ",
+    "food_badge": "খাদ্য",
+    "empty_category": "এখানে এখনো কোনো শপ নেই"
   },
   "shops_detail": {
     "not_found": "দোকান পাওয়া যায়নি",
     "no_products": "এখনও কোনো পণ্য নেই",
     "cart_count": "{{count}}টি আইটেম — {{amount}}",
-    "checkout": "চেকআউট"
+    "checkout": "চেকআউট",
+    "tab_products": "পণ্য",
+    "tab_services": "সেবা",
+    "request": "অনুরোধ",
+    "request_form_title": "এই সেবাটি অনুরোধ করুন",
+    "vehicle_details": "যানবাহনের তথ্য",
+    "vehicle_placeholder": "মেক, মডেল, রেজিস্ট্রেশন নম্বর",
+    "date": "তারিখ",
+    "date_placeholder": "YYYY-MM-DD",
+    "window_start": "শুরু",
+    "window_end": "শেষ",
+    "window_placeholder": "HH:MM",
+    "note_placeholder": "সমস্যাটি বর্ণনা করুন (ঐচ্ছিক)",
+    "send_request": "অনুরোধ পাঠান",
+    "sla_hint": "আপনার সময় নিশ্চিত করতে দোকানের কাছে ২ ঘণ্টা আছে।",
+    "sent_title": "অনুরোধ পাঠানো হয়েছে",
+    "sent_body": "আপনার অনুরোধ দোকানের কাছে গেছে। নিশ্চিত হলে জানানো হবে।",
+    "invalid_fields": "তারিখ (YYYY-MM-DD) এবং সময় (HH:MM) দেখুন, এবং যানবাহনের তথ্য পূরণ করুন।",
+    "my_requests": "আপনার অনুরোধসমূহ",
+    "status_requested": "নিশ্চিতকরণের অপেক্ষায়",
+    "status_confirmed": "নিশ্চিত হয়েছে",
+    "status_in_progress": "চলছে",
+    "status_done": "সম্পন্ন",
+    "status_declined": "প্রত্যাখ্যাত — অন্য সময় বেছে নিন",
+    "declined_hint": "দোকান সময়মতো নিশ্চিত করেনি — অন্য সময়ের জন্য নতুন অনুরোধ পাঠান।",
+    "request_error": "অনুরোধ পাঠানো যায়নি। আবার চেষ্টা করুন।",
+    "duration_minutes": "{{minutes}} মিনিট"
   },
   "shops_order": {
     "title": "চেকআউট",
@@ -1855,7 +1887,11 @@
     "err_title": "অর্ডার ব্যর্থ",
     "err_body": "অর্ডার দেওয়া যায়নি",
     "placed_title": "অর্ডার সম্পন্ন",
-    "placed_body": "আপনার অর্ডার সফলভাবে সম্পন্ন হয়েছে"
+    "placed_body": "আপনার অর্ডার সফলভাবে সম্পন্ন হয়েছে",
+    "coords_title": "অবস্থান প্রয়োজন",
+    "coords_body": "ডেলিভারি ফি হিসাব করতে আপনার বর্তমান অবস্থান সেট করুন।",
+    "fee_hint": "ডেলিভারি ফি অর্ডার করার সময় দূরত্ব অনুযায়ী যোগ হবে (ক্যাশ অন ডেলিভারি)।",
+    "placed_body_total": "অর্ডার হয়েছে। ডেলিভারিতে {{total}} টাকা নগদ পরিশোধ করুন (পণ্য + {{fee}} ডেলিভারি)।"
   },
   "shop": {
     "dashboard": {
@@ -1968,5 +2004,64 @@
       "entry_adjustment": "সমন্বয়",
       "entry_reversal": "রিভার্সাল"
     }
+  },
+  "shops_track": {
+    "title": "অর্ডার ট্র্যাকিং",
+    "my_orders": "আমার অর্ডার",
+    "load_error": "অর্ডারটি লোড করা যায়নি।",
+    "retry": "আবার চেষ্টা করুন",
+    "empty_title": "এখনও কোনো অর্ডার নেই",
+    "empty_body": "যেকোনো দোকান থেকে দেওয়া অর্ডার এখানে দেখা যাবে।",
+    "timeline": "অর্ডারের অবস্থা",
+    "items": "অর্ডারের আইটেম",
+    "missing": "নেই",
+    "subtotal": "সাবটোটাল",
+    "delivery_fee": "ডেলিভারি ফি",
+    "total": "ক্যাশ অন ডেলিভারি মোট",
+    "cod_hint": "অর্ডার পেয়ে নগদে পরিশোধ করুন।",
+    "cancelled_fee": "বাতিল ফি: {{fee}}",
+    "dispute": "অভিযোগ জানান",
+    "cancel": "অর্ডার বাতিল করুন",
+    "cancel_confirm_title": "এই অর্ডারটি বাতিল করবেন?",
+    "cancel_confirm_free": "কোনো চার্জ প্রযোজ্য নয়।",
+    "cancel_confirm_fee": "{{fee}} বাতিল ফি প্রযোজ্য হবে।",
+    "cancel_keep": "অর্ডার রাখুন",
+    "cancel_fail": "অর্ডারটি বাতিল করা যায়নি।",
+    "partial_title": "কিছু আইটেম পাওয়া যাচ্ছে না",
+    "partial_body": "{{names}} স্টকে নেই। কমানো অর্ডারটি নিশ্চিত করুন অথবা বিনামূল্যে বাতিল করুন।",
+    "partial_confirm": "কমানো অর্ডার নিশ্চিত করুন",
+    "partial_done": "আপনি কমানো অর্ডারটি নিশ্চিত করেছেন।",
+    "partial_fail": "কমানো অর্ডারটি নিশ্চিত করা যায়নি।",
+    "courier_searching": "কুরিয়ার খোঁজা হচ্ছে...",
+    "courier_assigned": "কুরিয়ার নির্ধারিত",
+    "courier_picked_up": "কুরিয়ার অর্ডারটি তুলে নিয়েছে",
+    "courier_delivered": "ডেলিভারি সম্পন্ন",
+    "courier_failed": "কুরিয়ার পাওয়া যায়নি - দোকান ডেলিভারির ব্যবস্থা করবে",
+    "prep_estimate": "প্রস্তুতি: প্রায় {{minutes}} মিনিট",
+    "step_placed": "অর্ডার দেওয়া হয়েছে",
+    "step_accepted": "দোকান গ্রহণ করেছে",
+    "step_preparing": "প্রস্তুত হচ্ছে",
+    "step_ready": "সংগ্রহের জন্য প্রস্তুত",
+    "step_courier": "কুরিয়ার নির্ধারিত",
+    "step_picked_up": "তোলা হয়েছে",
+    "step_delivered": "ডেলিভারি হয়েছে",
+    "step_service_confirmed": "সার্ভিস নিশ্চিত হয়েছে",
+    "step_service_progress": "কাজ চলছে",
+    "status_pending": "দেওয়া হয়েছে",
+    "status_accepted": "গৃহীত",
+    "status_preparing": "প্রস্তুত হচ্ছে",
+    "status_ready_for_pickup": "সংগ্রহের জন্য প্রস্তুত",
+    "status_out_for_delivery": "ডেলিভারিতে",
+    "status_delivered": "ডেলিভারি হয়েছে",
+    "status_cancelled": "বাতিল হয়েছে",
+    "status_refunded": "ফেরত দেওয়া হয়েছে",
+    "status_booked": "বুক করা হয়েছে",
+    "status_confirmed": "নিশ্চিত",
+    "status_in_progress": "চলছে",
+    "status_done": "সম্পন্ন",
+    "status_dispatched": "কুরিয়ার খোঁজা হচ্ছে",
+    "status_courier_assigned": "কুরিয়ার নির্ধারিত",
+    "status_picked_up": "তোলা হয়েছে",
+    "status_self_delivered": "দোকান ডেলিভারি করেছে"
   }
 }

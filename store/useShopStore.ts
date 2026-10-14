@@ -15,6 +15,14 @@ export interface Shop {
   lat: number | null;
   lng: number | null;
   is_verified: boolean;
+  // S4 listing fields (GET /api/shop/list joins shop_types)
+  is_open: boolean;
+  busy: boolean;
+  rating: string | null;
+  shop_type_slug: string | null;
+  shop_type_label_en: string | null;
+  shop_type_label_bn: string | null;
+  shop_type_is_restaurant: boolean | null;
   created_at: string;
 }
 

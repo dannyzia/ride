@@ -162,6 +162,9 @@ const ALLOWED_KEYS = new Set([
   'delivery_fee_tier_radius_km',
   'delivery_man_subscription_bdt_monthly',
   'shop_commission_percent',
+  // S4/F-11: state-dependent customer cancel fee after accept — integer
+  // paisa, fresh-read by lib/shopOrderCancel.ts (launch seed: 0).
+  'shop_order_cancel_fee_after_accept_bdt',
 
   // Fare engine — joma recovery (taka-scale)
   'joma_bike_eco_monthly_bdt',
@@ -278,6 +281,9 @@ function validateKeyValue(key: string, value: string): string | null {
   }
   if (key === 'shop_commission_percent') {
     if (v < 0 || v > 100) return `${key} must be between 0 and 100`;
+  }
+  if (key === 'shop_order_cancel_fee_after_accept_bdt') {
+    if (!Number.isInteger(v) || v < 0) return `${key} must be a non-negative integer (paisa)`;
   }
 
   // Reference quantile: 0–1

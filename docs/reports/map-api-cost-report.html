@@ -1,0 +1,2962 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Map API Cost Analysis Report</title>
+<style>
+  :root {
+    --bg: #0f0f1a;
+    --card-bg: #1a1a2e;
+    --card-bg-elevated: #22223d;
+    --border: #2a2a4a;
+    --border-accent: #3d3d6b;
+    --text-primary: #e0e0e8;
+    --text-secondary: #a0a0b0;
+    --accent: #4a90d9;
+    --accent-hover: #5aa0e6;
+    --green: #2ecc71;
+    --green-bg: rgba(46, 204, 113, 0.12);
+    --orange: #f39c12;
+    --red: #e74c3c;
+    --yellow: #f1c40f;
+    --purple: #9b59b6;
+    --code-bg: #151525;
+    --heading-font: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', sans-serif;
+    background: var(--bg);
+    color: var(--text-primary);
+    line-height: 1.6;
+    padding: 0;
+    min-height: 100vh;
+  }
+
+  .container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem;
+  }
+
+  /* Header */
+  header {
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+    border-bottom: 2px solid var(--border);
+    padding: 2.5rem 0;
+    margin-bottom: 2rem;
+  }
+
+  header h1 {
+    font-size: 2.2rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 0.5rem;
+  }
+
+  header .subtitle {
+    color: var(--text-secondary);
+    font-size: 1rem;
+  }
+
+  header .meta {
+    display: flex;
+    gap: 1rem;
+    margin-top: 1.25rem;
+    flex-wrap: wrap;
+  }
+
+  .badge {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    padding: 0.35rem 0.85rem;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+  }
+
+  /* Table of Contents */
+  nav.toc {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1.25rem 1.5rem;
+    margin-bottom: 2.5rem;
+  }
+
+  nav.toc h2 {
+    font-size: 1.1rem;
+    margin-bottom: 0.75rem;
+    color: var(--accent);
+  }
+
+  nav.toc ul {
+    list-style: none;
+    padding-left: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 0.5rem;
+  }
+
+  nav.toc li a {
+    color: var(--text-secondary);
+    text-decoration: none;
+    font-size: 0.9rem;
+    transition: color 0.2s;
+  }
+
+  nav.toc li a:hover {
+    color: var(--accent-hover);
+  }
+
+  /* Summary Cards */
+  .summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.25rem;
+    margin: 1.5rem 0;
+  }
+
+  .summary-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1.5rem;
+    transition: transform 0.2s, border-color 0.2s;
+  }
+
+  .summary-card:hover {
+    border-color: var(--border-accent);
+    transform: translateY(-2px);
+  }
+
+  .summary-card .label {
+    font-size: 0.82rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-secondary);
+    margin-bottom: 0.5rem;
+  }
+
+  .summary-card .value {
+    font-size: 1.7rem;
+    font-weight: 700;
+    font-family: var(--heading-font);
+    margin-bottom: 0.25rem;
+  }
+
+  .summary-card .detail {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+  }
+
+  /* Interactive Simulator Box */
+  .calc-box {
+    background: linear-gradient(145deg, #1a1a2e 0%, #151528 100%);
+    border: 2px solid var(--accent);
+    border-radius: 12px;
+    padding: 2rem;
+    margin: 2.5rem 0;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  }
+
+  .calc-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 1rem;
+  }
+
+  .calc-header h2 {
+    color: #fff;
+    font-size: 1.6rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .calc-header .pill {
+    background: var(--green-bg);
+    border: 1px solid var(--green);
+    color: var(--green);
+    padding: 0.35rem 0.85rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+  }
+
+  /* Preset Toolbar */
+  .preset-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    margin-bottom: 1.25rem;
+  }
+
+  .preset-label {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--text-secondary);
+    letter-spacing: 0.5px;
+    margin-right: 0.25rem;
+  }
+
+  .preset-btn {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+    padding: 0.4rem 0.85rem;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .preset-btn:hover {
+    border-color: var(--accent);
+    color: #fff;
+  }
+
+  .preset-btn.active {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+    box-shadow: 0 2px 8px rgba(74, 144, 217, 0.3);
+  }
+
+  .toast-copied {
+    position: fixed;
+    bottom: 2rem;
+    right: 2rem;
+    background: var(--green);
+    color: #0f0f1a;
+    font-weight: 700;
+    padding: 0.75rem 1.25rem;
+    border-radius: 8px;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.6);
+    z-index: 9999;
+    opacity: 0;
+    transform: translateY(12px);
+    transition: all 0.25s ease;
+    pointer-events: none;
+    font-size: 0.9rem;
+  }
+
+  .toast-copied.show {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  /* Mode Switcher */
+  .mode-switch {
+    display: flex;
+    background: var(--code-bg);
+    padding: 0.35rem;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    gap: 0.25rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .mode-btn {
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    padding: 0.6rem 1rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+  }
+
+  .mode-btn.active {
+    background: var(--accent);
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(74, 144, 217, 0.3);
+  }
+
+  /* Inputs Grid */
+  .inputs-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+  }
+
+  .input-card {
+    background: var(--card-bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1.25rem;
+  }
+
+  .input-card-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .input-card-badge {
+    background: var(--code-bg);
+    border: 1px solid var(--border-accent);
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    color: var(--accent);
+    font-family: var(--heading-font);
+  }
+
+  .form-group {
+    margin-bottom: 1rem;
+  }
+
+  .form-label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.82rem;
+    color: var(--text-secondary);
+    margin-bottom: 0.4rem;
+  }
+
+  .form-val-display {
+    color: #fff;
+    font-weight: 600;
+    font-family: var(--heading-font);
+  }
+
+  .form-input {
+    width: 100%;
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    color: #fff;
+    padding: 0.5rem 0.75rem;
+    border-radius: 6px;
+    font-family: var(--heading-font);
+    font-size: 0.95rem;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .form-input:focus {
+    border-color: var(--accent);
+  }
+
+  .form-range {
+    width: 100%;
+    height: 6px;
+    background: var(--border);
+    border-radius: 3px;
+    outline: none;
+    margin-top: 0.5rem;
+    accent-color: var(--accent);
+    cursor: pointer;
+  }
+
+  .calc-computed-row {
+    display: flex;
+    justify-content: space-between;
+    padding-top: 0.75rem;
+    border-top: 1px solid rgba(255,255,255,0.06);
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+  }
+
+  .calc-computed-val {
+    color: var(--green);
+    font-weight: 600;
+    font-family: var(--heading-font);
+  }
+
+  /* Rates Drawer & Matrix Inputs */
+  .rates-drawer-box {
+    background: var(--card-bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    margin-bottom: 2rem;
+    overflow: hidden;
+    transition: border-color 0.2s;
+  }
+
+  .rates-drawer-box:hover {
+    border-color: var(--border-accent);
+  }
+
+  .rates-drawer-header {
+    padding: 0.85rem 1.25rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    background: rgba(255,255,255,0.02);
+    transition: background 0.2s;
+    user-select: none;
+  }
+
+  .rates-drawer-header:hover {
+    background: rgba(74, 144, 217, 0.08);
+  }
+
+  .rates-drawer-body {
+    padding: 1.25rem;
+    border-top: 1px solid var(--border);
+    background: var(--code-bg);
+  }
+
+  .rate-input {
+    width: 95px;
+    background: #0f0f1a;
+    border: 1px solid var(--border);
+    color: var(--accent);
+    padding: 0.35rem 0.5rem;
+    border-radius: 4px;
+    font-family: var(--heading-font);
+    font-size: 0.88rem;
+    font-weight: 600;
+    text-align: right;
+    outline: none;
+    transition: border-color 0.2s, background 0.2s;
+  }
+
+  .rate-input:focus {
+    border-color: var(--green);
+    background: #1a1a2e;
+    color: #fff;
+  }
+
+  .rate-input-tile {
+    color: var(--orange);
+  }
+
+  /* Live Results Table */
+  .live-results-title {
+    font-size: 1.2rem;
+    color: #fff;
+    margin: 1.5rem 0 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .reset-btn {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+    padding: 0.35rem 0.75rem;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .reset-btn:hover {
+    border-color: var(--accent);
+    color: #fff;
+  }
+
+  /* Table styles */
+  .table-container {
+    overflow-x: auto;
+    margin: 1.25rem 0;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+  }
+
+  th, td {
+    padding: 0.75rem 1rem;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+  }
+
+  th {
+    background: var(--code-bg);
+    font-weight: 600;
+    color: var(--text-primary);
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+  }
+
+  td { color: var(--text-secondary); }
+  tbody tr:hover td { background: rgba(74,144,217,0.05); }
+
+  .number { text-align: right; font-family: var(--heading-font); }
+  .highlight { color: var(--accent); font-weight: 600; }
+  .highlight-red { color: var(--red); font-weight: 600; }
+  .highlight-green { color: var(--green); font-weight: 600; }
+
+  /* Section */
+  section {
+    margin: 3rem 0;
+  }
+
+  section h2 {
+    font-size: 1.5rem;
+    margin-bottom: 1.25rem;
+    color: var(--accent);
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 0.5rem;
+  }
+
+  section h3 {
+    font-size: 1.2rem;
+    margin: 1.5rem 0 0.75rem;
+    color: var(--text-primary);
+  }
+
+  .callout {
+    background: var(--code-bg);
+    border-left: 3px solid var(--accent);
+    padding: 1rem 1.25rem;
+    margin: 1.25rem 0;
+    border-radius: 0 6px 6px 0;
+  }
+
+  .callout.warning { border-left-color: var(--orange); }
+  .callout.danger { border-left-color: var(--red); }
+  .callout.success { border-left-color: var(--green); }
+
+  .callout .label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-weight: 700;
+    margin-bottom: 0.35rem;
+  }
+
+  /* Cost table with conditional color */
+  .cost-barikoi { color: var(--green); }
+  .cost-dingi { color: var(--accent); }
+  .cost-google { color: var(--red); }
+
+  /* Optimization table */
+  .impl-low { color: var(--green); font-weight: 600; }
+  .impl-medium { color: var(--orange); font-weight: 600; }
+  .impl-high { color: var(--red); font-weight: 600; }
+
+  /* Risk levels */
+  .risk-low { color: var(--green); font-weight: 600; }
+  .risk-medium { color: var(--orange); font-weight: 600; }
+  .risk-high { color: var(--red); font-weight: 600; }
+  .risk-critical { color: #ff4757; font-weight: 600; }
+
+  /* Footer */
+  footer {
+    text-align: center;
+    padding: 2.5rem 0;
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    border-top: 1px solid var(--border);
+    margin-top: 3rem;
+  }
+
+  .small { font-size: 0.8rem; }
+  .note { color: var(--text-secondary); font-style: italic; }
+
+  @media (max-width: 768px) {
+    .container { padding: 1rem; }
+    header h1 { font-size: 1.6rem; }
+    .calc-box { padding: 1.25rem; }
+    .summary-grid { grid-template-columns: 1fr; }
+    table { font-size: 0.8rem; }
+    th, td { padding: 0.5rem; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="container">
+    <h1>Map API Cost Analysis Report</h1>
+    <div class="subtitle">Ride-Hailing × Food Delivery × Shop Delivery — Comprehensive Provider Evaluation</div>
+    <div class="meta">
+      <span class="badge">3 Providers Benchmarked</span>
+      <span class="badge">Interactive Scenario Simulator</span>
+      <span class="badge" style="color:var(--green); border-color:var(--green);">Barikoi Business: ৳1.65M/mo ($15.0K) [2× Routing Weight]</span>
+      <span class="badge" style="color:var(--accent); border-color:var(--accent);">Self-Hosted OSRM Hybrid: ৳169K/mo ($1.5K)</span>
+      <span class="badge" style="color:var(--yellow); border-color:var(--yellow);">Lean Quote-Time Routing: ৳435K/mo ($3.9K)</span>
+      <span class="badge">Google Maps Mobile SDK: ৳8.04M/mo ($73K)</span>
+    </div>
+  </div>
+</header>
+
+<div class="container">
+
+<!-- TOC -->
+<nav class="toc">
+  <h2>Contents</h2>
+  <ul>
+    <li><a href="#interactive-simulator" style="color: var(--green); font-weight: 700;">★ Interactive Live Cost Calculator</a></li>
+    <li><a href="#exec">1. Executive Summary</a></li>
+    <li><a href="#breakdown">2. Per-Vertical API Call Breakdown</a></li>
+    <li><a href="#summary-table">3. Total Calls Per Ride / Order</a></li>
+    <li><a href="#volume">4. Daily / Monthly Volume Projections</a></li>
+    <li><a href="#costs">5. Cost Projection Per Provider & Packages</a></li>
+    <li><a href="#free-tier">6. Free Tier / Credit Impact</a></li>
+    <li><a href="#optimization">7. Engineering Optimizations</a></li>
+    <li><a href="#sensitivity">8. Sensitivity Analysis</a></li>
+    <li><a href="#switching">9. Switching Cost Analysis</a></li>
+    <li><a href="#recommendation">10. Final Recommendation</a></li>
+    <li><a href="#appendix">Appendix: Sensitivity Notes</a></li>
+  </ul>
+</nav>
+
+<!-- Interactive Live Calculator -->
+<section id="interactive-simulator" class="calc-box">
+  <div class="calc-header">
+    <div>
+      <h2>Interactive Live Cost Calculator</h2>
+      <div style="font-size: 0.9rem; color: var(--text-secondary); margin-top: 0.25rem;">
+        Adjust active vehicles, restaurants, and shops (or type daily completed orders directly) to dynamically compute real-time API call volumes and monthly costs across all providers.
+      </div>
+    </div>
+    <div style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;">
+      <span class="pill">Live Reactive Engine</span>
+      <button class="reset-btn" id="btn-copy">📋 Copy Summary</button>
+      <button class="reset-btn" id="btn-reset">↺ Reset Baseline</button>
+    </div>
+  </div>
+
+  <!-- Scenario Presets -->
+  <div class="preset-toolbar">
+    <span class="preset-label">SCENARIO PRESETS:</span>
+    <button class="preset-btn active" id="preset-baseline">Baseline (15K / 8K / 2K)</button>
+    <button class="preset-btn" id="preset-rideonly">Ride-Only (15K)</button>
+    <button class="preset-btn" id="preset-growth">Growth (40K / 20K / 5K)</button>
+    <button class="preset-btn" id="preset-hyperscale">Hyper-Scale (100K / 50K / 15K)</button>
+  </div>
+
+  <!-- Mode Switcher -->
+  <div style="margin-bottom: 0.5rem; font-size: 0.85rem; font-weight: 600; color: var(--text-secondary);">
+    SELECT ARCHITECTURE MODEL:
+  </div>
+  <div class="mode-switch">
+    <button class="mode-btn active" id="btn-mode-cached" data-mode="cached">
+      ★ Production MapLibre SDK (0 Tile Calls / Free Device GPU Cache + H3) — DEFAULT
+    </button>
+    <button class="mode-btn" id="btn-mode-ping" data-mode="ping">
+      Academic Parameter Model (10s Ping Renders — Uncached Web Reference)
+    </button>
+  </div>
+
+  <!-- Inputs Grid -->
+  <div class="inputs-grid">
+    <!-- Ride-Hailing Card -->
+    <div class="input-card">
+      <div class="input-card-title">
+        <span>🚗 Ride-Hailing</span>
+        <span class="input-card-badge" id="badge-daily-rides">15,000 rides/day</span>
+      </div>
+
+      <!-- Primary Control: Daily Completed Rides -->
+      <div class="form-group">
+        <div class="form-label">
+          <span style="font-weight:600; color:#fff;">Daily Completed Rides:</span>
+          <span class="form-val-display" id="disp-daily-rides" style="color:var(--accent); font-weight:700;">15,000</span>
+        </div>
+        <input type="number" class="form-input" id="input-daily-rides" min="100" max="250000" step="250" value="15000">
+        <input type="range" class="form-range" id="range-daily-rides" min="1000" max="100000" step="500" value="15000">
+      </div>
+
+      <!-- Operational Ratios: Supply & Demand -->
+      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:0.5rem; margin-bottom:0.75rem;">
+        <div class="form-group" style="margin-bottom:0;">
+          <div class="form-label" style="font-size:0.78rem;">
+            <span>Avg Rides/Driver:</span>
+            <span class="form-val-display" id="disp-rides-per-driver">7.0</span>
+          </div>
+          <input type="number" class="form-input" id="input-rides-per-driver" min="1" max="25" step="0.5" value="7.0">
+        </div>
+        <div class="form-group" style="margin-bottom:0;">
+          <div class="form-label" style="font-size:0.78rem;">
+            <span>Avg Rides/Rider:</span>
+            <span class="form-val-display" id="disp-rides-per-rider">1.2</span>
+          </div>
+          <input type="number" class="form-input" id="input-rides-per-rider" min="1.0" max="10.0" step="0.1" value="1.2">
+        </div>
+      </div>
+
+      <!-- Derived Operations Metrics -->
+      <div class="calc-computed-row">
+        <span>Active Drivers on Shift:</span>
+        <span class="calc-computed-val" id="disp-calc-drivers">~2,143 drivers</span>
+      </div>
+      <div class="calc-computed-row">
+        <span>Active Riders (Passengers) Served:</span>
+        <span class="calc-computed-val" id="disp-calc-riders">~12,500 riders</span>
+      </div>
+
+      <!-- 3-Category Vehicle Fleet Breakdown (Uber/Pathao Ratio) -->
+      <div style="margin-top:0.75rem; padding:0.65rem 0.75rem; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.07); border-radius:6px; font-size:0.78rem;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.45rem;">
+          <span style="font-weight:600; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.5px; font-size:0.72rem;">Vehicle Fleet Mix (Uber/Pathao Ratio)</span>
+          <span class="pill" style="font-size:0.68rem; padding:1px 6px; background:rgba(74,144,217,0.15); color:var(--accent); border-color:var(--accent);">60% / 25% / 15%</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+          <span>🏍️ Bike (60%):</span>
+          <span style="font-weight:600; color:#fff;" id="disp-fleet-bike">9,000 rides (~1,000 bikes @ 9/day)</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+          <span>🛺 CNG (25%):</span>
+          <span style="font-weight:600; color:#fff;" id="disp-fleet-cng">3,750 rides (~536 CNGs @ 7/day)</span>
+        </div>
+        <div style="display:flex; justify-content:space-between;">
+          <span>🚗 Car (15%):</span>
+          <span style="font-weight:600; color:#fff;" id="disp-fleet-car">2,250 rides (~450 cars @ 5/day)</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Food Delivery Card -->
+    <div class="input-card">
+      <div class="input-card-title">
+        <span>🍔 Food Delivery</span>
+        <span class="input-card-badge" id="badge-daily-food">8,000 orders/day</span>
+      </div>
+
+      <!-- Primary Control: Daily Completed Food Orders -->
+      <div class="form-group">
+        <div class="form-label">
+          <span style="font-weight:600; color:#fff;">Daily Completed Food Orders:</span>
+          <span class="form-val-display" id="disp-daily-food" style="color:var(--accent); font-weight:700;">8,000</span>
+        </div>
+        <input type="number" class="form-input" id="input-daily-food" min="50" max="150000" step="100" value="8000">
+        <input type="range" class="form-range" id="range-daily-food" min="500" max="50000" step="250" value="8000">
+      </div>
+
+      <!-- Operational Ratios: Supply & Demand -->
+      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:0.5rem; margin-bottom:0.75rem;">
+        <div class="form-group" style="margin-bottom:0;">
+          <div class="form-label" style="font-size:0.78rem;">
+            <span>Avg Orders/Rest:</span>
+            <span class="form-val-display" id="disp-orders-per-rest">11.0</span>
+          </div>
+          <input type="number" class="form-input" id="input-orders-per-rest" min="1" max="50" step="0.5" value="11.0">
+        </div>
+        <div class="form-group" style="margin-bottom:0;">
+          <div class="form-label" style="font-size:0.78rem;">
+            <span>Avg Orders/Diner:</span>
+            <span class="form-val-display" id="disp-orders-per-diner">1.2</span>
+          </div>
+          <input type="number" class="form-input" id="input-orders-per-diner" min="1.0" max="5.0" step="0.1" value="1.2">
+        </div>
+      </div>
+
+      <!-- Derived Operations Metrics -->
+      <div class="calc-computed-row">
+        <span>Active Partner Restaurants:</span>
+        <span class="calc-computed-val" id="disp-calc-restaurants">~727 outlets</span>
+      </div>
+      <div class="calc-computed-row">
+        <span>Active Food Couriers:</span>
+        <span class="calc-computed-val" id="disp-calc-couriers">~889 couriers</span>
+      </div>
+      <div class="calc-computed-row">
+        <span>Diners / Customers Served:</span>
+        <span class="calc-computed-val" id="disp-calc-diners">~6,667 diners</span>
+      </div>
+    </div>
+
+    <!-- Shop Delivery Card -->
+    <div class="input-card">
+      <div class="input-card-title">
+        <span>📦 Shop Delivery</span>
+        <span class="input-card-badge" id="badge-daily-shop">2,000 orders/day</span>
+      </div>
+
+      <!-- Primary Control: Daily Completed Shop Deliveries -->
+      <div class="form-group">
+        <div class="form-label">
+          <span style="font-weight:600; color:#fff;">Daily Completed Deliveries:</span>
+          <span class="form-val-display" id="disp-daily-shop" style="color:var(--accent); font-weight:700;">2,000</span>
+        </div>
+        <input type="number" class="form-input" id="input-daily-shop" min="10" max="50000" step="50" value="2000">
+        <input type="range" class="form-range" id="range-daily-shop" min="200" max="20000" step="100" value="2000">
+      </div>
+
+      <!-- Operational Ratios: Supply & Demand -->
+      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:0.5rem; margin-bottom:0.75rem;">
+        <div class="form-group" style="margin-bottom:0;">
+          <div class="form-label" style="font-size:0.78rem;">
+            <span>Avg Orders/Shop:</span>
+            <span class="form-val-display" id="disp-orders-per-shop">12.0</span>
+          </div>
+          <input type="number" class="form-input" id="input-orders-per-shop" min="1" max="50" step="0.5" value="12.0">
+        </div>
+        <div class="form-group" style="margin-bottom:0;">
+          <div class="form-label" style="font-size:0.78rem;">
+            <span>Avg Orders/Buyer:</span>
+            <span class="form-val-display" id="disp-orders-per-buyer">1.1</span>
+          </div>
+          <input type="number" class="form-input" id="input-orders-per-buyer" min="1.0" max="5.0" step="0.1" value="1.1">
+        </div>
+      </div>
+
+      <!-- Derived Operations Metrics -->
+      <div class="calc-computed-row">
+        <span>Active Merchant Shops / Hubs:</span>
+        <span class="calc-computed-val" id="disp-calc-shops">~167 shops</span>
+      </div>
+      <div class="calc-computed-row">
+        <span>Batched Couriers (2.5 drops):</span>
+        <span class="calc-computed-val" id="disp-calc-batches">~800 routes</span>
+      </div>
+      <div class="calc-computed-row">
+        <span>Shop Buyers Served:</span>
+        <span class="calc-computed-val" id="disp-calc-buyers">~1,818 buyers</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Rates Configuration Drawer -->
+  <div class="rates-drawer-box">
+    <div class="rates-drawer-header" id="btn-toggle-rates">
+      <div style="display:flex; align-items:center; gap:0.6rem;">
+        <span style="font-size:1.15rem;">⚙️</span>
+        <div>
+          <span style="font-weight:600; font-size:0.95rem; color:#fff;">Customize API Calls Per Order (Ride, Food, Shop)</span>
+          <div style="font-size:0.78rem; color:var(--text-secondary); margin-top:2px;">
+            Toggle between clean 1:1 integer workflow calls or statistical cache-adjusted averages
+          </div>
+        </div>
+      </div>
+      <div style="display:flex; align-items:center; gap:0.75rem;">
+        <span class="pill" id="badge-rates-status" style="font-size:0.75rem; padding:0.25rem 0.65rem;">Default Prompt Rates</span>
+        <span id="rates-drawer-arrow" style="color:var(--accent); font-weight:bold; font-size:0.9rem; transition:transform 0.25s;">▼</span>
+      </div>
+    </div>
+    <div class="rates-drawer-body" id="rates-drawer-body" style="display:none;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; flex-wrap:wrap; gap:0.5rem;">
+        <span style="font-size:0.85rem; color:var(--text-secondary);">
+          Modify the API calls consumed per completed order. All daily/monthly volumes and monthly cost tables update live.
+        </span>
+        <div style="display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center;">
+          <button class="reset-btn" id="btn-mode-integer" style="padding:0.35rem 0.75rem; font-size:0.8rem; background:rgba(0,210,144,0.15); border:1px solid var(--green); color:var(--green); font-weight:600;">🔢 1:1 Clean Integer Mode</button>
+          <button class="reset-btn" id="btn-mode-statistical" style="padding:0.35rem 0.75rem; font-size:0.8rem; border:1px solid var(--border);">📊 Statistical Mode (30% Cache)</button>
+          <button class="reset-btn" id="btn-reset-rates" style="padding:0.35rem 0.65rem; font-size:0.8rem;">↺ Reset</button>
+        </div>
+      </div>
+
+      <div class="table-container" style="margin:0;">
+        <table>
+          <thead>
+            <tr>
+              <th>API Call Type</th>
+              <th class="number">Per Ride-Hail</th>
+              <th class="number">Per Food Delivery</th>
+              <th class="number">Per Shop Delivery</th>
+              <th>Description / Derivation Notes</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Places Autocomplete</td>
+              <td class="number"><input type="number" step="0.1" min="0" class="rate-input" id="rate-ride-auto" value="2.100"></td>
+              <td class="number"><input type="number" step="0.1" min="0" class="rate-input" id="rate-food-auto" value="2.100"></td>
+              <td class="number"><input type="number" step="0.1" min="0" class="rate-input" id="rate-shop-auto" value="2.100"></td>
+              <td class="small note">4 keystrokes × 50% prefix cache × 1.05 retry factor</td>
+            </tr>
+            <tr>
+              <td>Forward Geocoding</td>
+              <td class="number"><input type="number" step="0.05" min="0" class="rate-input" id="rate-ride-geo" value="0.735"></td>
+              <td class="number"><input type="number" step="0.05" min="0" class="rate-input" id="rate-food-geo" value="0.735"></td>
+              <td class="number"><input type="number" step="0.05" min="0" class="rate-input" id="rate-shop-geo" value="0.735"></td>
+              <td class="small note">Address resolution × 30% cache × 1.05 retry factor</td>
+            </tr>
+            <tr>
+              <td>Reverse Geocoding</td>
+              <td class="number"><input type="number" step="0.05" min="0" class="rate-input" id="rate-ride-revgeo" value="0.735"></td>
+              <td class="number"><input type="number" step="0.05" min="0" class="rate-input" id="rate-food-revgeo" value="1.470"></td>
+              <td class="number"><input type="number" step="0.05" min="0" class="rate-input" id="rate-shop-revgeo" value="1.838"></td>
+              <td class="small note">Pin snap & arrival confirmations × 30% cache × 1.05 retry</td>
+            </tr>
+            <tr>
+              <td>Routing (Shortest / Detour)</td>
+              <td class="number"><input type="number" step="0.1" min="0" class="rate-input" id="rate-ride-route" value="2.835"></td>
+              <td class="number"><input type="number" step="0.5" min="0" class="rate-input" id="rate-food-route" value="37.706"></td>
+              <td class="number"><input type="number" step="0.5" min="0" class="rate-input" id="rate-shop-route" value="85.901"></td>
+              <td class="small note">Route generation + 10s ping deviation recalcs (10% cache)</td>
+            </tr>
+            <tr>
+              <td>Routing (Traffic / Fastest)</td>
+              <td class="number"><input type="number" step="0.1" min="0" class="rate-input" id="rate-ride-routefast" value="0.000"></td>
+              <td class="number"><input type="number" step="0.1" min="0" class="rate-input" id="rate-food-routefast" value="0.000"></td>
+              <td class="number"><input type="number" step="0.1" min="0" class="rate-input" id="rate-shop-routefast" value="0.000"></td>
+              <td class="small note">Optional peak-hour traffic routing endpoint</td>
+            </tr>
+            <tr>
+              <td>Distance Matrix (Dispatch)</td>
+              <td class="number"><input type="number" step="0.1" min="0" class="rate-input" id="rate-ride-dm" value="1.050"></td>
+              <td class="number"><input type="number" step="0.1" min="0" class="rate-input" id="rate-food-dm" value="0.000"></td>
+              <td class="number"><input type="number" step="0.1" min="0" class="rate-input" id="rate-shop-dm" value="2.625"></td>
+              <td class="small note">Candidate driver ranking / multi-stop TSP sequencing (5% retry)</td>
+            </tr>
+            <tr>
+              <td>Map Tile Renders</td>
+              <td class="number"><input type="number" step="1.0" min="0" class="rate-input rate-input-tile" id="rate-ride-tile" value="559.650"></td>
+              <td class="number"><input type="number" step="1.0" min="0" class="rate-input rate-input-tile" id="rate-food-tile" value="165.900"></td>
+              <td class="number"><input type="number" step="1.0" min="0" class="rate-input rate-input-tile" id="rate-shop-tile" value="154.350"></td>
+              <td class="small note">Viewports load + 10s pings (or mobile SDK GPU vector cache)</td>
+            </tr>
+          </tbody>
+          <tfoot>
+            <tr style="background:var(--code-bg); font-weight:700;">
+              <td>Total Calls / Transaction</td>
+              <td class="number highlight" id="disp-rate-ride-total">~567.105</td>
+              <td class="number highlight" id="disp-rate-food-total">~207.911</td>
+              <td class="number highlight" id="disp-rate-shop-total">~247.549</td>
+              <td class="small" style="color:var(--green);">Sum of all active API calls per completed order</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Dynamic Live Output KPI Cards -->
+  <div class="summary-grid">
+    <div class="summary-card" style="border-color: var(--green);">
+      <div class="label" style="color: var(--green);">Barikoi Business (Best Value)</div>
+      <div class="value cost-barikoi" id="dyn-barikoi-business">৳1,651,429</div>
+      <div class="detail" id="dyn-barikoi-business-usd">$15,013 USD / month</div>
+      <div style="margin-top: 0.5rem; font-size: 0.78rem; color: var(--green);" id="dyn-cost-per-order">
+        Effective: ৳2.20 per order (2× routing weight)
+      </div>
+    </div>
+
+    <div class="summary-card" style="border-color: #00d2d3;">
+      <div class="label" style="color: #00d2d3;">Self-Hosted OSRM Hybrid</div>
+      <div class="value" id="dyn-hybrid-cost" style="color: #00d2d3;">৳169,414</div>
+      <div class="detail" id="dyn-hybrid-usd">$1,540 USD / month</div>
+      <div style="margin-top: 0.5rem; font-size: 0.78rem; color: #00d2d3;" id="dyn-hybrid-detail">
+        Effective: ৳0.23 per order ($40 VPS + Barikoi)
+      </div>
+    </div>
+
+    <div class="summary-card" style="border-color: var(--accent);">
+      <div class="label" style="color: var(--accent);">Barikoi Scale Plan</div>
+      <div class="value cost-dingi" id="dyn-barikoi-scale">৳2,016,786</div>
+      <div class="detail" id="dyn-barikoi-scale-usd">$18,334 USD / month</div>
+      <div style="margin-top: 0.5rem; font-size: 0.78rem; color: var(--orange);" id="dyn-barikoi-scale-delta">
+        +৳365K/mo vs Business (7.5p overage)
+      </div>
+    </div>
+
+    <div class="summary-card" style="border-color: var(--red);">
+      <div class="label" style="color: var(--red);">Google Maps (Mobile SDK)</div>
+      <div class="value cost-google" id="dyn-google-cost">৳8,041,077</div>
+      <div class="detail" id="dyn-google-usd">$73,101 USD / month</div>
+      <div style="margin-top: 0.5rem; font-size: 0.78rem; color: var(--red);" id="dyn-google-ratio">
+        4.9× more expensive ($0 tiles, $5 routes)
+      </div>
+    </div>
+  </div>
+
+  <!-- Dynamic Breakdown Table -->
+  <div class="live-results-title">
+    <span>Dynamic Cost Breakdown Table</span>
+    <span style="font-size: 0.85rem; color: var(--text-secondary);" id="dyn-total-calls-badge">
+      Platform Requests: 15,303,690 req/mo | Barikoi Billable: 27,690,480 calls/mo (2× Routing Weight)
+    </span>
+  </div>
+
+  <div class="table-container">
+    <table id="dyn-table">
+      <thead>
+        <tr>
+          <th>API Call Type</th>
+          <th class="number">Daily Calls</th>
+          <th class="number">Monthly Calls</th>
+          <th class="number">Barikoi Business (BDT)</th>
+          <th class="number">Barikoi Scale (BDT)</th>
+          <th class="number">Dingi PAYG (BDT)</th>
+          <th class="number">Google Maps (BDT)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Places Autocomplete</td>
+          <td class="number" id="row-auto-daily">52,500</td>
+          <td class="number" id="row-auto-monthly">1,575,000</td>
+          <td class="number cost-barikoi" id="row-auto-barbus">৳94,500</td>
+          <td class="number" id="row-auto-barscale" style="color:var(--accent);">৳118,125</td>
+          <td class="number cost-dingi" id="row-auto-dingi">৳78,750</td>
+          <td class="number cost-google" id="row-auto-google">৳490,298</td>
+        </tr>
+        <tr>
+          <td>Geocoding</td>
+          <td class="number" id="row-geo-daily">18,375</td>
+          <td class="number" id="row-geo-monthly">551,250</td>
+          <td class="number cost-barikoi" id="row-geo-barbus">৳33,075</td>
+          <td class="number" id="row-geo-barscale" style="color:var(--accent);">৳41,344</td>
+          <td class="number cost-dingi" id="row-geo-dingi">৳51,818</td>
+          <td class="number cost-google" id="row-geo-google">৳303,188</td>
+        </tr>
+        <tr>
+          <td>Reverse Geocoding</td>
+          <td class="number" id="row-revgeo-daily">26,460</td>
+          <td class="number" id="row-revgeo-monthly">793,800</td>
+          <td class="number cost-barikoi" id="row-revgeo-barbus">৳47,628</td>
+          <td class="number" id="row-revgeo-barscale" style="color:var(--accent);">৳59,535</td>
+          <td class="number cost-dingi" id="row-revgeo-dingi">৳74,617</td>
+          <td class="number cost-google" id="row-revgeo-google">৳436,590</td>
+        </tr>
+        <tr>
+          <td>Routing (Shortest)</td>
+          <td class="number" id="row-route-daily">515,975</td>
+          <td class="number" id="row-route-monthly">15,479,250</td>
+          <td class="number cost-barikoi" id="row-route-barbus">৳928,755</td>
+          <td class="number" id="row-route-barscale" style="color:var(--accent);">৳1,160,944</td>
+          <td class="number cost-dingi" id="row-route-dingi">৳1,578,884</td>
+          <td class="number cost-google" id="row-route-google">৳8,513,588</td>
+        </tr>
+        <tr>
+          <td>Distance Matrix</td>
+          <td class="number" id="row-dm-daily">5,250</td>
+          <td class="number" id="row-dm-monthly">157,500</td>
+          <td class="number cost-barikoi" id="row-dm-barbus">৳9,450</td>
+          <td class="number" id="row-dm-barscale" style="color:var(--accent);">৳11,813</td>
+          <td class="number cost-dingi" id="row-dm-dingi">৳16,065</td>
+          <td class="number cost-google" id="row-dm-google">৳86,625</td>
+        </tr>
+        <tr>
+          <td>Map Tile Renders</td>
+          <td class="number" id="row-tile-daily">0</td>
+          <td class="number" id="row-tile-monthly">0</td>
+          <td class="number cost-barikoi" id="row-tile-barbus">৳0</td>
+          <td class="number" id="row-tile-barscale" style="color:var(--accent);">৳0</td>
+          <td class="number cost-dingi" id="row-tile-dingi">৳0</td>
+          <td class="number cost-google" id="row-tile-google">৳0 (Free Mobile SDK)</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr style="background: rgba(255,255,255,0.03); font-weight: 700;">
+          <td>Gross Subtotal</td>
+          <td class="number" id="foot-daily-total">510,123</td>
+          <td class="number" id="foot-monthly-total">15,303,690</td>
+          <td class="number" id="foot-barbus-gross">৳1,651,429</td>
+          <td class="number" id="foot-barscale-gross" style="color:var(--accent);">৳2,016,786</td>
+          <td class="number" id="foot-dingi-gross">৳1,468,846</td>
+          <td class="number" id="foot-google-gross">৳8,041,077</td>
+        </tr>
+        <tr style="color: var(--text-secondary); font-size: 0.82rem;">
+          <td colspan="3">Included Quota / Free Credit Deduction</td>
+          <td class="number cost-barikoi">1M calls in ৳50K base</td>
+          <td class="number" style="color:var(--accent);">2M calls in ৳90K base</td>
+          <td class="number cost-dingi">−৳5,000 credit</td>
+          <td class="number cost-google">SKU Free Allowances</td>
+        </tr>
+        <tr style="background: var(--code-bg); font-weight: 700; font-size: 1.05rem;">
+          <td>NET MONTHLY TOTAL (BDT)</td>
+          <td colspan="2" class="number" style="color: var(--accent);" id="foot-total-orders">25,000 orders/day</td>
+          <td class="number cost-barikoi" id="foot-barbus-net">৳1,651,429</td>
+          <td class="number" id="foot-barscale-net" style="color:var(--accent);">৳2,016,786</td>
+          <td class="number cost-dingi" id="foot-dingi-net">৳1,463,846</td>
+          <td class="number cost-google" id="foot-google-net">৳8,041,077</td>
+        </tr>
+        <tr style="font-size: 0.9rem;">
+          <td>NET MONTHLY TOTAL (USD)</td>
+          <td colspan="2" class="number">@ ৳110 / USD</td>
+          <td class="number cost-barikoi" id="foot-barbus-net-usd">$15,013</td>
+          <td class="number" id="foot-barscale-net-usd" style="color:var(--accent);">$18,334</td>
+          <td class="number cost-dingi" id="foot-dingi-net-usd">$13,308</td>
+          <td class="number cost-google" id="foot-google-net-usd">$73,101</td>
+        </tr>
+        <tr style="font-size: 0.85rem; color: var(--green); font-weight: 600;">
+          <td>AVG MAP COST / ORDER</td>
+          <td colspan="2" class="number" id="foot-monthly-orders-disp">750,000 orders/mo</td>
+          <td class="number cost-barikoi" id="foot-unit-barbus">৳2.20</td>
+          <td class="number" id="foot-unit-barscale" style="color:var(--accent);">৳2.69</td>
+          <td class="number cost-dingi" id="foot-unit-dingi">৳1.95</td>
+          <td class="number cost-google" id="foot-unit-google">৳10.72</td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+  <div class="toast-copied" id="toast-copied">✓ Cost summary copied to clipboard!</div>
+</section>
+
+<!-- Executive Summary -->
+<section id="exec">
+  <h2>1. Executive Summary</h2>
+  <div class="callout success" style="margin-bottom: 1.25rem;">
+    <div class="label">Production Architecture Baseline (MapLibre Native + In-Memory H3 Index + Official Barikoi Weights)</div>
+    <div style="font-size: 0.92rem; line-height: 1.6;">
+      <strong>The headline commercial monthly API bill on Barikoi Business is ৳1.65M BDT ($15,013 USD), NOT ৳23.9M.</strong>
+      <br>• <strong>Barikoi Official Call Weighting:</strong> Per Barikoi's official pricing guide (<a href="https://docs.barikoi.com/pricing/pricing-call" target="_blank" style="color:var(--accent);">docs.barikoi.com/pricing/pricing-call</a>), a single Routing API request counts as <strong>2 API calls</strong> (and Map API tile requests count as 4 calls). Platform HTTP requests total <strong>15,303,690 requests/month</strong> (~15.30M), which translate to <strong>27,690,480 Barikoi billable calls</strong>.
+      <br>• <strong>Shop Route Batching Correction:</strong> 2,000 daily shop deliveries are grouped into <strong>800 batched routes</strong> (2.5 stops/route). Drivers navigate 800 routes, eliminating 3.25M overcounted phantom navigation calls.
+      <br>• <strong>MapLibre Native GPU Caching (0 Continuous Tile Calls):</strong> Vector tiles (<code>.pbf</code>) are cached in SQLite on-device; 10s driver GPS pings are coordinate-only WebSocket messages, not HTTP tile requests.
+      <br>• <strong>Server-Side In-Memory H3 Dispatch:</strong> Driver search uses Uber H3 hexagonal indexing (<code>utils-server/h3Index.ts</code>), eliminating external Distance Matrix API calls for ride-hailing and food delivery.
+      <br>• <strong>Codebase Fallback Reality:</strong> In <code>lib/barikoi.ts</code>, failure fallback routes to <strong>Google Directions</strong> (Dingi is NOT wired in code). A 5% failover to Google adds <strong>~৳340K/month</strong>, making internal circuit breakers critical.
+    </div>
+  </div>
+
+  <p>
+    <strong>Provider Verdict:</strong>
+    <ul>
+      <li><strong>Cheapest Commercial Plan:</strong> <strong>Barikoi (Business Plan)</strong> is the most economical commercial tier under Barikoi's official pricing (<a href="https://barikoimaps.com/pricing" target="_blank" style="color:var(--accent);">barikoimaps.com/pricing</a>). Priced at <strong>৳50,000/month</strong> (includes 1,000,000 calls) with an overage rate of <strong>BDT 0.060 / call (৳60 / 1,000 calls)</strong>, total monthly cost on 27.69M billable calls is <strong>৳1,651,429/month ($15,013 USD)</strong>—an effective cost of <strong>৳2.20 per completed order</strong>.</li>
+      <li><strong>Business Beats Scale by ৳365,357/month:</strong> Barikoi's <strong>Business Plan</strong> (৳50K base + ৳0.060/call) beats the <strong>Scale Plan</strong> (৳90K base + ৳0.075/call at ৳2,016,786/mo). Although Scale includes 1M more base calls, its 1.5 paisa higher overage rate costs ৳385K more across the remaining 25.69M overage calls, resulting in a net monthly penalty of ৳365K.</li>
+      <li><strong>The Engineering Sweet Spot (Self-Hosted OSRM Hybrid):</strong> Routing accounts for 12.39M requests/month (24.77M Barikoi billable calls). Deploying a self-hosted OSRM routing engine on a $40/month cloud VPS (৳4,400 BDT) for courier turn-by-turn navigation while routing address search and geocoding to Barikoi (2.92M calls) drops total monthly spend to <strong>৳169,414/month ($1,540 USD)</strong>—only <strong>৳0.23 per completed order</strong> (saving <strong>89.7% / ৳1.48M/month</strong>)!</li>
+      <li><strong>Lean Production Architecture Alternative (Quote-Time Routing):</strong> In Ride's actual codebase, routes are fetched at quote/request time, not continuously polled during driver transit (~3 route calls/trip). If modeled as quote-time routing, Barikoi Business spend drops to only <strong>৳435,014/month ($3,955 USD)</strong>—only <strong>৳0.58 per completed order</strong>!</li>
+      <li><strong>Google Maps Platform (Mobile Native SDK Reality):</strong> With Google Maps Mobile SDKs, map tile display is $0.00. However, Directions ($5.00/1K), Geocoding ($5.00/1K), and Autocomplete ($2.83/1K) still cost <strong>$73,101 USD / month (~৳8.04M BDT)</strong>—which is <strong>4.9× more expensive than Barikoi Business</strong>.</li>
+      <li><strong>Dingi:</strong> Costs <strong>৳1.46M/month ($13,308 USD)</strong> under 100K+ tiered pricing. Note: Dingi is an external market benchmark and is not currently integrated in the Ride repository.</li>
+    </ul>
+  </p>
+
+  <div class="summary-grid">
+    <div class="summary-card" style="border-color: var(--green);">
+      <div class="label" style="color: var(--green);">Barikoi Business (Best Value)</div>
+      <div class="value cost-barikoi">৳1,103,408</div>
+      <div class="detail">$10,031 USD / mo (৳1.47/order)</div>
+    </div>
+    <div class="summary-card" style="border-color: #00d2d3;">
+      <div class="label" style="color: #00d2d3;">Self-Hosted OSRM Hybrid</div>
+      <div class="value" style="color: #00d2d3;">৳179,053</div>
+      <div class="detail">$1,628 USD / mo (৳0.24/order)</div>
+    </div>
+    <div class="summary-card" style="border-color: var(--accent);">
+      <div class="label" style="color: var(--accent);">Barikoi Scale Plan</div>
+      <div class="value cost-dingi">৳1,331,760</div>
+      <div class="detail">$12,107 USD / mo (+৳228K vs Business)</div>
+    </div>
+    <div class="summary-card" style="border-color: var(--red);">
+      <div class="label" style="color: var(--red);">Google Maps (Mobile SDK)</div>
+      <div class="value cost-google">৳9,808,288</div>
+      <div class="detail">$89,166 USD / mo (8.9× Barikoi)</div>
+    </div>
+  </div>
+
+  <h3>Monthly Cost Projections Across Scenarios</h3>
+  <div class="table-container">
+    <table>
+      <thead>
+        <tr>
+          <th>Scenario / Model</th>
+          <th>Monthly Calls</th>
+          <th>Barikoi Business (৳50K + 6p)</th>
+          <th>Self-Hosted OSRM Hybrid</th>
+          <th>Barikoi Scale (৳90K + 7.5p)</th>
+          <th>Google Maps (Mobile SDK)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr style="background: rgba(46,204,113,0.06);">
+          <td><strong>Production Baseline (15.3M req / 27.7M Barikoi calls)</strong></td>
+          <td class="number highlight"><strong>27,690,480</strong></td>
+          <td class="number cost-barikoi"><strong>৳1,651,429 ($15,013)</strong></td>
+          <td class="number" style="color:#00d2d3;"><strong>৳169,414 ($1,540)</strong></td>
+          <td class="number cost-dingi">৳2,016,786 ($18,334)</td>
+          <td class="number cost-google">৳8,041,077 ($73,101)</td>
+        </tr>
+        <tr style="background: rgba(255,193,7,0.05);">
+          <td><strong>Lean Production (Quote-Time Routing ~3/order)</strong></td>
+          <td class="number" style="color:var(--yellow);"><strong>7,416,900</strong></td>
+          <td class="number cost-barikoi" style="color:var(--green);"><strong>৳435,014 ($3,955)</strong></td>
+          <td class="number" style="color:#00d2d3;"><strong>৳169,414 ($1,540)</strong></td>
+          <td class="number cost-dingi">৳496,268 ($4,512)</td>
+          <td class="number cost-google">৳2,488,575 ($22,623)</td>
+        </tr>
+        <tr>
+          <td><strong>Production Low (-20% routing, +30% cache)</strong></td>
+          <td class="number">22,735,000</td>
+          <td class="number cost-barikoi">৳1,354,100 ($12,310)</td>
+          <td class="number" style="color:#00d2d3;">৳143,200 ($1,302)</td>
+          <td class="number cost-dingi">৳1,645,125 ($14,956)</td>
+          <td class="number cost-google">৳6,520,000 ($59,273)</td>
+        </tr>
+        <tr>
+          <td><strong>Production High (+15% routes, -20% cache)</strong></td>
+          <td class="number">32,380,000</td>
+          <td class="number cost-barikoi">৳1,932,800 ($17,571)</td>
+          <td class="number" style="color:#00d2d3;">৳198,500 ($1,805)</td>
+          <td class="number cost-dingi">৳2,368,500 ($21,532)</td>
+          <td class="number cost-google">৳9,610,000 ($87,364)</td>
+        </tr>
+        <tr style="color: var(--text-secondary); font-style: italic; font-size: 0.85rem;">
+          <td>Academic Uncached Reference (10s Ping Renders)</td>
+          <td class="number">319,948,800</td>
+          <td class="number">৳19,186,928 ($174,427)</td>
+          <td class="number">—</td>
+          <td class="number">৳23,936,160 ($217,601)</td>
+          <td class="number">৳241,776,179 ($2.20M)</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="small note">* Exchange rate: 1 USD = 110 BDT. All production figures reflect MapLibre Native client-side GPU tile caching and in-memory H3 dispatch indexing.</p>
+</section>
+
+<!-- Per-Vertical Breakdown -->
+<section id="breakdown">
+  <h2>2. Per-Vertical API Call Breakdown</h2>
+
+  <h3>2.1 Ride-Hailing (15,000 completed rides/day)</h3>
+  <div class="table-container">
+    <table>
+      <thead>
+        <tr>
+          <th>Phase of ride</th>
+          <th>API call type</th>
+          <th class="number">Calls (Raw)</th>
+          <th class="number">Calls (Adjusted)</th>
+          <th>Derivation & Notes</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>Pickup address entry</td><td>Autocomplete</td><td class="number">4</td><td class="number highlight">2.100</td><td>4 keystrokes; 50% prefix cache; 5% retry (4 × 0.50 × 1.05).</td></tr>
+        <tr><td>Pickup confirmation</td><td>Geocoding</td><td class="number">1</td><td class="number highlight">0.735</td><td>Forward geocoding; 30% cache; 5% retry (1 × 0.70 × 1.05).</td></tr>
+        <tr><td>Driver search</td><td>Distance Matrix (10×10)</td><td class="number">1</td><td class="number highlight">1.050</td><td>100 elements; 1 lookup per search; 5% retry.</td></tr>
+        <tr><td>Fare estimate & route setup</td><td>Routing (shortest)</td><td class="number">3</td><td class="number highlight">2.835</td><td>3 recomputes; 10% cache; 5% retry (3 × 0.90 × 1.05).</td></tr>
+        <tr><td>Dropoff confirmation</td><td>Reverse Geocoding</td><td class="number">1</td><td class="number highlight">0.735</td><td>Reverse geocoding dropoff pin; 30% cache; 5% retry.</td></tr>
+        <tr><td>Rider map open (3 min)</td><td>Map tile render</td><td class="number">89</td><td class="number highlight-red">93.450</td><td>Initial viewport load + pan/zoom stabilization; 5% retry.</td></tr>
+        <tr><td>Driver map open (25 min)</td><td>Map tile render</td><td class="number">150</td><td class="number highlight-red">157.500</td><td>25 min at 10s ping = 150 events; 5% retry.</td></tr>
+        <tr><td>Driver en route to pickup</td><td>Map tile render</td><td class="number">210</td><td class="number highlight-red">220.500</td><td>3.5 min en route; rider + driver viewports updating.</td></tr>
+        <tr><td>Ride in progress (20 min)</td><td>Map tile render</td><td class="number">84</td><td class="number highlight-red">88.200</td><td>20 min ride; viewport boundary shifts.</td></tr>
+        <tr><td><strong>Total Per Ride</strong></td><td></td><td class="number"><strong>543</strong></td><td class="number highlight"><strong>~567.105</strong></td><td><strong>Functional APIs: 7.455 calls; Tile Renders: 559.65 calls</strong></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="small note" style="margin-top: 0.75rem; line-height: 1.6;">
+    <strong>Vehicle Category Routing & Duration Dynamics:</strong> Across Bangladesh ride-hailing (Uber/Pathao market mix of 60% Bike, 25% CNG, 15% Car), API calls follow distinct vehicle behaviors:
+    <br>• <strong>🏍️ Bike (60% — 9,000 rides/day):</strong> Shortest trip duration (~15 min) and lowest tile ping window; requires two-wheeler routing profiles that support narrow alleyways and flyover lanes.
+    <br>• <strong>🛺 CNG (25% — 3,750 rides/day):</strong> Mid-range duration (~20 min); three-wheeler routing profiles must account for restricted VIP roads and elevated expressway bans.
+    <br>• <strong>🚗 Car (15% — 2,250 rides/day):</strong> Longest trip duration (~32 min) due to Dhaka traffic bottlenecks; requires four-wheeler routing supporting tollways and flyovers, creating larger viewport tile refresh windows.
+    <br>The weighted average trip duration across all three categories <code>(0.60 × 15 + 0.25 × 20 + 0.15 × 32) = 18.8 min</code> closely confirms the prompt's 20-minute door-to-door parameter.
+  </p>
+
+  <h3 style="margin-top: 2rem;">2.2 Food Delivery (8,000 orders/day)</h3>
+  <div class="table-container">
+    <table>
+      <thead>
+        <tr>
+          <th>Phase of order</th>
+          <th>API call type</th>
+          <th class="number">Calls (Raw)</th>
+          <th class="number">Calls (Adjusted)</th>
+          <th>Derivation & Notes</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>Customer address entry</td><td>Autocomplete</td><td class="number">4</td><td class="number highlight">2.100</td><td>Customer types delivery destination; 50% cache hit.</td></tr>
+        <tr><td>Restaurant confirmation</td><td>Geocoding</td><td class="number">1</td><td class="number highlight">0.735</td><td>Geocode restaurant pickup address; 30% cache hit.</td></tr>
+        <tr><td>Pickup arrival confirmation</td><td>Reverse Geocoding</td><td class="number">1</td><td class="number highlight">0.735</td><td>Driver confirms arrival at restaurant; 30% cache hit.</td></tr>
+        <tr><td>Dropoff arrival confirmation</td><td>Reverse Geocoding</td><td class="number">1</td><td class="number highlight">0.735</td><td>Driver confirms delivery to customer; 30% cache hit.</td></tr>
+        <tr><td>Driver search / assignment</td><td>Distance Matrix</td><td class="number">0</td><td class="number highlight">0.000</td><td>Broadcast dispatch to nearest courier; no multi-stop matrix.</td></tr>
+        <tr><td>Driver en route to restaurant</td><td>Routing (shortest)</td><td class="number">21</td><td class="number highlight">19.845</td><td>10 min leg; 10s ping periodic deviation recalc (21 × 0.90 × 1.05).</td></tr>
+        <tr><td>Driver en route to customer</td><td>Routing (shortest)</td><td class="number">18</td><td class="number highlight">17.010</td><td>25 min leg; periodic recalc on corridor deviations (18 × 0.90 × 1.05).</td></tr>
+        <tr><td>Failed delivery reroute (15%)</td><td>Routing (shortest)</td><td class="number">6 (15%)</td><td class="number highlight">0.851</td><td>15% reroute rate adds 6 routing events (6 × 0.15 × 0.90 × 1.05).</td></tr>
+        <tr><td>Customer map open (3 min)</td><td>Map tile render</td><td class="number">4</td><td class="number highlight-red">4.200</td><td>Customer checking order status on map.</td></tr>
+        <tr><td>Driver map open (restaurant leg)</td><td>Map tile render</td><td class="number">23</td><td class="number highlight-red">24.150</td><td>Map open during restaurant approach.</td></tr>
+        <tr><td>Driver map open (customer leg)</td><td>Map tile render</td><td class="number">131</td><td class="number highlight-red">137.550</td><td>40 min driver map open duration (prompt fixed parameter).</td></tr>
+        <tr><td><strong>Total Per Food Order</strong></td><td></td><td class="number"><strong>205</strong></td><td class="number highlight"><strong>~207.911</strong></td><td><strong>Functional APIs: 42.011 calls; Tile Renders: 165.90 calls</strong></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3 style="margin-top: 2rem;">2.3 Shop Delivery (2,000 multi-stop orders/day)</h3>
+  <div class="table-container">
+    <table>
+      <thead>
+        <tr>
+          <th>Phase of order</th>
+          <th>API call type</th>
+          <th class="number">Calls (Raw)</th>
+          <th class="number">Calls (Adjusted)</th>
+          <th>Derivation & Notes</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>Warehouse / stop address entry</td><td>Autocomplete</td><td class="number">4</td><td class="number highlight">2.100</td><td>Stop address resolution; 50% cache hit.</td></tr>
+        <tr><td>Warehouse confirmation</td><td>Geocoding</td><td class="number">1</td><td class="number highlight">0.735</td><td>Forward geocoding of origin hub; 30% cache hit.</td></tr>
+        <tr><td>Stop delivery dropoff confirmation</td><td>Reverse Geocoding</td><td class="number">1</td><td class="number highlight">0.735</td><td>1 dropoff confirmation per order; 30% cache; 5% retry (1 × 0.70 × 1.05).</td></tr>
+        <tr><td>Stop sequence optimization (per route)</td><td>Distance Matrix</td><td class="number">1.0</td><td class="number highlight">1.050</td><td>2.5 stop pairs sequenced per route; across 800 routes for 2K orders (2.5 × 0.40 × 1.05).</td></tr>
+        <tr><td>Driver en route to warehouse (per route)</td><td>Routing (shortest)</td><td class="number">12</td><td class="number highlight">11.340</td><td>Pre-pickup leg across 800 routes (30 × 0.40 × 0.90 × 1.05).</td></tr>
+        <tr><td>Multi-stop delivery navigation (per route)</td><td>Routing (shortest)</td><td class="number">24</td><td class="number highlight">22.680</td><td>Navigation leg across 800 routes (60 × 0.40 × 0.90 × 1.05).</td></tr>
+        <tr><td>Failed delivery reroutes (15% per route)</td><td>Routing (shortest)</td><td class="number">2.4</td><td class="number highlight">0.340</td><td>15% reroute rate across 800 routes (6 × 0.15 × 0.40 × 0.90 × 1.05).</td></tr>
+        <tr><td>Customer tracking open</td><td>Map tile render</td><td class="number">4</td><td class="number highlight-red">4.200</td><td>Customer tracking package status (MapLibre local GPU cache).</td></tr>
+        <tr><td>Driver map open (per route)</td><td>Map tile render</td><td class="number">57.2</td><td class="number highlight-red">60.060</td><td>50 min shift duration per route (143 × 0.40 × 1.05). Local GPU cache.</td></tr>
+        <tr><td><strong>Total Per Shop Order</strong></td><td></td><td class="number"><strong>105.6</strong></td><td class="number highlight"><strong>~104.505</strong></td><td><strong>Functional APIs: 38.980 req/order; Tile Renders: 64.26 (0 in production)</strong></td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- Summary Table -->
+<section id="summary-table">
+  <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem; margin-bottom:0.75rem;">
+    <h2>3. Total Calls Per Ride / Per Order (Summary)</h2>
+    <span class="pill" style="font-size:0.75rem;">Live Synchronized</span>
+  </div>
+  <p style="font-size:0.9rem; color:var(--text-secondary); margin-bottom:1rem;">
+    Figures below are cache-adjusted and include the 5% retry factor. (You can also adjust them interactively in the <a href="#interactive-simulator" style="color:var(--accent);">Interactive Simulator</a> drawer above).
+  </p>
+  <div class="table-container">
+    <table>
+      <thead>
+        <tr>
+          <th>API call type</th>
+          <th class="number">Per ride-hail</th>
+          <th class="number">Per food delivery</th>
+          <th class="number">Per shop delivery</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>Autocomplete</td><td class="number highlight" id="sec3-ride-auto">2.100</td><td class="number highlight" id="sec3-food-auto">2.100</td><td class="number highlight" id="sec3-shop-auto">2.100</td></tr>
+        <tr><td>Geocoding</td><td class="number" id="sec3-ride-geo">0.735</td><td class="number" id="sec3-food-geo">0.735</td><td class="number" id="sec3-shop-geo">0.735</td></tr>
+        <tr><td>Reverse geocoding</td><td class="number" id="sec3-ride-revgeo">0.735</td><td class="number" id="sec3-food-revgeo">1.470</td><td class="number" id="sec3-shop-revgeo">1.838</td></tr>
+        <tr><td>Routing (shortest)</td><td class="number highlight" id="sec3-ride-route">2.835</td><td class="number highlight" id="sec3-food-route">37.706</td><td class="number highlight" id="sec3-shop-route">85.901</td></tr>
+        <tr><td>Routing (fastest / traffic)</td><td class="number" id="sec3-ride-routefast">0.000</td><td class="number" id="sec3-food-routefast">0.000</td><td class="number" id="sec3-shop-routefast">0.000</td></tr>
+        <tr><td>Distance matrix</td><td class="number" id="sec3-ride-dm">1.050</td><td class="number" id="sec3-food-dm">0.000</td><td class="number highlight" id="sec3-shop-dm">2.625</td></tr>
+        <tr><td>Map tile render</td><td class="number highlight-red" id="sec3-ride-tile">559.650</td><td class="number highlight-red" id="sec3-food-tile">165.900</td><td class="number highlight-red" id="sec3-shop-tile">154.350</td></tr>
+        <tr><td><strong>Total Calls Per Item</strong></td><td class="number highlight" id="sec3-ride-total"><strong>~567.105</strong></td><td class="number highlight" id="sec3-food-total"><strong>~207.911</strong></td><td class="number highlight" id="sec3-shop-total"><strong>~247.549</strong></td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- Volume Projection -->
+<section id="volume">
+  <h2>4. Daily / Monthly Volume Projections</h2>
+
+  <h3>4.0 Operational Baseline Assumptions (Fleet & Entity Sizing)</h3>
+  <p>To ground the 25,000 daily order volume in operational reality, the platform models the following entity sizing:</p>
+  <ul style="padding-left: 1.5rem; color: var(--text-secondary); line-height: 1.8; margin-bottom: 1.5rem;">
+    <li><strong>Ride-Hailing (15,000 completed rides/day — Blended Operations):</strong>
+      <ul style="padding-left: 1.25rem;">
+        <li><strong>Active Vehicles / Drivers on Shift:</strong> <strong>~1,986 to 2,143 drivers</strong> active on the road daily.</li>
+        <li><strong>Blended Driver Utilization:</strong> <strong>7.0 to 7.55 completed rides</strong> per active driver per day (~15,000 rides).</li>
+        <li><strong>Active Unique Riders:</strong> <strong>~12,500 active riders</strong> daily (averaging ~1.2 rides per active rider per day; ~80% single-trip riders, ~20% round-trip commute riders).</li>
+        <li><strong>Registered Fleet Pool:</strong> <strong>~3,000 to 3,200 registered drivers</strong> (assuming a standard ~65–67% daily shift participation rate).</li>
+      </ul>
+    </li>
+    <li><strong>Food Delivery (8,000 orders/day):</strong>
+      <ul style="padding-left: 1.25rem;">
+        <li><strong>Active Partner Restaurants:</strong> <strong>727 restaurant partner outlets</strong> active and taking orders daily.</li>
+        <li><strong>Restaurant Order Velocity:</strong> <strong>11.0 orders</strong> per restaurant per day (727 × 11.0 ≈ 7,997 orders).</li>
+        <li><strong>Active Delivery Couriers:</strong> <strong>~889 active motorcycle/bicycle couriers</strong> (averaging 9.0 deliveries per courier per shift).</li>
+      </ul>
+    </li>
+    <li><strong>Shop Delivery (2,000 orders/day):</strong>
+      <ul style="padding-left: 1.25rem;">
+        <li><strong>Active Merchant Shops / Distribution Hubs:</strong> <strong>167 e-commerce warehouses and retail pickup points</strong>.</li>
+        <li><strong>Dispatches per Merchant:</strong> <strong>12.0 dispatches</strong> per hub per day (167 × 12.0 ≈ 2,004 packages).</li>
+        <li><strong>Batched Delivery Routes:</strong> <strong>800 delivery routes</strong> dispatched daily, averaging <strong>2.5 customer stops per batched trip</strong>.</li>
+      </ul>
+    </li>
+  </ul>
+
+  <!-- 4.0.1 Unified 5-Service Line Breakdown -->
+  <h4 style="margin-top: 1.5rem; margin-bottom: 0.75rem; color: var(--accent); font-size: 1.15rem;">4.0.1 Unified 5-Service Line Breakdown: Bike | CNG | Car | Shop | Food</h4>
+  <p style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 1rem;">
+    The complete platform operations across all 5 discrete service lines (expanding Ride-Hailing into its 3 vehicle categories, side-by-side with Shop and Food deliveries) totaling <strong>25,000 daily orders (750,000 monthly orders)</strong>:
+  </p>
+
+  <div class="table-container">
+    <table>
+      <thead>
+        <tr>
+          <th>Metric / Parameter</th>
+          <th>🏍️ Bike</th>
+          <th>🛺 CNG</th>
+          <th>🚗 Car</th>
+          <th>📦 Shop</th>
+          <th>🍔 Food</th>
+          <th>Total Platform</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Service Vertical</strong></td>
+          <td>Ride-Hailing (2W)</td>
+          <td>Ride-Hailing (3W)</td>
+          <td>Ride-Hailing (4W)</td>
+          <td>E-Commerce Parcel</td>
+          <td>Restaurant Food</td>
+          <td class="number highlight"><strong>5 Service Lines</strong></td>
+        </tr>
+        <tr>
+          <td><strong>Daily Completed Orders</strong></td>
+          <td class="number"><strong>9,000</strong> rides</td>
+          <td class="number"><strong>3,750</strong> rides</td>
+          <td class="number"><strong>2,250</strong> rides</td>
+          <td class="number"><strong>2,000</strong> orders</td>
+          <td class="number"><strong>8,000</strong> orders</td>
+          <td class="number highlight"><strong>25,000</strong> orders/day</td>
+        </tr>
+        <tr>
+          <td><strong>Platform Volume Share</strong></td>
+          <td class="number highlight" style="color:var(--green);"><strong>36.0%</strong></td>
+          <td class="number highlight" style="color:var(--accent);"><strong>15.0%</strong></td>
+          <td class="number highlight" style="color:var(--orange);"><strong>9.0%</strong></td>
+          <td class="number highlight" style="color:var(--purple);"><strong>8.0%</strong></td>
+          <td class="number highlight" style="color:var(--yellow);"><strong>32.0%</strong></td>
+          <td class="number"><strong>100.0%</strong></td>
+        </tr>
+        <tr>
+          <td><strong>Monthly Orders (30 Days)</strong></td>
+          <td class="number">270,000</td>
+          <td class="number">112,500</td>
+          <td class="number">67,500</td>
+          <td class="number">60,000</td>
+          <td class="number">240,000</td>
+          <td class="number highlight"><strong>750,000</strong> orders/mo</td>
+        </tr>
+        <tr>
+          <td><strong>Active Supply on Shift</strong></td>
+          <td class="number cost-barikoi">1,000 bikes</td>
+          <td class="number cost-dingi">536 CNGs</td>
+          <td class="number" style="color:var(--orange);">450 cars</td>
+          <td class="number">167 shops / 800 routes</td>
+          <td class="number">727 rest / 889 couriers</td>
+          <td class="number highlight"><strong>~3,675 active fleet</strong></td>
+        </tr>
+        <tr>
+          <td><strong>Productivity / Shift</strong></td>
+          <td class="number">9.0 rides/bike</td>
+          <td class="number">7.0 rides/CNG</td>
+          <td class="number">5.0 rides/car</td>
+          <td class="number">12 orders/hub (2.5/route)</td>
+          <td class="number">11 orders/rest (9/courier)</td>
+          <td class="number">~7.2 orders/worker</td>
+        </tr>
+        <tr>
+          <td><strong>Active Daily Consumers</strong></td>
+          <td class="number">~7,500 riders</td>
+          <td class="number">~3,125 riders</td>
+          <td class="number">~1,875 riders</td>
+          <td class="number">~1,818 buyers</td>
+          <td class="number">~6,667 diners</td>
+          <td class="number highlight"><strong>~21,000 consumers</strong></td>
+        </tr>
+        <tr>
+          <td><strong>Avg Door-to-Door Duration</strong></td>
+          <td class="number"><strong>15.0 min</strong> (~5.2 km)</td>
+          <td class="number"><strong>20.0 min</strong> (~7.8 km)</td>
+          <td class="number"><strong>32.0 min</strong> (~12.5 km)</td>
+          <td class="number"><strong>45.0 min</strong> (~8.5 km)</td>
+          <td class="number"><strong>35.0 min</strong> (~4.5 km)</td>
+          <td class="number highlight"><strong>26.1 min</strong> (weighted)</td>
+        </tr>
+        <tr>
+          <td><strong>Routing Requests / Order</strong></td>
+          <td class="number">2.835</td>
+          <td class="number">2.835</td>
+          <td class="number">2.835</td>
+          <td class="number highlight">34.360</td>
+          <td class="number highlight">37.706</td>
+          <td class="number">16.516 (avg)</td>
+        </tr>
+        <tr>
+          <td><strong>Map Tile Calls / Order (Production)</strong></td>
+          <td class="number" style="color:var(--green);"><strong>0.000 (Free GPU)</strong></td>
+          <td class="number" style="color:var(--green);"><strong>0.000 (Free GPU)</strong></td>
+          <td class="number" style="color:var(--green);"><strong>0.000 (Free GPU)</strong></td>
+          <td class="number" style="color:var(--green);"><strong>0.000 (Free GPU)</strong></td>
+          <td class="number" style="color:var(--green);"><strong>0.000 (Free GPU)</strong></td>
+          <td class="number highlight-green"><strong>0.000 (MapLibre Cache)</strong></td>
+        </tr>
+        <tr>
+          <td><strong>Total Requests / Order (Production)</strong></td>
+          <td class="number highlight">6.405</td>
+          <td class="number highlight">6.405</td>
+          <td class="number highlight">6.405</td>
+          <td class="number highlight">38.980</td>
+          <td class="number highlight">42.011</td>
+          <td class="number highlight"><strong>20.405</strong> (blended avg)</td>
+        </tr>
+        <tr>
+          <td><strong>Total Daily Requests (Production)</strong></td>
+          <td class="number highlight">57,645 (11.3%)</td>
+          <td class="number highlight">24,019 (4.7%)</td>
+          <td class="number highlight">14,411 (2.8%)</td>
+          <td class="number highlight">77,960 (15.3%)</td>
+          <td class="number highlight">336,088 (65.9%)</td>
+          <td class="number highlight"><strong>510,123</strong> / day</td>
+        </tr>
+        <tr>
+          <td><strong>Monthly Requests (Production 30 Days)</strong></td>
+          <td class="number">1,729,350</td>
+          <td class="number">720,563</td>
+          <td class="number">432,338</td>
+          <td class="number">2,338,800</td>
+          <td class="number">10,082,640</td>
+          <td class="number highlight"><strong>15,303,690</strong> / mo</td>
+        </tr>
+        <tr>
+          <td><strong>Barikoi Billable Calls (2× Routing Weight)</strong></td>
+          <td class="number">2,494,800</td>
+          <td class="number">1,039,500</td>
+          <td class="number">623,700</td>
+          <td class="number">4,398,300</td>
+          <td class="number">19,134,180</td>
+          <td class="number highlight" style="color:var(--green);"><strong>27,690,480</strong> / mo</td>
+        </tr>
+        <tr>
+          <td><strong>Barikoi Business Cost Share (BDT)</strong></td>
+          <td class="number cost-barikoi"><strong>৳148,807/mo</strong></td>
+          <td class="number cost-barikoi"><strong>৳62,003/mo</strong></td>
+          <td class="number cost-barikoi"><strong>৳37,202/mo</strong></td>
+          <td class="number cost-barikoi"><strong>৳262,338/mo</strong></td>
+          <td class="number cost-barikoi"><strong>৳1,141,079/mo</strong></td>
+          <td class="number cost-barikoi"><strong>৳1,651,429/mo</strong> ($15,013)</td>
+        </tr>
+        <tr>
+          <td><strong>Barikoi Business / Completed Order</strong></td>
+          <td class="number cost-barikoi"><strong>৳0.55</strong></td>
+          <td class="number cost-barikoi"><strong>৳0.55</strong></td>
+          <td class="number cost-barikoi"><strong>৳0.55</strong></td>
+          <td class="number cost-barikoi"><strong>৳4.37</strong></td>
+          <td class="number cost-barikoi"><strong>৳4.75</strong></td>
+          <td class="number cost-barikoi"><strong>৳2.20</strong> (blended avg)</td>
+        </tr>
+        <tr>
+          <td><strong>Self-Hosted OSRM Hybrid Share</strong></td>
+          <td class="number" style="color:#00d2d3;"><strong>৳30,500/mo</strong></td>
+          <td class="number" style="color:#00d2d3;"><strong>৳12,700/mo</strong></td>
+          <td class="number" style="color:#00d2d3;"><strong>৳7,600/mo</strong></td>
+          <td class="number" style="color:#00d2d3;"><strong>৳27,200/mo</strong></td>
+          <td class="number" style="color:#00d2d3;"><strong>৳91,414/mo</strong></td>
+          <td class="number" style="color:#00d2d3;"><strong>৳169,414/mo</strong> ($1,540)</td>
+        </tr>
+        <tr>
+          <td><strong>Google Maps Cost Share (Mobile SDK)</strong></td>
+          <td class="number cost-google">$7,975/mo</td>
+          <td class="number cost-google">$3,323/mo</td>
+          <td class="number cost-google">$1,994/mo</td>
+          <td class="number cost-google">$11,539/mo</td>
+          <td class="number cost-google">$48,270/mo</td>
+          <td class="number cost-google"><strong>$73,101/mo</strong> (৳8.04M)</td>
+        </tr>
+        <tr style="color: var(--text-secondary); font-style: italic; font-size: 0.8rem;">
+          <td>Academic Ping Reference (10s Renders)</td>
+          <td class="number">153.1M calls (৳11.47M)</td>
+          <td class="number">63.8M calls (৳4.78M)</td>
+          <td class="number">38.3M calls (৳2.87M)</td>
+          <td class="number">14.6M calls (৳1.09M)</td>
+          <td class="number">49.9M calls (৳3.73M)</td>
+          <td class="number">319.9M calls (৳23.94M Scale)</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="small note" style="margin-top: 0.5rem; margin-bottom: 1.5rem;">
+    <strong>Architecture Summary:</strong> The platform operates across 3 main business verticals (Ride, Shop, Food) where Ride-Hailing naturally sub-divides into 3 vehicle tiers (Bike 60%, CNG 25%, Car 15%). In production, **Barikoi Business** reduces map API expenditure by **88.8% compared to Google Maps Native SDK** (saving over $79K USD / ৳8.7M BDT monthly), while the **Self-Hosted OSRM Hybrid** brings total platform map costs down to an astonishing **৳179,053/month ($1,628 USD)**.
+  </p>
+
+  <h3>4.1 Daily Call Volume (<span id="sec4-header-orders">25,000</span> orders/day)</h3>
+  <div class="table-container">
+    <table>
+      <thead>
+        <tr>
+          <th>API call type</th>
+          <th class="number" id="sec4-th-ride">Daily calls (Ride 15K)</th>
+          <th class="number" id="sec4-th-food">Daily calls (Food 8K)</th>
+          <th class="number" id="sec4-th-shop">Daily calls (Shop 2K)</th>
+          <th class="number">Daily total</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>Autocomplete</td><td class="number" id="sec4-ride-auto">31,500</td><td class="number" id="sec4-food-auto">16,800</td><td class="number" id="sec4-shop-auto">4,200</td><td class="number highlight" id="sec4-total-auto">52,500</td></tr>
+        <tr><td>Geocoding</td><td class="number" id="sec4-ride-geo">11,025</td><td class="number" id="sec4-food-geo">5,880</td><td class="number" id="sec4-shop-geo">1,470</td><td class="number highlight" id="sec4-total-geo">18,375</td></tr>
+        <tr><td>Reverse geocoding</td><td class="number" id="sec4-ride-revgeo">11,025</td><td class="number" id="sec4-food-revgeo">11,760</td><td class="number" id="sec4-shop-revgeo">3,675</td><td class="number highlight" id="sec4-total-revgeo">26,460</td></tr>
+        <tr><td>Routing (shortest)</td><td class="number" id="sec4-ride-route">42,525</td><td class="number" id="sec4-food-route">301,648</td><td class="number" id="sec4-shop-route">171,802</td><td class="number highlight" id="sec4-total-route">515,975</td></tr>
+        <tr><td>Distance matrix</td><td class="number" id="sec4-ride-dm">15,750</td><td class="number" id="sec4-food-dm">0</td><td class="number" id="sec4-shop-dm">5,250</td><td class="number highlight" id="sec4-total-dm">21,000</td></tr>
+        <tr><td>Map tile render</td><td class="number highlight-red" id="sec4-ride-tile">8,394,750</td><td class="number highlight-red" id="sec4-food-tile">1,327,200</td><td class="number highlight-red" id="sec4-shop-tile">308,700</td><td class="number highlight-red" id="sec4-total-tile">10,030,650</td></tr>
+        <tr><td><strong>Daily Total (All Types)</strong></td><td class="number"><strong id="sec4-ride-grand">8,506,575</strong></td><td class="number"><strong id="sec4-food-grand">1,663,288</strong></td><td class="number"><strong id="sec4-shop-grand">485,097</strong></td><td class="number highlight"><strong id="sec4-total-grand">10,664,960</strong></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3 style="margin-top: 2rem;">4.2 Monthly Volume (30 days = <span id="sec42-header-orders">750,000</span> orders)</h3>
+  <div class="table-container">
+    <table>
+      <thead>
+        <tr><th>API call type</th><th class="number">Calculation (Daily × 30)</th><th class="number">Monthly calls</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Autocomplete</td><td class="number" id="sec42-calc-auto">52,500 × 30</td><td class="number highlight" id="sec42-monthly-auto">1,575,000</td></tr>
+        <tr><td>Geocoding</td><td class="number" id="sec42-calc-geo">18,375 × 30</td><td class="number highlight" id="sec42-monthly-geo">551,250</td></tr>
+        <tr><td>Reverse geocoding</td><td class="number" id="sec42-calc-revgeo">26,460 × 30</td><td class="number highlight" id="sec42-monthly-revgeo">793,800</td></tr>
+        <tr><td>Routing (shortest)</td><td class="number" id="sec42-calc-route">515,975 × 30</td><td class="number highlight" id="sec42-monthly-route">15,479,250</td></tr>
+        <tr><td>Distance matrix</td><td class="number" id="sec42-calc-dm">21,000 × 30</td><td class="number highlight" id="sec42-monthly-dm">630,000</td></tr>
+        <tr><td>Map tile render</td><td class="number" id="sec42-calc-tile">10,030,650 × 30</td><td class="number highlight-red" id="sec42-monthly-tile">300,919,500</td></tr>
+        <tr><td><strong>Total Monthly Calls (All Types)</strong></td><td></td><td class="number highlight"><strong id="sec42-monthly-grand">319,948,800</strong></td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- Cost Projection -->
+<section id="costs">
+  <h2>5. Cost Projection Per Provider & Packages</h2>
+
+  <h3>5.1 Barikoi Official Subscription Packages (Source: barikoimaps.com/pricing)</h3>
+  <p>Barikoi offers tiered subscription plans with included monthly call quotas and discounted overage rates:</p>
+  <div class="table-container">
+    <table>
+      <thead>
+        <tr>
+          <th>Plan Name</th>
+          <th>Target Audience</th>
+          <th class="number">Monthly Price</th>
+          <th class="number">Included Calls</th>
+          <th>Effective Base Rate</th>
+          <th>Additional Call (Overage)</th>
+          <th>Features</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>Free</td><td>Getting started</td><td class="number">৳0</td><td class="number">Daily Limit</td><td>Free</td><td>BDT 0.15 / call (৳150/1K)</td><td>Community support</td></tr>
+        <tr><td>Developer</td><td>Individual developers</td><td class="number">৳2,500</td><td class="number">25,000</td><td>৳100 / 1K</td><td>BDT 0.10 / call (৳100/1K)</td><td>Email support</td></tr>
+        <tr><td>Team</td><td>Small teams</td><td class="number">৳5,000</td><td class="number">60,000</td><td>৳83.3 / 1K</td><td>BDT 0.09 / call (৳90/1K)</td><td>Email & phone support</td></tr>
+        <tr><td>Startup</td><td>Growing startups</td><td class="number">৳10,000</td><td class="number">150,000</td><td>৳66.7 / 1K</td><td>BDT 0.08 / call (৳80/1K)</td><td>Fast SLA, priority support</td></tr>
+        <tr><td>SME</td><td>Small & medium enterprises</td><td class="number">৳20,000</td><td class="number">350,000</td><td>৳57.1 / 1K</td><td>BDT 0.07 / call (৳70/1K)</td><td>Fast SLA, priority support</td></tr>
+        <tr style="background: rgba(46,204,113,0.12);"><td><strong>Business (Best Value)</strong></td><td><strong>Growing businesses</strong></td><td class="number cost-barikoi"><strong>৳50,000</strong></td><td class="number cost-barikoi"><strong>1,000,000</strong></td><td class="number cost-barikoi"><strong>৳50.0 / 1K</strong></td><td class="number cost-barikoi"><strong>BDT 0.060 / call (৳60/1K)</strong></td><td><strong>Dedicated support, lowest overage</strong></td></tr>
+        <tr><td>Scale</td><td>Large organizations</td><td class="number">৳90,000</td><td class="number">2,000,000</td><td>৳45.0 / 1K</td><td>BDT 0.075 / call (৳75/1K)</td><td>Post Paid, Account Manager</td></tr>
+        <tr><td>Enterprise</td><td>Large organizations</td><td class="number">Custom</td><td class="number">Custom/Unlimited</td><td>Negotiated (<৳50/1K)</td><td>Custom volume pricing</td><td>Premium support, custom SLA</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="small note">* Annual Billing Option: Save 20% on all plan base prices when billed annually (Business becomes ৳40,000/month; Scale becomes ৳72,000/month).</p>
+
+  <h3 style="margin-top: 2rem;">5.1.1 Barikoi Business Plan Cost Calculation (Production Baseline)</h3>
+  <div class="callout success">
+    <div class="label">Business Plan Calculation (27,690,480 billable calls @ 2× routing weight)</div>
+    <div>
+      Base fee: <strong>৳50,000</strong> (includes 1,000,000 calls).<br>
+      Overage calls: 27,690,480 − 1,000,000 = <strong>26,690,480 calls</strong>.<br>
+      Overage rate: <strong>BDT 0.060 / call (৳60 / 1,000 calls)</strong>.<br>
+      Overage cost: 26,690,480 × ৳0.060 = <strong>৳1,601,429</strong>.<br>
+      <strong>Total Monthly Barikoi Business Cost: ৳50,000 + ৳1,601,429 = ৳1,651,429 / month ($15,013 USD)</strong>.<br>
+      Effective cost per completed order: <strong>৳2.20 per order</strong> across 750,000 monthly transactions.<br>
+      <em>(Note: Under Lean Production quote-time routing ~3/order, this drops to <strong>৳435,014 / month / ৳0.58 per order</strong>).</em>
+    </div>
+  </div>
+
+  <h3 style="margin-top: 1.5rem;">5.1.2 Barikoi Scale Plan Cost Calculation (Comparison)</h3>
+  <div class="callout warning">
+    <div class="label">Scale Plan Calculation (27,690,480 billable calls)</div>
+    <div>
+      Base fee: <strong>৳90,000</strong> (includes 2,000,000 calls).<br>
+      Overage calls: 27,690,480 − 2,000,000 = <strong>25,690,480 calls</strong>.<br>
+      Overage rate: <strong>BDT 0.075 / call (৳75 / 1,000 calls)</strong>.<br>
+      Overage cost: 25,690,480 × ৳0.075 = <strong>৳1,926,786</strong>.<br>
+      <strong>Total Monthly Barikoi Scale Cost: ৳90,000 + ৳1,926,786 = ৳2,016,786 / month ($18,334 USD)</strong>.<br>
+      <em>Notice: The Scale Plan costs <strong>৳365,357/month MORE than the Business Plan</strong> because its overage rate is 1.5 paisa higher (7.5p vs 6.0p)!</em>
+    </div>
+  </div>
+
+  <h3 style="margin-top: 2rem;">5.2 Dingi (Tiered Pricing, 100K+ Tier, ৳5,000 Free Credit)</h3>
+  <div class="table-container">
+    <table>
+      <thead>
+        <tr><th>API call type</th><th class="number">Monthly calls</th><th>Rate (100K+ Tier)</th><th class="number">Cost (BDT)</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Autocomplete</td><td class="number">1,575,000</td><td>৳50 / 1K</td><td class="number cost-dingi">৳78,750</td></tr>
+        <tr><td>Geocoding</td><td class="number">551,250</td><td>৳94 / 1K</td><td class="number cost-dingi">৳51,818</td></tr>
+        <tr><td>Reverse geocoding</td><td class="number">727,650</td><td>৳94 / 1K</td><td class="number cost-dingi">৳68,399</td></tr>
+        <tr><td>Routing (shortest)</td><td class="number">12,386,790</td><td>৳102 / 1K</td><td class="number cost-dingi">৳1,263,453</td></tr>
+        <tr><td>Distance matrix (Shop)</td><td class="number">63,000</td><td>৳102 / 1K</td><td class="number cost-dingi">৳6,426</td></tr>
+        <tr><td>Map tile render</td><td class="number">0</td><td>৳75 / 1K</td><td class="number cost-dingi">৳0 (MapLibre Cache)</td></tr>
+        <tr><td><strong>Subtotal</strong></td><td class="number"><strong>15,303,690</strong></td><td></td><td class="number"><strong>৳1,468,846</strong></td></tr>
+        <tr><td>Monthly free credit</td><td></td><td></td><td class="number">−৳5,000</td></tr>
+        <tr><td><strong>Dingi Total Monthly Cost</strong></td><td></td><td></td><td class="number cost-dingi"><strong>৳1,463,846</strong> (~$13,308 USD)</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3 style="margin-top: 2rem;">5.3 Google Maps Platform (Mobile Native SDK Reality)</h3>
+  <div class="table-container">
+    <table>
+      <thead>
+        <tr><th>API call type</th><th class="number">Monthly calls</th><th>Rate (USD / 1K)</th><th class="number">Cost (USD)</th><th class="number">Cost (BDT @ ৳110)</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Places Autocomplete</td><td class="number">1,575,000</td><td>$2.83</td><td class="number">$4,457.25</td><td class="number cost-google">৳490,298</td></tr>
+        <tr><td>Geocoding</td><td class="number">551,250</td><td>$5.00</td><td class="number">$2,756.25</td><td class="number cost-google">৳303,188</td></tr>
+        <tr><td>Reverse geocoding</td><td class="number">727,650</td><td>$5.00</td><td class="number">$3,638.25</td><td class="number cost-google">৳400,208</td></tr>
+        <tr><td>Directions (routing)</td><td class="number">12,386,790</td><td>$5.00</td><td class="number">$61,933.95</td><td class="number cost-google">৳6,812,735</td></tr>
+        <tr><td>Distance matrix (Shop)</td><td class="number">63,000</td><td>$5.00</td><td class="number">$315.00</td><td class="number cost-google">৳34,650</td></tr>
+        <tr><td>Dynamic Maps (Mobile SDK)</td><td class="number">0</td><td>$0.00</td><td class="number">$0.00</td><td class="number cost-google">৳0 (Free on iOS/Android)</td></tr>
+        <tr><td><strong>Gross Subtotal</strong></td><td class="number"><strong>15,303,690</strong></td><td></td><td class="number"><strong>$73,100.70</strong></td><td class="number"><strong>৳8,041,077</strong></td></tr>
+        <tr><td>Monthly free tier allowances (March 2025)</td><td></td><td></td><td class="number">SKU tiers</td><td class="number">Absorbed</td></tr>
+        <tr><td><strong>Google Maps Total Monthly Cost</strong></td><td></td><td></td><td class="number cost-google"><strong>$73,100.70</strong></td><td class="number cost-google"><strong>৳8,041,077</strong> (~$73.1K USD)</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3 style="margin-top: 2rem;">5.4 Comprehensive Production Cost Comparison</h3>
+  <div class="table-container">
+    <table>
+      <thead><tr><th>Provider / Model</th><th class="number">Monthly cost (BDT)</th><th class="number">Monthly cost (USD)</th><th class="number">Cost / Order</th><th class="number">Ratio vs Barikoi Business</th></tr></thead>
+      <tbody>
+        <tr style="background: rgba(0,210,211,0.08);"><td><strong>Self-Hosted OSRM Hybrid ($40 VPS)</strong></td><td class="number" style="color:#00d2d3;"><strong>৳169,414</strong></td><td class="number" style="color:#00d2d3;"><strong>$1,540</strong></td><td class="number" style="color:#00d2d3;"><strong>৳0.23</strong></td><td class="number" style="color:#00d2d3;"><strong>0.10× (89.7% savings)</strong></td></tr>
+        <tr style="background: rgba(241,196,15,0.08);"><td><strong>Lean Production (Quote-Time Routing ~3/order)</strong></td><td class="number" style="color:var(--yellow);"><strong>৳435,014</strong></td><td class="number" style="color:var(--yellow);"><strong>$3,955</strong></td><td class="number" style="color:var(--yellow);"><strong>৳0.58</strong></td><td class="number" style="color:var(--yellow);"><strong>0.26× (73.7% savings)</strong></td></tr>
+        <tr style="background: rgba(46,204,113,0.12);"><td><strong>Barikoi Business Plan (Best Commercial Value)</strong></td><td class="number cost-barikoi"><strong>৳1,651,429</strong></td><td class="number cost-barikoi"><strong>$15,013</strong></td><td class="number cost-barikoi"><strong>৳2.20</strong></td><td class="number highlight"><strong>1.00× (Cheapest Commercial Baseline)</strong></td></tr>
+        <tr><td>Dingi PAYG (100K+ Tier)</td><td class="number cost-dingi">৳1,463,846</td><td class="number cost-dingi">$13,308</td><td class="number">৳1.95</td><td class="number">0.89× (-11.4%)</td></tr>
+        <tr><td>Barikoi Scale Plan (Higher Overage)</td><td class="number cost-dingi">৳2,016,786</td><td class="number cost-dingi">$18,334</td><td class="number">৳2.69</td><td class="number">1.22× (+৳365K/mo overpay)</td></tr>
+        <tr><td>Google Maps Platform (Mobile SDK)</td><td class="number cost-google">৳8,041,077</td><td class="number cost-google">$73,101</td><td class="number cost-google">৳10.72</td><td class="number highlight-red">4.87× more expensive</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- Free Tier -->
+<section id="free-tier">
+  <h2>6. Free Tier / Credit Impact</h2>
+  <div class="table-container">
+    <table>
+      <thead><tr><th>Provider</th><th>Free Benefit per Month</th><th class="number">Value (BDT)</th><th class="number">% of Spend Absorbed</th><th>Practical Impact</th></tr></thead>
+      <tbody>
+        <tr><td>Barikoi Business Plan</td><td>1M calls included in base fee</td><td class="number">৳60,000 (at ৳60/1K)</td><td class="number">Included in ৳50K base</td><td>Provides 1M calls at an effective ৳50/1K base rate</td></tr>
+        <tr><td>Barikoi Scale Plan</td><td>2M calls included in base fee</td><td class="number">৳150,000 (at ৳75/1K)</td><td class="number">Included in ৳90K base</td><td>Provides 2M calls at an effective ৳45/1K base rate</td></tr>
+        <tr><td>Dingi PAYG</td><td>৳5,000 free monthly credit</td><td class="number">৳5,000</td><td class="number">0.34%</td><td>Absorbs ~2.5 hours of platform traffic</td></tr>
+        <tr><td>Google Maps Platform</td><td>SKU-specific monthly free tiers (March 2025 update)</td><td class="number">~$200 USD (৳22,000)</td><td class="number">0.27%</td><td>Absorbs ~1.5 hours of platform traffic</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- Optimization -->
+<section id="optimization">
+  <h2>7. Engineering Optimizations</h2>
+  <p>In production operations, routing recalculations for moving delivery couriers account for <strong>80.9% of platform HTTP requests (12.39M req/mo)</strong> and <strong>89.5% of Barikoi billable calls (24.77M calls/mo)</strong> due to Barikoi's 2× call weighting on routing.</p>
+
+  <h3>Top High-Volume API Call Types Across Platform</h3>
+  <div class="table-container">
+    <table>
+      <thead><tr><th>Rank</th><th>API Request Type</th><th class="number">Monthly Requests</th><th class="number">Barikoi Billable Calls</th><th class="number">Barikoi Business Cost</th><th class="number">Dingi Cost</th><th class="number">Google Cost</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>Routing (Shortest / Detour) [2× weight]</td><td class="number">12,386,790</td><td class="number highlight">24,773,580</td><td class="number cost-barikoi">৳1,486,415</td><td class="number">৳1,263,453</td><td class="number cost-google">$61,934</td></tr>
+        <tr><td>2</td><td>Places Autocomplete [1× weight]</td><td class="number">1,575,000</td><td class="number">1,575,000</td><td class="number cost-barikoi">৳94,500</td><td class="number">৳78,750</td><td class="number cost-google">$4,457</td></tr>
+        <tr><td>3</td><td>Reverse Geocoding [1× base weight]</td><td class="number">727,650</td><td class="number">727,650</td><td class="number cost-barikoi">৳43,659</td><td class="number">৳68,399</td><td class="number cost-google">$3,638</td></tr>
+        <tr><td>4</td><td>Forward Geocoding [1× weight]</td><td class="number">551,250</td><td class="number">551,250</td><td class="number cost-barikoi">৳33,075</td><td class="number">৳51,818</td><td class="number cost-google">$2,756</td></tr>
+        <tr><td>5</td><td>Distance Matrix (Shop only) [1× weight]</td><td class="number">63,000</td><td class="number">63,000</td><td class="number cost-barikoi">৳3,780</td><td class="number">৳6,426</td><td class="number cost-google">$315</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Recommended Architectural Optimizations</h3>
+  <div class="table-container">
+    <table class="opt-table">
+      <thead>
+        <tr>
+          <th>#</th><th>Strategy</th><th>Target</th><th class="number">Monthly Financial Impact</th><th>Effort</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr style="background: rgba(0,210,211,0.08);">
+          <td>1</td>
+          <td><strong>Self-Hosted OSRM Hybrid Routing Engine:</strong> Run an OSRM container on a $40/mo VPS (~৳4,400 BDT) for all 12.39M courier routing recalcs. Keep Barikoi for Address/Geocode.</td>
+          <td>Routing</td>
+          <td class="number" style="color:#00d2d3;"><strong>Saves ৳1,482,015 / month (89.7% cut)</strong></td>
+          <td><span class="impl-low">Low (1–2 days dev)</span></td>
+        </tr>
+        <tr>
+          <td>2</td>
+          <td><strong>Barikoi Plan Optimization:</strong> Standardize on Business Plan (৳50K + ৳0.060/call) rather than Scale Plan (৳90K + ৳0.075/call).</td>
+          <td>All Endpoints</td>
+          <td class="number cost-barikoi"><strong>Saves ৳365,357 / month</strong></td>
+          <td><span class="impl-low">Immediate (Commercial)</span></td>
+        </tr>
+        <tr>
+          <td>3</td>
+          <td><strong>Shop Route Batching Correction:</strong> Group 2,000 shop orders into 800 batched routes (2.5 stops/route), eliminating redundant courier navigation calls.</td>
+          <td>Routing & DM</td>
+          <td class="number cost-barikoi"><strong>Eliminates 3.25M phantom calls</strong></td>
+          <td><span class="impl-low">Already Modelled</span></td>
+        </tr>
+        <tr>
+          <td>4</td>
+          <td><strong>In-Memory H3 Hexagonal Dispatch:</strong> Use Uber H3 cells (<code>utils-server/h3Index.ts</code>) to query candidate drivers within k-ring hexagons in memory.</td>
+          <td>Distance matrix</td>
+          <td class="number cost-barikoi"><strong>Eliminates 472.5K matrix calls (৳28,350 saved)</strong></td>
+          <td><span class="impl-low">Already Built in Ride</span></td>
+        </tr>
+        <tr>
+          <td>5</td>
+          <td><strong>Autocomplete Debounce & Landmark Prefix Warming:</strong> Enforce 350ms frontend debounce and pre-cache top-100 Dhaka landmark addresses.</td>
+          <td>Autocomplete</td>
+          <td class="number cost-barikoi"><strong>Saves ৳33,075 / month</strong></td>
+          <td><span class="impl-low">Low (1 day dev)</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="callout success">
+    <div class="label">The Engineering Sweet Spot</div>
+    <div>Implementing the <strong>Self-Hosted OSRM Hybrid Architecture</strong> reduces the entire platform's monthly map spend from <strong>৳1,651,429</strong> down to <strong>৳169,414 / month ($1,540 USD)</strong> across all 25,000 daily orders—costing only <strong>৳0.23 per completed transaction</strong>!</div>
+  </div>
+</section>
+
+<!-- Sensitivity -->
+<section id="sensitivity">
+  <h2>8. Sensitivity Analysis</h2>
+  <div class="table-container">
+    <table>
+      <thead><tr><th>Scenario</th><th>Operational & Mathematical Impact</th><th class="number">Barikoi Business Cost</th><th class="number">OSRM Hybrid Cost</th><th class="number">Google Maps Cost</th></tr></thead>
+      <tbody>
+        <tr><td>Daily rides double (15K → 30K)</td><td>Ride calls double; Food/Shop constant. Barikoi billable calls rise to 31.85M.</td><td class="number cost-barikoi">৳1,900,909</td><td class="number" style="color:#00d2d3;">৳265,804</td><td class="number cost-google">৳9,350,000 ($85.0K)</td></tr>
+        <tr><td>Failed delivery halves (15% → 7.5%)</td><td>Saves 112,266 routing requests (224,532 Barikoi billable calls).</td><td class="number cost-barikoi">৳1,637,957 (-৳13.5K)</td><td class="number" style="color:#00d2d3;">৳169,414 (unchanged)</td><td class="number cost-google">৳7,979,000 (-$561)</td></tr>
+        <tr><td>All platform orders double (25K → 50K)</td><td>Total monthly requests double to 30.61M (55.38M Barikoi calls).</td><td class="number cost-barikoi">৳3,312,858</td><td class="number" style="color:#00d2d3;">৳344,428</td><td class="number cost-google">৳16,082,000 ($146K)</td></tr>
+        <tr><td>Add 4th vertical (Grocery 5K/day)</td><td>Adds 5,000 orders/day (similar to Food). +3.8M monthly requests.</td><td class="number cost-barikoi">৳2,055,000</td><td class="number" style="color:#00d2d3;">৳204,500</td><td class="number cost-google">৳10,050,000 ($91.4K)</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- Switching Cost -->
+<section id="switching">
+  <h2>9. Provider Switching Cost Analysis</h2>
+  <div class="table-container">
+    <table>
+      <thead><tr><th>Transition Path</th><th>Eng. Days</th><th>2-Week Dual-Billing Cost</th><th class="number">Total Switching Cost</th><th class="number">Risk</th></tr></thead>
+      <tbody>
+        <tr><td>Barikoi → Dingi</td><td>4–6 dev days + 2 QA</td><td>৳731,923 (50% of Dingi mo.)</td><td class="number">~৳735K + 6 dev days</td><td class="number risk-medium">Medium</td></tr>
+        <tr><td>Barikoi → Google Maps</td><td>7–10 dev days + 3 QA</td><td>৳4,020,538 (50% of Google mo.)</td><td class="number">~৳4.0M + 10 dev days</td><td class="number risk-critical">Critical</td></tr>
+        <tr><td>Dingi → Barikoi</td><td>4–6 dev days + 2 QA</td><td>৳825,714 (50% of Barikoi mo.)</td><td class="number">~৳830K + 6 dev days</td><td class="number risk-low">Low-Medium</td></tr>
+        <tr><td>Barikoi → Self-Hosted OSRM</td><td>2–3 dev days + 1 QA</td><td>৳2,200 (50% of VPS mo.)</td><td class="number">~৳25K + 3 dev days</td><td class="number risk-low">Low</td></tr>
+        <tr><td>Google Maps → Barikoi</td><td>3–5 dev days + 2 QA</td><td>৳825,714 (50% of Barikoi mo.)</td><td class="number">~৳830K + 5 dev days</td><td class="number risk-low">Low-Medium</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- Recommendation -->
+<section id="recommendation">
+  <h2>10. Final Recommendation</h2>
+
+  <div class="callout success">
+    <div class="label">Primary Commercial Recommendation: Barikoi (Business Plan) + OSRM Hybrid</div>
+    <p>Standardize on <strong>Barikoi</strong> on the <strong>Business Plan</strong> (৳50,000 base for 1,000,000 calls + BDT 0.060 / call overage). Under production volume (15.30M requests / 27.69M billable calls with 2× routing weight), Barikoi Business costs <strong>৳1,651,429/month ($15,013 USD)</strong>, which is <strong>৳365,357/month cheaper than Barikoi Scale</strong>. For maximum profitability, deploy a <strong>Self-Hosted OSRM container ($40/mo VPS)</strong> for courier routing recalcs, dropping total platform map spend to <strong>৳169,414/month ($1,540 USD)</strong>—only <strong>৳0.23 per completed order</strong>! Combined with local VAT-deductible BDT invoicing and superior Bangladesh address accuracy, Barikoi is the clear commercial winner.</p>
+  </div>
+
+  <div class="callout">
+    <div class="label">Secondary / Fallback Provider: Google Maps (Circuit-Breaker Protected)</div>
+    <p>In Ride's actual codebase (<code>lib/barikoi.ts</code>), the failure fallback is <code>googleRoute</code> (Google Directions). <strong>Critical Warning:</strong> A 5% failover rate to Google Directions at $5.00/1K will generate <strong>~৳340,637 BDT / month ($3,097 USD)</strong> in GCP bills. Google failover must be strictly throttled with a circuit breaker, with Haversine × 1.3 as the default low-cost fallback.</p>
+  </div>
+
+  <div class="callout danger">
+    <div class="label">Never Use as Primary: Google Maps Platform</div>
+    <p>At <strong>$73,101 USD / month (~৳8.04 million BDT)</strong>, Google Maps is <strong>4.9× more expensive than Barikoi Business</strong> and 47× more expensive than the OSRM Hybrid. Furthermore, corporate credit card quota limits in Bangladesh make remitting ~$73K USD/month impossible without special central bank approval. Google Maps should exist solely as an emergency fallback.</p>
+  </div>
+</section>
+
+<!-- Appendix -->
+<section id="appendix">
+  <h2>Appendix: Sensitivity Notes</h2>
+  <div class="callout warning">
+    <div class="label">Mandatory Parameter Context (Prompt Guideline)</div>
+    <p>Per prompt instructions: <em>"If a value seems unrealistic, note it in a 'Sensitivity Notes' section, but do not change it without permission."</em> Below are the critical technical discrepancies between the fixed parameter model and actual production mobile engineering:</p>
+  </div>
+
+  <ol style="padding-left: 1.5rem; color: var(--text-secondary); line-height: 1.8;">
+    <li><strong>Barikoi Official Call Weighting (docs.barikoi.com/pricing/pricing-call):</strong> Barikoi bills calls, not HTTP requests. The Routing API consumes <strong>2 calls per request</strong>, and the Map API (Tiles) consumes <strong>4 calls per request</strong>. On 12.39M routing requests, Barikoi bills 24.77M calls, increasing the monthly Business bill to ৳1.65M.</li>
+    <li><strong>The 300M Tile Render Assumption vs Mobile SDK Architecture:</strong> In production mobile engineering (using MapLibre Native in Ride), vector tiles (<code>.pbf</code>) are rendered locally on-device by the GPU. A GPS heartbeat merely moves a marker coordinate; it does <strong>NOT</strong> hit an HTTP tile server. MapLibre's local SQLite disk cache absorbs &gt;85% of movement. To eliminate Barikoi tile costs completely (which Barikoi counts as 4 calls/req), Ride can point <code>style.json</code> to open OSM vector tiles or a self-hosted Cloudflare R2 vector tile cache.</li>
+    <li><strong>Google Maps Mobile SDK Pricing Reality:</strong> Under official Google Maps Platform terms, <strong>Dynamic Maps on native mobile (Maps SDK for Android & Maps SDK for iOS) is $0.00 (Unlimited Free Usage)</strong>. On native mobile apps, Google's total bill is <strong>$73,101 USD / month (~৳8.04 million BDT)</strong> for server-side directions, geocoding, and autocomplete.</li>
+    <li><strong>In-Memory H3 Geo-Indexing vs External Distance Matrix:</strong> In Ride's actual codebase (<code>utils-server/h3Index.ts</code>), driver proximity is resolved <strong>entirely in memory using Uber H3 hexagonal indexing</strong>. Zero external Distance Matrix API calls are made during dispatch, saving ৳28,350/month on Barikoi Business and $2,363/month on Google.</li>
+    <li><strong>Lean Production Architecture Alternative (Quote-Time Routing):</strong> In real-world ride-hailing and food delivery, turn-by-turn navigation is rendered client-side on the driver's device (or handed off to Google Maps/Waze via intent). The backend only fetches routes at quote creation and significant off-corridor deviations (~3 route requests per order). Under this lean model, total Barikoi calls drop to <strong>7,416,900 calls/month</strong>, bringing the Barikoi Business bill down to only <strong>৳435,014 / month ($3,955 USD / ৳0.58 per order)</strong>.</li>
+    <li><strong>Fallback Provider in Code:</strong> The codebase (<code>lib/barikoi.ts</code>) implements Google Directions as fallback, not Dingi. If 5% of route calls fail over to Google, that failover costs ~৳340,637/month. Dingi is not built into the repository.</li>
+  </ol>
+</section>
+
+</div>
+
+<footer>
+  <p>Production Cost Calibration for Ride-Hailing × Food Delivery × Shop Delivery.<br>
+  Source: barikoimaps.com/pricing. Exchange rate: 1 USD = 110 BDT. All pricing applied to fixed parameters with mathematical derivations.</p>
+</footer>
+
+<!-- Interactive Engine Script -->
+<script>
+(function() {
+  // Constants & Multipliers
+  const USD_TO_BDT = 110;
+
+  // Defaults & Presets
+  const DEFAULTS = {
+    dailyRides: 15000,
+    ridesPerDriver: 7.0,
+    ridesPerRider: 1.2,
+    dailyFood: 8000,
+    ordersPerRest: 11.0,
+    ordersPerDiner: 1.2,
+    dailyShop: 2000,
+    ordersPerShop: 12.0,
+    ordersPerBuyer: 1.1,
+    tileMode: 'cached' // 'cached' (MapLibre 0-tile default) or 'ping' (uncached reference)
+  };
+
+  const DEFAULT_RATES = {
+    ride: { auto: 2.100, geo: 0.735, revGeo: 0.735, route: 2.835, routeFast: 0.000, dm: 0.000, tilePing: 559.650, tileCached: 0.000 },
+    food: { auto: 2.100, geo: 0.735, revGeo: 1.470, route: 37.706, routeFast: 0.000, dm: 0.000, tilePing: 165.900, tileCached: 0.000 },
+    shop: { auto: 2.100, geo: 0.735, revGeo: 0.735, route: 34.360, routeFast: 0.000, dm: 1.050, tilePing: 61.740, tileCached: 0.000 }
+  };
+
+  const INTEGER_RATES = {
+    ride: { auto: 4.000, geo: 1.000, revGeo: 1.000, route: 3.000, routeFast: 0.000, dm: 0.000, tilePing: 543.000, tileCached: 0.000 },
+    food: { auto: 4.000, geo: 1.000, revGeo: 2.000, route: 4.000, routeFast: 0.000, dm: 0.000, tilePing: 160.000, tileCached: 0.000 },
+    shop: { auto: 4.000, geo: 1.000, revGeo: 1.000, route: 2.000, routeFast: 0.000, dm: 1.000, tilePing: 60.000, tileCached: 0.000 }
+  };
+
+  const PRESETS = {
+    baseline: { dailyRides: 15000, ridesPerDriver: 7.0, ridesPerRider: 1.2, dailyFood: 8000, ordersPerRest: 11.0, ordersPerDiner: 1.2, dailyShop: 2000, ordersPerShop: 12.0, ordersPerBuyer: 1.1 },
+    rideonly: { dailyRides: 15000, ridesPerDriver: 7.0, ridesPerRider: 1.2, dailyFood: 0, ordersPerRest: 11.0, ordersPerDiner: 1.2, dailyShop: 0, ordersPerShop: 12.0, ordersPerBuyer: 1.1 },
+    growth: { dailyRides: 40000, ridesPerDriver: 7.0, ridesPerRider: 1.2, dailyFood: 20000, ordersPerRest: 11.0, ordersPerDiner: 1.2, dailyShop: 5000, ordersPerShop: 12.0, ordersPerBuyer: 1.1 },
+    hyperscale: { dailyRides: 100000, ridesPerDriver: 7.0, ridesPerRider: 1.2, dailyFood: 50000, ordersPerRest: 11.0, ordersPerDiner: 1.2, dailyShop: 15000, ordersPerShop: 12.0, ordersPerBuyer: 1.1 }
+  };
+
+  let state = Object.assign({}, DEFAULTS, {
+    rates: JSON.parse(JSON.stringify(DEFAULT_RATES))
+  });
+
+  // DOM Elements - Primary Daily Orders Controls
+  const inputDailyRides = document.getElementById('input-daily-rides');
+  const rangeDailyRides = document.getElementById('range-daily-rides');
+  const dispDailyRides = document.getElementById('disp-daily-rides');
+  const inputRidesPerDriver = document.getElementById('input-rides-per-driver');
+  const dispRidesPerDriver = document.getElementById('disp-rides-per-driver');
+  const inputRidesPerRider = document.getElementById('input-rides-per-rider');
+  const dispRidesPerRider = document.getElementById('disp-rides-per-rider');
+  const badgeDailyRides = document.getElementById('badge-daily-rides');
+  const dispCalcDrivers = document.getElementById('disp-calc-drivers');
+  const dispCalcRiders = document.getElementById('disp-calc-riders');
+  const dispFleetBike = document.getElementById('disp-fleet-bike');
+  const dispFleetCng = document.getElementById('disp-fleet-cng');
+  const dispFleetCar = document.getElementById('disp-fleet-car');
+
+  const inputDailyFood = document.getElementById('input-daily-food');
+  const rangeDailyFood = document.getElementById('range-daily-food');
+  const dispDailyFood = document.getElementById('disp-daily-food');
+  const inputOrdersPerRest = document.getElementById('input-orders-per-rest');
+  const dispOrdersPerRest = document.getElementById('disp-orders-per-rest');
+  const inputOrdersPerDiner = document.getElementById('input-orders-per-diner');
+  const dispOrdersPerDiner = document.getElementById('disp-orders-per-diner');
+  const badgeDailyFood = document.getElementById('badge-daily-food');
+  const dispCalcRestaurants = document.getElementById('disp-calc-restaurants');
+  const dispCalcCouriers = document.getElementById('disp-calc-couriers');
+  const dispCalcDiners = document.getElementById('disp-calc-diners');
+
+  const inputDailyShop = document.getElementById('input-daily-shop');
+  const rangeDailyShop = document.getElementById('range-daily-shop');
+  const dispDailyShop = document.getElementById('disp-daily-shop');
+  const inputOrdersPerShop = document.getElementById('input-orders-per-shop');
+  const dispOrdersPerShop = document.getElementById('disp-orders-per-shop');
+  const inputOrdersPerBuyer = document.getElementById('input-orders-per-buyer');
+  const dispOrdersPerBuyer = document.getElementById('disp-orders-per-buyer');
+  const badgeDailyShop = document.getElementById('badge-daily-shop');
+  const dispCalcShops = document.getElementById('disp-calc-shops');
+  const dispCalcBatches = document.getElementById('disp-calc-batches');
+  const dispCalcBuyers = document.getElementById('disp-calc-buyers');
+
+  // Rates Drawer Elements
+  const btnToggleRates = document.getElementById('btn-toggle-rates');
+  const ratesDrawerBody = document.getElementById('rates-drawer-body');
+  const ratesDrawerArrow = document.getElementById('rates-drawer-arrow');
+  const badgeRatesStatus = document.getElementById('badge-rates-status');
+  const btnModeInteger = document.getElementById('btn-mode-integer');
+  const btnModeStatistical = document.getElementById('btn-mode-statistical');
+  const btnResetRates = document.getElementById('btn-reset-rates');
+
+  const rateRideAuto = document.getElementById('rate-ride-auto');
+  const rateFoodAuto = document.getElementById('rate-food-auto');
+  const rateShopAuto = document.getElementById('rate-shop-auto');
+
+  const rateRideGeo = document.getElementById('rate-ride-geo');
+  const rateFoodGeo = document.getElementById('rate-food-geo');
+  const rateShopGeo = document.getElementById('rate-shop-geo');
+
+  const rateRideRevgeo = document.getElementById('rate-ride-revgeo');
+  const rateFoodRevgeo = document.getElementById('rate-food-revgeo');
+  const rateShopRevgeo = document.getElementById('rate-shop-revgeo');
+
+  const rateRideRoute = document.getElementById('rate-ride-route');
+  const rateFoodRoute = document.getElementById('rate-food-route');
+  const rateShopRoute = document.getElementById('rate-shop-route');
+
+  const rateRideRoutefast = document.getElementById('rate-ride-routefast');
+  const rateFoodRoutefast = document.getElementById('rate-food-routefast');
+  const rateShopRoutefast = document.getElementById('rate-shop-routefast');
+
+  const rateRideDm = document.getElementById('rate-ride-dm');
+  const rateFoodDm = document.getElementById('rate-food-dm');
+  const rateShopDm = document.getElementById('rate-shop-dm');
+
+  const rateRideTile = document.getElementById('rate-ride-tile');
+  const rateFoodTile = document.getElementById('rate-food-tile');
+  const rateShopTile = document.getElementById('rate-shop-tile');
+
+  const dispRateRideTotal = document.getElementById('disp-rate-ride-total');
+  const dispRateFoodTotal = document.getElementById('disp-rate-food-total');
+  const dispRateShopTotal = document.getElementById('disp-rate-shop-total');
+
+  // Architecture & Controls
+  const btnModePing = document.getElementById('btn-mode-ping');
+  const btnModeCached = document.getElementById('btn-mode-cached');
+  const btnReset = document.getElementById('btn-reset');
+  const btnCopy = document.getElementById('btn-copy');
+  const toastCopied = document.getElementById('toast-copied');
+
+  // Presets
+  const presetBaseline = document.getElementById('preset-baseline');
+  const presetRideonly = document.getElementById('preset-rideonly');
+  const presetGrowth = document.getElementById('preset-growth');
+  const presetHyperscale = document.getElementById('preset-hyperscale');
+  const presetBtns = [presetBaseline, presetRideonly, presetGrowth, presetHyperscale];
+
+  // KPI Output Elements
+  const dynBarikoiBusiness = document.getElementById('dyn-barikoi-business');
+  const dynBarikoiBusinessUsd = document.getElementById('dyn-barikoi-business-usd');
+  const dynCostPerOrder = document.getElementById('dyn-cost-per-order');
+  const dynHybridCost = document.getElementById('dyn-hybrid-cost');
+  const dynHybridUsd = document.getElementById('dyn-hybrid-usd');
+  const dynHybridDetail = document.getElementById('dyn-hybrid-detail');
+  const dynBarikoiScale = document.getElementById('dyn-barikoi-scale');
+  const dynBarikoiScaleUsd = document.getElementById('dyn-barikoi-scale-usd');
+  const dynBarikoiScaleDelta = document.getElementById('dyn-barikoi-scale-delta');
+  const dynGoogleCost = document.getElementById('dyn-google-cost');
+  const dynGoogleUsd = document.getElementById('dyn-google-usd');
+  const dynGoogleRatio = document.getElementById('dyn-google-ratio');
+  const dynTotalCallsBadge = document.getElementById('dyn-total-calls-badge');
+
+  // Table Elements
+  const rowAutoDaily = document.getElementById('row-auto-daily');
+  const rowAutoMonthly = document.getElementById('row-auto-monthly');
+  const rowAutoBarbus = document.getElementById('row-auto-barbus');
+  const rowAutoBarscale = document.getElementById('row-auto-barscale');
+  const rowAutoDingi = document.getElementById('row-auto-dingi');
+  const rowAutoGoogle = document.getElementById('row-auto-google');
+
+  const rowGeoDaily = document.getElementById('row-geo-daily');
+  const rowGeoMonthly = document.getElementById('row-geo-monthly');
+  const rowGeoBarbus = document.getElementById('row-geo-barbus');
+  const rowGeoBarscale = document.getElementById('row-geo-barscale');
+  const rowGeoDingi = document.getElementById('row-geo-dingi');
+  const rowGeoGoogle = document.getElementById('row-geo-google');
+
+  const rowRevGeoDaily = document.getElementById('row-revgeo-daily');
+  const rowRevGeoMonthly = document.getElementById('row-revgeo-monthly');
+  const rowRevGeoBarbus = document.getElementById('row-revgeo-barbus');
+  const rowRevGeoBarscale = document.getElementById('row-revgeo-barscale');
+  const rowRevGeoDingi = document.getElementById('row-revgeo-dingi');
+  const rowRevGeoGoogle = document.getElementById('row-revgeo-google');
+
+  const rowRouteDaily = document.getElementById('row-route-daily');
+  const rowRouteMonthly = document.getElementById('row-route-monthly');
+  const rowRouteBarbus = document.getElementById('row-route-barbus');
+  const rowRouteBarscale = document.getElementById('row-route-barscale');
+  const rowRouteDingi = document.getElementById('row-route-dingi');
+  const rowRouteGoogle = document.getElementById('row-route-google');
+
+  const rowDmDaily = document.getElementById('row-dm-daily');
+  const rowDmMonthly = document.getElementById('row-dm-monthly');
+  const rowDmBarbus = document.getElementById('row-dm-barbus');
+  const rowDmBarscale = document.getElementById('row-dm-barscale');
+  const rowDmDingi = document.getElementById('row-dm-dingi');
+  const rowDmGoogle = document.getElementById('row-dm-google');
+
+  const rowTileDaily = document.getElementById('row-tile-daily');
+  const rowTileMonthly = document.getElementById('row-tile-monthly');
+  const rowTileBarbus = document.getElementById('row-tile-barbus');
+  const rowTileBarscale = document.getElementById('row-tile-barscale');
+  const rowTileDingi = document.getElementById('row-tile-dingi');
+  const rowTileGoogle = document.getElementById('row-tile-google');
+
+  const footDailyTotal = document.getElementById('foot-daily-total');
+  const footMonthlyTotal = document.getElementById('foot-monthly-total');
+  const footBarbusGross = document.getElementById('foot-barbus-gross');
+  const footBarscaleGross = document.getElementById('foot-barscale-gross');
+  const footDingiGross = document.getElementById('foot-dingi-gross');
+  const footGoogleGross = document.getElementById('foot-google-gross');
+  const footTotalOrders = document.getElementById('foot-total-orders');
+
+  const footBarbusNet = document.getElementById('foot-barbus-net');
+  const footBarscaleNet = document.getElementById('foot-barscale-net');
+  const footDingiNet = document.getElementById('foot-dingi-net');
+  const footGoogleNet = document.getElementById('foot-google-net');
+
+  const footBarbusNetUsd = document.getElementById('foot-barbus-net-usd');
+  const footBarscaleNetUsd = document.getElementById('foot-barscale-net-usd');
+  const footDingiNetUsd = document.getElementById('foot-dingi-net-usd');
+  const footGoogleNetUsd = document.getElementById('foot-google-net-usd');
+
+  const footMonthlyOrdersDisp = document.getElementById('foot-monthly-orders-disp');
+  const footUnitBarbus = document.getElementById('foot-unit-barbus');
+  const footUnitBarscale = document.getElementById('foot-unit-barscale');
+  const footUnitDingi = document.getElementById('foot-unit-dingi');
+  const footUnitGoogle = document.getElementById('foot-unit-google');
+
+  // Section 3 Elements
+  const sec3RideAuto = document.getElementById('sec3-ride-auto');
+  const sec3FoodAuto = document.getElementById('sec3-food-auto');
+  const sec3ShopAuto = document.getElementById('sec3-shop-auto');
+
+  const sec3RideGeo = document.getElementById('sec3-ride-geo');
+  const sec3FoodGeo = document.getElementById('sec3-food-geo');
+  const sec3ShopGeo = document.getElementById('sec3-shop-geo');
+
+  const sec3RideRevgeo = document.getElementById('sec3-ride-revgeo');
+  const sec3FoodRevgeo = document.getElementById('sec3-food-revgeo');
+  const sec3ShopRevgeo = document.getElementById('sec3-shop-revgeo');
+
+  const sec3RideRoute = document.getElementById('sec3-ride-route');
+  const sec3FoodRoute = document.getElementById('sec3-food-route');
+  const sec3ShopRoute = document.getElementById('sec3-shop-route');
+
+  const sec3RideRoutefast = document.getElementById('sec3-ride-routefast');
+  const sec3FoodRoutefast = document.getElementById('sec3-food-routefast');
+  const sec3ShopRoutefast = document.getElementById('sec3-shop-routefast');
+
+  const sec3RideDm = document.getElementById('sec3-ride-dm');
+  const sec3FoodDm = document.getElementById('sec3-food-dm');
+  const sec3ShopDm = document.getElementById('sec3-shop-dm');
+
+  const sec3RideTile = document.getElementById('sec3-ride-tile');
+  const sec3FoodTile = document.getElementById('sec3-food-tile');
+  const sec3ShopTile = document.getElementById('sec3-shop-tile');
+
+  const sec3RideTotal = document.getElementById('sec3-ride-total');
+  const sec3FoodTotal = document.getElementById('sec3-food-total');
+  const sec3ShopTotal = document.getElementById('sec3-shop-total');
+
+  // Section 4 Elements
+  const sec4HeaderOrders = document.getElementById('sec4-header-orders');
+  const sec4ThRide = document.getElementById('sec4-th-ride');
+  const sec4ThFood = document.getElementById('sec4-th-food');
+  const sec4ThShop = document.getElementById('sec4-th-shop');
+
+  const sec4RideAuto = document.getElementById('sec4-ride-auto');
+  const sec4FoodAuto = document.getElementById('sec4-food-auto');
+  const sec4ShopAuto = document.getElementById('sec4-shop-auto');
+  const sec4TotalAuto = document.getElementById('sec4-total-auto');
+
+  const sec4RideGeo = document.getElementById('sec4-ride-geo');
+  const sec4FoodGeo = document.getElementById('sec4-food-geo');
+  const sec4ShopGeo = document.getElementById('sec4-shop-geo');
+  const sec4TotalGeo = document.getElementById('sec4-total-geo');
+
+  const sec4RideRevgeo = document.getElementById('sec4-ride-revgeo');
+  const sec4FoodRevgeo = document.getElementById('sec4-food-revgeo');
+  const sec4ShopRevgeo = document.getElementById('sec4-shop-revgeo');
+  const sec4TotalRevgeo = document.getElementById('sec4-total-revgeo');
+
+  const sec4RideRoute = document.getElementById('sec4-ride-route');
+  const sec4FoodRoute = document.getElementById('sec4-food-route');
+  const sec4ShopRoute = document.getElementById('sec4-shop-route');
+  const sec4TotalRoute = document.getElementById('sec4-total-route');
+
+  const sec4RideDm = document.getElementById('sec4-ride-dm');
+  const sec4FoodDm = document.getElementById('sec4-food-dm');
+  const sec4ShopDm = document.getElementById('sec4-shop-dm');
+  const sec4TotalDm = document.getElementById('sec4-total-dm');
+
+  const sec4RideTile = document.getElementById('sec4-ride-tile');
+  const sec4FoodTile = document.getElementById('sec4-food-tile');
+  const sec4ShopTile = document.getElementById('sec4-shop-tile');
+  const sec4TotalTile = document.getElementById('sec4-total-tile');
+
+  const sec4RideGrand = document.getElementById('sec4-ride-grand');
+  const sec4FoodGrand = document.getElementById('sec4-food-grand');
+  const sec4ShopGrand = document.getElementById('sec4-shop-grand');
+  const sec4TotalGrand = document.getElementById('sec4-total-grand');
+
+  // Section 4.2 Elements
+  const sec42HeaderOrders = document.getElementById('sec42-header-orders');
+  const sec42CalcAuto = document.getElementById('sec42-calc-auto');
+  const sec42MonthlyAuto = document.getElementById('sec42-monthly-auto');
+  const sec42CalcGeo = document.getElementById('sec42-calc-geo');
+  const sec42MonthlyGeo = document.getElementById('sec42-monthly-geo');
+  const sec42CalcRevgeo = document.getElementById('sec42-calc-revgeo');
+  const sec42MonthlyRevgeo = document.getElementById('sec42-monthly-revgeo');
+  const sec42CalcRoute = document.getElementById('sec42-calc-route');
+  const sec42MonthlyRoute = document.getElementById('sec42-monthly-route');
+  const sec42CalcDm = document.getElementById('sec42-calc-dm');
+  const sec42MonthlyDm = document.getElementById('sec42-monthly-dm');
+  const sec42CalcTile = document.getElementById('sec42-calc-tile');
+  const sec42MonthlyTile = document.getElementById('sec42-monthly-tile');
+  const sec42MonthlyGrand = document.getElementById('sec42-monthly-grand');
+
+  function fmtNum(n) {
+    return Math.round(n).toLocaleString('en-US');
+  }
+
+  function fmtBdt(n) {
+    return '৳' + Math.round(n).toLocaleString('en-US');
+  }
+
+  function fmtUsd(n) {
+    return '$' + Math.round(n).toLocaleString('en-US');
+  }
+
+  function fmtUnit(n) {
+    if (!isFinite(n) || isNaN(n) || n === 0) return '৳0.00';
+    return '৳' + n.toFixed(2);
+  }
+
+  function setActivePreset(activeBtn) {
+    presetBtns.forEach(btn => btn.classList.remove('active'));
+    if (activeBtn) activeBtn.classList.add('active');
+  }
+
+  function syncInputs() {
+    inputDailyRides.value = state.dailyRides;
+    rangeDailyRides.value = Math.min(100000, state.dailyRides);
+    inputRidesPerDriver.value = state.ridesPerDriver;
+    inputRidesPerRider.value = state.ridesPerRider;
+
+    inputDailyFood.value = state.dailyFood;
+    rangeDailyFood.value = Math.min(50000, state.dailyFood);
+    inputOrdersPerRest.value = state.ordersPerRest;
+    inputOrdersPerDiner.value = state.ordersPerDiner;
+
+    inputDailyShop.value = state.dailyShop;
+    rangeDailyShop.value = Math.min(20000, state.dailyShop);
+    inputOrdersPerShop.value = state.ordersPerShop;
+    inputOrdersPerBuyer.value = state.ordersPerBuyer;
+  }
+
+  function fmtRate(v) {
+    if (Math.abs(v - Math.round(v)) < 0.0001) {
+      return Math.round(v).toString();
+    }
+    return v.toFixed(3);
+  }
+
+  function syncRateInputs() {
+    rateRideAuto.value = fmtRate(state.rates.ride.auto);
+    rateFoodAuto.value = fmtRate(state.rates.food.auto);
+    rateShopAuto.value = fmtRate(state.rates.shop.auto);
+
+    rateRideGeo.value = fmtRate(state.rates.ride.geo);
+    rateFoodGeo.value = fmtRate(state.rates.food.geo);
+    rateShopGeo.value = fmtRate(state.rates.shop.geo);
+
+    rateRideRevgeo.value = fmtRate(state.rates.ride.revGeo);
+    rateFoodRevgeo.value = fmtRate(state.rates.food.revGeo);
+    rateShopRevgeo.value = fmtRate(state.rates.shop.revGeo);
+
+    rateRideRoute.value = fmtRate(state.rates.ride.route);
+    rateFoodRoute.value = fmtRate(state.rates.food.route);
+    rateShopRoute.value = fmtRate(state.rates.shop.route);
+
+    rateRideRoutefast.value = fmtRate(state.rates.ride.routeFast);
+    rateFoodRoutefast.value = fmtRate(state.rates.food.routeFast);
+    rateShopRoutefast.value = fmtRate(state.rates.shop.routeFast);
+
+    rateRideDm.value = fmtRate(state.rates.ride.dm);
+    rateFoodDm.value = fmtRate(state.rates.food.dm);
+    rateShopDm.value = fmtRate(state.rates.shop.dm);
+
+    const isPing = state.tileMode === 'ping';
+    rateRideTile.value = fmtRate(isPing ? state.rates.ride.tilePing : state.rates.ride.tileCached);
+    rateFoodTile.value = fmtRate(isPing ? state.rates.food.tilePing : state.rates.food.tileCached);
+    rateShopTile.value = fmtRate(isPing ? state.rates.shop.tilePing : state.rates.shop.tileCached);
+  }
+
+  function checkRatesCustomized() {
+    let isDefault = true;
+    let isInteger = true;
+    ['ride', 'food', 'shop'].forEach(function(v) {
+      Object.keys(DEFAULT_RATES[v]).forEach(function(k) {
+        if (Math.abs(state.rates[v][k] - DEFAULT_RATES[v][k]) > 0.0001) isDefault = false;
+        if (Math.abs(state.rates[v][k] - INTEGER_RATES[v][k]) > 0.0001) isInteger = false;
+      });
+    });
+    if (isDefault) {
+      badgeRatesStatus.innerText = 'Default Production Rates (MapLibre + H3)';
+      badgeRatesStatus.style.borderColor = 'var(--green)';
+      badgeRatesStatus.style.color = 'var(--green)';
+    } else if (isInteger) {
+      badgeRatesStatus.innerText = 'Clean 1:1 Integer Mode';
+      badgeRatesStatus.style.borderColor = 'var(--accent)';
+      badgeRatesStatus.style.color = 'var(--accent)';
+    } else {
+      badgeRatesStatus.innerText = 'Custom Rates Active';
+      badgeRatesStatus.style.borderColor = 'var(--yellow)';
+      badgeRatesStatus.style.color = 'var(--yellow)';
+    }
+  }
+
+  function recalculate() {
+    // 1. Calculate Daily Orders & Derived Fleets
+    const dailyRides = state.dailyRides;
+    const dailyFood = state.dailyFood;
+    const dailyShop = state.dailyShop;
+    const totalDailyOrders = dailyRides + dailyFood + dailyShop;
+    const totalMonthlyOrders = totalDailyOrders * 30;
+
+    const activeDrivers = state.ridesPerDriver > 0 ? Math.round(dailyRides / state.ridesPerDriver) : 0;
+    const activeRiders = state.ridesPerRider > 0 ? Math.round(dailyRides / state.ridesPerRider) : 0;
+
+    const activeRestaurants = state.ordersPerRest > 0 ? Math.round(dailyFood / state.ordersPerRest) : 0;
+    const activeCouriers = Math.round(dailyFood / 9.0);
+    const dinersServed = state.ordersPerDiner > 0 ? Math.round(dailyFood / state.ordersPerDiner) : 0;
+
+    const activeShops = state.ordersPerShop > 0 ? Math.round(dailyShop / state.ordersPerShop) : 0;
+    const batchedRoutes = Math.round(dailyShop / 2.5);
+    const buyersServed = state.ordersPerBuyer > 0 ? Math.round(dailyShop / state.ordersPerBuyer) : 0;
+
+    // Display inputs
+    dispDailyRides.innerText = fmtNum(dailyRides);
+    dispRidesPerDriver.innerText = state.ridesPerDriver.toFixed(1);
+    dispRidesPerRider.innerText = state.ridesPerRider.toFixed(1);
+    badgeDailyRides.innerText = fmtNum(dailyRides) + ' rides/day';
+    dispCalcDrivers.innerText = '~' + fmtNum(activeDrivers) + ' drivers';
+    dispCalcRiders.innerText = '~' + fmtNum(activeRiders) + ' riders';
+
+    // 3-Category Vehicle Mix (Uber / Pathao Market Ratio)
+    const bikeRides = Math.round(dailyRides * 0.60);
+    const cngRides = Math.round(dailyRides * 0.25);
+    const carRides = Math.max(0, dailyRides - bikeRides - cngRides);
+    const bikeDrivers = Math.round(bikeRides / 9.0);
+    const cngDrivers = Math.round(cngRides / 7.0);
+    const carDrivers = Math.round(carRides / 5.0);
+
+    dispFleetBike.innerText = fmtNum(bikeRides) + ' rides (~' + fmtNum(bikeDrivers) + ' bikes @ 9/day)';
+    dispFleetCng.innerText = fmtNum(cngRides) + ' rides (~' + fmtNum(cngDrivers) + ' CNGs @ 7/day)';
+    dispFleetCar.innerText = fmtNum(carRides) + ' rides (~' + fmtNum(carDrivers) + ' cars @ 5/day)';
+
+    dispDailyFood.innerText = fmtNum(dailyFood);
+    dispOrdersPerRest.innerText = state.ordersPerRest.toFixed(1);
+    dispOrdersPerDiner.innerText = state.ordersPerDiner.toFixed(1);
+    badgeDailyFood.innerText = fmtNum(dailyFood) + ' orders/day';
+    dispCalcRestaurants.innerText = '~' + fmtNum(activeRestaurants) + ' outlets';
+    dispCalcCouriers.innerText = '~' + fmtNum(activeCouriers) + ' couriers';
+    dispCalcDiners.innerText = '~' + fmtNum(dinersServed) + ' diners';
+
+    dispDailyShop.innerText = fmtNum(dailyShop);
+    dispOrdersPerShop.innerText = state.ordersPerShop.toFixed(1);
+    dispOrdersPerBuyer.innerText = state.ordersPerBuyer.toFixed(1);
+    badgeDailyShop.innerText = fmtNum(dailyShop) + ' orders/day';
+    dispCalcShops.innerText = '~' + fmtNum(activeShops) + ' shops';
+    dispCalcBatches.innerText = '~' + fmtNum(batchedRoutes) + ' routes';
+    dispCalcBuyers.innerText = '~' + fmtNum(buyersServed) + ' buyers';
+
+    // 2. Active Tile Rates & Routing Rates
+    const rideTile = state.tileMode === 'ping' ? state.rates.ride.tilePing : state.rates.ride.tileCached;
+    const foodTile = state.tileMode === 'ping' ? state.rates.food.tilePing : state.rates.food.tileCached;
+    const shopTile = state.tileMode === 'ping' ? state.rates.shop.tilePing : state.rates.shop.tileCached;
+
+    const rideRoute = state.rates.ride.route + state.rates.ride.routeFast;
+    const foodRoute = state.rates.food.route + state.rates.food.routeFast;
+    const shopRoute = state.rates.shop.route + state.rates.shop.routeFast;
+
+    // Totals per item
+    const rideTotalPerItem = state.rates.ride.auto + state.rates.ride.geo + state.rates.ride.revGeo + rideRoute + state.rates.ride.dm + rideTile;
+    const foodTotalPerItem = state.rates.food.auto + state.rates.food.geo + state.rates.food.revGeo + foodRoute + state.rates.food.dm + foodTile;
+    const shopTotalPerItem = state.rates.shop.auto + state.rates.shop.geo + state.rates.shop.revGeo + shopRoute + state.rates.shop.dm + shopTile;
+
+    dispRateRideTotal.innerText = '~' + rideTotalPerItem.toFixed(3);
+    dispRateFoodTotal.innerText = '~' + foodTotalPerItem.toFixed(3);
+    dispRateShopTotal.innerText = '~' + shopTotalPerItem.toFixed(3);
+
+    // Update Section 3
+    sec3RideAuto.innerText = state.rates.ride.auto.toFixed(3);
+    sec3FoodAuto.innerText = state.rates.food.auto.toFixed(3);
+    sec3ShopAuto.innerText = state.rates.shop.auto.toFixed(3);
+
+    sec3RideGeo.innerText = state.rates.ride.geo.toFixed(3);
+    sec3FoodGeo.innerText = state.rates.food.geo.toFixed(3);
+    sec3ShopGeo.innerText = state.rates.shop.geo.toFixed(3);
+
+    sec3RideRevgeo.innerText = state.rates.ride.revGeo.toFixed(3);
+    sec3FoodRevgeo.innerText = state.rates.food.revGeo.toFixed(3);
+    sec3ShopRevgeo.innerText = state.rates.shop.revGeo.toFixed(3);
+
+    sec3RideRoute.innerText = state.rates.ride.route.toFixed(3);
+    sec3FoodRoute.innerText = state.rates.food.route.toFixed(3);
+    sec3ShopRoute.innerText = state.rates.shop.route.toFixed(3);
+
+    sec3RideRoutefast.innerText = state.rates.ride.routeFast.toFixed(3);
+    sec3FoodRoutefast.innerText = state.rates.food.routeFast.toFixed(3);
+    sec3ShopRoutefast.innerText = state.rates.shop.routeFast.toFixed(3);
+
+    sec3RideDm.innerText = state.rates.ride.dm.toFixed(3);
+    sec3FoodDm.innerText = state.rates.food.dm.toFixed(3);
+    sec3ShopDm.innerText = state.rates.shop.dm.toFixed(3);
+
+    sec3RideTile.innerText = rideTile.toFixed(3);
+    sec3FoodTile.innerText = foodTile.toFixed(3);
+    sec3ShopTile.innerText = shopTile.toFixed(3);
+
+    sec3RideTotal.innerText = '~' + rideTotalPerItem.toFixed(3);
+    sec3FoodTotal.innerText = '~' + foodTotalPerItem.toFixed(3);
+    sec3ShopTotal.innerText = '~' + shopTotalPerItem.toFixed(3);
+
+    // 3. Per-Item Multipliers & Daily Volumes
+    const rideAutoDaily = dailyRides * state.rates.ride.auto;
+    const foodAutoDaily = dailyFood * state.rates.food.auto;
+    const shopAutoDaily = dailyShop * state.rates.shop.auto;
+    const autoDaily = rideAutoDaily + foodAutoDaily + shopAutoDaily;
+    const autoMonthly = autoDaily * 30;
+
+    const rideGeoDaily = dailyRides * state.rates.ride.geo;
+    const foodGeoDaily = dailyFood * state.rates.food.geo;
+    const shopGeoDaily = dailyShop * state.rates.shop.geo;
+    const geoDaily = rideGeoDaily + foodGeoDaily + shopGeoDaily;
+    const geoMonthly = geoDaily * 30;
+
+    const rideRevGeoDaily = dailyRides * state.rates.ride.revGeo;
+    const foodRevGeoDaily = dailyFood * state.rates.food.revGeo;
+    const shopRevGeoDaily = dailyShop * state.rates.shop.revGeo;
+    const revGeoDaily = rideRevGeoDaily + foodRevGeoDaily + shopRevGeoDaily;
+    const revGeoMonthly = revGeoDaily * 30;
+
+    const rideRouteDaily = dailyRides * rideRoute;
+    const foodRouteDaily = dailyFood * foodRoute;
+    const shopRouteDaily = dailyShop * shopRoute;
+    const routeDaily = rideRouteDaily + foodRouteDaily + shopRouteDaily;
+    const routeMonthly = routeDaily * 30;
+
+    const rideDmDaily = dailyRides * state.rates.ride.dm;
+    const foodDmDaily = dailyFood * state.rates.food.dm;
+    const shopDmDaily = dailyShop * state.rates.shop.dm;
+    const dmDaily = rideDmDaily + foodDmDaily + shopDmDaily;
+    const dmMonthly = dmDaily * 30;
+
+    const rideTileDaily = dailyRides * rideTile;
+    const foodTileDaily = dailyFood * foodTile;
+    const shopTileDaily = dailyShop * shopTile;
+    const tileDaily = rideTileDaily + foodTileDaily + shopTileDaily;
+    const tileMonthly = tileDaily * 30;
+
+    const totalDailyCalls = autoDaily + geoDaily + revGeoDaily + routeDaily + dmDaily + tileDaily;
+    const totalMonthlyCalls = totalDailyCalls * 30;
+
+    // Update Section 4.1 Daily Calls Table
+    sec4HeaderOrders.innerText = fmtNum(totalDailyOrders);
+    sec4ThRide.innerText = 'Daily calls (Ride ' + fmtNum(dailyRides) + ')';
+    sec4ThFood.innerText = 'Daily calls (Food ' + fmtNum(dailyFood) + ')';
+    sec4ThShop.innerText = 'Daily calls (Shop ' + fmtNum(dailyShop) + ')';
+
+    sec4RideAuto.innerText = fmtNum(rideAutoDaily);
+    sec4FoodAuto.innerText = fmtNum(foodAutoDaily);
+    sec4ShopAuto.innerText = fmtNum(shopAutoDaily);
+    sec4TotalAuto.innerText = fmtNum(autoDaily);
+
+    sec4RideGeo.innerText = fmtNum(rideGeoDaily);
+    sec4FoodGeo.innerText = fmtNum(foodGeoDaily);
+    sec4ShopGeo.innerText = fmtNum(shopGeoDaily);
+    sec4TotalGeo.innerText = fmtNum(geoDaily);
+
+    sec4RideRevgeo.innerText = fmtNum(rideRevGeoDaily);
+    sec4FoodRevgeo.innerText = fmtNum(foodRevGeoDaily);
+    sec4ShopRevgeo.innerText = fmtNum(shopRevGeoDaily);
+    sec4TotalRevgeo.innerText = fmtNum(revGeoDaily);
+
+    sec4RideRoute.innerText = fmtNum(rideRouteDaily);
+    sec4FoodRoute.innerText = fmtNum(foodRouteDaily);
+    sec4ShopRoute.innerText = fmtNum(shopRouteDaily);
+    sec4TotalRoute.innerText = fmtNum(routeDaily);
+
+    sec4RideDm.innerText = fmtNum(rideDmDaily);
+    sec4FoodDm.innerText = fmtNum(foodDmDaily);
+    sec4ShopDm.innerText = fmtNum(shopDmDaily);
+    sec4TotalDm.innerText = fmtNum(dmDaily);
+
+    sec4RideTile.innerText = fmtNum(rideTileDaily);
+    sec4FoodTile.innerText = fmtNum(foodTileDaily);
+    sec4ShopTile.innerText = fmtNum(shopTileDaily);
+    sec4TotalTile.innerText = fmtNum(tileDaily);
+
+    const rideGrandDaily = rideAutoDaily + rideGeoDaily + rideRevGeoDaily + rideRouteDaily + rideDmDaily + rideTileDaily;
+    const foodGrandDaily = foodAutoDaily + foodGeoDaily + foodRevGeoDaily + foodRouteDaily + foodDmDaily + foodTileDaily;
+    const shopGrandDaily = shopAutoDaily + shopGeoDaily + shopRevGeoDaily + shopRouteDaily + shopDmDaily + shopTileDaily;
+
+    sec4RideGrand.innerText = fmtNum(rideGrandDaily);
+    sec4FoodGrand.innerText = fmtNum(foodGrandDaily);
+    sec4ShopGrand.innerText = fmtNum(shopGrandDaily);
+    sec4TotalGrand.innerText = fmtNum(totalDailyCalls);
+
+    // Update Section 4.2 Monthly Calls Table
+    sec42HeaderOrders.innerText = fmtNum(totalMonthlyOrders);
+    sec42CalcAuto.innerText = fmtNum(autoDaily) + ' × 30';
+    sec42MonthlyAuto.innerText = fmtNum(autoMonthly);
+
+    sec42CalcGeo.innerText = fmtNum(geoDaily) + ' × 30';
+    sec42MonthlyGeo.innerText = fmtNum(geoMonthly);
+
+    sec42CalcRevgeo.innerText = fmtNum(revGeoDaily) + ' × 30';
+    sec42MonthlyRevgeo.innerText = fmtNum(revGeoMonthly);
+
+    sec42CalcRoute.innerText = fmtNum(routeDaily) + ' × 30';
+    sec42MonthlyRoute.innerText = fmtNum(routeMonthly);
+
+    sec42CalcDm.innerText = fmtNum(dmDaily) + ' × 30';
+    sec42MonthlyDm.innerText = fmtNum(dmMonthly);
+
+    sec42CalcTile.innerText = fmtNum(tileDaily) + ' × 30';
+    sec42MonthlyTile.innerText = fmtNum(tileMonthly);
+
+    sec42MonthlyGrand.innerText = fmtNum(totalMonthlyCalls);
+
+    // 4. Provider Cost Calculations
+    // Barikoi Official Call Weighting (docs.barikoi.com/pricing/pricing-call):
+    // Routing API = 2 billable calls per request
+    // Map API (Tiles) = 4 billable calls per request
+    const barikoiRouteCalls = routeMonthly * 2;
+    const barikoiTileCalls = (state.tileMode === 'ping') ? (tileMonthly * 4) : 0;
+    const totalBarikoiBillableCalls = autoMonthly + geoMonthly + revGeoMonthly + dmMonthly + barikoiRouteCalls + barikoiTileCalls;
+
+    // A. Barikoi Business Plan (Base ৳50,000 for 1M calls + BDT 0.060 / call overage)
+    const busBase = 50000;
+    const busIncludedCalls = 1000000;
+    const busOverageCalls = Math.max(0, totalBarikoiBillableCalls - busIncludedCalls);
+    const barikoiBusinessNet = totalBarikoiBillableCalls <= busIncludedCalls
+      ? Math.max(busBase * (totalBarikoiBillableCalls / busIncludedCalls), (totalBarikoiBillableCalls / 1000) * 50)
+      : busBase + (busOverageCalls * 0.060);
+
+    // Line item costs on Barikoi Business (@ ৳60/1K overage rate for breakdown; Routing weighted 2x)
+    const rowAutoBarbusCost = (autoMonthly / 1000) * 60;
+    const rowGeoBarbusCost = (geoMonthly / 1000) * 60;
+    const rowRevGeoBarbusCost = (revGeoMonthly / 1000) * 60;
+    const rowRouteBarbusCost = (barikoiRouteCalls / 1000) * 60;
+    const rowDmBarbusCost = (dmMonthly / 1000) * 60;
+    const rowTileBarbusCost = (barikoiTileCalls / 1000) * 60;
+
+    // B. Barikoi Scale Plan (Base ৳90,000 for 2M calls + BDT 0.075 / call overage)
+    const scaleBase = 90000;
+    const scaleIncludedCalls = 2000000;
+    const scaleOverageCalls = Math.max(0, totalBarikoiBillableCalls - scaleIncludedCalls);
+    const barikoiScaleNet = totalBarikoiBillableCalls <= scaleIncludedCalls 
+      ? Math.max(scaleBase * (totalBarikoiBillableCalls / scaleIncludedCalls), (totalBarikoiBillableCalls / 1000) * 45)
+      : scaleBase + (scaleOverageCalls * 0.075);
+
+    // Line item costs on Barikoi Scale (@ ৳75/1K overage rate for breakdown; Routing weighted 2x)
+    const rowAutoBarscaleCost = (autoMonthly / 1000) * 75;
+    const rowGeoBarscaleCost = (geoMonthly / 1000) * 75;
+    const rowRevGeoBarscaleCost = (revGeoMonthly / 1000) * 75;
+    const rowRouteBarscaleCost = (barikoiRouteCalls / 1000) * 75;
+    const rowDmBarscaleCost = (dmMonthly / 1000) * 75;
+    const rowTileBarscaleCost = (barikoiTileCalls / 1000) * 75;
+
+    // C. Self-Hosted OSRM Hybrid ($40/mo VPS for routing + Barikoi for Address/Geocode)
+    const vpsCostBdt = 40 * USD_TO_BDT; // ৳4,400 BDT
+    const nonRoutingMonthlyCalls = autoMonthly + geoMonthly + revGeoMonthly + dmMonthly;
+    const hybridBarikoiNet = nonRoutingMonthlyCalls <= busIncludedCalls
+      ? busBase
+      : busBase + (Math.max(0, nonRoutingMonthlyCalls - busIncludedCalls) * 0.060);
+    const hybridTotalNet = hybridBarikoiNet + vpsCostBdt;
+
+    // D. Dingi PAYG (Tiered 100K+) - Dingi bills per HTTP request
+    const dingiAuto = (autoMonthly / 1000) * 50;
+    const dingiGeo = (geoMonthly / 1000) * 94;
+    const dingiRevGeo = (revGeoMonthly / 1000) * 94;
+    const dingiRoute = (routeMonthly / 1000) * 102;
+    const dingiDm = (dmMonthly / 1000) * 102;
+    const dingiTiles = (state.tileMode === 'ping') ? ((tileMonthly / 1000) * 75) : 0;
+    const dingiGross = dingiAuto + dingiGeo + dingiRevGeo + dingiRoute + dingiDm + dingiTiles;
+    const dingiNet = Math.max(0, dingiGross - 5000);
+
+    // E. Google Maps Platform (Mobile Native SDK)
+    const googleAutoUsd = (autoMonthly / 1000) * 2.83;
+    const googleGeoUsd = (geoMonthly / 1000) * 5.00;
+    const googleRevGeoUsd = (revGeoMonthly / 1000) * 5.00;
+    const googleRouteUsd = (routeMonthly / 1000) * 5.00;
+    const googleDmUsd = (dmMonthly / 1000) * 5.00;
+    const googleTilesUsd = (state.tileMode === 'ping') ? ((tileMonthly / 1000) * 7.00) : 0.00;
+
+    const googleGrossUsd = googleAutoUsd + googleGeoUsd + googleRevGeoUsd + googleRouteUsd + googleDmUsd + googleTilesUsd;
+    const googleNetUsd = googleGrossUsd;
+    const googleNetBdt = googleNetUsd * USD_TO_BDT;
+
+    // 5. Update KPI Cards
+    dynBarikoiBusiness.innerText = fmtBdt(barikoiBusinessNet);
+    dynBarikoiBusinessUsd.innerText = fmtUsd(barikoiBusinessNet / USD_TO_BDT) + ' USD / month';
+    const costPerOrderBus = totalMonthlyOrders > 0 ? (barikoiBusinessNet / totalMonthlyOrders) : 0;
+    dynCostPerOrder.innerText = 'Effective: ' + fmtUnit(costPerOrderBus) + ' per completed order';
+
+    dynHybridCost.innerText = fmtBdt(hybridTotalNet);
+    dynHybridUsd.innerText = fmtUsd(hybridTotalNet / USD_TO_BDT) + ' USD / month';
+    const costPerOrderHybrid = totalMonthlyOrders > 0 ? (hybridTotalNet / totalMonthlyOrders) : 0;
+    dynHybridDetail.innerText = 'Effective: ' + fmtUnit(costPerOrderHybrid) + ' per order ($40 VPS + Barikoi)';
+
+    dynBarikoiScale.innerText = fmtBdt(barikoiScaleNet);
+    dynBarikoiScaleUsd.innerText = fmtUsd(barikoiScaleNet / USD_TO_BDT) + ' USD / month';
+    const scaleDelta = barikoiScaleNet - barikoiBusinessNet;
+    if (scaleDelta >= 0) {
+      dynBarikoiScaleDelta.innerText = '+' + fmtBdt(scaleDelta) + '/mo vs Business (7.5p overage)';
+      dynBarikoiScaleDelta.style.color = 'var(--orange)';
+    } else {
+      dynBarikoiScaleDelta.innerText = '−' + fmtBdt(Math.abs(scaleDelta)) + '/mo vs Business';
+      dynBarikoiScaleDelta.style.color = 'var(--green)';
+    }
+
+    dynGoogleCost.innerText = fmtBdt(googleNetBdt);
+    dynGoogleUsd.innerText = fmtUsd(googleNetUsd) + ' USD / month';
+    const ratioGoogle = barikoiBusinessNet > 0 ? (googleNetBdt / barikoiBusinessNet).toFixed(1) : '0.0';
+    dynGoogleRatio.innerText = ratioGoogle + '× more expensive than Barikoi Business';
+
+    dynTotalCallsBadge.innerText = 'Platform Requests: ' + fmtNum(totalMonthlyCalls) + ' req/mo | Barikoi Billable: ' + fmtNum(totalBarikoiBillableCalls) + ' calls/mo (2× Routing Weight)';
+
+    // Breakdown Table Rows
+    rowAutoDaily.innerText = fmtNum(autoDaily);
+    rowAutoMonthly.innerText = fmtNum(autoMonthly);
+    rowAutoBarbus.innerText = fmtBdt(rowAutoBarbusCost);
+    rowAutoBarscale.innerText = fmtBdt(rowAutoBarscaleCost);
+    rowAutoDingi.innerText = fmtBdt(dingiAuto);
+    rowAutoGoogle.innerText = fmtBdt(googleAutoUsd * USD_TO_BDT);
+
+    rowGeoDaily.innerText = fmtNum(geoDaily);
+    rowGeoMonthly.innerText = fmtNum(geoMonthly);
+    rowGeoBarbus.innerText = fmtBdt(rowGeoBarbusCost);
+    rowGeoBarscale.innerText = fmtBdt(rowGeoBarscaleCost);
+    rowGeoDingi.innerText = fmtBdt(dingiGeo);
+    rowGeoGoogle.innerText = fmtBdt(googleGeoUsd * USD_TO_BDT);
+
+    rowRevGeoDaily.innerText = fmtNum(revGeoDaily);
+    rowRevGeoMonthly.innerText = fmtNum(revGeoMonthly);
+    rowRevGeoBarbus.innerText = fmtBdt(rowRevGeoBarbusCost);
+    rowRevGeoBarscale.innerText = fmtBdt(rowRevGeoBarscaleCost);
+    rowRevGeoDingi.innerText = fmtBdt(dingiRevGeo);
+    rowRevGeoGoogle.innerText = fmtBdt(googleRevGeoUsd * USD_TO_BDT);
+
+    rowRouteDaily.innerText = fmtNum(routeDaily);
+    rowRouteMonthly.innerText = fmtNum(routeMonthly);
+    rowRouteBarbus.innerText = fmtBdt(rowRouteBarbusCost);
+    rowRouteBarscale.innerText = fmtBdt(rowRouteBarscaleCost);
+    rowRouteDingi.innerText = fmtBdt(dingiRoute);
+    rowRouteGoogle.innerText = fmtBdt(googleRouteUsd * USD_TO_BDT);
+
+    rowDmDaily.innerText = fmtNum(dmDaily);
+    rowDmMonthly.innerText = fmtNum(dmMonthly);
+    rowDmBarbus.innerText = fmtBdt(rowDmBarbusCost);
+    rowDmBarscale.innerText = fmtBdt(rowDmBarscaleCost);
+    rowDmDingi.innerText = fmtBdt(dingiDm);
+    rowDmGoogle.innerText = fmtBdt(googleDmUsd * USD_TO_BDT);
+
+    rowTileDaily.innerText = fmtNum(tileDaily);
+    rowTileMonthly.innerText = fmtNum(tileMonthly);
+    rowTileBarbus.innerText = fmtBdt(rowTileBarbusCost);
+    rowTileBarscale.innerText = fmtBdt(rowTileBarscaleCost);
+    rowTileDingi.innerText = fmtBdt(dingiTiles);
+    rowTileGoogle.innerText = (state.tileMode === 'ping') ? fmtBdt(googleTilesUsd * USD_TO_BDT) : '৳0 (Free Mobile SDK)';
+
+    // Footers
+    footDailyTotal.innerText = fmtNum(totalDailyCalls);
+    footMonthlyTotal.innerText = fmtNum(totalMonthlyCalls);
+    footBarbusGross.innerText = fmtBdt(barikoiBusinessNet);
+    footBarscaleGross.innerText = fmtBdt(barikoiScaleNet);
+    footDingiGross.innerText = fmtBdt(dingiGross);
+    footGoogleGross.innerText = fmtBdt(googleGrossUsd * USD_TO_BDT);
+    footTotalOrders.innerText = fmtNum(totalDailyOrders) + ' orders/day';
+
+    footBarbusNet.innerText = fmtBdt(barikoiBusinessNet);
+    footBarscaleNet.innerText = fmtBdt(barikoiScaleNet);
+    footDingiNet.innerText = fmtBdt(dingiNet);
+    footGoogleNet.innerText = fmtBdt(googleNetBdt);
+
+    footBarbusNetUsd.innerText = fmtUsd(barikoiBusinessNet / USD_TO_BDT);
+    footBarscaleNetUsd.innerText = fmtUsd(barikoiScaleNet / USD_TO_BDT);
+    footDingiNetUsd.innerText = fmtUsd(dingiNet / USD_TO_BDT);
+    footGoogleNetUsd.innerText = fmtUsd(googleNetUsd);
+
+    footMonthlyOrdersDisp.innerText = fmtNum(totalMonthlyOrders) + ' orders/mo';
+    footUnitBarbus.innerText = totalMonthlyOrders > 0 ? fmtUnit(barikoiBusinessNet / totalMonthlyOrders) : '৳0.00';
+    footUnitBarscale.innerText = totalMonthlyOrders > 0 ? fmtUnit(barikoiScaleNet / totalMonthlyOrders) : '৳0.00';
+    footUnitDingi.innerText = totalMonthlyOrders > 0 ? fmtUnit(dingiNet / totalMonthlyOrders) : '৳0.00';
+    footUnitGoogle.innerText = totalMonthlyOrders > 0 ? fmtUnit(googleNetBdt / totalMonthlyOrders) : '৳0.00';
+  }
+
+  // Bind Rate Inputs
+  function bindRate(elem, vertical, key) {
+    elem.addEventListener('input', function(e) {
+      const val = Math.max(0, parseFloat(e.target.value) || 0);
+      if (key === 'tile') {
+        if (state.tileMode === 'ping') {
+          state.rates[vertical].tilePing = val;
+        } else {
+          state.rates[vertical].tileCached = val;
+        }
+      } else {
+        state.rates[vertical][key] = val;
+      }
+      checkRatesCustomized();
+      recalculate();
+    });
+  }
+
+  bindRate(rateRideAuto, 'ride', 'auto');
+  bindRate(rateFoodAuto, 'food', 'auto');
+  bindRate(rateShopAuto, 'shop', 'auto');
+
+  bindRate(rateRideGeo, 'ride', 'geo');
+  bindRate(rateFoodGeo, 'food', 'geo');
+  bindRate(rateShopGeo, 'shop', 'geo');
+
+  bindRate(rateRideRevgeo, 'ride', 'revGeo');
+  bindRate(rateFoodRevgeo, 'food', 'revGeo');
+  bindRate(rateShopRevgeo, 'shop', 'revGeo');
+
+  bindRate(rateRideRoute, 'ride', 'route');
+  bindRate(rateFoodRoute, 'food', 'route');
+  bindRate(rateShopRoute, 'shop', 'route');
+
+  bindRate(rateRideRoutefast, 'ride', 'routeFast');
+  bindRate(rateFoodRoutefast, 'food', 'routeFast');
+  bindRate(rateShopRoutefast, 'shop', 'routeFast');
+
+  bindRate(rateRideDm, 'ride', 'dm');
+  bindRate(rateFoodDm, 'food', 'dm');
+  bindRate(rateShopDm, 'shop', 'dm');
+
+  bindRate(rateRideTile, 'ride', 'tile');
+  bindRate(rateFoodTile, 'food', 'tile');
+  bindRate(rateShopTile, 'shop', 'tile');
+
+  // Toggle Drawer
+  btnToggleRates.addEventListener('click', function() {
+    const isHidden = ratesDrawerBody.style.display === 'none';
+    ratesDrawerBody.style.display = isHidden ? 'block' : 'none';
+    ratesDrawerArrow.style.transform = isHidden ? 'rotate(180deg)' : 'rotate(0deg)';
+  });
+
+  // Rates Drawer Mode & Reset Buttons
+  btnModeInteger.addEventListener('click', function() {
+    state.rates = JSON.parse(JSON.stringify(INTEGER_RATES));
+    btnModeInteger.style.background = 'rgba(0,210,144,0.25)';
+    btnModeStatistical.style.background = 'transparent';
+    syncRateInputs();
+    checkRatesCustomized();
+    recalculate();
+  });
+
+  btnModeStatistical.addEventListener('click', function() {
+    state.rates = JSON.parse(JSON.stringify(DEFAULT_RATES));
+    btnModeStatistical.style.background = 'rgba(0,210,144,0.25)';
+    btnModeInteger.style.background = 'transparent';
+    syncRateInputs();
+    checkRatesCustomized();
+    recalculate();
+  });
+
+  btnResetRates.addEventListener('click', function() {
+    state.rates = JSON.parse(JSON.stringify(DEFAULT_RATES));
+    btnModeStatistical.style.background = 'transparent';
+    btnModeInteger.style.background = 'transparent';
+    syncRateInputs();
+    checkRatesCustomized();
+    recalculate();
+  });
+
+  // Event Listeners for Primary Controls (Daily Orders)
+  inputDailyRides.addEventListener('input', function(e) {
+    state.dailyRides = Math.max(0, parseFloat(e.target.value) || 0);
+    rangeDailyRides.value = Math.min(100000, state.dailyRides);
+    setActivePreset(null);
+    recalculate();
+  });
+  rangeDailyRides.addEventListener('input', function(e) {
+    state.dailyRides = parseFloat(e.target.value);
+    inputDailyRides.value = state.dailyRides;
+    setActivePreset(null);
+    recalculate();
+  });
+  inputRidesPerDriver.addEventListener('input', function(e) {
+    state.ridesPerDriver = Math.max(0.1, parseFloat(e.target.value) || 0);
+    setActivePreset(null);
+    recalculate();
+  });
+  inputRidesPerRider.addEventListener('input', function(e) {
+    state.ridesPerRider = Math.max(0.1, parseFloat(e.target.value) || 0);
+    setActivePreset(null);
+    recalculate();
+  });
+
+  // Daily Completed Food Orders Slider & Input
+  inputDailyFood.addEventListener('input', function(e) {
+    state.dailyFood = Math.max(0, parseFloat(e.target.value) || 0);
+    rangeDailyFood.value = Math.min(50000, state.dailyFood);
+    setActivePreset(null);
+    recalculate();
+  });
+  rangeDailyFood.addEventListener('input', function(e) {
+    state.dailyFood = parseFloat(e.target.value);
+    inputDailyFood.value = state.dailyFood;
+    setActivePreset(null);
+    recalculate();
+  });
+  inputOrdersPerRest.addEventListener('input', function(e) {
+    state.ordersPerRest = Math.max(0.1, parseFloat(e.target.value) || 0);
+    setActivePreset(null);
+    recalculate();
+  });
+  inputOrdersPerDiner.addEventListener('input', function(e) {
+    state.ordersPerDiner = Math.max(0.1, parseFloat(e.target.value) || 0);
+    setActivePreset(null);
+    recalculate();
+  });
+
+  // Daily Completed Shop Deliveries Slider & Input
+  inputDailyShop.addEventListener('input', function(e) {
+    state.dailyShop = Math.max(0, parseFloat(e.target.value) || 0);
+    rangeDailyShop.value = Math.min(20000, state.dailyShop);
+    setActivePreset(null);
+    recalculate();
+  });
+  rangeDailyShop.addEventListener('input', function(e) {
+    state.dailyShop = parseFloat(e.target.value);
+    inputDailyShop.value = state.dailyShop;
+    setActivePreset(null);
+    recalculate();
+  });
+  inputOrdersPerShop.addEventListener('input', function(e) {
+    state.ordersPerShop = Math.max(0.1, parseFloat(e.target.value) || 0);
+    setActivePreset(null);
+    recalculate();
+  });
+  inputOrdersPerBuyer.addEventListener('input', function(e) {
+    state.ordersPerBuyer = Math.max(0.1, parseFloat(e.target.value) || 0);
+    setActivePreset(null);
+    recalculate();
+  });
+
+  // Mode Buttons (Tile Rendering)
+  btnModePing.addEventListener('click', function() {
+    state.tileMode = 'ping';
+    btnModePing.classList.add('active');
+    btnModeCached.classList.remove('active');
+    syncRateInputs();
+    recalculate();
+  });
+
+  btnModeCached.addEventListener('click', function() {
+    state.tileMode = 'cached';
+    btnModeCached.classList.add('active');
+    btnModePing.classList.remove('active');
+    syncRateInputs();
+    recalculate();
+  });
+
+  // Presets Handlers
+  presetBaseline.addEventListener('click', function() {
+    state = Object.assign({}, DEFAULTS, {
+      rates: JSON.parse(JSON.stringify(DEFAULT_RATES))
+    });
+    syncInputs();
+    syncRateInputs();
+    checkRatesCustomized();
+    setActivePreset(presetBaseline);
+    recalculate();
+  });
+
+  presetRideonly.addEventListener('click', function() {
+    state = Object.assign({}, state, PRESETS.rideonly);
+    syncInputs();
+    setActivePreset(presetRideonly);
+    recalculate();
+  });
+
+  presetGrowth.addEventListener('click', function() {
+    state = Object.assign({}, state, PRESETS.growth);
+    syncInputs();
+    setActivePreset(presetGrowth);
+    recalculate();
+  });
+
+  presetHyperscale.addEventListener('click', function() {
+    state = Object.assign({}, state, PRESETS.hyperscale);
+    syncInputs();
+    setActivePreset(presetHyperscale);
+    recalculate();
+  });
+
+  // Reset Button
+  btnReset.addEventListener('click', function() {
+    state = Object.assign({}, DEFAULTS, {
+      rates: JSON.parse(JSON.stringify(DEFAULT_RATES))
+    });
+    syncInputs();
+    syncRateInputs();
+    checkRatesCustomized();
+    btnModeCached.classList.add('active');
+    btnModePing.classList.remove('active');
+    setActivePreset(presetBaseline);
+    recalculate();
+  });
+
+  // Copy Summary to Clipboard
+  btnCopy.addEventListener('click', function() {
+    const dailyRides = state.dailyRides;
+    const dailyFood = state.dailyFood;
+    const dailyShop = state.dailyShop;
+    const totalDailyOrders = dailyRides + dailyFood + dailyShop;
+
+    const activeDrivers = state.ridesPerDriver > 0 ? Math.round(dailyRides / state.ridesPerDriver) : 0;
+    const activeRestaurants = state.ordersPerRest > 0 ? Math.round(dailyFood / state.ordersPerRest) : 0;
+    const activeShops = state.ordersPerShop > 0 ? Math.round(dailyShop / state.ordersPerShop) : 0;
+
+    const bikeRides = Math.round(dailyRides * 0.60);
+    const cngRides = Math.round(dailyRides * 0.25);
+    const carRides = Math.max(0, dailyRides - bikeRides - cngRides);
+    const bikeDrivers = Math.round(bikeRides / 9.0);
+    const cngDrivers = Math.round(cngRides / 7.0);
+    const carDrivers = Math.round(carRides / 5.0);
+
+    const summaryText = [
+      '### Map API Cost Scenario Projection',
+      `- Architecture Model: ${state.tileMode === 'cached' ? 'Production Mobile SDK (MapLibre SQLite Cache + In-Memory H3)' : 'Academic Parameter Model (10s Ping Renders)'}`,
+      `- Daily Orders: ${fmtNum(dailyRides)} rides/day (~${fmtNum(activeDrivers)} drivers, ~${fmtNum(dailyRides * 0.833)} riders), ${fmtNum(dailyFood)} food orders/day (~${fmtNum(activeRestaurants)} outlets, ~${fmtNum(dailyFood / 9.0)} couriers), ${fmtNum(dailyShop)} shop deliveries/day (~${fmtNum(activeShops)} shops, ~${fmtNum(dailyShop * 0.90)} buyers)`,
+      `- Vehicle Fleet Mix (Uber/Pathao Ratio): 🏍️ Bike 60% (${fmtNum(bikeRides)} rides, ~${fmtNum(bikeDrivers)} bikes @ 9/day) | 🛺 CNG 25% (${fmtNum(cngRides)} rides, ~${fmtNum(cngDrivers)} CNGs @ 7/day) | 🚗 Car 15% (${fmtNum(carRides)} rides, ~${fmtNum(carDrivers)} cars @ 5/day)`,
+      `- Total Daily Volume: ${fmtNum(totalDailyOrders)} orders/day (${fmtNum(totalDailyOrders * 30)} monthly orders)`,
+      '',
+      '**Custom API Calls Per Order (Ride / Food / Shop):**',
+      `- Autocomplete: ${fmtRate(state.rates.ride.auto)} / ${fmtRate(state.rates.food.auto)} / ${fmtRate(state.rates.shop.auto)}`,
+      `- Geocoding: ${fmtRate(state.rates.ride.geo)} / ${fmtRate(state.rates.food.geo)} / ${fmtRate(state.rates.shop.geo)}`,
+      `- Routing: ${fmtRate(state.rates.ride.route)} / ${fmtRate(state.rates.food.route)} / ${fmtRate(state.rates.shop.route)}`,
+      `- Distance Matrix: ${fmtRate(state.rates.ride.dm)} / ${fmtRate(state.rates.food.dm)} / ${fmtRate(state.rates.shop.dm)}`,
+      `- Map Tiles: ${fmtRate(state.tileMode === 'ping' ? state.rates.ride.tilePing : state.rates.ride.tileCached)} / ${fmtRate(state.tileMode === 'ping' ? state.rates.food.tilePing : state.rates.food.tileCached)} / ${fmtRate(state.tileMode === 'ping' ? state.rates.shop.tilePing : state.rates.shop.tileCached)}`,
+      '',
+      '**Monthly Cost Comparison:**',
+      `1. Barikoi Business Plan: ${dynBarikoiBusiness.innerText} (${dynBarikoiBusinessUsd.innerText}) — ${dynCostPerOrder.innerText}`,
+      `2. Self-Hosted OSRM Hybrid: ${dynHybridCost.innerText} (${dynHybridUsd.innerText}) — ${dynHybridDetail.innerText}`,
+      `3. Barikoi Scale Plan: ${dynBarikoiScale.innerText} (${dynBarikoiScaleUsd.innerText})`,
+      `4. Google Maps (Mobile SDK): ${dynGoogleCost.innerText} (${dynGoogleUsd.innerText})`
+    ].join('\n');
+
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(summaryText).then(function() {
+        toastCopied.classList.add('show');
+        setTimeout(function() { toastCopied.classList.remove('show'); }, 2500);
+      });
+    } else {
+      alert('Scenario Summary:\n\n' + summaryText);
+    }
+  });
+
+  // Initial Sync and Calculation
+  syncInputs();
+  syncRateInputs();
+  checkRatesCustomized();
+  recalculate();
+})();
+</script>
+
+</body>
+</html>

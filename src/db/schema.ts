@@ -2894,6 +2894,11 @@ export const shopOrderStatusEnum = pgEnum("shop_order_status", [
   "confirmed",
   "in_progress",
   "done",
+  // S4 (§6.1, migration 0068): sequential-dispatch assignment states.
+  "dispatched",
+  "courier_assigned",
+  "picked_up",
+  "self_delivered",
 ]);
 
 export const shopMemberRoleEnum = pgEnum("shop_member_role", [
@@ -3067,6 +3072,10 @@ export const shopOrders = pgTable("shop_orders", {
   delivered_at: timestamptz("delivered_at"),
   cancelled_at: timestamptz("cancelled_at"),
   cancel_reason: text("cancel_reason"),
+  // S4/F-11: customer cancel + out-of-stock partial confirm (0071).
+  cancel_fee_bdt: integer("cancel_fee_bdt"), // paisa; launch default 0
+  unavailable_item_ids: uuid("unavailable_item_ids").array(), // shop-reported at accept
+  partial_confirmed_at: timestamptz("partial_confirmed_at"), // customer accepted the reduced order
   created_at: timestamptz("created_at").notNull().defaultNow(),
   updated_at: timestamptz("updated_at").notNull().defaultNow(),
 }, (t) => [
@@ -3142,6 +3151,8 @@ export const workshopRequestStatusEnum = pgEnum("workshop_request_status", [
   "confirmed",
   "in_progress",
   "done",
+  // S4/F-13: the 2h confirm SLA auto-declines expired requests (0069).
+  "declined",
 ]);
 
 /**
@@ -3198,6 +3209,8 @@ export const workshopRequests = pgTable("workshop_requests", {
   requested_date: date("requested_date").notNull(),
   window_start: time("window_start").notNull(),
   window_end: time("window_end").notNull(),
+  // S4/F-13: vehicle details (make/model/registration) from the request form (0070).
+  vehicle_details: text("vehicle_details"),
   note: text("note"),
   status: workshopRequestStatusEnum("status").notNull().default("requested"),
   order_id: uuid("order_id").references((): any => shopOrders.id),

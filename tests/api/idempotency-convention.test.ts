@@ -30,6 +30,7 @@ jest.mock("@/src/db", () => {
     claims: [] as Record<string, unknown>[],
     paymentEvents: [] as Record<string, unknown>[],
     failNextClaimInsert: false,
+    wrapClaimError: false,
   };
   const dialect = () => new (require("drizzle-orm/pg-core").PgDialect)();
   const predicateParams = (predicate: unknown): unknown[] =>
@@ -68,6 +69,14 @@ jest.mock("@/src/db", () => {
           throw { code: "23505" };
         }
         if (typeof v.route === "string" && typeof v.key === "string") {
+          if (state.wrapClaimError) {
+            // Real-DB shape: drizzle wraps the driver error in
+            // DrizzleQueryError, which carries `cause` — NOT `code`.
+            state.wrapClaimError = false;
+            throw new Error("Failed query: insert into idempotency_keys", {
+              cause: { code: "23505" },
+            });
+          }
           if (state.claims.some((c) => c.route === v.route && c.key === v.key)) {
             throw { code: "23505" }; // unique barrier on (route, key)
           }
@@ -127,6 +136,7 @@ const dbState = (db as unknown as { __state: {
   claims: Record<string, unknown>[];
   paymentEvents: Row[];
   failNextClaimInsert: boolean;
+  wrapClaimError: boolean;
 } }).__state;
 
 beforeEach(() => {
@@ -135,6 +145,7 @@ beforeEach(() => {
   dbState.claims = [];
   dbState.paymentEvents = [];
   dbState.failNextClaimInsert = false;
+  dbState.wrapClaimError = false;
 });
 
 function topupRequest(key?: string, body: unknown = BODY): Request {
@@ -198,6 +209,21 @@ describe("lib/idempotency — two-phase claim semantics", () => {
     expect(outcome.kind).toBe("replay");
     if (outcome.kind !== "replay") return;
     await expect(json(outcome.response)).resolves.toMatchObject({ winner: true });
+  });
+
+  test("DRIZZLE-WRAPPED 23505 (cause.code — the real-DB shape) still resolves to replay", async () => {
+    // Regression (S4 dev-DB e2e, 2026-10-14): drizzle's DrizzleQueryError
+    // carries `cause`, not `code`, so the bare `e.code === '23505'` check
+    // never matched a real DB and the SECOND call returned 500 instead of
+    // the stored outcome. The unwrap must handle both shapes.
+    dbState.wrapClaimError = true;
+    dbState.claims.push({ route: ROUTE, key: KEY, user_id: USER_ID, response_status: 201, response_body: { order_id: "o-1" } });
+    const outcome = await beginIdempotencyClaim({ route: ROUTE, key: KEY, userId: USER_ID });
+    expect(outcome.kind).toBe("replay");
+    if (outcome.kind !== "replay") return;
+    expect(outcome.response.status).toBe(201);
+    expect(outcome.response.headers.get("Idempotency-Replayed")).toBe("true");
+    await expect(json(outcome.response)).resolves.toMatchObject({ order_id: "o-1" });
   });
 
   test("user co-scope: a foreign user's key conflicts instead of replaying their outcome", async () => {

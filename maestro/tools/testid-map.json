@@ -1,5 +1,5 @@
 {
-  "total": 1194,
+  "total": 1214,
   "screens": {
     "(auth)/_layout.tsx": [
       {
@@ -668,59 +668,131 @@
     "(main)/(customer)/(shops)/index.tsx": [
       {
         "id": "customer.shops.el-1",
-        "line": 95
+        "line": 102
+      },
+      {
+        "id": "customer.shops.push-orders",
+        "line": 123
       },
       {
         "id": "customer.shops.set-search",
-        "line": 128
+        "line": 154
       },
       {
         "id": "customer.shops.push-shop-detail",
-        "line": 157
+        "line": 183
       }
     ],
     "(main)/(customer)/(shops)/order-create/[id].tsx": [
       {
         "id": "customer.shops.order-create.id.el-1",
-        "line": 98
+        "line": 142
       },
       {
         "id": "customer.shops.order-create.id.set-cart-fulfillment",
-        "line": 126
+        "line": 170
       },
       {
         "id": "customer.shops.order-create.id.set-delivery-address",
-        "line": 162
+        "line": 206
       },
       {
         "id": "customer.shops.order-create.id.set-notes",
-        "line": 209
+        "line": 256
       },
       {
         "id": "customer.shops.order-create.id.handle-submit",
-        "line": 256
+        "line": 308
+      }
+    ],
+    "(main)/(customer)/(shops)/orders/[id].tsx": [
+      {
+        "id": "customer.shops.orders.id.fetch-data",
+        "line": 286
+      },
+      {
+        "id": "customer.shops.orders.id.handle-confirm-partial",
+        "line": 398
+      },
+      {
+        "id": "customer.shops.orders.id.push-report-issue",
+        "line": 585
+      },
+      {
+        "id": "customer.shops.orders.id.handle-cancel",
+        "line": 620
+      },
+      {
+        "id": "customer.shops.orders.id.on-back",
+        "line": 646
+      }
+    ],
+    "(main)/(customer)/(shops)/orders/index.tsx": [
+      {
+        "id": "customer.shops.orders.el-1",
+        "line": 97
+      },
+      {
+        "id": "customer.shops.orders.fetch-orders",
+        "line": 117
+      },
+      {
+        "id": "customer.shops.orders.push-orders",
+        "line": 151
       }
     ],
     "(main)/(customer)/(shops)/shop-detail/[id].tsx": [
       {
         "id": "customer.shops.shop-detail.id.el-1",
-        "line": 79
+        "line": 213
+      },
+      {
+        "id": "customer.shops.shop-detail.id.set-tab",
+        "line": 240
       },
       {
         "id": "customer.shops.shop-detail.id.remove-from-cart",
-        "line": 134
+        "line": 299
       },
       {
         "id": "customer.shops.shop-detail.id.add-to-cart",
-        "line": 143
+        "line": 308
       },
       {
         "id": "customer.shops.shop-detail.id.add-to-cart-2",
-        "line": 151
+        "line": 316
+      },
+      {
+        "id": "customer.shops.shop-detail.id.set-active-service",
+        "line": 365
+      },
+      {
+        "id": "customer.shops.shop-detail.id.set-vehicle-details",
+        "line": 398
+      },
+      {
+        "id": "customer.shops.shop-detail.id.set-req-date",
+        "line": 410
+      },
+      {
+        "id": "customer.shops.shop-detail.id.set-window-start",
+        "line": 424
+      },
+      {
+        "id": "customer.shops.shop-detail.id.set-window-end",
+        "line": 437
+      },
+      {
+        "id": "customer.shops.shop-detail.id.set-req-note",
+        "line": 448
+      },
+      {
+        "id": "customer.shops.shop-detail.id.send-request",
+        "line": 464
       },
       {
         "id": "customer.shops.shop-detail.id.push-order-create",
-        "line": 191
+        "line": 549
       }
     ],
     "(main)/(customer)/(tabs)/_layout.tsx": [
@@ -1956,31 +2028,31 @@
     "(main)/(customer)/report-issue/index.tsx": [
       {
         "id": "customer.report-issue.el-1",
-        "line": 113
+        "line": 118
       },
       {
         "id": "customer.report-issue.set-theme",
-        "line": 128
+        "line": 133
       },
       {
         "id": "customer.report-issue.set-category",
-        "line": 166
+        "line": 171
       },
       {
         "id": "customer.report-issue.set-description",
-        "line": 192
+        "line": 197
       },
       {
         "id": "customer.report-issue.handle-submit",
-        "line": 215
+        "line": 220
       },
       {
         "id": "customer.report-issue.handle-submit-2",
-        "line": 232
+        "line": 237
       },
       {
         "id": "customer.report-issue.close-success",
-        "line": 259
+        "line": 264
       }
     ],
     "(main)/(customer)/ride-detail/[ride_id].tsx": [
@@ -2116,27 +2188,31 @@
     "(main)/(customer)/services-hub.tsx": [
       {
         "id": "customer.services-hub.set-theme",
-        "line": 77
+        "line": 112
       },
       {
         "id": "customer.services-hub.handle-select",
-        "line": 118
+        "line": 153
       },
       {
         "id": "customer.services-hub.push-shops",
-        "line": 164
+        "line": 199
       },
       {
         "id": "customer.services-hub.push-rental-marketplace",
-        "line": 195
+        "line": 230
+      },
+      {
+        "id": "customer.services-hub.el-1",
+        "line": 284
       },
       {
         "id": "customer.services-hub.push-delivery",
-        "line": 229
+        "line": 314
       },
       {
         "id": "customer.services-hub.push-emergency",
-        "line": 263
+        "line": 348
       }
     ],
     "(main)/(customer)/user-arrived/index.tsx": [
@@ -2655,48 +2731,52 @@
         "line": 1001
       },
       {
-        "id": "rider.d.set-theme",
+        "id": "rider.d.push-shops",
         "line": 1132
       },
       {
+        "id": "rider.d.set-theme",
+        "line": 1150
+      },
+      {
         "id": "rider.d.push-break-mode",
-        "line": 1151
+        "line": 1169
       },
       {
         "id": "rider.d.toggle-online-2",
-        "line": 1163
+        "line": 1181
       },
       {
         "id": "rider.d.push-break-mode-2",
-        "line": 1177
+        "line": 1195
       },
       {
         "id": "rider.d.get-driver-fix",
-        "line": 1250
+        "line": 1268
       },
       {
         "id": "rider.d.push-packages",
-        "line": 1311
+        "line": 1329
       },
       {
         "id": "rider.d.push-hotspot-map",
-        "line": 1334
+        "line": 1352
       },
       {
         "id": "rider.d.push-rental-bidder",
-        "line": 1417
+        "line": 1435
       },
       {
         "id": "rider.d.set-show-recovery-dialog",
-        "line": 1486
+        "line": 1504
       },
       {
         "id": "rider.d.handle-force-end-session",
-        "line": 1492
+        "line": 1510
       },
       {
         "id": "rider.d.recover-session",
-        "line": 1528
+        "line": 1546
       }
     ],
     "(main)/(rider)/d/(tabs)/profile/index.tsx": [
@@ -3919,80 +3999,84 @@
     ],
     "(main)/(shop-owner)/index.tsx": [
       {
-        "id": "shop-owner.push-settlement",
+        "id": "shop-owner.push-shops",
         "line": 328
       },
       {
-        "id": "shop-owner.push-staff",
+        "id": "shop-owner.push-settlement",
         "line": 334
       },
       {
-        "id": "shop-owner.push-workshop",
+        "id": "shop-owner.push-staff",
         "line": 340
       },
       {
-        "id": "shop-owner.push-catalog",
+        "id": "shop-owner.push-workshop",
         "line": 346
       },
       {
+        "id": "shop-owner.push-catalog",
+        "line": 352
+      },
+      {
         "id": "shop-owner.patch-availability",
-        "line": 368
+        "line": 374
       },
       {
         "id": "shop-owner.patch-availability-2",
-        "line": 381
+        "line": 387
       },
       {
         "id": "shop-owner.push-payout-method",
-        "line": 424
+        "line": 430
       },
       {
         "id": "shop-owner.push-workshop-2",
-        "line": 445
+        "line": 451
       },
       {
         "id": "shop-owner.purchase-plan",
-        "line": 494
+        "line": 500
       },
       {
         "id": "shop-owner.set-segment",
-        "line": 519
+        "line": 525
       },
       {
         "id": "shop-owner.set-prep-target",
-        "line": 567
+        "line": 573
       },
       {
         "id": "shop-owner.set-reject-reason",
-        "line": 581
+        "line": 587
       },
       {
         "id": "shop-owner.patch-status",
-        "line": 596
+        "line": 602
       },
       {
         "id": "shop-owner.patch-status-2",
-        "line": 610
+        "line": 616
       },
       {
         "id": "shop-owner.patch-status-3",
-        "line": 624
+        "line": 630
       },
       {
         "id": "shop-owner.set-prep-target-2",
-        "line": 659
+        "line": 665
       },
       {
         "id": "shop-owner.set-reject-reason-2",
-        "line": 691
+        "line": 697
       },
       {
         "id": "shop-owner.set-reject-target",
-        "line": 698
+        "line": 704
       },
       {
         "id": "shop-owner.set-reject-target-2",
-        "line": 713
+        "line": 719
       }
     ],
     "(main)/(shop-owner)/settlement.tsx": [

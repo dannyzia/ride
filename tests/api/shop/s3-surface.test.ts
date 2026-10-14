@@ -254,6 +254,9 @@ describe("PATCH /api/shop/[id]/workshop/requests", () => {
   });
 
   it("requested → confirmed transition commits", async () => {
+    // S4/F-13: applyWorkshopSla runs FIRST inside the tx (conditional
+    // update, zero expired rows) — it consumes the first update-queue slot.
+    mockUpdateQueue.push(() => []);
     // tx select → locked request row
     mockSelectQueue.push(() => [
       {

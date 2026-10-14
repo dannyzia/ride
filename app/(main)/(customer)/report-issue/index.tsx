@@ -37,7 +37,7 @@ export default function ReportIssue() {
   const { t } = useTranslation();
   const isDark = useIsDark();
   const { setTheme } = useAppearance();
-  const { rideId } = useLocalSearchParams<{ rideId?: string }>();
+  const { rideId, orderId } = useLocalSearchParams<{ rideId?: string; orderId?: string }>();
 
   const bg = isDark ? colors.bgDark : colors.bgLight;
   const surfaceBg = isDark ? colors.surfaceElevatedDark : colors.surfaceLight;
@@ -78,7 +78,12 @@ export default function ReportIssue() {
         body: JSON.stringify({
           category,
           subject: `Issue: ${category}`,
-          description: trimmedDescription,
+          // F-38: the tracking view links here for order disputes — the
+          // ticket has no order column (support_tickets.ride_id is rides),
+          // so the order id rides in the description text.
+          description: orderId
+            ? `[Order: ${orderId}]\n${trimmedDescription}`
+            : trimmedDescription,
           ...(rideId ? { ride_id: rideId } : {}),
         }),
       });

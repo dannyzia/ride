@@ -1,10 +1,10 @@
-# _counterpart-shop-ready — COUNTERPART ACTION: shop marks a food order ready,
-# which triggers lib/shopDeliveryBridge.ts to create the delivery (V4 Food Bridge).
+# _counterpart-shop-ready — COUNTERPART ACTION: shop marks a food order ready.
 # Counterpart call: POST ${API_BASE}/api/shop/orders/${ORDER_ID}/mark-ready
-#   Auth: real shop-member token. The bridge runs server-side as a declared writer
-#   of delivery_requests (source_shop_order_id idempotency, §C.4) — the app UI
-#   reflects the created delivery to the customer.
-# Contract: §C.1/§C.4. Class: COUNTERPART-API.
+#   Auth: real shop-member token. S4/§6.1 REWORK: the delivery leg is created
+#   in the ORDER PLACEMENT tx (lib/shopDeliveryBridge.ts → `deliveries`,
+#   idempotent on order_id) — mark-ready is a PURE status transition, no
+#   delivery_requests row is created here anymore.
+# Contract: §6.1 step 1 (placement) + mark-ready transition. Class: COUNTERPART-API.
 appId: com.ride.bd
 ---
 - runScript:

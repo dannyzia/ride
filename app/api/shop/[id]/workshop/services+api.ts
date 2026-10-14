@@ -1,13 +1,16 @@
 /**
- * Workshop services CRUD — S3 (§3).
+ * Workshop services CRUD — S3 (§3) + S4 (F-13).
  *
- * OWNER/MANAGER only. GET lists live services (not soft-deleted), POST
+ * GET is PUBLIC (the F-13 customer lane browses the service price list —
+ * same posture as the public products read in /api/shop/[id]; S3 originally
+ * gated it OWNER/MANAGER — recorded as an S4 divergence). POST/PATCH/DELETE
+ * stay OWNER/MANAGER. GET lists live services (not soft-deleted), POST
  * creates, PATCH updates (availability via deleted_at is NOT covered here —
  * use DELETE), DELETE soft-deletes per the repo no-hard-deletes rule
  * (deleted_at shipped with 0067).
  */
 import { db } from "@/src/db";
-import { workshopServices } from "@/src/db/schema";
+import { workshopServices, shops } from "@/src/db/schema";
 import { requireShopMember } from "@/lib/marketplaceRbac";
 import { parseJsonBody } from "@/lib/parseBody";
 import { logger } from "@/lib/logger";
@@ -22,7 +25,15 @@ export async function GET(request: Request, { id }: { id: string }) {
       return Response.json({ error: "invalid_uuid", message: "Invalid shop id" }, { status: 400 });
     }
 
-    await requireShopMember(id, ["OWNER", "MANAGER"])(request);
+    // Public read: 404 for a missing/deleted shop (mirror of /api/shop/[id]).
+    const [shopRow] = await db
+      .select({ id: shops.id })
+      .from(shops)
+      .where(and(eq(shops.id, id), isNull(shops.deleted_at)))
+      .limit(1);
+    if (!shopRow) {
+      return Response.json({ error: "shop_not_found", message: "Shop not found" }, { status: 404 });
+    }
 
     const services = await db
       .select()

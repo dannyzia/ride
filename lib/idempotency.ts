@@ -42,6 +42,7 @@ export const IDEMPOTENCY_ROUTES = {
   driverWalletTopup: '/api/driver/wallet/topup',
   riderPasses: '/api/rider/passes',
   packagePurchase: '/api/package/purchase',
+  shopOrderCreate: '/api/shop/orders',
 } as const;
 
 /** Extracts and validates the Idempotency-Key header. null = absent/invalid. */
@@ -87,6 +88,21 @@ export interface BeginClaimParams {
  * The user_id co-scope means user A cannot read user B's stored outcome —
  * a stolen key returns 409, never another user's response.
  */
+/**
+ * Driver error code, unwrapping drizzle's `DrizzleQueryError` cause chain.
+ * Drizzle wraps the postgres.js error (`{ cause: PostgresError }`) and does
+ * NOT proxy `code`, so a bare `e.code === '23505'` never matches against a
+ * real DB (caught by the S4 dev-DB e2e: the replay path returned 500).
+ */
+function driverErrorCode(e: unknown): string | undefined {
+  let cur = e as { code?: unknown; cause?: unknown } | null | undefined;
+  for (let depth = 0; cur && depth < 4; depth++) {
+    if (typeof cur.code === "string") return cur.code;
+    cur = (cur as { cause?: unknown }).cause as typeof cur;
+  }
+  return undefined;
+}
+
 export async function beginIdempotencyClaim(params: BeginClaimParams): Promise<IdempotencyOutcome> {
   const conflictResponse = (): Response =>
     Response.json(
@@ -129,7 +145,7 @@ export async function beginIdempotencyClaim(params: BeginClaimParams): Promise<I
   } catch (e: unknown) {
     // 23505: a concurrent claim won the (route, key) barrier — read and
     // resolve against the winner's row (the house barrier pattern).
-    if ((e as { code?: string }).code === '23505') {
+    if (driverErrorCode(e) === '23505') {
       const [existing] = await db
         .select({
           user_id: idempotencyKeys.user_id,

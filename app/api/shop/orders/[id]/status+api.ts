@@ -7,7 +7,7 @@
  * locked status (0 rows ⇒ 409) — no more unlocked read-check-write window.
  */
 import { db } from "@/src/db";
-import { shopOrders } from "@/src/db/schema";
+import { shopOrders, shopOrderItems } from "@/src/db/schema";
 import { requireAnyRole } from "@/lib/auth";
 import { requireShopMember } from "@/lib/marketplaceRbac";
 import { parseJsonBody } from "@/lib/parseBody";
@@ -17,6 +17,7 @@ import * as errors from "@/lib/errors";
 import { eq, and } from "drizzle-orm";
 import { z } from "zod";
 import { settleShopOrder } from "@/lib/shopLedger";
+import { notifyCustomerOrderStatus } from "@/lib/shopNotify";
 
 const statusSchema = z.object({
   status: z.enum([
@@ -30,6 +31,9 @@ const statusSchema = z.object({
   cancel_reason: z.string().max(500).optional(),
   // S3: prep-time picker — set WITH the accept transition (§3 dashboard).
   prep_minutes: z.number().int().min(5).max(720).optional(),
+  // S4/F-11: out-of-stock partial accept — shop names the missing items;
+  // the totals are recomputed server-side from the remaining snapshot.
+  unavailable_item_ids: z.array(z.string().uuid()).max(100).optional(),
 });
 
 const VALID_TRANSITIONS: Record<string, string[]> = {
@@ -118,6 +122,31 @@ export async function PATCH(request: Request, { id }: { id: string }) {
         if (result.data.prep_minutes !== undefined) {
           updates.prep_minutes = result.data.prep_minutes;
         }
+        // S4/F-11 partial accept: recompute the totals from the REMAINING
+        // items (the fee snapshot is unchanged). The customer confirms the
+        // reduced order (confirm-partial) or cancels — never silently billed.
+        if (result.data.unavailable_item_ids !== undefined) {
+          const unavailable = result.data.unavailable_item_ids;
+          const items = await tx
+            .select()
+            .from(shopOrderItems)
+            .where(eq(shopOrderItems.order_id, id));
+          const known = new Set(items.map((it) => it.product_id));
+          if (unavailable.some((pid) => !known.has(pid))) {
+            guard = Response.json(
+              { error: "unknown_item", message: "unavailable_item_ids must be a subset of the order items" },
+              { status: 400 },
+            );
+            return;
+          }
+          const missing = new Set(unavailable);
+          const newSubtotal = items
+            .filter((it) => !missing.has(it.product_id))
+            .reduce((sum, it) => sum + it.line_total_bdt, 0);
+          updates.unavailable_item_ids = unavailable;
+          updates.subtotal_bdt = newSubtotal;
+          updates.total_bdt = newSubtotal + (order.delivery_fee_bdt ?? 0);
+        }
       }
       if (targetStatus === "preparing") updates.prepared_at = new Date();
       if (targetStatus === "ready_for_pickup") updates.ready_at = new Date();
@@ -161,6 +190,27 @@ export async function PATCH(request: Request, { id }: { id: string }) {
     });
 
     if (guard) return guard;
+
+    // F-29: picked up / delivered → the ordering customer (fire-and-forget,
+    // deduped — a retried transition can never double-push). "Courier
+    // assigned" joins here when S6 starts writing that state.
+    if (newStatus === "out_for_delivery" || newStatus === "delivered") {
+      try {
+        const [cust] = await db
+          .select({ rider_user_id: shopOrders.rider_user_id })
+          .from(shopOrders)
+          .where(eq(shopOrders.id, id))
+          .limit(1);
+        if (cust?.rider_user_id) {
+          void notifyCustomerOrderStatus(id, cust.rider_user_id, newStatus);
+        }
+      } catch (e: unknown) {
+        logger.warn("[shop/orders/status] push notify failed", {
+          orderId: id,
+          error: e instanceof Error ? e.message : String(e),
+        });
+      }
+    }
 
     // Z2: emit after the tx (v1 §D.4.1 shop:order_status) — customer + shop staff
     try {

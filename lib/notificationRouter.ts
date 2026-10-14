@@ -127,6 +127,20 @@ const DRIVER_NOTIFICATION_ROUTES: Record<string, NotificationHandler> = {
     router.push("/(main)/(rider)/incentives" as never);
     return true;
   },
+
+  // Shop orders (F-29) — a driver account can order AND own a shop.
+  "shop:new_order": () => {
+    router.push("/(main)/(shop-owner)" as never);
+    return true;
+  },
+  "shop:order_status": (data) => {
+    if (data.order_id && isValidUUID(data.order_id)) {
+      router.push(`/(main)/(customer)/(shops)/orders/${data.order_id}` as never);
+      return true;
+    }
+    router.push("/(main)/(customer)/(shops)/orders" as never);
+    return true;
+  },
 };
 
 const RIDER_NOTIFICATION_ROUTES: Record<string, NotificationHandler> = {
@@ -179,6 +193,20 @@ const RIDER_NOTIFICATION_ROUTES: Record<string, NotificationHandler> = {
   // ever removed.
   "promo:available": () => {
     router.push("/(main)/(customer)/(tabs)/settings/loyalty" as never);
+    return true;
+  },
+
+  // Shop orders (F-29).
+  "shop:new_order": () => {
+    router.push("/(main)/(shop-owner)" as never);
+    return true;
+  },
+  "shop:order_status": (data) => {
+    if (data.order_id && isValidUUID(data.order_id)) {
+      router.push(`/(main)/(customer)/(shops)/orders/${data.order_id}` as never);
+      return true;
+    }
+    router.push("/(main)/(customer)/(shops)/orders" as never);
     return true;
   },
 };

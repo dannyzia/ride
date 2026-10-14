@@ -17,6 +17,7 @@ import { router, useLocalSearchParams } from "expo-router";
 import { useIsDark } from "@/lib/useAppearance";
 import { colors } from "@/theme/goRide";
 import { useShopStore } from "@/store/useShopStore";
+import { useCustomer } from "@/store";
 import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
 import { useTranslation } from "react-i18next";
@@ -45,12 +46,32 @@ const {
 
   const [notes, setNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  // §8: one Idempotency-Key per checkout attempt — a retry of the SAME cart
+  // replays the stored outcome instead of double-ordering (uuid v4 shape;
+  // this is a barrier token, not a secret).
+  const [idemKey] = useState(() =>
+    "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
+      const r = (Math.random() * 16) | 0;
+      const v = c === "x" ? r : (r & 0x3) | 0x8;
+      return v.toString(16);
+    }),
+  );
+  // §12: the dropoff coordinates drive the distance-tiered delivery fee —
+  // the rider's current location is the default dropoff.
+  const { userLatitude, userLongitude } = useCustomer();
 
   const subtotal = cart.reduce((sum, i) => sum + i.price_bdt * i.quantity, 0);
 
   const handleSubmit = async () => {
     if (cartFulfillment === "delivery" && !deliveryAddress) {
       Alert.alert(t("shops_order.address_title"), t("shops_order.address_body"));
+      return;
+    }
+    if (
+      cartFulfillment === "delivery" &&
+      (userLatitude == null || userLongitude == null)
+    ) {
+      Alert.alert(t("shops_order.coords_title"), t("shops_order.coords_body"));
       return;
     }
 
@@ -64,12 +85,15 @@ const {
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
+          "Idempotency-Key": idemKey,
         },
         body: JSON.stringify({
           shop_id: id,
           items: cart.map((i) => ({ product_id: i.product_id, quantity: i.quantity })),
           fulfillment: cartFulfillment,
           delivery_address: cartFulfillment === "delivery" ? deliveryAddress : undefined,
+          delivery_lat: cartFulfillment === "delivery" ? (userLatitude ?? undefined) : undefined,
+          delivery_lng: cartFulfillment === "delivery" ? (userLongitude ?? undefined) : undefined,
           rider_notes: notes || undefined,
         }),
       });
@@ -81,8 +105,28 @@ const {
       }
 
       clearCart();
-      Alert.alert(t("shops_order.placed_title"), t("shops_order.placed_body"), [
-        { text: t("common.ok"), onPress: () => router.replace(`/(main)/(customer)/(shops)/shop-detail/${id}`) },
+      // §12/§5: the server-quoted COD total (subtotal + distance fee) is the
+      // authority — shown in the confirmation.
+      const placedBody =
+        data.total_bdt != null
+          ? t("shops_order.placed_body_total", {
+              total: formatBDT(data.total_bdt),
+              fee:
+                data.delivery_fee_bdt != null
+                  ? formatBDT(data.delivery_fee_bdt)
+                  : formatBDT(0),
+            })
+          : t("shops_order.placed_body");
+      Alert.alert(t("shops_order.placed_title"), placedBody, [
+        // F-11: land the customer ON the tracking view — the canonical
+        // sequence starts there (timeline + courier panel + cancel).
+        {
+          text: t("common.ok"),
+          onPress: () =>
+            data.order_id
+              ? router.replace(`/(main)/(customer)/(shops)/orders/${data.order_id}`)
+              : router.replace(`/(main)/(customer)/(shops)/shop-detail/${id}`),
+        },
       ]);
     } catch (err) {
       logger.error("[order-create] error", err);
@@ -160,6 +204,9 @@ const {
               onChangeText={(t) => setDeliveryAddress(t || null)}
               multiline
              testID="customer.shops.order-create.id.set-delivery-address"/>
+            <Text style={{ fontSize: 12, fontFamily: "JakartaMedium", color: textSecondary, marginTop: 6 }}>
+              {t("shops_order.fee_hint")}
+            </Text>
           </View>
         )}
 
@@ -242,6 +289,11 @@ const {
             <Text style={{ fontSize: 20, fontFamily: "JakartaBold", color: colors.primary }}>
               {formatBDT(subtotal)}
             </Text>
+            {cartFulfillment === "delivery" && (
+              <Text style={{ fontSize: 12, fontFamily: "JakartaMedium", color: textSecondary }}>
+                + {t("shops_order.delivery")} {formatBDT(0)}
+              </Text>
+            )}
           </View>
           <TouchableOpacity
             onPress={handleSubmit}

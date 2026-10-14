@@ -15,8 +15,9 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { router } from "expo-router";
-import { useIsDark } from "@/lib/useAppearance";
+import { useIsDark, useAppearance } from "@/lib/useAppearance";
 import { colors } from "@/theme/goRide";
+import { useLocalSearchParams } from "expo-router";
 import { useShopStore } from "@/store/useShopStore";
 
 import { logger } from "@/lib/logger";
@@ -27,6 +28,11 @@ const SERVER_URL = process.env.EXPO_PUBLIC_SERVER_URL ?? "http://localhost:8080"
 export default function ShopListScreen() {
   const { t } = useTranslation();
   const isDark = useIsDark();
+  const { language } = useAppearance();
+  // §5: the good-morning category tile passes its slug; the list filters to
+  // that category and the header shows the locale label.
+  const { type } = useLocalSearchParams<{ type?: string }>();
+  const typeSlug = typeof type === "string" && type.length > 0 ? type : undefined;
   const bg = isDark ? colors.bgDark : colors.bgLight;
   const surfaceBg = isDark ? colors.surfaceElevatedDark : colors.surfaceLight;
   const textPrimary = isDark ? colors.textPrimaryDark : colors.textPrimaryLight;
@@ -46,6 +52,7 @@ export default function ShopListScreen() {
         
         const params = new URLSearchParams({ page: String(page), limit: "20" });
         if (searchQuery) params.set("search", searchQuery);
+        if (typeSlug) params.set("type", typeSlug);
         const res = await fetch(`${SERVER_URL}/api/shop/list?${params}`);
         if (!res.ok) throw new Error("Failed to fetch shops");
         const data = await res.json();
@@ -61,7 +68,7 @@ export default function ShopListScreen() {
         setShopsLoading(false);
       }
     },
-    [shops, setShops, setShopsLoading],
+    [shops, setShops, setShopsLoading, typeSlug],
   );
 
 useEffect(() => {
@@ -98,8 +105,27 @@ useEffect(() => {
         <Text
           style={{ flex: 1, fontSize: 20, fontFamily: "JakartaBold", color: textPrimary, marginLeft: 12 }}
         >
-          {t("shops.title")}
+          {typeSlug
+            ? // Locale label comes from the joined type fields on the rows;
+              // fall back to the generic title while loading/empty.
+              (shops.find((s) => s.shop_type_slug === typeSlug)
+                ? language === "bn"
+                  ? (shops.find((s) => s.shop_type_slug === typeSlug)?.shop_type_label_bn ?? t("shops.title"))
+                  : (shops.find((s) => s.shop_type_slug === typeSlug)?.shop_type_label_en ?? t("shops.title"))
+                : t("shops.title"))
+            : t("shops.title")}
         </Text>
+        {/* F-11 tracking entry — the caller's own orders across shops. */}
+        <TouchableOpacity
+          onPress={() => router.push("/(main)/(customer)/(shops)/orders")}
+          hitSlop={8}
+          style={{ flexDirection: "row", alignItems: "center", marginLeft: 8 }}
+         testID="customer.shops.push-orders">
+          <Ionicons name="receipt-outline" size={20} color={colors.primary} />
+          <Text style={{ fontSize: 13, fontFamily: "JakartaSemiBold", color: colors.primary, marginLeft: 4 }}>
+            {t("shops_track.my_orders")}
+          </Text>
+        </TouchableOpacity>
       </View>
 
       {/* Search */}
@@ -169,9 +195,41 @@ useEffect(() => {
                 <Ionicons name="storefront" size={24} color={colors.primary} />
               </View>
               <View style={{ flex: 1, marginLeft: 12 }}>
-                <Text style={{ fontSize: 16, fontFamily: "JakartaSemiBold", color: textPrimary }}>
-                  {shop.name}
-                </Text>
+                <View style={{ flexDirection: "row", alignItems: "center" }}>
+                  <Text style={{ fontSize: 16, fontFamily: "JakartaSemiBold", color: textPrimary }}>
+                    {shop.name}
+                  </Text>
+                  {!shop.is_open && (
+                    <View
+                      style={{
+                        marginLeft: 6,
+                        paddingHorizontal: 6,
+                        paddingVertical: 2,
+                        borderRadius: 6,
+                        backgroundColor: colors.danger + "18",
+                      }}
+                    >
+                      <Text style={{ fontSize: 10, fontFamily: "JakartaSemiBold", color: colors.danger }}>
+                        {t("shops.closed")}
+                      </Text>
+                    </View>
+                  )}
+                  {shop.shop_type_is_restaurant && (
+                    <View
+                      style={{
+                        marginLeft: 6,
+                        paddingHorizontal: 6,
+                        paddingVertical: 2,
+                        borderRadius: 6,
+                        backgroundColor: colors.amber + "18",
+                      }}
+                    >
+                      <Text style={{ fontSize: 10, fontFamily: "JakartaSemiBold", color: colors.amber }}>
+                        {t("shops.food_badge")}
+                      </Text>
+                    </View>
+                  )}
+                </View>
                 <Text
                   numberOfLines={1}
                   style={{ fontSize: 13, fontFamily: "Jakarta", color: textSecondary, marginTop: 2 }}
@@ -196,7 +254,7 @@ useEffect(() => {
           <View style={{ padding: 40, alignItems: "center" }}>
             <Ionicons name="storefront-outline" size={48} color={textSecondary} />
             <Text style={{ fontSize: 16, fontFamily: "JakartaMedium", color: textSecondary, marginTop: 12 }}>
-              {t("shops.empty")}
+              {typeSlug ? t("shops.empty_category") : t("shops.empty")}
             </Text>
           </View>
         )}

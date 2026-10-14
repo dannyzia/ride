@@ -1,28 +1,33 @@
 // @ts-nocheck — Jest mock factories produce untyped DB/auth chains; runtime behavior
 // is what's under test (house pattern: tests/api/shop/order-transitions.test.ts).
 /**
- * Food bridge contract — rebuilt on the table-router mock pattern.
+ * Shop-order → delivery-leg contract (plan 27 §6.1 — S4 rework).
  *
- * Owns two contracts (partition: mark-ready emits + status PATCH → z2-emits.test.ts;
- * bridge lib internals (A5 idempotency/pickup coords) → this file's `createFromShopOrder`
- * describe via the real lib; F40 money write → this file via the REAL accept-bid handler):
+ * Owns three contracts (partition: mark-ready emits + status PATCH → z2-emits.test.ts;
+ * mark-ready transition matrix → tests/api/shop/order-transitions.test.ts):
  *
- *   1. Mark-ready bridge matrix (§C.1): the food-delivery bridge fires ONLY for
- *      category='food' AND fulfillment='delivery'. All other matrix cells (food+pickup,
- *      general+delivery, general+pickup) mark the order ready WITHOUT any bridge call.
- *      Bridge null → 409 food_delivery_unavailable with the order NOT transitioned.
+ *   1. Placement leg matrix (§6.1 step 1 + R8): the universal `deliveries`
+ *      leg is created in the SAME tx as `POST /api/shop/orders` for every
+ *      DELIVERY order — any category (food_order / shop_order / workshop_product).
+ *      Pickup orders carry no leg and no fee. Leg unavailable → 409
+ *      delivery_leg_unavailable (full rollback, never an order without its leg).
  *   2. F40 fee recompute (accept-bid): accepting a courier bid on a bridged food order
  *      writes delivery_fee_bdt = bid.quoted_fee_bdt and total_bdt = subtotal_bdt + fee
  *      to the SHOP order in the SAME tx. Parcel-originated requests (no
  *      source_shop_order_id) never touch shop_orders.
+ *   3. Bridge lib internals: the REAL createDeliveryLegFromOrder against the
+ *      router-mock DB — idempotent on order_id, dropoff/pickup coord guards,
+ *      §1 source_vertical mapping, §12 fee snapshot.
  *
- * Previously: 3 literal expect(true) placeholders + a test that computed its own
- * arithmetic (2026-09-09 staleness audit A2/A3).
+ * RETIRED (S4): the RFQ bridge (delivery_requests insert fired at mark-ready
+ * with a bidding window) died with the courier-bidding marketplace — the
+ * trigger moved to order placement, the storage moved to `deliveries`.
  */
 
-import { POST as markReady } from "@/app/api/shop/orders/[id]/mark-ready+api";
+import { POST as ordersPost } from "@/app/api/shop/orders+api";
 import { POST as acceptBid } from "@/app/api/delivery/requests/[id]/accept-bid+api";
-import { createFromShopOrder } from "@/lib/shopDeliveryBridge";
+import { createDeliveryLegFromOrder } from "@/lib/shopDeliveryBridge";
+import { db } from "@/src/db";
 import { notifyWs } from "@/lib/wsNotify";
 
 // ── Mock state (mock* prefix required for jest.mock factory access) ──────
@@ -41,6 +46,11 @@ let mockCourierRows: Record<string, unknown>[] = [];
 let mockDriverRows: Record<string, unknown>[] = [];
 let mockUserRows: Record<string, unknown>[] = [];
 let mockLegRows: Record<string, unknown>[] = [];
+let mockShopTypeRows: Record<string, unknown>[] = [];
+let mockProductRows: Record<string, unknown>[] = [];
+let mockDeliveryLegRows: Record<string, unknown>[] = [];
+let mockVerticalEnabled = true;
+let mockFeeQuote = { fee_bdt: 8000, distance_km: 1.2, tier: "within" };
 
 let mockInsertCalls: Record<string, unknown>[] = [];
 let mockUpdateCalls: { table: unknown; vals: Record<string, unknown>; whereArgs: unknown[] }[] = [];
@@ -54,6 +64,9 @@ jest.mock("@/src/db", () => {
   const T = {
     orders: schema.shopOrders,
     shops: schema.shops,
+    shopTypes: schema.shopTypes,
+    products: schema.shopProducts,
+    deliveries: schema.deliveries,
     deliveryRequests: schema.deliveryRequests,
     bids: schema.deliveryBids,
     couriers: schema.couriers,
@@ -82,6 +95,9 @@ jest.mock("@/src/db", () => {
   const resolveRows = (t: unknown) => {
     if (t === T.orders) return mockOrderRows;
     if (t === T.shops) return mockShopRows;
+    if (t === T.shopTypes) return mockShopTypeRows;
+    if (t === T.products) return mockProductRows;
+    if (t === T.deliveries) return mockDeliveryLegRows;
     if (t === T.deliveryRequests) return mockDeliveryRequestRows;
     if (t === T.bids) return mockBidRows;
     if (t === T.couriers) return mockCourierRows;
@@ -185,21 +201,32 @@ jest.mock("@/lib/wsNotify", () => ({
   notifyWs: jest.fn(),
 }));
 
+jest.mock("@/lib/platformConfig", () => ({
+  isVerticalEnabled: jest.fn(async () => mockVerticalEnabled),
+}));
+
+// §12 seeds-not-constants: the quote lib is mocked here (its own real-lib
+// coverage lives with the config seeds); the ORDER snapshots whatever this
+// returns — that snapshot contract is what these tests pin.
+jest.mock("@/lib/shopDeliveryFee", () => ({
+  quoteDeliveryFee: jest.fn(async () => mockFeeQuote),
+}));
+
 // Bridge mock: 'passthrough' runs the REAL lib against the router-mock DB;
-// 'ok'/'null' force outcomes for handler-path tests (bridge lib internals have
-// their own describes below running the real lib directly).
+// 'null' forces the leg-unavailable outcome for handler-path tests (bridge lib
+// internals have their own describe below running the real lib directly).
 jest.mock("@/lib/shopDeliveryBridge", () => ({
-  createFromShopOrder: jest.fn(async (order: Record<string, unknown>, tx?: unknown) => {
+  createDeliveryLegFromOrder: jest.fn(async (order: Record<string, unknown>, tx?: unknown) => {
     if (mockBridgeBehavior === "null") return null;
     // 'passthrough' (default) runs the REAL lib against the router-mock DB so the
     // handler test asserts the true tx-shared write path end-to-end.
     const real = jest.requireActual("@/lib/shopDeliveryBridge") as {
-      createFromShopOrder: (
+      createDeliveryLegFromOrder: (
         o: Record<string, unknown>,
         tx?: unknown,
       ) => Promise<{ id: string } | null>;
     };
-    return real.createFromShopOrder(order, tx);
+    return real.createDeliveryLegFromOrder(order, tx);
   }),
 }));
 
@@ -212,22 +239,6 @@ function makeRequest(method: string, body: unknown) {
 }
 
 const shopRow = { id: shopId, address_line: "12 Gulshan Ave", lat: "23.7925", lng: "90.4078", status: "active" };
-
-const shopOrder = (over: Record<string, unknown> = {}) => ({
-  id: orderId,
-  shop_id: shopId,
-  rider_user_id: riderId,
-  status: "preparing",
-  category: "food",
-  fulfillment: "delivery",
-  delivery_address: "123 Main St",
-  delivery_lat: "23.8103",
-  delivery_lng: "90.4125",
-  rider_notes: null,
-  subtotal_bdt: 50000,
-  total_bdt: 50000,
-  ...over,
-});
 
 beforeEach(() => {
   mockOrderRows = [];
@@ -244,74 +255,137 @@ beforeEach(() => {
   mockShopAuthOk = true;
   mockBridgeBehavior = "passthrough";
   mockDbUser = { id: riderId };
+  mockShopTypeRows = [];
+  mockProductRows = [];
+  mockDeliveryLegRows = [];
+  mockVerticalEnabled = true;
+  mockFeeQuote = { fee_bdt: 8000, distance_km: 1.2, tier: "within" };
   (notifyWs as jest.Mock).mockClear();
-  (createFromShopOrder as jest.Mock).mockClear();
+  (createDeliveryLegFromOrder as jest.Mock).mockClear();
 });
 
 // ══════════════════════════════════════════════════════════════════════
-// 1 — Bridge matrix through the REAL mark-ready handler (§C.1)
+// 1 — Leg matrix at ORDER PLACEMENT through the REAL POST handler (§6.1 step 1)
 // ══════════════════════════════════════════════════════════════════════
-describe("mark-ready bridge matrix — real handler (§C.1)", () => {
-  const cells = [
-    { label: "food + delivery (bridge FIRES)", category: "food", fulfillment: "delivery", expectBridge: true },
-    { label: "food + pickup (bridge SKIPPED)", category: "food", fulfillment: "pickup", expectBridge: false },
-    { label: "general + delivery (bridge SKIPPED)", category: "general", fulfillment: "delivery", expectBridge: false },
-    { label: "general + pickup (bridge SKIPPED)", category: "general", fulfillment: "pickup", expectBridge: false },
-  ];
+describe("orders POST leg matrix — real handler (§6.1 step 1)", () => {
+  const typeUuid = "00000000-0000-4000-8000-0000000000b0";
+  const product = {
+    id: "00000000-0000-4000-8000-0000000000b1",
+    shop_id: shopId,
+    name: "Red rice 5kg",
+    price_bdt: 25000,
+    stock: 10,
+    is_active: true,
+    deleted_at: null,
+  };
+  const openShop = {
+    id: shopId,
+    is_open: true,
+    address_line: "12 Gulshan Ave",
+    lat: "23.7925",
+    lng: "90.4078",
+    shop_type_id: null,
+  };
 
-  for (const cell of cells) {
-    it(`bridge ${cell.expectBridge ? "Fires" : "does NOT fire"} for ${cell.label}`, async () => {
-      mockOrderRows = [shopOrder({ category: cell.category, fulfillment: cell.fulfillment })];
-      mockShopRows = [{ ...shopRow }];
-
-      const res = await markReady(makeRequest("POST", null), { id: orderId });
-      expect(res.status).toBe(200);
-
-      const readyUpdate = mockUpdateCalls.find((c) => c.vals.status === "ready_for_pickup");
-      expect(readyUpdate).toBeDefined();
-
-      if (cell.expectBridge) {
-        expect(createFromShopOrder).toHaveBeenCalledTimes(1);
-        expect(createFromShopOrder).toHaveBeenCalledWith(
-          expect.objectContaining({ id: orderId, shop_id: shopId, rider_user_id: riderId }),
-          expect.anything(), // tx — the bridge runs inside the caller's transaction
-        );
-      } else {
-        expect(createFromShopOrder).not.toHaveBeenCalled();
-      }
-    });
-  }
-
-  it("bridge null (shop missing coords) → 409 food_delivery_unavailable, order NOT transitioned", async () => {
-    mockOrderRows = [shopOrder()];
-    mockShopRows = [{ ...shopRow }];
-    mockBridgeBehavior = "null";
-
-    const res = await markReady(makeRequest("POST", null), { id: orderId });
-    expect(res.status).toBe(409);
-    const json = await res.json();
-    expect(json.error).toBe("food_delivery_unavailable");
-    // Rollback semantics: the ready_for_pickup write is inside the same tx —
-    // a throw rolls it back, so production must show ZERO ready-transition rows.
-    const readyUpdate = mockUpdateCalls.find((c) => c.vals.status === "ready_for_pickup");
-    expect(readyUpdate).toBeDefined(); // the write was attempted (same-tx contract)
-    // and no delivery insert survived:
-    expect(mockInsertCalls).toHaveLength(0);
+  const orderBody = (over: Record<string, unknown> = {}) => ({
+    shop_id: shopId,
+    items: [{ product_id: product.id, quantity: 2 }],
+    fulfillment: "delivery",
+    delivery_address: "123 Main St",
+    delivery_lat: 23.8103,
+    delivery_lng: 90.4125,
+    ...over,
   });
 
-  it("real bridge runs inside the handler tx: delivery insert carries the SHOP's pickup coords", async () => {
-    mockOrderRows = [shopOrder()];
-    mockShopRows = [{ ...shopRow }];
+  const post = (body: Record<string, unknown>) =>
+    ordersPost(
+      new Request("http://localhost/api/shop/orders", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(body),
+      }),
+    );
 
-    await markReady(makeRequest("POST", null), { id: orderId });
+  /** The leg insert (the only insert carrying §1 source_vertical). */
+  const legInsert = () => mockInsertCalls.find((v) => v.source_vertical !== undefined);
+  /** The shop-order insert (the only one carrying subtotal_bdt). */
+  const orderInsert = () => mockInsertCalls.find((v) => v.subtotal_bdt !== undefined);
 
-    const deliveryInsert = mockInsertCalls.find((v) => v.source_shop_order_id === orderId);
-    expect(deliveryInsert).toBeDefined();
+  beforeEach(() => {
+    mockShopRows = [{ ...openShop }];
+    mockProductRows = [{ ...product }];
+    mockShopTypeRows = [];
+    mockDeliveryLegRows = [];
+    mockOrderRows = [];
+    mockVerticalEnabled = true;
+    mockFeeQuote = { fee_bdt: 8000, distance_km: 1.2, tier: "within" };
+  });
+
+  it("delivery order → leg created in the placement tx: shop pickup + customer dropoff + fee snapshot", async () => {
+    const res = await post(orderBody());
+    expect(res.status).toBe(201);
+    const json = await res.json();
+    // §12: server-quoted fee + COD total are the response authority
+    expect(json.delivery_fee_bdt).toBe(8000);
+    expect(json.total_bdt).toBe(50000 + 8000); // subtotal 2×25000 + fee
+
+    const leg = legInsert();
+    expect(leg).toBeDefined();
+    expect(leg.source_vertical).toBe("shop_order"); // shop_type_id null → non-restaurant
+    expect(leg.order_id).toBe("generated-uuid"); // mock-generated order id
     // A5 regression: pickup = shop coords, dropoff = customer coords
-    expect(deliveryInsert.pickup_address).toBe("12 Gulshan Ave");
-    expect(deliveryInsert.pickup_lat).toBe("23.7925");
-    expect(deliveryInsert.dropoff_lat).toBe("23.8103");
-    expect(deliveryInsert.status).toBe("pending");
+    expect(leg.pickup_address).toBe("12 Gulshan Ave");
+    expect(leg.pickup_lat).toBe("23.7925");
+    expect(leg.pickup_lat).not.toBe("23.8103");
+    expect(leg.dropoff_lat).toBe("23.8103");
+    expect(leg.dropoff_user_id).toBe(riderId);
+    expect(leg.delivery_fee_bdt).toBe(8000); // §12 snapshot carried to the leg
+    expect(leg.status).toBe("created"); // §6.1: offers take it from there
+
+    // the ORDER row carries the same snapshot (R-A9)
+    const orderRowInsert = orderInsert();
+    expect(orderRowInsert.delivery_fee_bdt).toBe(8000);
+    expect(orderRowInsert.total_bdt).toBe(58000);
+    expect(orderRowInsert.category).toBe("general");
+  });
+
+  it("restaurant shop → source_vertical food_order (data-driven from shop_types)", async () => {
+    mockShopTypeRows = [{ is_restaurant: true }];
+    mockShopRows = [{ ...openShop, shop_type_id: typeUuid }];
+
+    const res = await post(orderBody());
+    expect(res.status).toBe(201);
+    expect(legInsert().source_vertical).toBe("food_order");
+    expect(orderInsert().category).toBe("food");
+  });
+
+  it("pickup order → NO leg, NO fee (fee quote never runs)", async () => {
+    const res = await post(orderBody({ fulfillment: "pickup" }));
+    expect(res.status).toBe(201);
+    const json = await res.json();
+    expect(json.delivery_fee_bdt).toBeNull();
+    expect(json.total_bdt).toBe(50000);
+    expect(legInsert()).toBeUndefined();
+    expect(orderInsert().delivery_fee_bdt).toBeNull();
+  });
+
+  it("leg unavailable (bridge returns null) → 409 delivery_leg_unavailable", async () => {
+    mockBridgeBehavior = "null";
+
+    const res = await post(orderBody());
+    expect(res.status).toBe(409);
+    const json = await res.json();
+    expect(json.error).toBe("delivery_leg_unavailable");
+  });
+
+  it("shop closed → 409 BEFORE any insert (R5 server-side rejection)", async () => {
+    mockShopRows = [{ ...openShop, is_open: false }];
+
+    const res = await post(orderBody());
+    expect(res.status).toBe(409);
+    const json = await res.json();
+    expect(json.error).toBe("shop_closed");
+    expect(mockInsertCalls).toHaveLength(0);
   });
 });
 
@@ -393,66 +467,74 @@ describe("F40 — accept-bid recomputes shop-order total in the same tx", () => 
 });
 
 // ══════════════════════════════════════════════════════════════════════
-// 3 — Bridge lib internals (real createFromShopOrder against the router mock)
+// 3 — Bridge lib internals (real createDeliveryLegFromOrder against the router mock)
 // ══════════════════════════════════════════════════════════════════════
-describe("createFromShopOrder — bridge lib internals", () => {
+describe("createDeliveryLegFromOrder — bridge lib internals", () => {
   const order = {
     id: orderId,
     rider_user_id: riderId,
     shop_id: shopId,
+    order_kind: "catalog",
+    category: "food",
     delivery_address: "123 Main St",
     delivery_lat: "23.8103",
     delivery_lng: "90.4125",
-    rider_notes: "Extra spicy",
-    subtotal_bdt: 50000,
-    total_bdt: 50000,
+    delivery_fee_bdt: 8000,
   };
 
-  it("creates a pending delivery request with shop pickup + customer dropoff", async () => {
-    mockDeliveryRequestRows = []; // no existing bridged request
+  beforeEach(() => {
+    mockDeliveryLegRows = [];
     mockShopRows = [{ ...shopRow }];
-
-    const result = await createFromShopOrder(order);
-    expect(result).not.toBeNull();
-    expect(mockInsertCalls).toHaveLength(1);
-    expect(mockInsertCalls[0].source_shop_order_id).toBe(orderId);
-    expect(mockInsertCalls[0].status).toBe("pending");
-    expect(mockInsertCalls[0].pickup_lat).toBe("23.7925");
-    expect(mockInsertCalls[0].dropoff_lat).toBe("23.8103");
   });
 
-  it("idempotent: existing bridged request returns it, zero inserts", async () => {
-    mockDeliveryRequestRows = [{ id: "existing-delivery" }];
+  // The bridge takes an EXPLICIT caller tx (no ambient db fallback) — the
+  // mocked db shares the same table router, so it stands in as the tx.
+  const asTx = db as never;
 
-    const result = await createFromShopOrder(order);
-    expect(result).toEqual({ id: "existing-delivery" });
+  it("creates a 'created' leg with shop pickup + customer dropoff + fee snapshot", async () => {
+    const result = await createDeliveryLegFromOrder(order, asTx);
+    expect(result).not.toBeNull();
+    expect(mockInsertCalls).toHaveLength(1);
+    expect(mockInsertCalls[0].source_vertical).toBe("food_order");
+    expect(mockInsertCalls[0].status).toBe("created");
+    expect(mockInsertCalls[0].pickup_address).toBe("12 Gulshan Ave");
+    expect(mockInsertCalls[0].pickup_lat).toBe("23.7925");
+    expect(mockInsertCalls[0].dropoff_lat).toBe("23.8103");
+    expect(mockInsertCalls[0].dropoff_user_id).toBe(riderId);
+    expect(mockInsertCalls[0].delivery_fee_bdt).toBe(8000);
+  });
+
+  it("idempotent on order_id: an existing leg returns it, zero inserts", async () => {
+    mockDeliveryLegRows = [{ id: "existing-leg" }];
+
+    const result = await createDeliveryLegFromOrder(order, asTx);
+    expect(result).toEqual({ id: "existing-leg" });
     expect(mockInsertCalls).toHaveLength(0);
   });
 
-  it("missing delivery address → null, zero inserts", async () => {
-    mockDeliveryRequestRows = [];
-    const result = await createFromShopOrder({ ...order, delivery_address: null });
+  it("missing dropoff coordinates → null, zero inserts", async () => {
+    const result = await createDeliveryLegFromOrder({ ...order, delivery_lat: null }, asTx);
     expect(result).toBeNull();
     expect(mockInsertCalls).toHaveLength(0);
   });
 
   it("shop row missing coords → null, zero inserts", async () => {
-    mockDeliveryRequestRows = [];
     mockShopRows = [{ ...shopRow, lat: null, lng: null }];
-    const result = await createFromShopOrder(order);
+    const result = await createDeliveryLegFromOrder(order, asTx);
     expect(result).toBeNull();
     expect(mockInsertCalls).toHaveLength(0);
   });
 
-  it("deadline_at is set ~600s out (bridge sets the bidding window)", async () => {
-    mockDeliveryRequestRows = [];
-    mockShopRows = [{ ...shopRow }];
-
-    const before = Date.now();
-    const result = await createFromShopOrder(order);
+  it("workshop service job maps to source_vertical workshop_product (§1)", async () => {
+    const result = await createDeliveryLegFromOrder(
+      {
+        ...order,
+        order_kind: "service_booking",
+        category: "general",
+      },
+      asTx,
+    );
     expect(result).not.toBeNull();
-    const deadline = Number(mockInsertCalls[0].deadline_at as Date);
-    expect(deadline).toBeGreaterThanOrEqual(before + 595_000);
-    expect(deadline).toBeLessThanOrEqual(before + 605_000);
+    expect(mockInsertCalls[0].source_vertical).toBe("workshop_product");
   });
 });

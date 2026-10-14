@@ -25,10 +25,15 @@ async function seed() {
       ('delivery_fee_beyond_3km_bdt',           '12000', now()),
       ('delivery_fee_tier_radius_km',           '3',     now()),
       ('delivery_man_subscription_bdt_monthly', '10000', now()),
-      ('shop_commission_percent',               '0',     now())
+      ('shop_commission_percent',               '0',     now()),
+      -- S4 (§5, F-11): state-dependent customer cancel fee — free before the
+      -- shop accepts; after accept this key applies (launch seed 0, admin
+      -- raises it via PATCH /api/admin/config). Fresh-read by
+      -- lib/shopOrderCancel.ts, never a code constant.
+      ('shop_order_cancel_fee_after_accept_bdt', '0',    now())
     ON CONFLICT (key) DO NOTHING;
   `);
-  console.log("platform_config seeded (12 keys)");
+  console.log("platform_config seeded (13 keys)");
   await client.end();
 }
 seed().catch(console.error);
