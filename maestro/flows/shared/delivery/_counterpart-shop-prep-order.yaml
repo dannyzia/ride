@@ -1,0 +1,30 @@
+# _counterpart-shop-prep-order — COUNTERPART ACTION: the shop takes the order
+# into preparation, which is what ARMS the S6 courier search.
+# Counterpart calls (live, authenticated — never a direct DB write):
+#   1. PATCH ${API_BASE}/api/shop/orders/${ORDER_ID}/status  {"status":"accepted","prep_minutes":${PREP_MINUTES}}
+#   2. PATCH ${API_BASE}/api/shop/orders/${ORDER_ID}/status  {"status":"preparing"}
+#   Auth: real shop-member token (SHOP_PHONE/SHOP_PASSWORD, seeded `shop_members`
+#   OWNER row). The shop surface is web/admin (Playwright-only per manifest Rule 1),
+#   so every shop action in a device flow is COUNTERPART-API by design.
+# Contract: §6.1 (R-A1 — the delivery search triggers at PREP START; arm 2 of
+#   deliveryDispatchTick selects `deliveries.status='created'` legs whose order is
+#   in ('preparing','dispatched')), VALID_TRANSITIONS in
+#   app/api/shop/orders/[id]/status+api.ts (pending→accepted→preparing).
+# Class: COUNTERPART-API.
+appId: com.ride.bd
+---
+- runScript:
+    when:
+      true
+    commands:
+      - node maestro/utils/counterpart-login.cjs --phone "${SHOP_PHONE}" --password "${SHOP_PASSWORD}" --out /tmp/shop-token.json
+- runScript:
+    when:
+      true
+    commands:
+      - node maestro/utils/counterpart-api.cjs --token /tmp/shop-token.json --method PATCH --path "/api/shop/orders/${ORDER_ID}/status" --body '{"status":"accepted","prep_minutes":15}' --out /tmp/order-accepted.json
+- runScript:
+    when:
+      true
+    commands:
+      - node maestro/utils/counterpart-api.cjs --token /tmp/shop-token.json --method PATCH --path "/api/shop/orders/${ORDER_ID}/status" --body '{"status":"preparing"}' --out /tmp/order-preparing.json

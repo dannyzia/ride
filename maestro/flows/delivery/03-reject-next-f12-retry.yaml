@@ -1,0 +1,122 @@
+# delivery/03-reject-next-f12-retry — S6 (plan 27 §6.1) chain behaviour:
+# reject advances the chain, exhaustion hands the decision to the shop, and the
+# shop's F-12 "Retry" re-arms the search.
+#
+#   1. offer to the top-ranked candidate → REJECT
+#      (delivery.respond-el → POST /api/delivery/offers/{id}/respond
+#      {decision:'reject'}): the leg returns to 'created' with the candidate
+#      added to the persisted tried set, so the NEXT tick offers to the next
+#      ranked candidate — never re-offering a tried one.
+#   2. once the suggestion cap is reached (or the pool runs dry) the chain
+#      EXHAUSTS: no live offer anywhere, and for a shop-order leg the shop is
+#      notified (shop:delivery_exhausted) to choose Retry / self-deliver /
+#      Cancel (exhaustDeliveryLeg in lib/deliveryDispatch.ts — the order status
+#      is deliberately NOT mutated here; the shop decides).
+#   3. COUNTERPART shop takes the RETRY arm
+#      (_counterpart-shop-dispatch-retry → POST /api/shop/orders/{id}/dispatch):
+#      the leg resets to 'created' with attempts=0 and an EMPTY tried set, so
+#      the next tick re-ranks from scratch — the same candidate is eligible
+#      again, which is what this flow asserts in the UI.
+#
+# DETERMINISM: step 2 must be reachable in one run, so the run pins
+# `delivery_max_suggestions = 1` in platform_config (admin → Configuration
+# screen; the value is never a constant — lib/deliveryDispatch reads it with
+# requireConfigInt, and a missing key propagates rather than defaulting). At the
+# seed value of 3 the same flow still works but needs three rejects per
+# exhaustion; the runner may raise the reject block's `times` instead.
+# Class: AUTOMATABLE + COUNTERPART-API. REQUIRES DEVICE + seeded roster
+# (rider 8801613249520, shop 8801700000201, delivery agent 8801700000301) and a
+# running utils-server (every chain advance happens on its 5s tick).
+appId: com.ride.bd
+name: "S6 Delivery - Reject to Next, F-12 Retry"
+tags: [delivery, s6, counterpart-api]
+---
+# ── Customer side (UI): place the order ────────────────────────────────────
+- runFlow:
+    env:
+      PHONE: "8801613249520"
+      PASSWORD: "test1234"
+    commands:
+      - runFlow: ../shared/auth/_login-rider.yaml
+- tapOn:
+    id: "customer.home.set-selected-category"
+    text: ".*Food.*|.*Shop.*"
+- tapOn:
+    text: ".*"
+    index: 0
+- tapOn:
+    id: "customer.shops.shop-detail.id.add-to-cart"
+- tapOn:
+    id: "customer.shops.shop-detail.id.push-order-create"
+- tapOn:
+    id: "customer.shops.order-create.id.handle-submit"
+- extendedWaitUntil:
+    visible: ".*pending.*|.*preparing.*|.*order.*"
+    timeout: 30000
+# ── Counterpart (API): shop preps → search armed ───────────────────────────
+- runFlow:
+    env:
+      SHOP_PHONE: "8801700000201"
+      SHOP_PASSWORD: "test1234"
+      ORDER_ID: "LATEST_FOOD_ORDER"
+    commands:
+      - runFlow: ../shared/delivery/_counterpart-shop-prep-order.yaml
+# ── Agent side (UI): log in → offers inbox ─────────────────────────────────
+- stopApp: com.ride.bd
+- launchApp:
+    appId: com.ride.bd
+    clearState: true
+- extendedWaitUntil:
+    visible: "Enter your phone number"
+    timeout: 20000
+- tapOn:
+    id: "phone-entry.set-phone"
+- eraseText
+- inputText: ${AGENT_PHONE}
+- tapOn:
+    id: "phone-entry.set-role-5"
+- tapOn:
+    id: "phone-entry.handle-login"
+- extendedWaitUntil:
+    visible: "Welcome Back"
+    timeout: 15000
+- tapOn:
+    id: "login.set-password"
+- inputText: ${AGENT_PASSWORD}
+- tapOn:
+    id: "login.handle-login"
+- runFlow:
+    when:
+      visible:
+        id: "login-as.enter-delivery-man"
+    commands:
+      - tapOn:
+          id: "login-as.enter-delivery-man"
+- extendedWaitUntil:
+    visible:
+      id: "delivery.inbox.offer-card"
+    timeout: 60000
+# ── Step 1: reject → the chain clears the live offer for this candidate ────
+- tapOn:
+    id: "delivery.respond-el"
+# ── Step 2: exhaustion (max_suggestions=1 for this run) — no live offer is
+# left anywhere, so the inbox settles on the empty state and the shop has been
+# told to choose the fallback. ─────────────────────────────────────────────
+- extendedWaitUntil:
+    visible:
+      id: "delivery.inbox.empty-state"
+    timeout: 60000
+# ── Step 3: COUNTERPART shop takes the RETRY arm and the chain re-arms ─────
+- runFlow:
+    env:
+      SHOP_PHONE: "8801700000201"
+      SHOP_PASSWORD: "test1234"
+      ORDER_ID: "LATEST_FOOD_ORDER"
+    commands:
+      - runFlow: ../shared/delivery/_counterpart-shop-dispatch-retry.yaml
+# The retried chain must offer again — and, with the tried set cleared, to the
+# same candidate (the only one in this run's pool).
+- extendedWaitUntil:
+    visible:
+      id: "delivery.inbox.offer-card"
+    timeout: 60000

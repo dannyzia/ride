@@ -1,0 +1,25 @@
+# _counterpart-shop-dispatch-retry — COUNTERPART ACTION: the F-12 fallback,
+# retry leg (plan 27 §6.1, exhaustion handling).
+# Counterpart call: POST ${API_BASE}/api/shop/orders/${ORDER_ID}/dispatch {"action":"retry"}
+#   Auth: real shop-member token with OWNER|MANAGER (SHOP_PHONE/SHOP_PASSWORD) —
+#   app/api/shop/orders/[id]/dispatch+api.ts is the retry leg of the fallback and
+#   is gated by requireShopMember(shopId, ['OWNER','MANAGER']) because it is a
+#   money-path decision (F-16 staff is orders-only).
+# Effect: lib/deliveryDispatch.retryDeliveryDispatch resets the leg's chain
+#   (status='created', offer_attempts=0, tried set cleared) so the next scheduler
+#   tick re-ranks from scratch — the F-12 "Retry" choice, as opposed to
+#   self-deliver (status transition to `self_delivered`) and cancel
+#   (`cancelled` on /status).
+# Class: COUNTERPART-API.
+appId: com.ride.bd
+---
+- runScript:
+    when:
+      true
+    commands:
+      - node maestro/utils/counterpart-login.cjs --phone "${SHOP_PHONE}" --password "${SHOP_PASSWORD}" --out /tmp/shop-token.json
+- runScript:
+    when:
+      true
+    commands:
+      - node maestro/utils/counterpart-api.cjs --token /tmp/shop-token.json --method POST --path "/api/shop/orders/${ORDER_ID}/dispatch" --body '{"action":"retry"}' --out /tmp/dispatch-retry.json

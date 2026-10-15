@@ -1,0 +1,97 @@
+# delivery/02-driver-toggle-accepts-leg — S6 (plan 27 §6.1 + Amendment 2):
+# BOTH ROLES PROVE OUT. A regular DRIVER turns the Deliveries toggle ON and
+# accepts a dispatched delivery leg — the same inbox, the same single-claim
+# accept, the same ranking pool as the Delivery Man.
+#
+#   driver logs in → goes online (the pool requires is_online) → Profile →
+#   Settings → Deliveries → toggles ON (rider.settings.deliveries.set-enabled →
+#   PATCH /api/driver/deliveries-toggle; default is OFF from migration 0074) →
+#   "Open delivery inbox" → the dispatched offer card → accept
+#   (delivery.respond-el-2 → POST /api/delivery/offers/{id}/respond).
+#
+# Also proven here by construction: the toggle is the SERVER-side gate — with it
+# OFF the driver is not in the pool at all (lib/deliveryDispatch's driver query
+# filters `deliveries_enabled = true`), so a client-side-only "enable" cannot
+# widen eligibility.
+# NOT covered here (separate flows/suites, not silently skipped):
+#   - mutual exclusion both directions (a ride offer never interrupts an active
+#     delivery and vice versa): pinned by tests/api/delivery/s6-dispatch-ranking.test.ts
+#     (carrying_rider + holds_active_job exclusions) and
+#     tests/api/driver/deliveries-toggle.test.ts (409 active_ride on re-enable);
+#   - the auto-OFF at match time + the re-enable rejection while carrying a rider.
+# Class: AUTOMATABLE + COUNTERPART-API. REQUIRES DEVICE + seeded roster
+# (rider 8801613249520, shop 8801700000201, driver 8801700000001) and a running
+# utils-server. Device-verification PENDING — the driver-side tab/row taps below
+# are text-addressed (no testIDs exist on the profile table rows yet; "Settings"
+# is a hard-coded JSX literal in (rider)/d/(tabs)/profile/index.tsx).
+appId: com.ride.bd
+name: "S6 Delivery - Driver Toggle Accepts Leg"
+tags: [delivery, s6, counterpart-api]
+---
+# ── Customer side (UI): the order that will be dispatched ───────────────────
+- runFlow:
+    env:
+      PHONE: "8801613249520"
+      PASSWORD: "test1234"
+    commands:
+      - runFlow: ../shared/auth/_login-rider.yaml
+- tapOn:
+    id: "customer.home.set-selected-category"
+    text: ".*Food.*|.*Shop.*"
+- tapOn:
+    text: ".*"
+    index: 0
+- tapOn:
+    id: "customer.shops.shop-detail.id.add-to-cart"
+- tapOn:
+    id: "customer.shops.shop-detail.id.push-order-create"
+- tapOn:
+    id: "customer.shops.order-create.id.handle-submit"
+- extendedWaitUntil:
+    visible: ".*pending.*|.*preparing.*|.*order.*"
+    timeout: 30000
+# ── Counterpart (API): shop takes it into prep → search armed (R-A1) ────────
+- runFlow:
+    env:
+      SHOP_PHONE: "8801700000201"
+      SHOP_PASSWORD: "test1234"
+      ORDER_ID: "LATEST_FOOD_ORDER"
+    commands:
+      - runFlow: ../shared/delivery/_counterpart-shop-prep-order.yaml
+# ── Driver side (UI): log in → online ──────────────────────────────────────
+- runFlow:
+    env:
+      PHONE: "8801700000001"
+      PASSWORD: "test1234"
+    commands:
+      - runFlow: ../shared/auth/_login-driver.yaml
+- tapOn:
+    id: "rider.d.toggle-online"
+# ── Toggle ON: Profile → Settings → Deliveries ─────────────────────────────
+- tapOn: ".*Profile.*"
+- tapOn: "Settings"
+- extendedWaitUntil:
+    visible: "Deliveries"
+    timeout: 20000
+- tapOn:
+    id: "rider.settings.deliveries.toggle-card"
+- tapOn:
+    id: "rider.settings.deliveries.set-enabled"
+# The inbox entry appears only once the SERVER reports enabled=true.
+- extendedWaitUntil:
+    visible:
+      id: "rider.settings.deliveries.push-delivery"
+    timeout: 20000
+- tapOn:
+    id: "rider.settings.deliveries.push-delivery"
+# ── Both roles: the driver sees the same dispatched offer ───────────────────
+- extendedWaitUntil:
+    visible:
+      id: "delivery.inbox.offer-card"
+    timeout: 60000
+- tapOn:
+    id: "delivery.respond-el-2"
+- extendedWaitUntil:
+    visible:
+      id: "delivery.push-active"
+    timeout: 30000

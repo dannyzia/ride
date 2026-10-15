@@ -1,0 +1,147 @@
+# delivery/01-dispatched-offer-to-delivered — S6 (plan 27 §6.1) end-to-end on
+# the DELIVERY MAN surface: the binding dispatched single-offer flow.
+#
+#   order placed in the customer UI (§6.1 step 1 — the `deliveries` leg is
+#   created in the placement tx, lib/shopDeliveryBridge.ts, idempotent on
+#   order_id)
+#     → COUNTERPART shop takes it into preparation (_counterpart-shop-prep-order;
+#       prep start ARMS arm 2 of deliveryDispatchTick — R-A1)
+#     → the scheduler offers the leg to the nearest ranked candidate
+#       (delivery_offer_window_seconds × delivery_max_suggestions from
+#       platform_config; Delivery Men + drivers with Deliveries ON rank together)
+#     → the Delivery Man sees the offer card IN THE APP (delivery.inbox.offer-card,
+#       full details: shop, pickup, contact, dropoff, order value, fee, class)
+#     → accept (delivery.respond-el-2 → POST /api/delivery/offers/{id}/respond,
+#       single-claim; the shop order gains courier + F-11 handover codes)
+#     → pickup (delivery.active.id.set-pickup-code → POST /api/delivery/active/{id}/action
+#       {action:'pickup'}) → deliver (delivery.active.id.set-otp + amount-input →
+#       {action:'deliver'}) → earnings credited (§12, lib/deliverySettlement).
+#
+# Counterpart: the SHOP, driven by real authenticated API calls (its surface is
+# web/admin — Playwright-only per manifest Rule 1). Never a direct DB write.
+# THE HANDOVER CODES ARE RUNNER-SUPPLIED (${PICKUP_CODE} / ${RECEIVER_OTP}):
+# both are minted server-side at accept and displayed to the OTHER party (F-11
+# pickup_code → shop, F-15 delivery_otp → receiver), so no device flow can read
+# them off its own screen. Same for ${AMOUNT_TAKA} (the COD amount actually
+# collected — equals the order total on a clean run; a smaller value exercises
+# F-38 short-pay).
+# Class: AUTOMATABLE + COUNTERPART-API. REQUIRES DEVICE + seeded roster
+# (rider 8801613249520, shop 8801700000201, delivery agent 8801700000301) and a
+# running utils-server (the dispatch tick) — the tick is the only thing that
+# advances the chain, so a stopped server fails at the offer-card gate.
+appId: com.ride.bd
+name: "S6 Delivery - Dispatched Offer to Delivered"
+tags: [delivery, s6, counterpart-api]
+---
+# ── Customer side (UI): place the order on the food/shop vertical ────────────
+- runFlow:
+    env:
+      PHONE: "8801613249520"
+      PASSWORD: "test1234"
+    commands:
+      - runFlow: ../shared/auth/_login-rider.yaml
+- tapOn:
+    id: "customer.home.set-selected-category"
+    text: ".*Food.*|.*Shop.*"
+- tapOn:
+    text: ".*"
+    index: 0
+- tapOn:
+    id: "customer.shops.shop-detail.id.add-to-cart"
+- tapOn:
+    id: "customer.shops.shop-detail.id.push-order-create"
+- tapOn:
+    id: "customer.shops.order-create.id.handle-submit"
+- extendedWaitUntil:
+    visible: ".*pending.*|.*preparing.*|.*order.*"
+    timeout: 30000
+# ── Counterpart (API): shop accepts + starts prep — this ARMS the search ─────
+- runFlow:
+    env:
+      SHOP_PHONE: "8801700000201"
+      SHOP_PASSWORD: "test1234"
+      ORDER_ID: "LATEST_FOOD_ORDER"
+    commands:
+      - runFlow: ../shared/delivery/_counterpart-shop-prep-order.yaml
+# ── Delivery Man side (UI): log in as the delivery agent → offers inbox ──────
+- stopApp: com.ride.bd
+- launchApp:
+    appId: com.ride.bd
+    clearState: true
+- extendedWaitUntil:
+    visible: "Enter your phone number"
+    timeout: 20000
+- tapOn:
+    id: "phone-entry.set-phone"
+- eraseText
+- inputText: ${AGENT_PHONE}
+- tapOn:
+    id: "phone-entry.set-role-5"
+- tapOn:
+    id: "phone-entry.handle-login"
+- extendedWaitUntil:
+    visible: "Welcome Back"
+    timeout: 15000
+- tapOn:
+    id: "login.set-password"
+- inputText: ${AGENT_PASSWORD}
+- tapOn:
+    id: "login.handle-login"
+# Multi-role accounts land on the chooser (§16); a single-role delivery_man goes
+# straight to the inbox. Pick the Delivery Man row when it is up.
+- runFlow:
+    when:
+      visible:
+        id: "login-as.enter-delivery-man"
+    commands:
+      - tapOn:
+          id: "login-as.enter-delivery-man"
+# The dispatched offer (§6.1 step 3) — fatal: the tick must have offered to us.
+- extendedWaitUntil:
+    visible:
+      id: "delivery.inbox.offer-card"
+    timeout: 60000
+# ── Accept (single claim, §6.1 step 4) ──────────────────────────────────────
+- tapOn:
+    id: "delivery.respond-el-2"
+- extendedWaitUntil:
+    visible:
+      id: "delivery.push-active"
+    timeout: 30000
+- tapOn:
+    id: "delivery.push-active"
+# ── Pickup (§6.1 step 6): the shop handover code (F-11) ─────────────────────
+- extendedWaitUntil:
+    visible:
+      id: "delivery.active.pickup-panel"
+    timeout: 30000
+- tapOn:
+    id: "delivery.active.id.set-pickup-code"
+- inputText: ${PICKUP_CODE}
+- tapOn:
+    id: "delivery.active.id.on-pickup"
+- extendedWaitUntil:
+    visible:
+      id: "delivery.active.deliver-panel"
+    timeout: 30000
+# ── Deliver (§6.1 step 7): receiver OTP (F-15) + amount collected (F-38) ────
+- tapOn:
+    id: "delivery.active.id.set-otp"
+- inputText: ${RECEIVER_OTP}
+- tapOn:
+    id: "delivery.active.id.set-amount-input"
+- inputText: ${AMOUNT_TAKA}
+- tapOn:
+    id: "delivery.active.id.on-deliver"
+- extendedWaitUntil:
+    visible: "Delivery complete"
+    timeout: 30000
+# ── Earnings: the fee credit + the COD remittance due (§12) ─────────────────
+- tapOn:
+    id: "delivery.earnings.el-1"
+- tapOn:
+    id: "delivery.push-earnings"
+- extendedWaitUntil:
+    visible:
+      id: "delivery.earnings.total-card"
+    timeout: 20000

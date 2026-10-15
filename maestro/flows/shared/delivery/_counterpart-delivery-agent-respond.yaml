@@ -1,0 +1,29 @@
+# _counterpart-delivery-agent-respond — COUNTERPART ACTION: the delivery agent
+# (Delivery Man courier row OR a driver with Deliveries ON) answers THE
+# dispatched single offer (§6.1 step 4).
+# Counterpart call: POST ${API_BASE}/api/delivery/offers/${LEG_ID}/respond {"decision":"${DECISION}"}
+#   Auth: real agent token (COURIER_PHONE/COURIER_PASSWORD — seeded `couriers`
+#   row; a driver-with-toggle run passes that driver's credentials instead).
+# Contract: single-claim accept — the leg is locked FOR UPDATE, the claim is
+#   conditional on status='offered', and deliveries_active_claimer_uidx is the
+#   DB backstop for "one active job at a time" (both roles) → 409
+#   already_claimed. Accept stamps the F-11 handover codes (pickup_code to the
+#   shop, delivery_otp to the receiver) and moves the order to
+#   `courier_assigned`; reject returns the leg to 'created' so the next tick
+#   offers the NEXT ranked candidate (tried candidates are never re-offered).
+# Supersedes the retired RFQ path POST /api/delivery/requests/{id}/accept, which
+#   served the pre-S6 broadcast feed (no request row exists for an
+#   order-derived leg any more).
+# Class: COUNTERPART-API.
+appId: com.ride.bd
+---
+- runScript:
+    when:
+      true
+    commands:
+      - node maestro/utils/counterpart-login.cjs --phone "${COURIER_PHONE}" --password "${COURIER_PASSWORD}" --out /tmp/agent-token.json
+- runScript:
+    when:
+      true
+    commands:
+      - node maestro/utils/counterpart-api.cjs --token /tmp/agent-token.json --method POST --path "/api/delivery/offers/${LEG_ID}/respond" --body "{\"decision\":\"${DECISION}\"}" --out /tmp/agent-respond.json
