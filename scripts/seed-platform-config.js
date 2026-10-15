@@ -43,10 +43,21 @@ async function seed() {
       ('fleet_owner_share_percent',            '0',     now()),
       ('vehicle_doc_expiry_warning_days',      '30',    now()),
       ('emergency_ack_timeout_seconds',        '60',    now()),
-      ('emergency_escalation_k_ring',          '50',    now())
+      ('emergency_escalation_k_ring',          '50',    now()),
+      -- S6 (plan 27 §6.1 + §12): sequential delivery dispatch + COD dues.
+      -- delivery_offer_window_seconds: 45s per-offer response window (§6.1).
+      -- delivery_max_suggestions: 3 candidates max per leg chain (§6.1).
+      -- cod_remittance_overdue_days: COD cash due becomes overdue after 7
+      --   days (F-33 reminders + dispatch-hold trigger).
+      -- cod_dispatch_hold_threshold_bdt: hold a courier from dispatch when
+      --   their overdue total exceeds this (0 paisa = any overdue due holds).
+      ('delivery_offer_window_seconds',        '45',    now()),
+      ('delivery_max_suggestions',             '3',     now()),
+      ('cod_remittance_overdue_days',          '7',     now()),
+      ('cod_dispatch_hold_threshold_bdt',      '0',     now())
     ON CONFLICT (key) DO NOTHING;
   `);
-  console.log("platform_config seeded (17 keys)");
+  console.log("platform_config seeded (21 keys)");
   await client.end();
 }
 seed().catch(console.error);

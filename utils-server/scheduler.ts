@@ -2768,5 +2768,74 @@ export function startScheduler(deps: SchedulerDeps = {}): void {
     }
   }, 3_600_000); // 1 hour
 
+  // Job 58 — Delivery dispatch chain (every 5s). S6 (plan 27 §6.1):
+  // sequential single-offer distribution — expire stale offers, advance
+  // to the next ranked candidate, start chains for dispatching shop
+  // orders. Exhaustion hands the order to the shop's F-12 fallback.
+  let deliveryDispatchRunning = false;
+  registerJob(async () => {
+    if (deliveryDispatchRunning) return;
+    deliveryDispatchRunning = true;
+    try {
+      const { deliveryDispatchTick } = await import('../lib/deliveryDispatch');
+      const { advanced, exhausted } = await deliveryDispatchTick();
+      if (advanced > 0 || exhausted > 0) {
+        logger.info('[scheduler] job 58 delivery dispatch', { advanced, exhausted });
+      }
+    } catch (e) {
+      logger.error('[scheduler] job 58 delivery dispatch error', e);
+    } finally {
+      deliveryDispatchRunning = false;
+    }
+  }, 5_000); // 5s — offer window is 45s (config); 5s tick bounds drift
+
+  // Job 59 — COD remittance reminders (daily). F-33 → §12 dues threshold:
+  // pending dues older than cod_remittance_overdue_days push a keyed reminder
+  // to the courier (the DISPATCH HOLD itself is enforced in the delivery
+  // candidate pool + accept guard, config-fresh).
+  let codReminderRunning = false;
+  registerJob(async () => {
+    if (codReminderRunning) return;
+    codReminderRunning = true;
+    try {
+      const { courierRemittanceDues } = await import('../src/db/schema');
+      const { eq, sql } = await import('drizzle-orm');
+      const { requireConfigInt } = await import('../lib/platformConfig');
+      const { sendNotifications } = await import('../lib/notify');
+      const overdueDays = await requireConfigInt('cod_remittance_overdue_days');
+      const cutoff = new Date(Date.now() - overdueDays * 24 * 60 * 60 * 1000);
+      const overdue = await db
+        .select({
+          id: courierRemittanceDues.id,
+          user_id: courierRemittanceDues.delivery_man_user_id,
+          amount_bdt: courierRemittanceDues.amount_bdt,
+          created_at: courierRemittanceDues.created_at,
+        })
+        .from(courierRemittanceDues)
+        .where(
+          sql`${courierRemittanceDues.status} = 'pending' AND ${courierRemittanceDues.created_at} < ${cutoff}`,
+        )
+        .limit(200);
+      if (overdue.length === 0) return;
+      const day = new Date().toISOString().slice(0, 10);
+      await sendNotifications(
+        overdue.map((row) => ({
+          userId: row.user_id,
+          type: 'delivery:status',
+          title: 'COD remittance overdue',
+          body: `Remit ${Math.round(row.amount_bdt / 100)} TK in collected cash to lift the dispatch hold.`,
+          data: { due_id: row.id, status: 'remittance_overdue' },
+          priority: 'default' as const,
+          idempotencyKey: `cod_reminder:${row.id}:${day}`,
+        })),
+      ).catch(() => {});
+      logger.info('[scheduler] job 59 cod remittance reminders', { count: overdue.length });
+    } catch (e) {
+      logger.error('[scheduler] job 59 cod reminder error', e);
+    } finally {
+      codReminderRunning = false;
+    }
+  }, 86_400_000); // daily (fires 24h after start; overdue threshold is config-days)
+
   logger.info(`[scheduler] started (${registeredJobs} jobs)`);
 }

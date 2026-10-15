@@ -141,6 +141,25 @@ const DRIVER_NOTIFICATION_ROUTES: Record<string, NotificationHandler> = {
     router.push("/(main)/(customer)/(shops)/orders" as never);
     return true;
   },
+  // S6 (§6.1): courier search exhausted / failed → the shop's F-12 fallback.
+  "shop:delivery_exhausted": (data) => {
+    if (data.order_id && isValidUUID(data.order_id)) {
+      router.push(`/(main)/(shop-owner)` as never);
+      return true;
+    }
+    router.push("/(main)/(shop-owner)" as never);
+    return true;
+  },
+  // S6: dispatched delivery offers land in the delivery-agent inbox
+  // (Deliveries ON drivers route here too — one active job at a time).
+  "delivery:offer": () => {
+    router.push("/(main)/(delivery)" as never);
+    return true;
+  },
+  "delivery:status": () => {
+    router.push("/(main)/(delivery)" as never);
+    return true;
+  },
 };
 
 const RIDER_NOTIFICATION_ROUTES: Record<string, NotificationHandler> = {
@@ -207,6 +226,19 @@ const RIDER_NOTIFICATION_ROUTES: Record<string, NotificationHandler> = {
       return true;
     }
     router.push("/(main)/(customer)/(shops)/orders" as never);
+    return true;
+  },
+  // S6 (§6.1): courier search exhausted / failed → the shop's F-12 fallback.
+  "shop:delivery_exhausted": () => {
+    router.push("/(main)/(shop-owner)" as never);
+    return true;
+  },
+  "delivery:offer": () => {
+    router.push("/(main)/(delivery)" as never);
+    return true;
+  },
+  "delivery:status": () => {
+    router.push("/(main)/(delivery)" as never);
     return true;
   },
 };

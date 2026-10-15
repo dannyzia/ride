@@ -474,3 +474,64 @@ describe("debitLeadForOfferTx — account-status guard (F-9.1)", () => {
     expect(state.callLedger).toHaveLength(1);
   });
 });
+
+// ── S6 regression — DRIZZLE-WRAPPED 23505 (cause-chain, the real-DB shape) ──
+// Mirrors the S4 idempotency fix: drizzle wraps driver errors in
+// DrizzleQueryError, so the 23505 lives on `cause` and a bare `e.code ===
+// '23505'` never matches — the graceful skip degraded to a thrown error
+// (tx still rolled back, no double-billing, but the dispatch chain aborted).
+describe("debitLeadForOfferTx — drizzle-wrapped 23505 (S6 regression)", () => {
+  test("wrapped call_ledger 23505 (cause.code) rolls back and reports billed=false instead of throwing", async () => {
+    const mock = buildDbMock({
+      subscriptions: [{ ...ACTIVE_SUB }],
+      packages: [{ ...PACKAGE }],
+    });
+
+    // Real-DB shape: error carries `cause`, not `code` (depth-2 chain like
+    // DrizzleQueryError → driver error).
+    const wrapped = Object.assign(new Error("insert failed"), {
+      cause: Object.assign(new Error("duplicate key value violates unique constraint"), {
+        code: "23505",
+      }),
+    });
+
+    const wrappedTx: TxLike = {
+      select: mock.tx.select,
+      update: mock.tx.update,
+      insert: (table: unknown) => {
+        if (table !== callLedger) return mock.tx.insert(table);
+        return {
+          values: (_v: Row) => ({
+            then: (_res: unknown, rej: (e: unknown) => void) => {
+              Promise.reject(wrapped).then(undefined, rej);
+            },
+          }),
+        };
+      },
+    };
+    (db.transaction as jest.Mock).mockImplementation(
+      async (cb: (t: TxLike) => unknown) => {
+        const snapshot = JSON.parse(JSON.stringify(mock.state)) as FakeState;
+        try {
+          return await cb(wrappedTx);
+        } catch (e) {
+          mock.state.subscriptions = snapshot.subscriptions;
+          mock.state.packages = snapshot.packages;
+          mock.state.callLedger = snapshot.callLedger;
+          mock.state.dispatchOffers = snapshot.dispatchOffers;
+          mock.state.drivers = snapshot.drivers;
+          throw e;
+        }
+      },
+    );
+
+    const res = await debitLeadForOfferTx({ rideId: "ride-1", driverId: "driver-1" });
+
+    // Pre-fix: SkipBillingError was never thrown for the wrapped error and
+    // this call REJECTED. Post-fix: recognized → rollback-and-skip.
+    expect(res).toEqual({ billed: false, balanceAfter: null });
+    expect(mock.state.dispatchOffers).toHaveLength(0); // offer row rolled back
+    expect(mock.state.callLedger).toHaveLength(0);
+    expect(mock.state.subscriptions[0].calls_remaining).toBe(5); // untouched
+  });
+});

@@ -24,6 +24,7 @@ const SETTINGS: SettingsItem[] = [
   { label: "Promo Rewards", labelKey: "driver.payout_method.promo_rewards", route: "/(main)/(rider)/promos", icon: "gift-outline", section: "Subscription" },
   { label: "Notifications", route: "/(main)/(rider)/settings/notifications", icon: "notifications-outline", section: "Preferences" },
   { label: "Auto-Accept", route: "/(main)/(rider)/settings/auto-accept", icon: "checkmark-circle-outline", section: "Preferences" },
+  { labelKey: "delivery.toggle.nav", route: "/(main)/(rider)/settings/deliveries", icon: "cube-outline", section: "Preferences" },
   { label: "App Appearance", route: "/(main)/(rider)/settings/appearance", icon: "color-palette-outline", section: "Preferences" },
   { label: "Language", route: "/(main)/(rider)/settings/language", icon: "globe-outline", section: "Preferences" },
   { label: "Account & Security", route: "/(main)/(rider)/settings/account-security", icon: "lock-closed-outline", section: "Account" },

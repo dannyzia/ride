@@ -125,6 +125,9 @@ export default function Splash() {
       } else if (data.role === "shop_owner") {
         // S3: the shop surface is live — a single-any-role owner lands here.
         redirect("/(main)/(shop-owner)");
+      } else if (data.role === "delivery_man") {
+        // S6: the Delivery Man surface is live — offers inbox is the landing.
+        redirect("/(main)/(delivery)");
       } else {
         redirect("/(main)/(customer)/services-hub");
       }

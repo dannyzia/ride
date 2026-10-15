@@ -403,6 +403,10 @@ export const drivers = pgTable(
     on_break: boolean("on_break").notNull().default(false),
     break_started_at: timestamptz("break_started_at"),
     auto_accept_enabled: boolean("auto_accept_enabled").notNull().default(false),
+    // S6 (Amendment 2 / F-15): Deliveries toggle — driver sees delivery-leg
+    // offers ONLY while true. Default OFF; auto-OFF on ride accept (never
+    // interrupts an active ride). Server-side gate in utils-server dispatch.
+    deliveries_enabled: boolean("deliveries_enabled").notNull().default(false),
     auto_accept_radius_meters: integer("auto_accept_radius_meters").notNull().default(500),
     gender: varchar("gender", { length: 10 }),
     created_at: timestamptz("created_at").notNull().defaultNow(),
@@ -3107,6 +3111,12 @@ export const shopOrders = pgTable("shop_orders", {
   cancel_fee_bdt: integer("cancel_fee_bdt"), // paisa; launch default 0
   unavailable_item_ids: uuid("unavailable_item_ids").array(), // shop-reported at accept
   partial_confirmed_at: timestamptz("partial_confirmed_at"), // customer accepted the reduced order
+  // S6 (§6.1 steps 4–6 + F-11 handover codes): courier assignment + codes.
+  courier_user_id: uuid("courier_user_id").references((): any => users.id),
+  pickup_code: varchar("pickup_code", { length: 6 }), // shop → courier handover PIN
+  delivery_otp: varchar("delivery_otp", { length: 6 }), // courier → customer proof
+  dispatched_at: timestamptz("dispatched_at"), // courier search started
+  courier_assigned_at: timestamptz("courier_assigned_at"), // §6.1 step 4
   created_at: timestamptz("created_at").notNull().defaultNow(),
   updated_at: timestamptz("updated_at").notNull().defaultNow(),
 }, (t) => [
@@ -3771,7 +3781,21 @@ export const deliveries = pgTable("deliveries", {
   status: deliveryLegStatusEnum("status").notNull().default("created"),
   // Delivery man OR driver with the Deliveries toggle on (Amendment 2).
   delivery_man_user_id: uuid("delivery_man_user_id").references((): any => users.id),
+  // S6 sequential single-offer dispatch (§6.1): ONE outstanding offer per leg.
+  // Persisted so a restart cannot re-offer past delivery_max_suggestions or
+  // forget a declined candidate (chain state itself is in-memory).
+  offered_to_user_id: uuid("offered_to_user_id").references((): any => users.id),
+  offer_expires_at: timestamptz("offer_expires_at"),
+  offer_attempts: integer("offer_attempts").notNull().default(0),
+  tried_claimer_ids: uuid("tried_claimer_ids").array().notNull().default(sql`'{}'`),
+  // S6 delivery-man surface (F-15): attempted-delivery state, proof, COD entry.
+  attempt_count: integer("attempt_count").notNull().default(0),
+  attempted_at: timestamptz("attempted_at"),
+  proof_photo_url: text("proof_photo_url"),
+  amount_collected_bdt: integer("amount_collected_bdt"), // paisa; F-38 short-pay evidence
+  amount_collected_at: timestamptz("amount_collected_at"),
   accepted_at: timestamptz("accepted_at"),
+  picked_up_at: timestamptz("picked_up_at"), // S6: F-15 pickup handover stamp
   delivered_at: timestamptz("delivered_at"),
   created_at: timestamptz("created_at").notNull().defaultNow(),
   updated_at: timestamptz("updated_at").notNull().defaultNow(),
@@ -3787,6 +3811,51 @@ export const deliveries = pgTable("deliveries", {
   uniqueIndex("deliveries_active_claimer_uidx")
     .on(t.delivery_man_user_id)
     .where(sql`status IN ('accepted','picked_up')`),
+]);
+
+/**
+ * S6 — delivery earnings (plan §12): courier credit for a delivered leg =
+ * delivery fee minus fresh-read delivery_commission_percent (0% at launch →
+ * fee × 100%). Append-only money table (no updated_at), one row per leg
+ * (unique leg index = double-earnings backstop, same shape as shop_ledger's
+ * (order_id, entry_type) partial unique).
+ * Write ownership: ONLY lib/deliverySettlement.ts inserts these rows.
+ */
+export const deliveryEarnings = pgTable("delivery_earnings", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  delivery_man_user_id: uuid("delivery_man_user_id").notNull().references((): any => users.id),
+  leg_id: uuid("leg_id").notNull().references((): any => deliveries.id),
+  order_id: uuid("order_id").notNull(), // polymorphic (shop_orders); no FK by design
+  fee_bdt: integer("fee_bdt").notNull(), // paisa gross
+  commission_bdt: integer("commission_bdt").notNull().default(0), // paisa platform take
+  net_bdt: integer("net_bdt").notNull(), // paisa credited to the courier
+  created_at: timestamptz("created_at").notNull().defaultNow(),
+}, (t) => [
+  uniqueIndex("delivery_earnings_leg_uq").on(t.leg_id),
+  index("delivery_earnings_user_idx").on(t.delivery_man_user_id, t.created_at),
+]);
+
+/**
+ * S6 — courier COD remittance dues (plan §12 + F-33): the items-total cash
+ * the courier collected on delivery and owes onward (the fee itself is the
+ * courier's earnings above). status: pending | remitted | adjusted.
+ * Overdue rows drive reminders + the dispatch hold (config seeds
+ * cod_remittance_overdue_days / cod_dispatch_hold_threshold_bdt).
+ */
+export const courierRemittanceDues = pgTable("courier_remittance_dues", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  delivery_man_user_id: uuid("delivery_man_user_id").notNull().references((): any => users.id),
+  leg_id: uuid("leg_id").notNull().references((): any => deliveries.id),
+  order_id: uuid("order_id").notNull(),
+  amount_bdt: integer("amount_bdt").notNull(), // paisa items total collected in cash
+  status: varchar("status", { length: 20 }).notNull().default("pending"), // pending | remitted | adjusted
+  remitted_at: timestamptz("remitted_at"),
+  remittance_note: text("remittance_note"),
+  created_at: timestamptz("created_at").notNull().defaultNow(),
+  updated_at: timestamptz("updated_at").notNull().defaultNow(),
+}, (t) => [
+  uniqueIndex("courier_remittance_dues_leg_uq").on(t.leg_id),
+  index("courier_remittance_dues_user_idx").on(t.delivery_man_user_id, t.status),
 ]);
 
 /**

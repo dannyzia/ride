@@ -31,7 +31,7 @@ const ROLE_HOME: Record<string, string> = {
   driver: "/(main)/(rider)/home",
   shop_owner: "/(main)/(shop-owner)",
   fleet_owner: "/(main)/(customer)/home",
-  delivery_man: "/(main)/(customer)/home",
+  delivery_man: "/(main)/(delivery)",
 };
 
 /** M-5 (§16): the resubmit button deep-links into the role's prefilled

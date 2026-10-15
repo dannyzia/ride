@@ -2331,6 +2331,20 @@ async function executeMatchFlow(
     return "race_lost";
   }
 
+  // S6 (F-15 / Amendment 2): Deliveries auto-OFF while carrying a rider —
+  // a matched driver must not receive delivery offers. The driver re-enables
+  // it from the Deliveries toggle after the ride; no auto-restore.
+  await db
+    .update(drivers)
+    .set({ deliveries_enabled: false })
+    .where(and(eq(drivers.id, driverId), eq(drivers.deliveries_enabled, true)))
+    .catch((e: unknown) =>
+      logger.warn("[match] deliveries auto-OFF failed", {
+        driverId,
+        error: e instanceof Error ? e.message : String(e),
+      }),
+    );
+
   // Mark this driver's offer as accepted (only after ride is successfully matched)
   await db
     .update(dispatchOffers)

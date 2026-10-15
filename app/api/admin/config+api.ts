@@ -174,6 +174,13 @@ const ALLOWED_KEYS = new Set([
   'emergency_ack_timeout_seconds',
   'emergency_escalation_k_ring',
 
+  // S6 (plan 27 §6.1 + §12) — delivery dispatch + COD remittance dues.
+  // Seeds, never constants (same rule as the keys above).
+  'delivery_offer_window_seconds',
+  'delivery_max_suggestions',
+  'cod_remittance_overdue_days',
+  'cod_dispatch_hold_threshold_bdt',
+
   // Fare engine — joma recovery (taka-scale)
   'joma_bike_eco_monthly_bdt',
   'joma_bike_std_monthly_bdt',
@@ -304,6 +311,18 @@ function validateKeyValue(key: string, value: string): string | null {
   }
   if (key === 'emergency_escalation_k_ring') {
     if (!Number.isInteger(v) || v <= 0) return `${key} must be a positive integer (H3 ring)`;
+  }
+  if (key === 'delivery_offer_window_seconds') {
+    if (!Number.isInteger(v) || v <= 0) return `${key} must be a positive integer (seconds)`;
+  }
+  if (key === 'delivery_max_suggestions') {
+    if (!Number.isInteger(v) || v <= 0) return `${key} must be a positive integer (count)`;
+  }
+  if (key === 'cod_remittance_overdue_days') {
+    if (!Number.isInteger(v) || v < 0) return `${key} must be a non-negative integer (days)`;
+  }
+  if (key === 'cod_dispatch_hold_threshold_bdt') {
+    if (!Number.isInteger(v) || v < 0) return `${key} must be a non-negative integer (paisa)`;
   }
 
   // Reference quantile: 0–1

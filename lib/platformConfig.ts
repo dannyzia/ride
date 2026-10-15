@@ -214,6 +214,17 @@ export const MARKETPLACE_CONFIG_KEYS = [
   // when the ack timeout escalates (seed 50; base broadcast uses
   // emergency_broadcast_k_ring = 25).
   'emergency_escalation_k_ring',
+  // S6 (plan 27 §6.1) — sequential delivery dispatch. The offer window is how
+  // long ONE candidate has to respond before the chain moves to the next
+  // (seed 45 seconds — the §6.1 45s window); max suggestions caps the chain
+  // per leg (seed 3 — the §6.1 3 suggestions). Seeds, never constants.
+  'delivery_offer_window_seconds',
+  'delivery_max_suggestions',
+  // S6 (plan 27 §12 + F-33) — COD remittance dues: overdue after this many
+  // days past delivery (seed 7); dispatch hold applies when a courier's
+  // overdue total exceeds this amount (seed 0 paisa = any overdue due holds).
+  'cod_remittance_overdue_days',
+  'cod_dispatch_hold_threshold_bdt',
   // delivery_fee_default_bdt was DROPPED (§12): superseded by the distance
   // tier above. It had no consumer on disk; the row it seeded is inert.
 ] as const;

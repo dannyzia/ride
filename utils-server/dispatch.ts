@@ -214,6 +214,15 @@ export async function buildCandidateList(
         AND rides.status IN ('matched', 'driver_arriving', 'driver_arrived', 'in_progress')
         AND rides.updated_at > now() - interval '3 hours'
       )`,
+      // S6 (Amendment 2, plan 27 §6.1): MUTUAL EXCLUSION — a driver holding
+      // an ACTIVE delivery (accepted/picked_up) is never a ride candidate
+      // (one active job at a time). The mirror guard — busy drivers excluded
+      // from delivery-offer candidates — lives in utils-server/deliveryDispatch.ts.
+      sql`NOT EXISTS (
+        SELECT 1 FROM deliveries
+        WHERE deliveries.delivery_man_user_id = drivers.user_id
+        AND deliveries.status IN ('accepted', 'picked_up')
+      )`,
       // S5 (plan 27 F-22): vehicle doc expiry BLOCKS offers — enforced here
       // because THIS is where dispatch eligibility is computed. Either BRTA
       // doc (fitness or tax token) expired as of the BD calendar day → the

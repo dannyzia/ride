@@ -7,14 +7,14 @@
  * locked status (0 rows ⇒ 409) — no more unlocked read-check-write window.
  */
 import { db } from "@/src/db";
-import { shopOrders, shopOrderItems } from "@/src/db/schema";
+import { shopOrders, shopOrderItems, deliveries } from "@/src/db/schema";
 import { requireAnyRole } from "@/lib/auth";
 import { requireShopMember } from "@/lib/marketplaceRbac";
 import { parseJsonBody } from "@/lib/parseBody";
 import { logger } from "@/lib/logger";
 import { notifyWs } from "@/lib/wsNotify";
 import * as errors from "@/lib/errors";
-import { eq, and } from "drizzle-orm";
+import { eq, and, inArray } from "drizzle-orm";
 import { z } from "zod";
 import { settleShopOrder } from "@/lib/shopLedger";
 import { notifyCustomerOrderStatus } from "@/lib/shopNotify";
@@ -23,6 +23,11 @@ const statusSchema = z.object({
   status: z.enum([
     "accepted",
     "preparing",
+    // S6 (§6.1): courier-search + assignment + handover + fallback states.
+    "dispatched",
+    "courier_assigned",
+    "picked_up",
+    "self_delivered",
     "ready_for_pickup",
     "out_for_delivery",
     "delivered",
@@ -38,9 +43,17 @@ const statusSchema = z.object({
 
 const VALID_TRANSITIONS: Record<string, string[]> = {
   pending: ["accepted", "cancelled"],
-  accepted: ["preparing", "cancelled"],
-  preparing: ["ready_for_pickup", "cancelled"],
-  ready_for_pickup: ["out_for_delivery", "delivered"],
+  // S6 (§6.1): "dispatched" = courier search under way. accepted→dispatched
+  // is the shop's early Find-courier choice; preparing→dispatched is the
+  // explicit trigger (the auto-trigger at prep start is state-preserving —
+  // dispatch job 58 accepts orders in either state).
+  accepted: ["preparing", "cancelled", "dispatched"],
+  preparing: ["ready_for_pickup", "cancelled", "dispatched"],
+  dispatched: ["courier_assigned", "self_delivered", "cancelled"],
+  courier_assigned: ["ready_for_pickup", "cancelled"],
+  // S6: the courier picks up after the shop marks ready (F-11 handover).
+  ready_for_pickup: ["out_for_delivery", "delivered", "picked_up", "cancelled"],
+  picked_up: ["delivered"],
   out_for_delivery: ["delivered", "cancelled"],
 };
 
@@ -90,13 +103,26 @@ export async function PATCH(request: Request, { id }: { id: string }) {
 
       // Auth: shop member (owner/manager/staff) or the ordering rider
       let authorized = false;
+      let isShopMember = false;
       try {
         await requireShopMember(order.shop_id, ["OWNER", "MANAGER", "STAFF"])(
           request,
         );
         authorized = true;
+        isShopMember = true;
       } catch {
         // Not a shop member — check if the ordering rider
+      }
+
+      // S6 (§6.1): dispatch states are SHOP-side only — the ordering rider
+      // may never drive courier search / assignment / pickup / self-delivery.
+      const SHOP_ONLY_STATES = ["dispatched", "courier_assigned", "picked_up", "self_delivered"];
+      if (!isShopMember && SHOP_ONLY_STATES.includes(targetStatus)) {
+        guard = Response.json(
+          { error: "forbidden", message: "Only the shop can perform this transition" },
+          { status: 403 },
+        );
+        return;
       }
 
       if (!authorized) {
@@ -149,12 +175,32 @@ export async function PATCH(request: Request, { id }: { id: string }) {
         }
       }
       if (targetStatus === "preparing") updates.prepared_at = new Date();
+      if (targetStatus === "dispatched") updates.dispatched_at = new Date();
       if (targetStatus === "ready_for_pickup") updates.ready_at = new Date();
+      if (targetStatus === "picked_up") updates.picked_up_at = new Date();
       if (targetStatus === "out_for_delivery") updates.picked_up_at = new Date();
-      if (targetStatus === "delivered") updates.delivered_at = new Date();
+      if (targetStatus === "delivered" || targetStatus === "self_delivered") {
+        updates.delivered_at = new Date();
+      }
       if (targetStatus === "cancelled") {
         updates.cancelled_at = new Date();
         updates.cancel_reason = result.data.cancel_reason ?? null;
+        // S6 F-12: a cancel under way kills the live dispatch chain (created/
+        // offered legs) so no further offers go out for this order.
+        await tx
+          .update(deliveries)
+          .set({
+            status: "failed",
+            offered_to_user_id: null,
+            offer_expires_at: null,
+            updated_at: new Date(),
+          })
+          .where(
+            and(
+              eq(deliveries.order_id, id),
+              inArray(deliveries.status, ["created", "offered"]),
+            ),
+          );
       }
 
       // Conditional write: 0 rows means a racing transition won the row
@@ -178,7 +224,10 @@ export async function PATCH(request: Request, { id }: { id: string }) {
       // S3/§12: order revenue + commission land in the SAME tx as the
       // delivered transition — a settle failure rolls the status back (no
       // delivered order without its ledger entries). Audit (§11 review 1).
-      if (targetStatus === "delivered") {
+      // S6: self-delivery settles the SAME way (the shop keeps the customer's
+      // delivery fee; there is no courier earnings/due row — §6.1 exhaustion
+      // fallback). No courier → no deliverySettlement writes.
+      if (targetStatus === "delivered" || targetStatus === "self_delivered") {
         await settleShopOrder(tx, {
           id: order.id,
           shop_id: order.shop_id,
@@ -192,9 +241,14 @@ export async function PATCH(request: Request, { id }: { id: string }) {
     if (guard) return guard;
 
     // F-29: picked up / delivered → the ordering customer (fire-and-forget,
-    // deduped — a retried transition can never double-push). "Courier
-    // assigned" joins here when S6 starts writing that state.
-    if (newStatus === "out_for_delivery" || newStatus === "delivered") {
+    // deduped — a retried transition can never double-push). S6 adds
+    // courier_assigned (§6.1 step 4, written by the accept route) and
+    // self_delivered (§6.1 exhaustion fallback).
+    if (
+      newStatus === "out_for_delivery" ||
+      newStatus === "delivered" ||
+      newStatus === "self_delivered"
+    ) {
       try {
         const [cust] = await db
           .select({ rider_user_id: shopOrders.rider_user_id })

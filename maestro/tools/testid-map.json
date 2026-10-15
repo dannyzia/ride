@@ -1,5 +1,5 @@
 {
-  "total": 1214,
+  "total": 1252,
   "screens": {
     "(auth)/_layout.tsx": [
       {
@@ -2239,6 +2239,144 @@
         "line": 183
       }
     ],
+    "(main)/(delivery)/active/[id].tsx": [
+      {
+        "id": "delivery.active.id.el-1",
+        "line": 271
+      },
+      {
+        "id": "delivery.active.status-pill",
+        "line": 281
+      },
+      {
+        "id": "delivery.active.details-card",
+        "line": 297
+      },
+      {
+        "id": "delivery.active.id.call-customer",
+        "line": 342
+      },
+      {
+        "id": "delivery.active.pickup-panel",
+        "line": 354
+      },
+      {
+        "id": "delivery.active.id.on-attempt",
+        "line": 361
+      },
+      {
+        "id": "delivery.active.id.set-pickup-code",
+        "line": 380
+      },
+      {
+        "id": "delivery.active.id.on-pickup",
+        "line": 387
+      },
+      {
+        "id": "delivery.active.deliver-panel",
+        "line": 397
+      },
+      {
+        "id": "delivery.active.id.set-otp",
+        "line": 414
+      },
+      {
+        "id": "delivery.active.id.pick-proof-photo",
+        "line": 421
+      },
+      {
+        "id": "delivery.active.id.set-amount-input",
+        "line": 455
+      },
+      {
+        "id": "delivery.active.id.on-deliver",
+        "line": 470
+      },
+      {
+        "id": "delivery.active.id.set-show-fail",
+        "line": 486
+      },
+      {
+        "id": "delivery.active.fail-panel",
+        "line": 492
+      },
+      {
+        "id": "delivery.active.id.set-fail-reason",
+        "line": 503
+      },
+      {
+        "id": "delivery.active.id.on-fail",
+        "line": 510
+      }
+    ],
+    "(main)/(delivery)/earnings.tsx": [
+      {
+        "id": "delivery.earnings.el-1",
+        "line": 146
+      },
+      {
+        "id": "delivery.earnings.total-card",
+        "line": 165
+      },
+      {
+        "id": "delivery.earnings.dues-card",
+        "line": 177
+      },
+      {
+        "id": "delivery.earnings.hold-banner",
+        "line": 195
+      },
+      {
+        "id": "delivery.earnings.rating-card",
+        "line": 210
+      },
+      {
+        "id": "delivery.earnings.due-row",
+        "line": 242
+      },
+      {
+        "id": "delivery.earnings.declare-remittance",
+        "line": 265
+      },
+      {
+        "id": "delivery.earnings.earning-row",
+        "line": 306
+      }
+    ],
+    "(main)/(delivery)/index.tsx": [
+      {
+        "id": "delivery.push-earnings",
+        "line": 178
+      },
+      {
+        "id": "delivery.inbox.hold-banner",
+        "line": 221
+      },
+      {
+        "id": "delivery.push-active",
+        "line": 238
+      },
+      {
+        "id": "delivery.inbox.offer-card",
+        "line": 261
+      },
+      {
+        "id": "delivery.respond-el",
+        "line": 329
+      },
+      {
+        "id": "delivery.respond-el-2",
+        "line": 340
+      },
+      {
+        "id": "delivery.inbox.empty-state",
+        "line": 350
+      },
+      {
+        "id": "delivery.inbox.history-row",
+        "line": 379
+      }
+    ],
     "(main)/(fleet)/(tabs)/dashboard/index.tsx": [
       {
         "id": "fleet.dashboard.on-press",
@@ -3709,14 +3847,36 @@
         "line": 149
       }
     ],
+    "(main)/(rider)/settings/deliveries.tsx": [
+      {
+        "id": "rider.settings.deliveries.el-1",
+        "line": 120
+      },
+      {
+        "id": "rider.settings.deliveries.toggle-card",
+        "line": 137
+      },
+      {
+        "id": "rider.settings.deliveries.set-enabled",
+        "line": 155
+      },
+      {
+        "id": "rider.settings.deliveries.notice-text",
+        "line": 172
+      },
+      {
+        "id": "rider.settings.deliveries.push-delivery",
+        "line": 186
+      }
+    ],
     "(main)/(rider)/settings/index.tsx": [
       {
         "id": "rider.settings.el-1",
-        "line": 68
+        "line": 69
       },
       {
         "id": "rider.settings.el-2",
-        "line": 108
+        "line": 109
       }
     ],
     "(main)/(rider)/settings/language/index.tsx": [
@@ -5298,7 +5458,7 @@
     "index.tsx": [
       {
         "id": ".run-auth-check",
-        "line": 194
+        "line": 197
       }
     ],
     "track/[rideId].tsx": [

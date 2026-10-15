@@ -201,6 +201,59 @@ export function requireFleetMarketplaceAccess() {
 // requireCourier (Phase 3 — E.5b, F29)
 // ══════════════════════════════════════════════════════════════
 
+/**
+ * S6 (plan 27 §6.1, Amendment 2): the universal delivery-agent guard —
+ * caller is EITHER an active Delivery Man (couriers row, any type) OR an
+ * active driver with the Deliveries toggle ON (server-side gate; UI hiding
+ * is not security). Used by the dispatched-offers inbox + leg actions.
+ */
+export interface DeliveryAgentAuthResult {
+  supabaseUser: User;
+  dbUser: { id: string; role: string };
+  kind: 'courier' | 'driver';
+  courier: { id: string; status: string } | null;
+  driver: { id: string; deliveries_enabled: boolean } | null;
+}
+
+export async function requireDeliveryAgent(
+  request: Request,
+): Promise<DeliveryAgentAuthResult> {
+  const supabaseUser = await verifySupabaseToken(request);
+
+  const { data: dbUser } = await supabaseAdmin
+    .from('users')
+    .select('id, role')
+    .eq('auth_uid', supabaseUser.id)
+    .maybeSingle();
+  if (!dbUser) throw Object.assign(new Error('Forbidden'), { status: 403 });
+
+  const { data: courier } = await supabaseAdmin
+    .from('couriers')
+    .select('id, status')
+    .eq('user_id', dbUser.id)
+    .in('status', ['active'])
+    .limit(1)
+    .maybeSingle();
+  if (courier) {
+    return { supabaseUser, dbUser, kind: 'courier', courier, driver: null };
+  }
+
+  const { data: driver } = await supabaseAdmin
+    .from('drivers')
+    .select('id, deliveries_enabled')
+    .eq('user_id', dbUser.id)
+    .eq('status', 'active')
+    .maybeSingle();
+  if (driver && driver.deliveries_enabled === true) {
+    return { supabaseUser, dbUser, kind: 'driver', courier: null, driver };
+  }
+
+  throw Object.assign(new Error('Forbidden'), {
+    status: 403,
+    message: 'delivery_agent_required',
+  });
+}
+
 export interface CourierAuthResult {
   supabaseUser: User;
   dbUser: { id: string; role: string };

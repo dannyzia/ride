@@ -87,6 +87,19 @@ const CUSTOMER_COPY: Record<string, { title: string; body: string }> = {
     title: "Order delivered",
     body: "Your order has been delivered. Pay cash on receipt.",
   },
+  // S6 (§6.1): assignment + self-delivery fallback states.
+  courier_assigned: {
+    title: "Courier assigned",
+    body: "A courier is on the way for your order.",
+  },
+  picked_up: {
+    title: "Order picked up",
+    body: "The courier picked up your order and is on the way.",
+  },
+  self_delivered: {
+    title: "Order delivered",
+    body: "Your order was delivered directly by the shop. Pay cash on receipt.",
+  },
 };
 
 /**

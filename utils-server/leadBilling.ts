@@ -27,6 +27,7 @@ import {
 } from '../src/db/schema';
 import { eq, and, sql, desc } from 'drizzle-orm';
 import { logger } from '../lib/logger';
+import { driverErrorCode } from '../lib/idempotency';
 
 export interface DebitResult {
   billed: boolean;
@@ -184,7 +185,12 @@ export async function debitLeadForOffer(
       reason: 'offer_sent',
     });
   } catch (e: unknown) {
-    if ((e as { code?: string }).code === '23505') {
+    // S6 fix: drizzle wraps driver errors in DrizzleQueryError — the 23505
+    // lives on the cause chain, so the bare `e.code` check NEVER matched a
+    // real DB and this graceful skip degraded to a thrown error (tx still
+    // rolled back — no double-billing — but the chain aborted). Shared
+    // cause-chain unwrap from lib/idempotency.ts (the S4 fix), reused here.
+    if (driverErrorCode(e) === '23505') {
       throw new SkipBillingError();
     }
     throw e;

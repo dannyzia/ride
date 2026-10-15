@@ -148,9 +148,10 @@ describe('A8 — honest job counter', () => {
     // The counter must equal the ACTUAL number of registered timers — never
     // a hardcoded string again.
     expect(logged).toBe(jest.getTimerCount());
-    // And the current registration count is 58 (57 + job 57 notification
-    // retention sweep).
-    expect(logged).toBe(58);
+    // And the current registration count is 60 (58 + S6 jobs 58/59 — the
+    // delivery dispatch tick and the COD remittance reminder sweep,
+    // plan 27 §6.1/§12).
+    expect(logged).toBe(60);
   });
 });
 
