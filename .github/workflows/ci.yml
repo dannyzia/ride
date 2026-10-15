@@ -276,6 +276,30 @@ jobs:
       - name: Maestro flow selector gate
         run: node maestro/tools/flow-xcheck.cjs
 
+      # The flow LOAD gate (2026-10-15), the repo-wide audit of the class no
+      # local-only run reaches. The selector gate above validates selectors and
+      # copy; it never parses Maestro's schema or resolves a reference path, so
+      # 95 wrong-depth references and 26 unrunnable runScript sites shipped
+      # through every green report in S3-S6. This step runs the native checks
+      # (references resolve / runScript form / `when:` shape) over the whole tree
+      # AND the Maestro ENGINE over it, with a sentinel --udid so no flow can
+      # execute. FLOW_LOAD_REQUIRE_ENGINE=1 makes this job REFUSE rather than pass
+      # when the engine is unreachable: it is the only check that sees
+      # unknown-command classes (`- wait:`, `- scrollUntil:` were both live).
+      # Maestro is installed here because the engine step is what this job exists
+      # for; the precommit-gates replay exercises the same stage natively without
+      # it (there, an absent engine is a WARN by design).
+      - name: Install Maestro (the load gate's engine witness)
+        run: |
+          curl -Ls "https://get.maestro.mobile.dev" | bash
+          echo "$HOME/maestro/bin" >> "$GITHUB_PATH"
+          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
+
+      - name: Maestro flow load gate (whole tree)
+        env:
+          FLOW_LOAD_REQUIRE_ENGINE: "1"
+        run: node maestro/tools/flow-load-check.cjs --all
+
       # Stage 4. The B-1 fingerprint proof: a second write-mode codemod run must
       # touch ZERO files, --strip → regen must reproduce app/ byte-for-byte, and
       # no testID may repeat a path segment. The tool sandboxes app/ itself (the

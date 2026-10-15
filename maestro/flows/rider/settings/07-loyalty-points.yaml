@@ -17,8 +17,8 @@ tags: [rider, settings, growth]
       PHONE: "8801613249520"
       PASSWORD: "test1234"
     commands:
-      - runFlow: ../../../shared/auth/_login-rider.yaml
-- runFlow: ../shared/util/_open-settings-hub.yaml
+      - runFlow: ../../shared/auth/_login-rider.yaml
+- runFlow: ../../shared/util/_open-settings-hub.yaml
 # _open-settings-hub already lands on the hub (taps customer.profile.push-settings-hub
 # and grounds on customer.settings.el-1), so select the Loyalty row from here.
 - tapOn:

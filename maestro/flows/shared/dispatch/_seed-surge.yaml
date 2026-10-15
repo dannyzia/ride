@@ -7,8 +7,13 @@
 # Class: BLOCKED.
 appId: com.ride.bd
 ---
+# Runs through the GraalJS helper (maestro/utils/js/counterpart-api.js) — a Maestro
+# step cannot shell out, so the counterpart construct is JS, not curl (2026-10-15).
 - runScript:
-    when:
-      true
-    commands:
-      - curl -s -X PATCH "${API_BASE}/api/test/surge-config" -H "Content-Type: application/json" -d '{"multiplier":${MULTIPLIER}}'
+    file: ../../../utils/js/counterpart-api.js
+    env:
+      apiBase: "${API_BASE}"
+      method: "PATCH"
+      path: "/api/test/surge-config"
+      body: '{"multiplier":${MULTIPLIER}}'
+      label: "seed-surge"

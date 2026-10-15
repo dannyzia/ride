@@ -14,17 +14,26 @@
 appId: com.ride.bd
 ---
 - runScript:
-    when:
-      true
-    commands:
-      - node maestro/utils/counterpart-login.cjs --phone "${SHOP_PHONE}" --password "${SHOP_PASSWORD}" --out /tmp/shop-token.json
+    file: ../../../utils/js/counterpart-login.js
+    env:
+      phone: "${SHOP_PHONE}"
+      password: "${SHOP_PASSWORD}"
+      supabaseUrl: "${SUPABASE_URL}"
+      supabaseAnonKey: "${SUPABASE_ANON_KEY}"
+      label: "shop-login"
 - runScript:
-    when:
-      true
-    commands:
-      - node maestro/utils/counterpart-api.cjs --token /tmp/shop-token.json --method PATCH --path "/api/shop/orders/${ORDER_ID}/status" --body '{"status":"accepted","prep_minutes":15}' --out /tmp/order-accepted.json
+    file: ../../../utils/js/counterpart-api.js
+    env:
+      apiBase: "${API_BASE}"
+      method: "PATCH"
+      path: "/api/shop/orders/${ORDER_ID}/status"
+      body: '{"status":"accepted","prep_minutes":15}'
+      label: "shop-prep-accepted"
 - runScript:
-    when:
-      true
-    commands:
-      - node maestro/utils/counterpart-api.cjs --token /tmp/shop-token.json --method PATCH --path "/api/shop/orders/${ORDER_ID}/status" --body '{"status":"preparing"}' --out /tmp/order-preparing.json
+    file: ../../../utils/js/counterpart-api.js
+    env:
+      apiBase: "${API_BASE}"
+      method: "PATCH"
+      path: "/api/shop/orders/${ORDER_ID}/status"
+      body: '{"status":"preparing"}'
+      label: "shop-prep-preparing"

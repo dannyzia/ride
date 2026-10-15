@@ -7,7 +7,7 @@
 #   Settings → Deliveries → toggles ON (rider.settings.deliveries.set-enabled →
 #   PATCH /api/driver/deliveries-toggle; default is OFF from migration 0074) →
 #   "Open delivery inbox" → the dispatched offer card → accept
-#   (delivery.respond-el-2 → POST /api/delivery/offers/{id}/respond).
+#   (delivery.respond-accept → POST /api/delivery/offers/{id}/respond).
 #
 # Also proven here by construction: the toggle is the SERVER-side gate — with it
 # OFF the driver is not in the pool at all (lib/deliveryDispatch's driver query
@@ -90,7 +90,7 @@ tags: [delivery, s6, counterpart-api]
       id: "delivery.inbox.offer-card"
     timeout: 60000
 - tapOn:
-    id: "delivery.respond-el-2"
+    id: "delivery.respond-accept"
 - extendedWaitUntil:
     visible:
       id: "delivery.push-active"

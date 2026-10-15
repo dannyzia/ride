@@ -29,7 +29,7 @@ tags: [marketplace, v4-food, counterpart-api]
       PHONE: "8801613249520"
       PASSWORD: "test1234"
     commands:
-      - runFlow: ../../../shared/auth/_login-rider.yaml
+      - runFlow: ../../shared/auth/_login-rider.yaml
 - tapOn:
     id: "customer.home.set-selected-category"
     text: ".*Food.*|.*Shop.*"
@@ -52,7 +52,7 @@ tags: [marketplace, v4-food, counterpart-api]
       SHOP_PASSWORD: "test1234"
       ORDER_ID: "LATEST_FOOD_ORDER"
     commands:
-      - runFlow: ../../../shared/marketplace/_counterpart-shop-ready.yaml
+      - runFlow: ../../shared/marketplace/_counterpart-shop-ready.yaml
 # ── Counterpart side (API): the agent accepts THE dispatched offer (§6.1) ─────
 - runFlow:
     env:
@@ -61,7 +61,7 @@ tags: [marketplace, v4-food, counterpart-api]
       LEG_ID: "LATEST_DELIVERY_LEG"
       DECISION: "accept"
     commands:
-      - runFlow: ../../../shared/delivery/_counterpart-delivery-agent-respond.yaml
+      - runFlow: ../../shared/delivery/_counterpart-delivery-agent-respond.yaml
 # ── Customer side (UI): order/delivery state reflects the courier ─────────────
 - extendedWaitUntil:
     visible: ".*on the way.*|.*picked.*|.*courier.*|.*delivering.*"

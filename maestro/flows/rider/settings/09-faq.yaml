@@ -14,8 +14,8 @@ tags: [rider, settings]
       PHONE: "8801613249520"
       PASSWORD: "test1234"
     commands:
-      - runFlow: ../../../shared/auth/_login-rider.yaml
-- runFlow: ../../../shared/util/_open-profile-tab.yaml
+      - runFlow: ../../shared/auth/_login-rider.yaml
+- runFlow: ../../shared/util/_open-profile-tab.yaml
 - tapOn:
     id: "customer.profile.push-faq"
 - extendedWaitUntil:

@@ -17,7 +17,7 @@ tags: [marketplace, v6-delivery, counterpart-api]
       PHONE: "8801613249520"
       PASSWORD: "test1234"
     commands:
-      - runFlow: ../../../shared/auth/_login-rider.yaml
+      - runFlow: ../../shared/auth/_login-rider.yaml
 - tapOn:
     id: "customer.home.set-selected-category"
     text: ".*Delivery.*|.*Parcel.*"
@@ -39,7 +39,7 @@ tags: [marketplace, v6-delivery, counterpart-api]
       COURIER_PASSWORD: "test1234"
       REQUEST_ID: "LATEST_PARCEL_REQUEST"
     commands:
-      - runFlow: ../../../shared/marketplace/_counterpart-courier-accept.yaml
+      - runFlow: ../../shared/marketplace/_counterpart-courier-accept.yaml
 - extendedWaitUntil:
     visible: ".*accepted.*|.*on the way.*|.*picked.*"
     timeout: 60000

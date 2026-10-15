@@ -8,12 +8,18 @@
 appId: com.ride.bd
 ---
 - runScript:
-    when:
-      true
-    commands:
-      - node maestro/utils/counterpart-login.cjs --phone "${SHOP_PHONE}" --password "${SHOP_PASSWORD}" --out /tmp/counterpart-token.json
+    file: ../../../utils/js/counterpart-login.js
+    env:
+      phone: "${SHOP_PHONE}"
+      password: "${SHOP_PASSWORD}"
+      supabaseUrl: "${SUPABASE_URL}"
+      supabaseAnonKey: "${SUPABASE_ANON_KEY}"
+      label: "shop-login"
 - runScript:
-    when:
-      true
-    commands:
-      - node maestro/utils/counterpart-api.cjs --token /tmp/counterpart-token.json --method POST --path "/api/shop/orders/${ORDER_ID}/mark-ready" --body '{}' --out /tmp/ready-response.json
+    file: ../../../utils/js/counterpart-api.js
+    env:
+      apiBase: "${API_BASE}"
+      method: "POST"
+      path: "/api/shop/orders/${ORDER_ID}/mark-ready"
+      body: '{}'
+      label: "shop-mark-ready"

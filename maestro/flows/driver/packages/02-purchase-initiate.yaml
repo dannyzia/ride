@@ -11,9 +11,9 @@ tags: [driver, packages, blocked]
       PHONE: "8801700000001"
       PASSWORD: "test1234"
     commands:
-      - runFlow: ../../../shared/auth/_login-driver.yaml
+      - runFlow: ../../shared/auth/_login-driver.yaml
 - runFlow:
     env:
       PACKAGE_NAME: "Standard"
     commands:
-      - runFlow: ../../../shared/payment/_buy-package.yaml
+      - runFlow: ../../shared/payment/_buy-package.yaml

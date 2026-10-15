@@ -11,28 +11,28 @@ appId: com.ride.bd
 name: "Rider Booking - Multi-Stop Ride"
 tags: [rider, booking]
 ---
-- runFlow: ../../../shared/location/_set-gps-banani.yaml
+- runFlow: ../../shared/location/_set-gps-banani.yaml
 - runFlow:
     env:
       PHONE: "8801613249520"
       PASSWORD: "test1234"
     commands:
-      - runFlow: ../../../shared/auth/_login-rider.yaml
+      - runFlow: ../../shared/auth/_login-rider.yaml
 - runFlow:
     env:
       DEST_NAME: "Gulshan"
     commands:
-      - runFlow: ../../../shared/booking/_select-destination.yaml
+      - runFlow: ../../shared/booking/_select-destination.yaml
 - runFlow:
     env:
       STOP_NAME: "Mohakhali"
     commands:
-      - runFlow: ../../../shared/booking/_add-stop.yaml
+      - runFlow: ../../shared/booking/_add-stop.yaml
 - runFlow:
     env:
       STOP_NAME: "Banani"
     commands:
-      - runFlow: ../../../shared/booking/_add-stop.yaml
+      - runFlow: ../../shared/booking/_add-stop.yaml
 - extendedWaitUntil:
     visible:
       id: "customer.home.set-stops"

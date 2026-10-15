@@ -3,7 +3,7 @@
 # shop's F-12 "Retry" re-arms the search.
 #
 #   1. offer to the top-ranked candidate → REJECT
-#      (delivery.respond-el → POST /api/delivery/offers/{id}/respond
+#      (delivery.respond-reject → POST /api/delivery/offers/{id}/respond
 #      {decision:'reject'}): the leg returns to 'created' with the candidate
 #      added to the persisted tried set, so the NEXT tick offers to the next
 #      ranked candidate — never re-offering a tried one.
@@ -98,7 +98,7 @@ tags: [delivery, s6, counterpart-api]
     timeout: 60000
 # ── Step 1: reject → the chain clears the live offer for this candidate ────
 - tapOn:
-    id: "delivery.respond-el"
+    id: "delivery.respond-reject"
 # ── Step 2: exhaustion (max_suggestions=1 for this run) — no live offer is
 # left anywhere, so the inbox settles on the empty state and the shop has been
 # told to choose the fallback. ─────────────────────────────────────────────

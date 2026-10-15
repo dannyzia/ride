@@ -15,13 +15,19 @@ appId: com.ride.bd
 ---
 # 1) Real counterpart login (Supabase OTP-bypass password login via live auth API).
 - runScript:
-    when:
-      true
-    commands:
-      - node maestro/utils/counterpart-login.cjs --phone "${FLEET_PHONE}" --password "${FLEET_PASSWORD}" --out /tmp/counterpart-token.json
+    file: ../../../utils/js/counterpart-login.js
+    env:
+      phone: "${FLEET_PHONE}"
+      password: "${FLEET_PASSWORD}"
+      supabaseUrl: "${SUPABASE_URL}"
+      supabaseAnonKey: "${SUPABASE_ANON_KEY}"
+      label: "fleet-login"
 # 2) Place the bid through the live endpoint with the counterpart's real token.
 - runScript:
-    when:
-      true
-    commands:
-      - node maestro/utils/counterpart-api.cjs --token /tmp/counterpart-token.json --method POST --path "/api/rental/requests/${REQUEST_ID}/bids" --body '{"amount_bdt":${BID_AMOUNT_BDT},"note":"automation sealed bid"}' --out /tmp/bid-response.json
+    file: ../../../utils/js/counterpart-api.js
+    env:
+      apiBase: "${API_BASE}"
+      method: "POST"
+      path: "/api/rental/requests/${REQUEST_ID}/bids"
+      body: '{"amount_bdt":${BID_AMOUNT_BDT},"note":"automation sealed bid"}'
+      label: "fleet-bid"

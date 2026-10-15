@@ -8,12 +8,18 @@
 appId: com.ride.bd
 ---
 - runScript:
-    when:
-      true
-    commands:
-      - node maestro/utils/counterpart-login.cjs --phone "${FLEET_PHONE}" --password "${FLEET_PASSWORD}" --out /tmp/counterpart-token.json
+    file: ../../../utils/js/counterpart-login.js
+    env:
+      phone: "${FLEET_PHONE}"
+      password: "${FLEET_PASSWORD}"
+      supabaseUrl: "${SUPABASE_URL}"
+      supabaseAnonKey: "${SUPABASE_ANON_KEY}"
+      label: "fleet-login"
 - runScript:
-    when:
-      true
-    commands:
-      - node maestro/utils/counterpart-api.cjs --token /tmp/counterpart-token.json --method POST --path "/api/rental/assignments/${ASSIGNMENT_ID}/ack" --body '{}' --out /tmp/ack-response.json
+    file: ../../../utils/js/counterpart-api.js
+    env:
+      apiBase: "${API_BASE}"
+      method: "POST"
+      path: "/api/rental/assignments/${ASSIGNMENT_ID}/ack"
+      body: '{}'
+      label: "fleet-ack"

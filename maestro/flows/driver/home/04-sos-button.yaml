@@ -13,7 +13,7 @@ tags: [driver, safety]
       PHONE: "8801700000001"
       PASSWORD: "test1234"
     commands:
-      - runFlow: ../../../shared/auth/_login-driver.yaml
+      - runFlow: ../../shared/auth/_login-driver.yaml
 - tapOn: ".*SOS.*"
 - runFlow:
     when:

@@ -2346,35 +2346,35 @@
     "(main)/(delivery)/index.tsx": [
       {
         "id": "delivery.push-earnings",
-        "line": 178
+        "line": 186
       },
       {
         "id": "delivery.inbox.hold-banner",
-        "line": 221
+        "line": 229
       },
       {
         "id": "delivery.push-active",
-        "line": 238
+        "line": 246
       },
       {
         "id": "delivery.inbox.offer-card",
-        "line": 261
+        "line": 269
       },
       {
-        "id": "delivery.respond-el",
-        "line": 329
+        "id": "delivery.respond-reject",
+        "line": 337
       },
       {
-        "id": "delivery.respond-el-2",
-        "line": 340
+        "id": "delivery.respond-accept",
+        "line": 348
       },
       {
         "id": "delivery.inbox.empty-state",
-        "line": 350
+        "line": 358
       },
       {
         "id": "delivery.inbox.history-row",
-        "line": 379
+        "line": 387
       }
     ],
     "(main)/(fleet)/(tabs)/dashboard/index.tsx": [

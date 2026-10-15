@@ -13,13 +13,13 @@ appId: com.ride.bd
 name: "Driver Home - Go Online"
 tags: [driver, smoke]
 ---
-- runFlow: ../../../shared/location/_set-gps-banani.yaml
+- runFlow: ../../shared/location/_set-gps-banani.yaml
 - runFlow:
     env:
       PHONE: "8801700000001"
       PASSWORD: "test1234"
     commands:
-      - runFlow: ../../../shared/auth/_login-driver.yaml
+      - runFlow: ../../shared/auth/_login-driver.yaml
 # ── FIRST-RUN: launch subscription already active (ruling manifest step) ──────
 - extendedWaitUntil:
     visible: ".*Calls Remaining.*"
@@ -29,5 +29,5 @@ tags: [driver, smoke]
 # so it could never match here. "Unlimited" is the card's live sentinel rendering.
 - assertVisible:
     text: ".*Unlimited.*|.*Calls Remaining.*"
-- runFlow: ../../../shared/driver/_go-online.yaml
+- runFlow: ../../shared/driver/_go-online.yaml
 - assertVisible: ".*Calls Remaining.*"

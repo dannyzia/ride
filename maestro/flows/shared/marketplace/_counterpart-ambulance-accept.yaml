@@ -10,12 +10,18 @@
 appId: com.ride.bd
 ---
 - runScript:
-    when:
-      true
-    commands:
-      - node maestro/utils/counterpart-login.cjs --phone "${DRIVER_PHONE}" --password "${DRIVER_PASSWORD}" --out /tmp/counterpart-token.json
+    file: ../../../utils/js/counterpart-login.js
+    env:
+      phone: "${DRIVER_PHONE}"
+      password: "${DRIVER_PASSWORD}"
+      supabaseUrl: "${SUPABASE_URL}"
+      supabaseAnonKey: "${SUPABASE_ANON_KEY}"
+      label: "ambulance-driver-login"
 - runScript:
-    when:
-      true
-    commands:
-      - node maestro/utils/counterpart-api.cjs --token /tmp/counterpart-token.json --method POST --path "/api/emergency/requests/${REQUEST_ID}/accept" --body '{}' --out /tmp/accept-response.json
+    file: ../../../utils/js/counterpart-api.js
+    env:
+      apiBase: "${API_BASE}"
+      method: "POST"
+      path: "/api/emergency/requests/${REQUEST_ID}/accept"
+      body: '{}'
+      label: "ambulance-accept"

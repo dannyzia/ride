@@ -5,8 +5,13 @@
 # Class: BLOCKED (payments sandbox).
 appId: com.ride.bd
 ---
+# Runs through the GraalJS helper (maestro/utils/js/counterpart-api.js) — a Maestro
+# step cannot shell out, so the counterpart construct is JS, not curl (2026-10-15).
 - runScript:
-    when:
-      true
-    commands:
-      - curl -s -X POST "${API_BASE}/api/test/payment-bypass" -H "Content-Type: application/json" -d '{"paymentRef":"${PAYMENT_REF}","purpose":"${PURPOSE}"}'
+    file: ../../../utils/js/counterpart-api.js
+    env:
+      apiBase: "${API_BASE}"
+      method: "POST"
+      path: "/api/test/payment-bypass"
+      body: '{"paymentRef":"${PAYMENT_REF}","purpose":"${PURPOSE}"}'
+      label: "portpos-bypass"

@@ -156,6 +156,14 @@ export default function DeliveryInboxScreen() {
     [load],
   );
 
+  // Named per-branch wrappers (2026-10-15): the testID codemod derives an
+  // element's id from the FIRST named call in its handler, so distinct handler
+  // names are what make these two buttons derive `delivery.respond-accept` /
+  // `delivery.respond-reject` instead of one shared `respond` id plus a
+  // positional `-2` suffix (the `respond-el` / `respond-el-2` debt).
+  const respondAccept = useCallback((legId: string) => respond(legId, "accept"), [respond]);
+  const respondReject = useCallback((legId: string) => respond(legId, "reject"), [respond]);
+
   const offer = data?.offer ?? null;
   const active = data?.active ?? null;
   const history = data?.history ?? [];
@@ -324,9 +332,9 @@ export default function DeliveryInboxScreen() {
                       className="flex-1 rounded-[12px] py-3 items-center border"
                       style={{ borderColor: C.border, opacity: busy ? 0.6 : 1 }}
                       disabled={busy}
-                      onPress={() => void respond(offer.id, "reject")}
+                      onPress={() => void respondReject(offer.id)}
                      
-                     testID="delivery.respond-el">
+                      testID="delivery.respond-reject">
                       <Text className="text-[14px] font-JakartaSemiBold" style={{ color: C.text }}>
                         {t("delivery.inbox.reject")}
                       </Text>
@@ -335,9 +343,9 @@ export default function DeliveryInboxScreen() {
                       className="flex-1 rounded-[12px] py-3 items-center"
                       style={{ backgroundColor: colors.primary, opacity: busy ? 0.6 : 1 }}
                       disabled={busy}
-                      onPress={() => void respond(offer.id, "accept")}
+                      onPress={() => void respondAccept(offer.id)}
                      
-                     testID="delivery.respond-el-2">
+                      testID="delivery.respond-accept">
                       <Text className="text-[14px] font-JakartaSemiBold text-white">
                         {t("delivery.inbox.accept")}
                       </Text>

@@ -27,13 +27,13 @@ name: "V2 Rental - Request to Award"
 tags: [marketplace, v2-rental, counterpart-api]
 ---
 # ── Customer side (UI): create the rental request ─────────────────────────────
-- runFlow: ../../../shared/location/_set-gps-banani.yaml
+- runFlow: ../../shared/location/_set-gps-banani.yaml
 - runFlow:
     env:
       PHONE: "8801613249520"
       PASSWORD: "test1234"
     commands:
-      - runFlow: ../../../shared/auth/_login-rider.yaml
+      - runFlow: ../../shared/auth/_login-rider.yaml
 - tapOn:
     id: "customer.home.set-selected-category"
     text: ".*Rental.*"
@@ -69,7 +69,7 @@ tags: [marketplace, v2-rental, counterpart-api]
       REQUEST_ID: "LATEST_RENTAL_REQUEST"
       BID_AMOUNT_BDT: "150000"
     commands:
-      - runFlow: ../../../shared/marketplace/_counterpart-fleet-bid.yaml
+      - runFlow: ../../shared/marketplace/_counterpart-fleet-bid.yaml
 # ── Customer side (UI): bid appears → accept → award ──────────────────────────
 - extendedWaitUntil:
     visible: ".*bid.*|.*Bid.*"
@@ -86,7 +86,7 @@ tags: [marketplace, v2-rental, counterpart-api]
       FLEET_PASSWORD: "test1234"
       ASSIGNMENT_ID: "LATEST_ASSIGNMENT"
     commands:
-      - runFlow: ../../../shared/marketplace/_counterpart-fleet-ack.yaml
+      - runFlow: ../../shared/marketplace/_counterpart-fleet-ack.yaml
 # ── Customer side (UI): assignment tracking visible ───────────────────────────
 - extendedWaitUntil:
     visible: ".*confirmed.*|.*assigned.*|.*tracking.*"

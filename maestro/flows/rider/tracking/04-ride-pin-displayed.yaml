@@ -15,7 +15,7 @@ tags: [rider, tracking, safety]
       PHONE: "8801613249520"
       PASSWORD: "test1234"
     commands:
-      - runFlow: ../../../shared/auth/_login-rider.yaml
+      - runFlow: ../../shared/auth/_login-rider.yaml
 # Rider re-enters the active ride from home/history (ride in matched state expected
 # from the paired driver run).
 - tapOn:

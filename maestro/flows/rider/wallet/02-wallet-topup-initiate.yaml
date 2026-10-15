@@ -12,9 +12,9 @@ tags: [rider, wallet, blocked]
       PHONE: "8801613249520"
       PASSWORD: "test1234"
     commands:
-      - runFlow: ../../../shared/auth/_login-rider.yaml
+      - runFlow: ../../shared/auth/_login-rider.yaml
 - runFlow:
     env:
       AMOUNT: "500"
     commands:
-      - runFlow: ../../../shared/payment/_wallet-topup.yaml
+      - runFlow: ../../shared/payment/_wallet-topup.yaml

@@ -107,6 +107,43 @@ else
   fi
 fi
 
+# 2026-10-15 flow LOAD gate (stage 4): every flow defect found in S6 (below) was
+# a LOAD defect — the flow failed before a single step ran, on device, with no
+# test having executed. Two classes, invisible to every other stage here:
+# (a) `runFlow`/`runScript.file` paths resolve relative to the flow FILE, so a
+# wrong `../` count is a dead reference (98 of them across 36 files, including
+# three flows on the device-day preflight list); (b) the counterpart construct
+# `runScript:` + `when:` + `commands:` cannot load at all — `commands:` is a
+# `runFlow` field and Maestro has no shell step (26 sites across 16 files).
+# flow-xcheck validates selectors and copy, never the Maestro schema or a path.
+# The tool checks refs / runScript forms / `when:` shapes natively over ALL flows
+# (~0.5s) and then runs the Maestro ENGINE over the staged files, with a sentinel
+# `--udid` so no flow can execute even on a machine with a device attached.
+# Maestro is not a project dependency, so its absence does NOT block this stage
+# (native checks still do); CI installs it and therefore always exercises the
+# engine step.
+echo "⏳ Pre-commit: Maestro flow load gate (staged flows)..."
+STAGED_LOAD_FLOWS=()
+while IFS= read -r -d '' f; do
+  STAGED_LOAD_FLOWS+=("$f")
+done < <(git diff --cached --name-only -z --diff-filter=ACMR | grep -zE '^maestro/flows/.*\.yaml$' || true)
+
+if [ ${#STAGED_LOAD_FLOWS[@]} -eq 0 ]; then
+  echo "✅ No staged Maestro flow files — skipping flow load gate."
+else
+  if ! node maestro/tools/flow-load-check.cjs "${STAGED_LOAD_FLOWS[@]}"; then
+    echo '❌ Flow load gate failed — commit blocked.'
+    echo '   A staged flow cannot load on Maestro 2.6.1, so no test in it can ever run.'
+    echo '   Fix:  unresolved reference -> the "../" count must equal the directory depth'
+    echo '         under maestro/flows (paths are relative to the flow FILE):'
+    echo '         node maestro/tools/fix-runflow-paths.cjs --dry-run'
+    echo '         inline runScript commands -> no shell step exists; use the file form:'
+    echo '         runScript: { file: <path under maestro/utils/js/>, env: {...} }'
+    echo "         bare \"when: true\" -> drop it (unconditional), or use when: { true: \${EXPR} }"
+    exit 1
+  fi
+fi
+
 echo "⏳ Pre-commit: testID codemod idempotence gate (B-1)..."
 # Runs whenever the codemod or any app/ file is staged — B-1 was a codemod that
 # double-prefixed every testID (_layout._layout.set-theme) across 221 files on a

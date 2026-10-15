@@ -169,7 +169,16 @@ describe("testid-flow-currency: live repo selector set (TRAP 1 regression guard)
     // 2026-10-12: re-pinned 99 -> 100 (measured in BOTH modes) after the
     // committed flow set moved again — ISSUE-77's marketplace-family flow
     // rewiring (d9ea7e6) plus the driver-onboarding wizard rebuild (2d4f3f4).
-    expect(gate.flowSelectors().size).toBe(100);
+    // 2026-10-15: found STALE at 100 while the S6 flow-load audit ran the FULL
+    // suite; re-pinned to the MEASURED 120. Proven pre-existing rather than a
+    // side effect of that audit: a throwaway `git worktree add --detach HEAD`
+    // (no working-tree changes at all) reports 120 too, so the committed flow
+    // set moved without moving this pin when the S6 delivery journeys landed
+    // (3 flows under maestro/flows/delivery/ + the v4-food rewire, be0b4fe).
+    // Nothing in this pin's drift came from renames: a renamed selector keeps
+    // the count, and `delivery.respond-el(-2)` -> `respond-reject`/`-accept`
+    // is one-for-one. Exact assertion unchanged; the canary keeps its force.
+    expect(gate.flowSelectors().size).toBe(120);
   });
 });
 

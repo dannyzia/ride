@@ -15,7 +15,7 @@ tags: [marketplace, v7-ambulance, counterpart-api]
       PHONE: "8801613249520"
       PASSWORD: "test1234"
     commands:
-      - runFlow: ../../../shared/auth/_login-rider.yaml
+      - runFlow: ../../shared/auth/_login-rider.yaml
 - tapOn: ".*Ambulance.*"
 - tapOn: ".*Schedule.*|.*Scheduled.*"
 - extendedWaitUntil:
@@ -36,7 +36,7 @@ tags: [marketplace, v7-ambulance, counterpart-api]
       DRIVER_PASSWORD: "test1234"
       REQUEST_ID: "LATEST_SCHEDULED_AMBULANCE"
     commands:
-      - runFlow: ../../../shared/marketplace/_counterpart-ambulance-accept.yaml
+      - runFlow: ../../shared/marketplace/_counterpart-ambulance-accept.yaml
 - extendedWaitUntil:
     visible: ".*accepted.*|.*assigned.*"
     timeout: 60000

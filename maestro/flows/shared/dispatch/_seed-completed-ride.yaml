@@ -1,16 +1,16 @@
 # _seed-completed-ride — POST /api/test/seed-ride?status=completed for the given pair.
 # §9. MANIFEST: BLOCKED-GATE (Gate 2 endpoint absent; verified 2026-09-27).
 # Class: COUNTERPART-API (once live).
-# Block scalar (>-): the raw curl line contains `Content-Type: application/json`,
-# whose colon-space made this sequence entry unparseable as a plain scalar.
+# Runs through the GraalJS helper (maestro/utils/js/counterpart-api.js) — a Maestro
+# step cannot shell out, so the counterpart construct is JS, not curl (2026-10-15).
 appId: com.ride.bd
 ---
 - runScript:
-    when:
-      true
-    commands:
-      - >-
-        curl -s -X POST "${API_BASE}/api/test/seed-ride?status=completed"
-        -H "Content-Type: application/json"
-        -H "Authorization: Bearer ${API_TOKEN}"
-        -d '{"riderId":"${RIDER_ID}","driverId":"${DRIVER_ID}"}'
+    file: ../../../utils/js/counterpart-api.js
+    env:
+      apiBase: "${API_BASE}"
+      method: "POST"
+      path: "/api/test/seed-ride?status=completed"
+      body: '{"riderId":"${RIDER_ID}","driverId":"${DRIVER_ID}"}'
+      token: "${API_TOKEN}"
+      label: "seed-completed-ride"

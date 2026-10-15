@@ -24,9 +24,10 @@ appId: com.ride.bd
 - inputText: "test1234"
 - tapOn:
     id: "login.handle-login"
-- wait: 10000
-- scrollUntil:
-    visible:
+- waitForAnimationToEnd:
+    timeout: 10000
+- scrollUntilVisible:
+    element:
       id: "customer.home.el-2"
+    direction: DOWN
     timeout: 30000
-    scrollTimes: 0

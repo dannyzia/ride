@@ -22,7 +22,7 @@ tags: [marketplace, v7-ambulance, counterpart-api]
       PHONE: "8801700000401"
       PASSWORD: "test1234"
     commands:
-      - runFlow: ../../../shared/auth/_login-driver.yaml
+      - runFlow: ../../shared/auth/_login-driver.yaml
 - tapOn: ".*Ambulance.*|.*Certification.*"
 - extendedWaitUntil:
     visible: ".*certif.*|.*BLS.*|.*ALS.*"
@@ -38,7 +38,7 @@ tags: [marketplace, v7-ambulance, counterpart-api]
       PHONE: "8801613249520"
       PASSWORD: "test1234"
     commands:
-      - runFlow: ../../../shared/auth/_login-rider.yaml
+      - runFlow: ../../shared/auth/_login-rider.yaml
 - tapOn: ".*Ambulance.*"
 - extendedWaitUntil:
     visible: ".*emergency.*|.*Emergency.*"
@@ -56,7 +56,7 @@ tags: [marketplace, v7-ambulance, counterpart-api]
       DRIVER_PASSWORD: "test1234"
       REQUEST_ID: "LATEST_EMERGENCY_REQUEST"
     commands:
-      - runFlow: ../../../shared/marketplace/_counterpart-ambulance-accept.yaml
+      - runFlow: ../../shared/marketplace/_counterpart-ambulance-accept.yaml
 # ── Customer side (UI): status transition reflected ───────────────────────────
 - extendedWaitUntil:
     visible: ".*accepted.*|.*on the way.*|.*assigned.*"

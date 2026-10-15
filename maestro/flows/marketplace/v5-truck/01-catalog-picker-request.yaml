@@ -19,7 +19,7 @@ tags: [marketplace, v5-truck, counterpart-api]
       PHONE: "8801613249520"
       PASSWORD: "test1234"
     commands:
-      - runFlow: ../../../shared/auth/_login-rider.yaml
+      - runFlow: ../../shared/auth/_login-rider.yaml
 - tapOn:
     id: "customer.home.set-selected-category"
     text: ".*Truck.*"
@@ -56,7 +56,7 @@ tags: [marketplace, v5-truck, counterpart-api]
       REQUEST_ID: "LATEST_TRUCK_REQUEST"
       BID_AMOUNT_BDT: "280000"
     commands:
-      - runFlow: ../../../shared/marketplace/_counterpart-fleet-bid.yaml
+      - runFlow: ../../shared/marketplace/_counterpart-fleet-bid.yaml
 - extendedWaitUntil:
     visible: ".*bid.*|.*Bid.*"
     timeout: 60000

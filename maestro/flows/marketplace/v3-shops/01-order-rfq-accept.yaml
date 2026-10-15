@@ -23,7 +23,7 @@ tags: [marketplace, v3-shops, counterpart-api]
       PHONE: "8801613249520"
       PASSWORD: "test1234"
     commands:
-      - runFlow: ../../../shared/auth/_login-rider.yaml
+      - runFlow: ../../shared/auth/_login-rider.yaml
 - tapOn:
     id: "customer.home.set-selected-category"
     text: ".*Shop.*"
@@ -58,7 +58,7 @@ tags: [marketplace, v3-shops, counterpart-api]
       ORDER_ID: "LATEST_SHOP_ORDER"
       QUOTE_AMOUNT_BDT: "45000"
     commands:
-      - runFlow: ../../../shared/marketplace/_counterpart-shop-quote.yaml
+      - runFlow: ../../shared/marketplace/_counterpart-shop-quote.yaml
 # ── Customer side (UI): quote visible → accept → order state advances ─────────
 - extendedWaitUntil:
     visible: ".*quote.*|.*৳.*"

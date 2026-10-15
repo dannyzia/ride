@@ -94,6 +94,13 @@ const TOOL_FILES = [
   path.join("scripts", "check-vacuous-assertions.js"),
   path.join("scripts", "check-date-in-sql.js"),
   path.join("maestro", "tools", "flow-xcheck.cjs"),
+  path.join("maestro", "tools", "flow-load-check.cjs"),
+  // Stage 4 (flow load). MEASURED 2026-10-15, the reason this list is explicit:
+  // without the copy the hook's `node maestro/tools/flow-load-check.cjs` died with
+  // MODULE_NOT_FOUND, which made the stage exit 1 — so the BLOCK case reported a
+  // pass for entirely the wrong reason, and only the PASS case (which demands the
+  // gate's ran-marker) exposed it. A gate whose tool is absent from this list is
+  // tested as "always blocks".
   // Stage 3's advisory screen-affinity tier SPAWNS this at run time. The harness
   // worktree sits at the base commit, so without the copy the tier degrades to
   // "unavailable" there instead of exercising the real reachability report.
@@ -154,6 +161,13 @@ const TOOL_FILES = [
  */
 const CORPUS_DIRS = [
   path.join("maestro", "flows"),
+  // Stage 4 (flow load) resolves every `runScript: { file: }` path against the
+  // filesystem, so the scripts the flows reference are INPUT, exactly like the
+  // flows themselves — without this overlay the worktree holds flows pointing at
+  // maestro/utils/js/*.js that do not exist there, and the gate blocks 26 sites
+  // that are correct in the real tree. MEASURED 2026-10-15: that is how the
+  // first --gate 9 run failed its PASS case.
+  path.join("maestro", "utils"),
   "app",
   "components",
   "i18n",
@@ -406,6 +420,32 @@ const GATES = [
         name: "passes a clean staged file and reports that it linted",
         expect: "pass",
         apply: (ctx) => ctx.append(BENIGN_APP_EDIT, "\n// harness probe\n"),
+      },
+    ],
+  },
+  {
+    // Runs 4th in the hook (straight after the flow-selector gate); the table's
+    // `n` is its own contiguous label — the hook also carries an i18n stage the
+    // table does not model — so this is appended rather than renumbering 4-8.
+    n: 9,
+    key: "flow-load",
+    title: "Maestro flow load",
+    blockBanner: "Flow load gate failed",
+    ranMarker: "flows: references resolve",
+    cases: [
+      {
+        name: "blocks a staged flow whose runFlow reference resolves nowhere (wrong ../ depth)",
+        expect: "block",
+        apply: (ctx) =>
+          ctx.write(
+            "maestro/flows/harness-probe.yaml",
+            'appId: com.ride.bd\n---\n- runFlow: ../shared/nowhere-harness-probe.yaml\n'
+          ),
+      },
+      {
+        name: "passes a staged flow whose references resolve and whose runScript form is valid",
+        expect: "pass",
+        apply: (ctx) => ctx.append("maestro/flows/shared/util/_open-settings-hub.yaml", "# harness probe\n"),
       },
     ],
   },

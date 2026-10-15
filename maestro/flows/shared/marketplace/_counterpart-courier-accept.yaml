@@ -9,12 +9,18 @@
 appId: com.ride.bd
 ---
 - runScript:
-    when:
-      true
-    commands:
-      - node maestro/utils/counterpart-login.cjs --phone "${COURIER_PHONE}" --password "${COURIER_PASSWORD}" --out /tmp/counterpart-token.json
+    file: ../../../utils/js/counterpart-login.js
+    env:
+      phone: "${COURIER_PHONE}"
+      password: "${COURIER_PASSWORD}"
+      supabaseUrl: "${SUPABASE_URL}"
+      supabaseAnonKey: "${SUPABASE_ANON_KEY}"
+      label: "courier-login"
 - runScript:
-    when:
-      true
-    commands:
-      - node maestro/utils/counterpart-api.cjs --token /tmp/counterpart-token.json --method POST --path "/api/delivery/requests/${REQUEST_ID}/accept" --body '{}' --out /tmp/accept-response.json
+    file: ../../../utils/js/counterpart-api.js
+    env:
+      apiBase: "${API_BASE}"
+      method: "POST"
+      path: "/api/delivery/requests/${REQUEST_ID}/accept"
+      body: '{}'
+      label: "courier-accept"

@@ -13,13 +13,13 @@ tags: [driver, in-ride, smoke]
       PHONE: "8801700000001"
       PASSWORD: "test1234"
     commands:
-      - runFlow: ../../../shared/auth/_login-driver.yaml
-- runFlow: ../../../shared/driver/_go-online.yaml
-- runFlow: ../../../shared/driver/_accept-ride.yaml
-- runFlow: ../../../shared/driver/_slide-arrive.yaml
+      - runFlow: ../../shared/auth/_login-driver.yaml
+- runFlow: ../../shared/driver/_go-online.yaml
+- runFlow: ../../shared/driver/_accept-ride.yaml
+- runFlow: ../../shared/driver/_slide-arrive.yaml
 - runFlow:
     env:
       PIN: "0000"
     commands:
-      - runFlow: ../../../shared/driver/_enter-pin.yaml
-- runFlow: ../../../shared/driver/_complete-ride-driver.yaml
+      - runFlow: ../../shared/driver/_enter-pin.yaml
+- runFlow: ../../shared/driver/_complete-ride-driver.yaml

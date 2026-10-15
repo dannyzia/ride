@@ -5,8 +5,13 @@
 # Class: COUNTERPART-API (state seeding via real HTTP API once it exists).
 appId: com.ride.bd
 ---
+# Runs through the GraalJS helper (maestro/utils/js/counterpart-api.js) — a Maestro
+# step cannot shell out, so the counterpart construct is JS, not curl (2026-10-15).
 - runScript:
-    when:
-      true
-    commands:
-      - curl -s -X POST ${API_BASE}/api/test/inject-offer -H "Content-Type: application/json" -d '{"driverId":"${DRIVER_ID}","riderId":"${RIDER_ID}"}'
+    file: ../../../utils/js/counterpart-api.js
+    env:
+      apiBase: "${API_BASE}"
+      method: "POST"
+      path: "/api/test/inject-offer"
+      body: '{"driverId":"${DRIVER_ID}","riderId":"${RIDER_ID}"}'
+      label: "seed-ride-offer"

@@ -222,12 +222,18 @@ grep -r "console\.log" app/ lib/ utils-server/ src/       # must return nothing
 grep -ri "clerk\|stripe\|firebase" app/ lib/ utils-server/ src/   # must return nothing
 
 # Automated pre-commit gate — scripts/git-hooks/pre-commit (install: node scripts/install-hooks.js)
-# 9 stages, any failure BLOCKS the commit, in order:
-#   1 vacuous-assertions  2 date-in-sql  3 Maestro flow selector
-#   4 testID codemod idempotence (B-1)  5 testID map freshness  6 testID flow currency  7 i18n orphan ratchet  8 shellcheck (shell scripts)  9 eslint (staged files only)
+# 10 stages, any failure BLOCKS the commit, in order:
+#   1 vacuous-assertions  2 date-in-sql  3 Maestro flow selector  4 Maestro flow load
+#   5 testID codemod idempotence (B-1)  6 testID map freshness  7 testID flow currency  8 i18n orphan ratchet  9 shellcheck (shell scripts)  10 eslint (staged files only)
+#   (Flow load was inserted 4th on 2026-10-15 — it is the only stage that parses the
+#    Maestro schema or resolves a runFlow/runScript path. Longer-form stage ordinals in
+#    the notes below that predate the insertion read one LOWER than the list above: the
+#    "stage 5" / "stage 6" of the map-freshness and flow-currency stories are 6 and 7,
+#    and the flow-selector stage every one of them defers to is still 3. The numbered
+#    set and order above are authoritative; the prose is the story behind each gate.)
 # ON-DEMAND HARNESS (opt-in, ~3min pre-commit / ~5min pre-push): node scripts/pre-commit-harness.cjs [--gate 5] [--list]
 #   [--json] [--keep] [--base <ref>] [--no-copy] [--push]. Runs the REAL hook in a disposable git worktree
-#   (node_modules linked so stage 8's CWD-relative eslint path resolves) and asserts every gate
+#   (node_modules linked so stage 10's CWD-relative eslint path resolves) and asserts every gate
 #   still BLOCKS its fault and still PASSES. It asserts two things beyond exit status, and both are
 #   load-bearing: a BLOCK case must show THAT GATE's banner (the hook exits at the first failure,
 #   so finding it is what proves the earlier gates passed), and a PASS case must show the gate's

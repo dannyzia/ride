@@ -10,21 +10,21 @@ appId: com.ride.bd
 name: "Rider Booking - Basic Ride Request"
 tags: [rider, booking, smoke]
 ---
-- runFlow: ../../../shared/location/_set-gps-banani.yaml
+- runFlow: ../../shared/location/_set-gps-banani.yaml
 - runFlow:
     env:
       PHONE: "8801613249520"
       PASSWORD: "test1234"
     commands:
-      - runFlow: ../../../shared/auth/_login-rider.yaml
+      - runFlow: ../../shared/auth/_login-rider.yaml
 - runFlow:
     env:
       DEST_NAME: "Gulshan"
     commands:
-      - runFlow: ../../../shared/booking/_select-destination.yaml
+      - runFlow: ../../shared/booking/_select-destination.yaml
 - runFlow:
     env:
       VEHICLE_TYPE: "Bike Basic"
     commands:
-      - runFlow: ../../../shared/booking/_select-vehicle.yaml
-- runFlow: ../../../shared/booking/_confirm-and-request.yaml
+      - runFlow: ../../shared/booking/_select-vehicle.yaml
+- runFlow: ../../shared/booking/_confirm-and-request.yaml

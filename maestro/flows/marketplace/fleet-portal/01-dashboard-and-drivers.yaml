@@ -22,7 +22,7 @@ tags: [fleet, cross-cutting, blocked]
       PHONE: "8801700000101"
       PASSWORD: "test1234"
     commands:
-      - runFlow: ../../../shared/auth/_login-driver.yaml
+      - runFlow: ../../shared/auth/_login-driver.yaml
 # Mode switch → fleet mode (local-state switch per AGENTS.md fleet authorization).
 - tapOn: ".*Fleet.*|.*Current Mode.*"
 - extendedWaitUntil:

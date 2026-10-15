@@ -11,10 +11,10 @@ tags: [rider, completion]
       PHONE: "8801613249520"
       PASSWORD: "test1234"
     commands:
-      - runFlow: ../../../shared/auth/_login-rider.yaml
+      - runFlow: ../../shared/auth/_login-rider.yaml
 - runFlow:
     env:
       STARS: "5"
       STAR_INDEX: "4"
     commands:
-      - runFlow: ../../../shared/completion/_rate-driver.yaml
+      - runFlow: ../../shared/completion/_rate-driver.yaml

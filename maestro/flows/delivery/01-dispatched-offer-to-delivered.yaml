@@ -11,7 +11,7 @@
 #       platform_config; Delivery Men + drivers with Deliveries ON rank together)
 #     → the Delivery Man sees the offer card IN THE APP (delivery.inbox.offer-card,
 #       full details: shop, pickup, contact, dropoff, order value, fee, class)
-#     → accept (delivery.respond-el-2 → POST /api/delivery/offers/{id}/respond,
+#     → accept (delivery.respond-accept → POST /api/delivery/offers/{id}/respond,
 #       single-claim; the shop order gains courier + F-11 handover codes)
 #     → pickup (delivery.active.id.set-pickup-code → POST /api/delivery/active/{id}/action
 #       {action:'pickup'}) → deliver (delivery.active.id.set-otp + amount-input →
@@ -103,7 +103,7 @@ tags: [delivery, s6, counterpart-api]
     timeout: 60000
 # ── Accept (single claim, §6.1 step 4) ──────────────────────────────────────
 - tapOn:
-    id: "delivery.respond-el-2"
+    id: "delivery.respond-accept"
 - extendedWaitUntil:
     visible:
       id: "delivery.push-active"

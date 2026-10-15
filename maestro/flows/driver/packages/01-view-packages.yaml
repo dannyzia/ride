@@ -30,7 +30,7 @@ tags: [driver, packages, smoke]
       PHONE: "8801700000001"
       PASSWORD: "test1234"
     commands:
-      - runFlow: ../../../shared/auth/_login-driver.yaml
+      - runFlow: ../../shared/auth/_login-driver.yaml
 # Home → Earnings via the stats bar (no testID on the component; "Today:" is its
 # literal — home screen renders no other "Today" text).
 - tapOn: ".*Today.*"

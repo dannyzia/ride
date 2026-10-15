@@ -65,7 +65,7 @@ describe("pre-commit harness ↔ hook consistency", () => {
     // its job. Do NOT relax this to a range or a length comparison.
     // Stage 7 (i18n orphan) was inserted on 2026-10-05 ahead of ShellCheck so
     // eslint stays last; the two trailing gates moved 7->8 and 8->9.
-    expect(GATES.map((g) => g.n)).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
+    expect(GATES.map((g) => g.n)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9]);
     expect(HOOK_BANNERS).toContain("lint staged files");
     expect(HOOK_BANNERS.length).toBeGreaterThan(0);
   });

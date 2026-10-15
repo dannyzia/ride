@@ -11,9 +11,9 @@ tags: [rider, completion, payment]
       PHONE: "8801613249520"
       PASSWORD: "test1234"
     commands:
-      - runFlow: ../../../shared/auth/_login-rider.yaml
+      - runFlow: ../../shared/auth/_login-rider.yaml
 - runFlow:
     env:
       AMOUNT: "50"
     commands:
-      - runFlow: ../../../shared/completion/_add-tip-post-ride.yaml
+      - runFlow: ../../shared/completion/_add-tip-post-ride.yaml
