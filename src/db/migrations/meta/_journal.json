@@ -512,6 +512,27 @@
       "when": 1792400002000,
       "tag": "0074_delivery_dispatch",
       "breakpoints": true
+    },
+    {
+      "idx": 73,
+      "version": "7",
+      "when": 1792500000000,
+      "tag": "0075_vehicle_type_change_reject_details",
+      "breakpoints": true
+    },
+    {
+      "idx": 74,
+      "version": "7",
+      "when": 1760486400000,
+      "tag": "0042_zone_foundation_indexes",
+      "breakpoints": true
+    },
+    {
+      "idx": 75,
+      "version": "7",
+      "when": 1761091200000,
+      "tag": "0046_event_calendar_drop_demand_multiplier",
+      "breakpoints": true
     }
   ]
 }

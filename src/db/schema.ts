@@ -1345,6 +1345,11 @@ export const vehicleTypeChanges = pgTable(
     changed_by: uuid("changed_by").references(() => users.id),
     status: varchar("status", { length: 20 }).notNull().default("pending"),
     effective_at: timestamptz("effective_at"),
+    // S7 (§7 A3 + F-30/E2): structured rejection, same shape as the
+    // verification queues — { code, field, example, internal_note }. The
+    // driver sees reason_text (free text) and code/field/example; internal_note
+    // is admin-only. Migration 0075, additive + nullable.
+    reject_details: jsonb("reject_details"),
     created_at: timestamptz("created_at").notNull().defaultNow(),
     updated_at: timestamptz("updated_at").notNull().defaultNow(),
   },

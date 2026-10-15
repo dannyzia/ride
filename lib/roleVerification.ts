@@ -21,9 +21,14 @@
  * old/new values, ip and user agent.
  */
 import { db } from '@/src/db';
+// auditLogs stays imported for the ONE in-transaction audit write (the shared
+// lib/auditLog writer is deliberately non-transactional); every other decision
+// goes through writeSharedAudit below.
 import { shops, fleets, fleetMembers, couriers, users, auditLogs } from '@/src/db/schema';
 import { and, eq, asc, isNull } from 'drizzle-orm';
 import { logger } from './logger';
+// §7 A3 audit writer — one implementation for the whole admin surface (S7).
+import { writeAudit as writeSharedAudit } from './auditLog';
 // M-5 (§16): the resubmission carries the wizard's edited fields — shared
 // payload shape + slug derivation live in launchRoles (no cycle: it never
 // imports this module).
@@ -563,7 +568,12 @@ export async function resubmit(
   return { status: 'pending', resubmit_count: crow.n + 1 };
 }
 
-/** §7 A3: every decision lands in audit_logs with actor, entity and old/new. */
+/**
+ * §7 A3: every decision lands in audit_logs with actor, entity and old/new.
+ * The insert itself lives in lib/auditLog.ts (one writer for the whole admin
+ * surface since S7); this adapter keeps the request-meta call shape the
+ * S2 call sites already use.
+ */
 async function writeAudit(params: {
   adminUserId: string;
   action: string;
@@ -573,23 +583,14 @@ async function writeAudit(params: {
   newValue: Record<string, unknown>;
   meta: DecisionMeta;
 }): Promise<void> {
-  try {
-    await db.insert(auditLogs).values({
-      actor_user_id: params.adminUserId,
-      action: params.action,
-      entity_type: params.entityType,
-      entity_id: params.entityId,
-      old_value: params.oldValue,
-      new_value: params.newValue,
-      ip_address: params.meta.ip ?? null,
-      user_agent: params.meta.userAgent ?? null,
-    });
-  } catch (auditErr) {
-    // The decision itself must not be rolled back by an audit write failure,
-    // but it is loud: this is the compliance trail §7 A3 names.
-    logger.error('[roleVerification] audit_logs write failed', auditErr, {
-      action: params.action,
-      entity_id: params.entityId,
-    });
-  }
+  await writeSharedAudit({
+    adminUserId: params.adminUserId,
+    action: params.action,
+    entityType: params.entityType,
+    entityId: params.entityId,
+    oldValue: params.oldValue,
+    newValue: params.newValue,
+    ip: params.meta.ip,
+    userAgent: params.meta.userAgent,
+  });
 }

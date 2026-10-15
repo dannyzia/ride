@@ -14,7 +14,15 @@ const expoPreset = require("jest-expo/jest-preset.js");
 module.exports = {
   ...expoPreset,
   preset: undefined,
-  testPathIgnorePatterns: ["/_reference/", "/node_modules/", "/admin-test-results/", "/.kilo/"],
+  // /tests/e2e/ belongs to the Playwright admin lane (A6) — jest must never
+  // claim those specs (they import @playwright/test, not jest).
+  testPathIgnorePatterns: [
+    "/_reference/",
+    "/node_modules/",
+    "/admin-test-results/",
+    "/.kilo/",
+    "/tests/e2e/",
+  ],
   transform: {
     ...expoPreset.transform,
     "\\.[jt]sx?$": "<rootDir>/jest-dynamic-import-transform.cjs",

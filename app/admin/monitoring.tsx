@@ -11,6 +11,7 @@ import {
   TextInput,
   View,
 } from "react-native";
+import { useRouter } from "expo-router";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { AdminTable, type AdminColumn } from "@/components/admin/AdminTable";
 import { useAdminToast } from "@/components/admin/AdminToast";
@@ -18,7 +19,21 @@ import { adminFetch } from "@/lib/adminFetch";
 import { colors } from "@/theme/goRide";
 import { VEHICLE_TYPES } from "@/lib/vehicleTypes";
 
-type Tab = "dispatch" | "chat" | "economics";
+type Tab = "dispatch" | "chat" | "economics" | "ops";
+
+// ---------- S7 §7 A5 ops rows ----------
+interface OpsRow {
+  key: string;
+  label: string;
+  value: number;
+  href: string;
+}
+
+interface OpsRowsResponse {
+  rows: OpsRow[];
+  day_start_utc: string;
+  generated_at: string;
+}
 
 // ---------- Dispatch log shapes ----------
 interface CallLedgerEvent {
@@ -90,6 +105,8 @@ interface EconResponse {
 }
 
 const TABS: { key: Tab; label: string }[] = [
+  // S7 §7 A5 leads: the read-only ops counts are what a shift starts with.
+  { key: "ops", label: "Ops Rows" },
   { key: "dispatch", label: "Dispatch Log" },
   { key: "chat", label: "Ride Chat" },
   { key: "economics", label: "Driver Economics" },
@@ -130,7 +147,8 @@ function outcomeColor(outcome: string | null): string {
 
 export default function MonitoringScreen() {
   const toast = useAdminToast();
-  const [tab, setTab] = useState<Tab>("dispatch");
+  const router = useRouter();
+  const [tab, setTab] = useState<Tab>("ops");
 
   // Dispatch log state
   const [rideIdInput, setRideIdInput] = useState("");
@@ -147,6 +165,21 @@ export default function MonitoringScreen() {
   // Economics state
   const [econ, setEcon] = useState<DriverEconRow[]>([]);
   const [econLoading, setEconLoading] = useState(false);
+
+  // S7 §7 A5 — read-only ops counts (pending verifications, active shops,
+  // legs today, delivery men online).
+  const [opsRows, setOpsRows] = useState<OpsRow[]>([]);
+  const [opsLoading, setOpsLoading] = useState(false);
+
+  const fetchOps = useCallback(async () => {
+    setOpsLoading(true);
+    const { data, error } = await adminFetch<OpsRowsResponse>("/api/admin/monitoring-rows", {
+      method: "GET",
+    });
+    setOpsLoading(false);
+    setOpsRows(data?.rows ?? []);
+    if (error) toast.show(`Failed to load ops rows: ${error}`, "error");
+  }, [toast]);
 
   const fetchDispatchLog = useCallback(
     async (rideId: string) => {
@@ -245,6 +278,11 @@ export default function MonitoringScreen() {
       fetchEcon();
     }
   }, [tab, econ.length, econLoading, fetchEcon]);
+
+  // Ops rows are cheap counts — refetch on every visit so the numbers are live.
+  useEffect(() => {
+    if (tab === "ops") fetchOps();
+  }, [tab, fetchOps]);
 
   const dispatchColumns: AdminColumn<DispatchOfferRow>[] = [
     {
@@ -455,6 +493,10 @@ export default function MonitoringScreen() {
           <Pressable style={styles.refreshBtn} onPress={fetchEcon} testID="admin.monitoring.fetch-econ">
             <Text style={styles.refreshBtnText}>Refresh</Text>
           </Pressable>
+        ) : tab === "ops" ? (
+          <Pressable style={styles.refreshBtn} onPress={fetchOps} testID="admin.monitoring.fetch-ops">
+            <Text style={styles.refreshBtnText}>Refresh</Text>
+          </Pressable>
         ) : null
       }
     >
@@ -476,6 +518,32 @@ export default function MonitoringScreen() {
           );
         })}
       </View>
+
+      {tab === "ops" ? (
+        <View style={styles.opsGrid}>
+          {opsLoading && opsRows.length === 0 ? (
+            <View style={styles.center}>
+              <ActivityIndicator color={colors.adminAccent} />
+            </View>
+          ) : opsRows.length === 0 ? (
+            <View style={styles.center}>
+              <Text style={styles.hintText}>No ops rows returned.</Text>
+            </View>
+          ) : (
+            opsRows.map((row) => (
+              <Pressable
+                key={row.key}
+                style={styles.opsCard}
+                onPress={() => router.push(row.href as never)}
+               
+               testID="admin.monitoring.el-1">
+                <Text style={styles.opsValue}>{row.value}</Text>
+                <Text style={styles.opsLabel}>{row.label}</Text>
+              </Pressable>
+            ))
+          )}
+        </View>
+      ) : null}
 
       {tab === "dispatch" ? (
         <View style={{ gap: 14 }}>
@@ -732,6 +800,31 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
     gap: 8,
     marginBottom: 14,
+  },
+  opsGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 14,
+  },
+  opsCard: {
+    minWidth: 190,
+    flexGrow: 1,
+    backgroundColor: colors.darkSecondary,
+    borderWidth: 1,
+    borderColor: "#2A2D35",
+    borderRadius: 10,
+    padding: 16,
+    gap: 4,
+  },
+  opsValue: {
+    color: colors.textPrimaryDark,
+    fontFamily: "Jakarta-Bold",
+    fontSize: 26,
+  },
+  opsLabel: {
+    color: colors.textSecondaryDark,
+    fontFamily: "Jakarta-Regular",
+    fontSize: 12,
   },
   tabChip: {
     paddingHorizontal: 14,

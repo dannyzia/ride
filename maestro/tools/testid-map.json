@@ -1,5 +1,5 @@
 {
-  "total": 1252,
+  "total": 1273,
   "screens": {
     "(auth)/_layout.tsx": [
       {
@@ -4669,6 +4669,44 @@
         "line": 113
       }
     ],
+    "admin/marketplace/orders.tsx": [
+      {
+        "id": "admin.marketplace.orders.set-target",
+        "line": 236
+      },
+      {
+        "id": "admin.marketplace.orders.set-status",
+        "line": 256
+      },
+      {
+        "id": "admin.marketplace.orders.set-shop-id",
+        "line": 272
+      },
+      {
+        "id": "admin.marketplace.orders.set-customer-id",
+        "line": 281
+      },
+      {
+        "id": "admin.marketplace.orders.close-modal",
+        "line": 299
+      },
+      {
+        "id": "admin.marketplace.orders.submit-force-cancel",
+        "line": 302
+      },
+      {
+        "id": "admin.marketplace.orders.set-reason-code",
+        "line": 320
+      },
+      {
+        "id": "admin.marketplace.orders.set-reason-text",
+        "line": 335
+      },
+      {
+        "id": "admin.marketplace.orders.set-internal-note",
+        "line": 344
+      }
+    ],
     "admin/marketplace/rental.tsx": [
       {
         "id": "admin.marketplace.rental.set-selected-request",
@@ -4702,27 +4740,35 @@
     "admin/monitoring.tsx": [
       {
         "id": "admin.monitoring.fetch-econ",
-        "line": 455
+        "line": 493
+      },
+      {
+        "id": "admin.monitoring.fetch-ops",
+        "line": 497
       },
       {
         "id": "admin.monitoring.set-tab",
-        "line": 469
+        "line": 511
+      },
+      {
+        "id": "admin.monitoring.el-1",
+        "line": 539
       },
       {
         "id": "admin.monitoring.set-ride-id-input",
-        "line": 491
+        "line": 559
       },
       {
         "id": "admin.monitoring.fetch-dispatch-log",
-        "line": 496
+        "line": 564
       },
       {
         "id": "admin.monitoring.set-chat-ride-id",
-        "line": 565
+        "line": 633
       },
       {
         "id": "admin.monitoring.fetch-chat",
-        "line": 570
+        "line": 638
       }
     ],
     "admin/packages.tsx": [
@@ -5355,6 +5401,48 @@
       {
         "id": "admin.vehicle-models.handle-save",
         "line": 582
+      }
+    ],
+    "admin/vehicle-type-changes.tsx": [
+      {
+        "id": "admin.vehicle-type-changes.set-status",
+        "line": 224
+      },
+      {
+        "id": "admin.vehicle-type-changes.reset-reject-form",
+        "line": 246
+      },
+      {
+        "id": "admin.vehicle-type-changes.submit-reject",
+        "line": 249
+      },
+      {
+        "id": "admin.vehicle-type-changes.set-reject-code",
+        "line": 267
+      },
+      {
+        "id": "admin.vehicle-type-changes.set-reject-reason",
+        "line": 283
+      },
+      {
+        "id": "admin.vehicle-type-changes.set-reject-field",
+        "line": 292
+      },
+      {
+        "id": "admin.vehicle-type-changes.set-reject-example",
+        "line": 302
+      },
+      {
+        "id": "admin.vehicle-type-changes.set-reject-note",
+        "line": 311
+      },
+      {
+        "id": "admin.vehicle-type-changes.on-approve",
+        "line": 338
+      },
+      {
+        "id": "admin.vehicle-type-changes.on-reject",
+        "line": 345
       }
     ],
     "admin/verification.tsx": [

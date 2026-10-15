@@ -68,6 +68,15 @@ const NAV: NavItem[] = [
     roles: OWNER_ADMIN_OPS, // admin.read
   },
   {
+    // S7 (§7 A1-F-30/E2): the admin side of the F-22 vehicle-type request.
+    // List is admin.read; approve/reject are verification.write (server-side).
+    route: "/admin/vehicle-type-changes",
+    label: "Vehicle Type Changes",
+    icon: "car-settings",
+    group: "Operations",
+    roles: OWNER_ADMIN_OPS, // admin.read to view; verification.write to decide
+  },
+  {
     route: "/admin/monitoring",
     label: "Monitoring",
     icon: "chart-line",
@@ -319,6 +328,15 @@ const NAV: NavItem[] = [
     icon: "chart-bar",
     group: "Marketplace",
     roles: OWNER_ADMIN, // marketplace.write
+  },
+  {
+    // S7 (§7 A1): read-across every order/booking + force-cancel (the only
+    // action). admin.read lists; marketplace.write force-cancels.
+    route: "/admin/marketplace/orders",
+    label: "Orders",
+    icon: "clipboard-list",
+    group: "Marketplace",
+    roles: OWNER_ADMIN,
   },
   {
     route: "/admin/marketplace/shops",

@@ -103,6 +103,37 @@ const CUSTOMER_COPY: Record<string, { title: string; body: string }> = {
 };
 
 /**
+ * S7 §7 A1 + A3: admin force-cancel → the affected customer, WITH the reason.
+ * The reason is part of the copy on purpose (the order requires it to surface
+ * to the user); it is deduped on `shop_order_force_cancel:{orderId}:{userId}`
+ * so a retried admin action cannot double-push.
+ */
+export async function notifyCustomerForceCancel(
+  orderId: string,
+  userId: string,
+  reason: string,
+): Promise<void> {
+  try {
+    await sendNotification(
+      userId,
+      "shop:order_status",
+      "Order cancelled by support",
+      `Your order was cancelled by support. Reason: ${reason}`,
+      { order_id: orderId, status: "cancelled", reason },
+      {
+        priority: "high",
+        idempotencyKey: `shop_order_force_cancel:${orderId}:${userId}`,
+      },
+    ).catch(() => {});
+  } catch (err) {
+    logger.warn("[shopNotify] force-cancel notify failed", {
+      orderId,
+      error: err instanceof Error ? err.message : String(err),
+    });
+  }
+}
+
+/**
  * Order status → the ordering customer, high priority, deduped on
  * `shop_order_status:{orderId}:{status}:{userId}` — a retried transition
  * can never double-push.

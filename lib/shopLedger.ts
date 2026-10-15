@@ -87,3 +87,48 @@ async function readPercent(): Promise<number> {
     throw err;
   }
 }
+
+/**
+ * Reverse an order's settlement inside the caller's transaction (S7 §7 A1).
+ *
+ * Used by the admin force-cancel path (§7 A1 + plan line 276: "admin
+ * force-cancel writes reversal entries") and by nothing else. It does NOT edit
+ * the original rows — shop_ledger is append-only — it appends ONE `reversal`
+ * row equal to the negative of everything the order booked (revenue credit +
+ * commission debit), so the shop's balance for that order nets to zero.
+ *
+ * "Where money moved" is literal: an order that never reached its settlement
+ * point has no ledger rows and returns 0 with nothing written.
+ *
+ * Idempotence: in-tx check plus the (order_id, entry_type) partial unique index
+ * from 0067 — at most one `reversal` row can ever exist per order.
+ */
+export async function reverseShopOrder(
+  tx: ShopTx,
+  order: { id: string; shop_id: string },
+  opts: { reason: string },
+): Promise<{ reversed_bdt: number }> {
+  const rows = await tx
+    .select({ entry_type: shopLedger.entry_type, amount_bdt: shopLedger.amount_bdt })
+    .from(shopLedger)
+    .where(eq(shopLedger.order_id, order.id));
+
+  if (rows.some((r) => r.entry_type === "reversal")) {
+    return { reversed_bdt: 0 }; // already reversed — nothing to do, nothing written
+  }
+
+  const booked = rows.reduce((sum, r) => sum + Number(r.amount_bdt), 0);
+  if (booked === 0) {
+    return { reversed_bdt: 0 }; // no money moved — no reversal row
+  }
+
+  await tx.insert(shopLedger).values({
+    shop_id: order.shop_id,
+    order_id: order.id,
+    entry_type: "reversal",
+    amount_bdt: -booked,
+    note: opts.reason,
+  });
+
+  return { reversed_bdt: -booked };
+}
