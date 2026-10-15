@@ -166,6 +166,14 @@ const ALLOWED_KEYS = new Set([
   // paisa, fresh-read by lib/shopOrderCancel.ts (launch seed: 0).
   'shop_order_cancel_fee_after_accept_bdt',
 
+  // S5 (plan 27 §4/F-17/F-19/F-22) — fleet + emergency launch economics.
+  // Seeds, never constants (same §12 rule): consumers fresh-read at request
+  // time; admin edits take effect with no deploy.
+  'fleet_owner_share_percent',
+  'vehicle_doc_expiry_warning_days',
+  'emergency_ack_timeout_seconds',
+  'emergency_escalation_k_ring',
+
   // Fare engine — joma recovery (taka-scale)
   'joma_bike_eco_monthly_bdt',
   'joma_bike_std_monthly_bdt',
@@ -284,6 +292,18 @@ function validateKeyValue(key: string, value: string): string | null {
   }
   if (key === 'shop_order_cancel_fee_after_accept_bdt') {
     if (!Number.isInteger(v) || v < 0) return `${key} must be a non-negative integer (paisa)`;
+  }
+  if (key === 'fleet_owner_share_percent') {
+    if (!Number.isInteger(v) || v < 0 || v > 100) return `${key} must be an integer between 0 and 100 (percent)`;
+  }
+  if (key === 'vehicle_doc_expiry_warning_days') {
+    if (!Number.isInteger(v) || v < 0) return `${key} must be a non-negative integer (days)`;
+  }
+  if (key === 'emergency_ack_timeout_seconds') {
+    if (!Number.isInteger(v) || v <= 0) return `${key} must be a positive integer (seconds)`;
+  }
+  if (key === 'emergency_escalation_k_ring') {
+    if (!Number.isInteger(v) || v <= 0) return `${key} must be a positive integer (H3 ring)`;
   }
 
   // Reference quantile: 0–1

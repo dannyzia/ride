@@ -10,13 +10,15 @@
  */
 import { db } from "@/src/db";
 import {
+  fleetMembers,
   fleetSubscriptionPlans,
   fleetSubscriptions,
   fleets,
+  users,
 } from "@/src/db/schema";
 import { and, asc, eq, sql } from "drizzle-orm";
 import { z } from "zod";
-import { requireFleetMember } from "@/lib/auth";
+import { requireFleetMember, verifySupabaseToken } from "@/lib/auth";
 import { logger } from "@/lib/logger";
 import * as errors from "@/lib/errors";
 import { parseJsonBody } from "@/lib/parseBody";
@@ -25,9 +27,46 @@ const subscribeSchema = z.object({
   plan_id: z.string().uuid(),
 });
 
-/** GET — list all active plans (anyone can browse the catalog). */
-export async function GET() {
+/**
+ * GET — the active fleet-plan catalog. S5/§14 VISIBILITY: the full catalog is
+ * never sent to a caller with no fleet capability (shipped unauthenticated —
+ * §14: "the full catalog is never sent to a non-matching client"). A caller
+ * qualifies with an ACTIVE fleet_members row OR by owning any fleet
+ * (solo NATIVE owners included — the portal is their surface too).
+ */
+export async function GET(request: Request) {
   try {
+    const supabaseUser = await verifySupabaseToken(request);
+    const [dbUser] = await db
+      .select({ id: users.id })
+      .from(users)
+      .where(eq(users.auth_uid, supabaseUser.id))
+      .limit(1);
+    if (!dbUser) {
+      return Response.json({ error: "unauthorized", message: "Authentication required" }, { status: 401 });
+    }
+
+    const [memberRow, ownedRow] = await Promise.all([
+      db
+        .select({ id: fleetMembers.id })
+        .from(fleetMembers)
+        .where(
+          sql`${fleetMembers.user_id} = ${dbUser.id} AND ${fleetMembers.status} = 'active' AND ${fleetMembers.removed_at} IS NULL`,
+        )
+        .limit(1),
+      db
+        .select({ id: fleets.id })
+        .from(fleets)
+        .where(eq(fleets.owner_user_id, dbUser.id))
+        .limit(1),
+    ]);
+    if (memberRow.length === 0 && ownedRow.length === 0) {
+      return Response.json(
+        { error: "fleet_membership_required", message: "Fleet plans are visible to fleet owners and members only" },
+        { status: 403 },
+      );
+    }
+
     const plans = await db
       .select()
       .from(fleetSubscriptionPlans)
@@ -36,6 +75,10 @@ export async function GET() {
 
     return Response.json({ plans }, { status: 200 });
   } catch (err: unknown) {
+    const status = errors.getErrorStatus(err);
+    if (status === 401) {
+      return Response.json({ error: "unauthorized", message: "Authentication required" }, { status: 401 });
+    }
     logger.error("[fleet/plans] GET error", err);
     return Response.json(
       { error: "internal_error", message: "An internal server error occurred" },

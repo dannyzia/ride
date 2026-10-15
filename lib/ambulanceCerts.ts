@@ -99,14 +99,19 @@ export async function isVerifiedCertPair(
  * Broadcast eligibility (§C.6): VERIFIED cert holders whose service_level
  * covers the request, with an ACTIVE online, non-breaking drivers row whose
  * h3_cell_res9 falls within emergency_broadcast_k_ring (default 25, res 9)
- * of the pickup.
+ * of the pickup. `ringOverride` widens the ring for the S5/F-19 escalation
+ * re-broadcast (config emergency_escalation_k_ring, seeded in platform_config).
  */
 export async function getEligibleEmergencyDriverUserIds(
   pickupLat: number,
   pickupLng: number,
   serviceLevel: string,
+  ringOverride?: number,
 ): Promise<string[]> {
-  const k = await getConfigInt("emergency_broadcast_k_ring", 25);
+  const k =
+    ringOverride != null && ringOverride > 0
+      ? ringOverride
+      : await getConfigInt("emergency_broadcast_k_ring", 25);
   const ring = new Set(getH3Ring(pickupLat, pickupLng, k));
 
   const rows = await db

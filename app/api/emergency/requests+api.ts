@@ -52,6 +52,15 @@ export async function POST(request: Request) {
     if (!result.ok) return result.response;
     const body = result.data;
 
+    // S5/F-19 equipment filter: a paramedic request REQUIRES ALS — BLS units
+    // are not equipped. Mirrors the rental route's paramedic_requires_als.
+    if (body.requires_paramedic && body.service_level !== "ALS") {
+      return Response.json(
+        { error: "paramedic_requires_als", message: "requires_paramedic requires service_level=ALS" },
+        { status: 400 },
+      );
+    }
+
     const ttlSeconds = await getConfigInt("emergency_ttl_seconds", 120);
     const now = new Date();
     const expiresAt = new Date(now.getTime() + ttlSeconds * 1000);

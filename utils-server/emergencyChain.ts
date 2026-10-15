@@ -26,6 +26,7 @@ import { logger } from '../lib/logger';
 import { emergencySendToUser } from './emergencyBus';
 import { sendNotifications, type NotificationRequest } from '../lib/notify';
 import { getEligibleEmergencyDriverUserIds } from '../lib/ambulanceCerts';
+import { getConfigInt } from '../lib/platformConfig';
 
 /** §B.5 transition table. 'failed' is SYSTEM-only (TTL sweep) from broadcasting. */
 export const EMERGENCY_TRANSITIONS: Record<string, string[]> = {
@@ -334,6 +335,99 @@ export async function sweepExpiredEmergencies(tx: DbClient = db): Promise<number
 }
 
 /**
+ * S5 (plan 27 §4 + F-19 revision) — the 60-second ack timeout ESCALATES:
+ * broadcasting rows older than emergency_ack_timeout_seconds (seed 60, config
+ * — never a code literal) get escalated_at stamped ONCE, then
+ *   (a) re-broadcast to the WIDENED ring (emergency_escalation_k_ring, seed
+ *       50 vs the base 25) — drivers outside the base ring who never saw the
+ *       alarm; base-ring drivers are deduped by the same M5 idempotency keys
+ *       (emergency_activation:{id}:{userId}), and
+ *   (b) the requester is notified of the delay (keyed emergency_escalated:{id}).
+ * The TTL sweep (job 53) still owns final failure at emergency_ttl_seconds.
+ *
+ * M4/M5 pattern: pushes RETURNED via notifyQueue for post-budget dispatch.
+ * Returns the number of rows escalated.
+ */
+export async function escalateUnacknowledgedEmergencies(
+  tx: DbClient = db,
+  notifyQueue?: NotificationRequest[],
+): Promise<number> {
+  const ackSeconds = await getConfigInt('emergency_ack_timeout_seconds', 60);
+  const cutoff = new Date(Date.now() - ackSeconds * 1000);
+
+  // Claim first: conditional UPDATE ... RETURNING makes concurrent ticks
+  // race-safe (each row escalates exactly once).
+  const claimed = await tx
+    .update(emergencyRequests)
+    .set({ escalated_at: new Date(), updated_at: new Date() })
+    .where(
+      and(
+        eq(emergencyRequests.status, 'broadcasting'),
+        isNull(emergencyRequests.escalated_at),
+        lt(emergencyRequests.created_at, cutoff),
+      ),
+    )
+    .returning({
+      id: emergencyRequests.id,
+      caller_user_id: emergencyRequests.caller_user_id,
+      pickup_address: emergencyRequests.pickup_address,
+      pickup_lat: emergencyRequests.pickup_lat,
+      pickup_lng: emergencyRequests.pickup_lng,
+      service_level: emergencyRequests.service_level,
+      requires_paramedic: emergencyRequests.requires_paramedic,
+      expires_at: emergencyRequests.expires_at,
+    });
+
+  if (claimed.length === 0) return 0;
+
+  const widenedRing = await getConfigInt('emergency_escalation_k_ring', 50);
+
+  for (const req of claimed) {
+    // (a) Widen the broadcast — base-ring drivers dedupe on the M5 keys.
+    await broadcastEmergencyNewRequest(
+      {
+        id: req.id,
+        pickup_address: req.pickup_address,
+        pickup_lat: req.pickup_lat,
+        pickup_lng: req.pickup_lng,
+        service_level: req.service_level,
+        requires_paramedic: req.requires_paramedic,
+        expires_at: req.expires_at,
+      },
+      notifyQueue,
+      widenedRing,
+    );
+
+    // (b) Requester "delay" notice — F-19: "requester notified of delay".
+    const delayNotice: NotificationRequest = {
+      userId: req.caller_user_id,
+      type: 'status',
+      title: '🚑 Widening the ambulance search',
+      body: `No ambulance has answered yet — we are alerting more units near ${req.pickup_address}. Keep this screen open.`,
+      data: { request_id: req.id, type: 'emergency_escalated' },
+      priority: 'high',
+      idempotencyKey: `emergency_escalated:${req.id}`,
+    };
+    if (notifyQueue) {
+      notifyQueue.push(delayNotice);
+    } else {
+      try {
+        await sendNotifications([delayNotice]);
+      } catch (err) {
+        logger.warn('[emergencyChain] escalation delay push failed', { request_id: req.id, err });
+      }
+    }
+
+    logger.info('[emergencyChain] escalated unacknowledged emergency', {
+      request_id: req.id,
+      widenedRing,
+    });
+  }
+
+  return claimed.length;
+}
+
+/**
  * §D.2.1 broadcast — F41 payload: NO patient_condition. Eligible = verified
  * cert, service_level covers, online, not on break, within k-ring.
  *
@@ -356,6 +450,7 @@ export async function broadcastEmergencyNewRequest(
     expires_at: Date | string;
   },
   notifyQueue?: NotificationRequest[],
+  ringOverride?: number,
 ): Promise<number> {
   if (!req.service_level) return 0;
 
@@ -363,6 +458,7 @@ export async function broadcastEmergencyNewRequest(
     Number(req.pickup_lat),
     Number(req.pickup_lng),
     req.service_level,
+    ringOverride,
   );
 
   const payload = {

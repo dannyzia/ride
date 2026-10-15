@@ -195,6 +195,25 @@ export const MARKETPLACE_CONFIG_KEYS = [
   'delivery_fee_tier_radius_km',   // distance (km) separating the two fee tiers
   'delivery_man_subscription_bdt_monthly', // delivery-man subscription, integer paisa/month
   'shop_commission_percent',       // marketplace commission on shop revenue (a percentage; zero at launch)
+  // S4/F-11: customer cancel fee after the shop accepts — integer paisa,
+  // state-dependent (0 while pending); launch seed 0, admin can raise it.
+  'shop_order_cancel_fee_after_accept_bdt',
+  // S5 (plan 27 §4/F-17) — fleet payout split owner ↔ driver. Percentage of
+  // the driver-fare pool the FLEET OWNER keeps; launch seed 0 = 100% driver
+  // (owner ruling: default 100% driver unless ruled otherwise). Integer 0–100;
+  // fresh-read server-side, never a code literal.
+  'fleet_owner_share_percent',
+  // S5 (F-22) — vehicle doc expiry: warn the fleet at T-days before
+  // fitness/tax-token expiry (launch seed 30). Offers BLOCK at expiry — the
+  // block is a date comparison in dispatch eligibility, never this key.
+  'vehicle_doc_expiry_warning_days',
+  // S5 (F-19) — ambulance ack timeout: silence beyond this many seconds
+  // escalates (seed 60 — the F-19 revision's 60s, config-driven per the order).
+  'emergency_ack_timeout_seconds',
+  // S5 (F-19) — escalation re-broadcast ring: the widened H3 ring tier used
+  // when the ack timeout escalates (seed 50; base broadcast uses
+  // emergency_broadcast_k_ring = 25).
+  'emergency_escalation_k_ring',
   // delivery_fee_default_bdt was DROPPED (§12): superseded by the distance
   // tier above. It had no consumer on disk; the row it seeded is inert.
 ] as const;

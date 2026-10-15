@@ -4,7 +4,7 @@
  * never in broadcasts (F41).
  */
 import { db } from "@/src/db";
-import { emergencyRequests, ambulanceCertifications } from "@/src/db/schema";
+import { ambulanceCertifications, drivers, emergencyRequests } from "@/src/db/schema";
 import { verifySupabaseToken } from "@/lib/auth";
 import { supabaseAdmin } from "@/lib/supabaseServer";
 import { logger } from "@/lib/logger";
@@ -50,7 +50,35 @@ export async function GET(request: Request, { id }: { id: string }) {
       return Response.json({ error: "forbidden", message: "Not a party to this emergency" }, { status: 403 });
     }
 
-    return Response.json({ request: req });
+    // S5/F-19 live location to the requester — the assigned driver's last
+    // pushed point (drivers.last_location_*, fed by the WS location stream;
+    // utils-server also pushes emergency:location to the caller in real time).
+    let driver_location: {
+      lat: number;
+      lng: number;
+      at: string;
+    } | null = null;
+    if (req.accepted_cert_id) {
+      const [loc] = await db
+        .select({
+          lat: drivers.last_location_lat,
+          lng: drivers.last_location_lng,
+          at: drivers.last_location_at,
+        })
+        .from(drivers)
+        .innerJoin(ambulanceCertifications, eq(ambulanceCertifications.user_id, drivers.user_id))
+        .where(eq(ambulanceCertifications.id, req.accepted_cert_id))
+        .limit(1);
+      if (loc?.lat != null && loc.lng != null) {
+        driver_location = {
+          lat: Number(loc.lat),
+          lng: Number(loc.lng),
+          at: loc.at ? new Date(loc.at).toISOString() : new Date().toISOString(),
+        };
+      }
+    }
+
+    return Response.json({ request: req, driver_location });
   } catch (err: unknown) {
     logger.error("[emergency/requests/[id] GET] error", err);
     return Response.json(

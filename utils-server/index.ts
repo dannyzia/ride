@@ -378,7 +378,7 @@ export function sendToUser(userId: string, msg: Record<string, unknown>) {
 
 // Emergency chain emits through the bus so utils-server-free consumers
 // (Expo REST routes) never pull this WS server module into their bundle.
-import { setEmergencyEmitter } from "./emergencyBus";
+import { setEmergencyEmitter, getActiveEmergencyForDriver } from "./emergencyBus";
 setEmergencyEmitter(sendToUser);
 
 // ── HTTP Server ────────────────────────────────────────────────────────────
@@ -1359,6 +1359,22 @@ wss.on("connection", (ws: WebSocket) => {
             msg.lng as number,
             parsePointTs(msg.ts),
           );
+
+          // S5/F-19 live location to the requester — O(1) in-memory lookup
+          // against the 2s-rebuilt active-emergency index (emergencyBus);
+          // no DB touch on this hot path.
+          if (client.userId) {
+            const activeEmergency = getActiveEmergencyForDriver(client.userId);
+            if (activeEmergency) {
+              sendToUser(activeEmergency.callerUserId, {
+                type: "emergency:location",
+                request_id: activeEmergency.requestId,
+                lat: msg.lat,
+                lng: msg.lng,
+                ts: msg.ts ?? null,
+              });
+            }
+          }
 
           // Forward to rider tracking this ride
           const rideId = msg.ride_id as string;

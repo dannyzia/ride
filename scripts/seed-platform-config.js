@@ -30,10 +30,23 @@ async function seed() {
       -- shop accepts; after accept this key applies (launch seed 0, admin
       -- raises it via PATCH /api/admin/config). Fresh-read by
       -- lib/shopOrderCancel.ts, never a code constant.
-      ('shop_order_cancel_fee_after_accept_bdt', '0',    now())
+      ('shop_order_cancel_fee_after_accept_bdt', '0',    now()),
+      -- S5 (plan 27 §4/F-17/F-19/F-22): fleet + emergency launch economics.
+      -- Seeds, never constants — same §12 rule as the keys above.
+      -- fleet_owner_share_percent: owner keeps 0% → 100% driver at launch
+      --   (owner ruling: default 100% driver unless ruled otherwise).
+      -- vehicle_doc_expiry_warning_days: T-days warning before fitness/tax
+      --   expiry (the BLOCK at expiry is a date check in dispatch, not this).
+      -- emergency_ack_timeout_seconds: F-19's 60s silence → escalate.
+      -- emergency_escalation_k_ring: widened H3 ring used by the escalation
+      --   re-broadcast (base broadcast ring = emergency_broadcast_k_ring).
+      ('fleet_owner_share_percent',            '0',     now()),
+      ('vehicle_doc_expiry_warning_days',      '30',    now()),
+      ('emergency_ack_timeout_seconds',        '60',    now()),
+      ('emergency_escalation_k_ring',          '50',    now())
     ON CONFLICT (key) DO NOTHING;
   `);
-  console.log("platform_config seeded (13 keys)");
+  console.log("platform_config seeded (17 keys)");
   await client.end();
 }
 seed().catch(console.error);

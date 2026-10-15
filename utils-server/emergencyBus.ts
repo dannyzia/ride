@@ -17,3 +17,26 @@ export function setEmergencyEmitter(fn: EmergencyEmit): void {
 export function emergencySendToUser(userId: string, msg: Record<string, unknown>): void {
   emit(userId, msg);
 }
+
+/**
+ * S5/F-19 live-location relay index — driverUserId → active emergency.
+ * Rebuilt every 2s by the scheduler from EMERGENCY_ACTIVE_STATES rows (tiny,
+ * indexed); the WS location handler reads it O(1) with NO per-update DB cost.
+ * Entries vanish within one tick of a terminal transition.
+ */
+export interface ActiveEmergencyEntry {
+  requestId: string;
+  callerUserId: string;
+}
+
+let activeByDriver = new Map<string, ActiveEmergencyEntry>();
+
+export function setActiveEmergencies(next: Map<string, ActiveEmergencyEntry>): void {
+  activeByDriver = next;
+}
+
+export function getActiveEmergencyForDriver(
+  driverUserId: string,
+): ActiveEmergencyEntry | undefined {
+  return activeByDriver.get(driverUserId);
+}

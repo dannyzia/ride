@@ -7,7 +7,7 @@
  */
 import { db } from "@/src/db";
 import { fleetMembers, users } from "@/src/db/schema";
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import { requireFleetMember } from "@/lib/auth";
 import { logger } from "@/lib/logger";
@@ -18,10 +18,17 @@ const querySchema = z.object({
   fleet_id: z.string().uuid(),
 });
 
-const inviteSchema = z.object({
-  user_id: z.string().uuid(),
-  role: z.enum(["OWNER", "MANAGER", "DISPATCHER", "ACCOUNTANT", "VIEWER"]),
-});
+// S5 (plan 27 §4 F-17): invite by PHONE (the dispatcher invite path) or by
+// user_id (pre-existing). Exactly one targeting field required.
+const inviteSchema = z
+  .object({
+    user_id: z.string().uuid().optional(),
+    phone: z.string().min(6).max(30).optional(),
+    role: z.enum(["OWNER", "MANAGER", "DISPATCHER", "ACCOUNTANT", "VIEWER"]),
+  })
+  .refine((d) => (d.user_id ? 1 : 0) + (d.phone ? 1 : 0) === 1, {
+    message: "Provide exactly one of user_id or phone",
+  });
 
 /** GET — list staff (any active member). */
 export async function GET(request: Request) {
@@ -99,12 +106,16 @@ export async function POST(request: Request) {
     const body = await parseJsonBody(request, inviteSchema);
     if (!body.ok) return body.response;
 
-    // Check the target user exists.
-    const [targetUser] = await db
-      .select({ id: users.id })
-      .from(users)
-      .where(eq(users.id, body.data.user_id))
-      .limit(1);
+    // Resolve the target user — by user_id (pre-existing) or phone (S5).
+    const inviteUserId = body.data.user_id;
+    const invitePhone = body.data.phone;
+    const [targetUser] = inviteUserId
+      ? await db.select({ id: users.id }).from(users).where(eq(users.id, inviteUserId)).limit(1)
+      : await db
+          .select({ id: users.id })
+          .from(users)
+          .where(eq(users.phone, invitePhone ?? ""))
+          .limit(1);
 
     if (!targetUser) {
       return Response.json(
@@ -112,6 +123,7 @@ export async function POST(request: Request) {
         { status: 404 },
       );
     }
+    const targetUserId = targetUser.id;
 
     // Check not already an active member.
     const [existing] = await db
@@ -120,7 +132,7 @@ export async function POST(request: Request) {
       .where(
         and(
           eq(fleetMembers.fleet_id, fleetId),
-          eq(fleetMembers.user_id, body.data.user_id),
+          eq(fleetMembers.user_id, targetUserId),
         ),
       )
       .limit(1);
@@ -140,7 +152,7 @@ export async function POST(request: Request) {
       .insert(fleetMembers)
       .values({
         fleet_id: fleetId,
-        user_id: body.data.user_id,
+        user_id: targetUserId,
         role: body.data.role as
           | "OWNER"
           | "MANAGER"

@@ -14,10 +14,12 @@
  */
 import { db } from '../src/db';
 import type { DbClient } from './tx';
-import { emergencyRequests } from '../src/db/schema';
-import { and, eq, gt } from 'drizzle-orm';
+import { emergencyRequests, ambulanceCertifications } from '../src/db/schema';
+import { and, eq, gt, inArray } from 'drizzle-orm';
 import type { NotificationRequest } from '../lib/notify';
 import { broadcastEmergencyNewRequest } from './emergencyChain';
+import { setActiveEmergencies, type ActiveEmergencyEntry } from './emergencyBus';
+import { EMERGENCY_ACTIVE_STATES } from './emergencyChain';
 
 // Epoch-initialized: re-broadcast still-live emergencies on restart
 let emergencyWatermark: Date = new Date(0);
@@ -71,4 +73,32 @@ export async function activateEmergencyRequests(tx: DbClient = db): Promise<{
   emergencyWatermark = newest;
 
   return { count, notifyQueue };
+}
+
+/**
+ * S5/F-19 live-location relay — rebuild the driver→emergency index every
+ * 2s from ACTIVE rows (assigned/en_route/arrived). The WS location handler
+ * reads it O(1): when the moving driver holds an active emergency, the point
+ * is relayed to the requester via emergencySendToUser — no per-update DB cost
+ * on the location hot path.
+ */
+export async function refreshActiveEmergencyIndex(tx: DbClient = db): Promise<void> {
+  const rows = await tx
+    .select({
+      request_id: emergencyRequests.id,
+      caller_user_id: emergencyRequests.caller_user_id,
+      driver_user_id: ambulanceCertifications.user_id,
+    })
+    .from(emergencyRequests)
+    .innerJoin(
+      ambulanceCertifications,
+      eq(emergencyRequests.accepted_cert_id, ambulanceCertifications.id),
+    )
+    .where(inArray(emergencyRequests.status, [...EMERGENCY_ACTIVE_STATES]));
+
+  const next = new Map<string, ActiveEmergencyEntry>();
+  for (const r of rows) {
+    next.set(r.driver_user_id, { requestId: r.request_id, callerUserId: r.caller_user_id });
+  }
+  setActiveEmergencies(next);
 }

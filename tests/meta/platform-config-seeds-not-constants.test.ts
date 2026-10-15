@@ -32,6 +32,12 @@ const ECONOMICS_KEYS = [
   // S4 (plan 27 §5, F-11): customer cancel fee — also a seed, never a
   // literal (lib/shopOrderCancel.ts fresh-reads it at cancel time).
   "shop_order_cancel_fee_after_accept_bdt",
+  // S5 (plan 27 §4, F-17/F-19/F-22): fleet payout split + vehicle doc
+  // warning window + ambulance ack/escalation — same seeds-not-constants rule.
+  "fleet_owner_share_percent",
+  "vehicle_doc_expiry_warning_days",
+  "emergency_ack_timeout_seconds",
+  "emergency_escalation_k_ring",
 ] as const;
 
 /** Launch DEFAULTS as Zia set them — asserted against the SEED, never lib code. */
@@ -45,6 +51,12 @@ const LAUNCH_SEEDS: Record<string, string> = {
   // S4: free cancel while the order is still pending is state logic; the
   // post-accept fee itself is a seed (0 at launch — COD is post-2.5).
   shop_order_cancel_fee_after_accept_bdt: "0",
+  // S5: owner keeps 0% at launch (100% driver per the owner ruling); docs
+  // warn at T-30d; ambulance ack escalates at 60s into a widened ring.
+  fleet_owner_share_percent: "0",
+  vehicle_doc_expiry_warning_days: "30",
+  emergency_ack_timeout_seconds: "60",
+  emergency_escalation_k_ring: "50",
 };
 
 function* walk(dir: string): Generator<string> {

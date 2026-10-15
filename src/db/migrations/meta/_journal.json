@@ -491,6 +491,20 @@
       "when": 1792300002000,
       "tag": "0071_shop_order_cancel_partial",
       "breakpoints": true
+    },
+    {
+      "idx": 70,
+      "version": "7",
+      "when": 1792400000000,
+      "tag": "0072_fleet_driver_invites",
+      "breakpoints": true
+    },
+    {
+      "idx": 71,
+      "version": "7",
+      "when": 1792400001000,
+      "tag": "0073_emergency_escalated_at",
+      "breakpoints": true
     }
   ]
 }

@@ -2661,6 +2661,37 @@ export const fleetVehicleAssignments = pgTable("fleet_vehicle_assignments", {
   index("fva_created_idx").on(t.created_at),
 ]);
 
+/**
+ * S5 (plan 27 §1.2 D6, F-17/R9) — fleet driver invite WITH CONSENT. The owner
+ * invites a phone number; the invitee accepts from their own session (attach
+ * then runs the §4.3 plan-limit checks + the single-fleet rule — an existing
+ * driver in ANOTHER fleet is REJECTED, never silently transferred, on the
+ * consent path). status: pending → accepted | declined | expired.
+ * Append-only decisions: responded_at stamps the response.
+ */
+export const fleetDriverInvites = pgTable(
+  "fleet_driver_invites",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    fleet_id: uuid("fleet_id").notNull().references(() => fleets.id),
+    phone: varchar("phone", { length: 30 }).notNull(),
+    invited_by: uuid("invited_by").references((): any => users.id),
+    status: varchar("status", { length: 20 }).notNull().default("pending"),
+    expires_at: timestamptz("expires_at").notNull(),
+    responded_at: timestamptz("responded_at"),
+    created_at: timestamptz("created_at").notNull().defaultNow(),
+    updated_at: timestamptz("updated_at").notNull().defaultNow(),
+  },
+  (t) => [
+    // One OPEN invite per phone per fleet — the duplicate-invite barrier.
+    uniqueIndex("fdi_fleet_phone_pending_uq")
+      .on(t.fleet_id, t.phone)
+      .where(sql`status = 'pending'`),
+    index("fdi_phone_idx").on(t.phone),
+    index("fdi_fleet_status_idx").on(t.fleet_id, t.status),
+  ],
+);
+
 /** Fleet service subscription (separate from the driver ride subscription). */
 export const fleetSubscriptions = pgTable("fleet_subscriptions", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -3472,10 +3503,13 @@ export const emergencyRequests = pgTable("emergency_requests", {
    completed_at: timestamptz("completed_at"),
    cancelled_at: timestamptz("cancelled_at"),
    cancel_reason: text("cancel_reason"),
-   failure_reason: text("failure_reason"),
-   expires_at: timestamptz("expires_at").notNull(),
-   created_at: timestamptz("created_at").notNull().defaultNow(),
-   updated_at: timestamptz("updated_at").notNull().defaultNow(),
+   failure_reason: text("failure_reason"),  expires_at: timestamptz("expires_at").notNull(),
+  // S5/F-19: 60s ack timeout escalates ONCE (config emergency_ack_timeout_seconds,
+  // seed 60) — the sweep stamps this, re-broadcasts to the next ring tier and
+  // notifies the requester of the delay. Job 53 still owns final TTL failure.
+  escalated_at: timestamptz("escalated_at"),
+  created_at: timestamptz("created_at").notNull().defaultNow(),
+  updated_at: timestamptz("updated_at").notNull().defaultNow(),
   }, (t) => [
     // F2: service_level must be BLS/ALS when present
     check("emergency_requests_service_level_check", sql`service_level IS NULL OR service_level IN ('BLS','ALS')`),

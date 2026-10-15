@@ -94,7 +94,7 @@ export interface BeginClaimParams {
  * NOT proxy `code`, so a bare `e.code === '23505'` never matches against a
  * real DB (caught by the S4 dev-DB e2e: the replay path returned 500).
  */
-function driverErrorCode(e: unknown): string | undefined {
+export function driverErrorCode(e: unknown): string | undefined {
   let cur = e as { code?: unknown; cause?: unknown } | null | undefined;
   for (let depth = 0; cur && depth < 4; depth++) {
     if (typeof cur.code === "string") return cur.code;

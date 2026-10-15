@@ -214,6 +214,16 @@ export async function buildCandidateList(
         AND rides.status IN ('matched', 'driver_arriving', 'driver_arrived', 'in_progress')
         AND rides.updated_at > now() - interval '3 hours'
       )`,
+      // S5 (plan 27 F-22): vehicle doc expiry BLOCKS offers — enforced here
+      // because THIS is where dispatch eligibility is computed. Either BRTA
+      // doc (fitness or tax token) expired as of the BD calendar day → the
+      // driver is not an offer candidate. Drivers with no vehicle pointer are
+      // untouched (pre-existing behavior — no doc exists to evaluate).
+      sql`NOT EXISTS (
+        SELECT 1 FROM vehicles
+        WHERE vehicles.id = drivers.vehicle_id
+        AND (vehicles.fitness_expires_at < CURRENT_DATE OR vehicles.tax_token_expires_at < CURRENT_DATE)
+      )`,
     ),
   );
 

@@ -2683,17 +2683,29 @@ export function startScheduler(deps: SchedulerDeps = {}): void {
   // ════════════════════════════════════════════════════════════════
 
   // Job 53 — Emergency TTL sweep: broadcasting + expires_at < now() → failed
+  // S5/F-19 add-on: the same tick also runs the ack-timeout ESCALATION
+  // (escalateUnacknowledgedEmergencies — widen ring + requester delay notice,
+  // config emergency_ack_timeout_seconds seed 60). Escalation runs FIRST so a
+  // request crossing both thresholds in one tick escalates before it fails.
   let emergencyTtlRunning = false;
   registerJob(async () => {
     if (emergencyTtlRunning) return;
     try {
       emergencyTtlRunning = true;
-      const { sweepExpiredEmergencies } = await import('../utils-server/emergencyChain');
+      const { sweepExpiredEmergencies, escalateUnacknowledgedEmergencies } = await import('../utils-server/emergencyChain');
+      const { dispatchNotifyQueue } = await import('../utils-server/activationJobs');
+      const notifyQueue: import('../lib/notify').NotificationRequest[] = [];
+      const escalated =
+        (await withJobBudget(53, MARKETPLACE_TICK_BUDGET_MS, (tx) =>
+          escalateUnacknowledgedEmergencies(tx, notifyQueue),
+        )) ?? 0;
       const count =
         (await withJobBudget(53, MARKETPLACE_TICK_BUDGET_MS, (tx) => sweepExpiredEmergencies(tx))) ?? 0;
-      if (count > 0) {
-        logger.info('[scheduler] job 53 emergency TTL sweep', { failed: count });
+      if (count > 0 || escalated > 0) {
+        logger.info('[scheduler] job 53 emergency sweep', { failed: count, escalated });
       }
+      // M4: pushes dispatch AFTER the budget tx, never inside it.
+      await dispatchNotifyQueue(notifyQueue);
     } catch (e) {
       logger.error('[scheduler] job 53 emergency TTL sweep error', e);
     } finally {
@@ -2713,13 +2725,16 @@ export function startScheduler(deps: SchedulerDeps = {}): void {
     if (emergencyActivationRunning) return;
     try {
       emergencyActivationRunning = true;
-      const { activateEmergencyRequests } = await import('../utils-server/emergencyActivation');
+      const { activateEmergencyRequests, refreshActiveEmergencyIndex } = await import('../utils-server/emergencyActivation');
       const { dispatchNotifyQueue } = await import('../utils-server/activationJobs');
       const { count, notifyQueue } =
         (await withJobBudget(56, MARKETPLACE_TICK_BUDGET_MS, (tx) => activateEmergencyRequests(tx))) ?? {
           count: 0,
           notifyQueue: [],
         };
+      // S5/F-19: rebuild the live-location relay index in the same tick —
+      // after the budget tx commits, so it sees the just-activated rows.
+      await refreshActiveEmergencyIndex();
       if (count > 0) {
         logger.info('[scheduler] job 56 emergency activation', { reached: count });
       }
