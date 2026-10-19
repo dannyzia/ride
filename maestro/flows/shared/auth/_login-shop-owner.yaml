@@ -1,0 +1,60 @@
+# _login-shop-owner — switch the device to the SHOP OWNER identity and land on
+# the dashboard (S7.1).
+#
+# WHY A FRESH LOGIN AND NOT A SESSION HANDOFF: the shop surface is a role-gated
+# route group, and the suite's only verified way to enter a role surface is a real
+# login (the auth gate / splash forwarder decides the landing surface — see
+# app/_layout.tsx:148). So this subflow follows the S6 delivery-flow shape:
+# stopApp → launchApp clearState → phone-entry → password → chooser-if-present.
+#
+# `clearState: true` is used deliberately here, unlike _login-rider.yaml, whose
+# header documents WHY it must not (pm clear poisons the expo dev launcher and
+# its first link attempts after a clear can abort). The S6 delivery flows accept
+# that trade for a deterministic identity switch, and this subflow inherits their
+# measured behaviour rather than inventing a new one; on a dev-client build the
+# operator may need one manual deep-link cycle after the clear (device-day
+# runbook §0).
+#
+# Env: PHONE / PASSWORD (the shop-owner roster account). The chooser step is
+# conditional because a shop_owner-only account is routed straight through
+# (app/_layout.tsx decides by held-role count) — but the account must be ACTIVE
+# either way, so the final gate is fatal: a pending shop owner never reaches the
+# dashboard (its own screen renders "No shop yet", index.tsx:~299).
+# Class: AUTOMATABLE. NOT device-verified — the device day is ENV-blocked.
+appId: com.ride.bd
+---
+- stopApp: com.ride.bd
+- launchApp:
+    appId: com.ride.bd
+    clearState: true
+- extendedWaitUntil:
+    visible: "Enter your phone number"
+    timeout: 20000
+- tapOn:
+    id: "phone-entry.set-phone"
+- eraseText
+- inputText: ${PHONE}
+# chip 3 = shop_owner (phone-entry.tsx:232).
+- tapOn:
+    id: "phone-entry.set-role-3"
+- tapOn:
+    id: "phone-entry.handle-login"
+- extendedWaitUntil:
+    visible: "Welcome Back"
+    timeout: 15000
+- tapOn:
+    id: "login.set-password"
+- inputText: ${PASSWORD}
+- tapOn:
+    id: "login.handle-login"
+- runFlow:
+    when:
+      visible:
+        id: "login-as.enter-shop-owner"
+    commands:
+      - tapOn:
+          id: "login-as.enter-shop-owner"
+- extendedWaitUntil:
+    visible:
+      id: "shop-owner.push-catalog"
+    timeout: 30000

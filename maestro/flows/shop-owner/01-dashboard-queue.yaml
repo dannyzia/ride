@@ -1,0 +1,113 @@
+# shop-owner/01-dashboard-queue — the S3 shop dashboard's operative surface (S7.1).
+#
+# Covers app/(main)/(shop-owner)/index.tsx: the OWNER/MANAGER availability block
+# (open/closed + F-16 busy) and the order queue's real state machine —
+# accept (with the prep-time picker) → Start preparing → Mark ready.
+#
+# END-TO-END, NOT MOCKED: the pending order is placed in the CUSTOMER UI first
+# (the same verified chain the S6 delivery flows use: home category chip → shop →
+# add to cart → order-create submit). The shop then acts on that real order. No
+# direct DB write anywhere.
+#
+# WHY EACH ASSERTION IS STRONG:
+#   * the queue's transitions are asserted on the ACTION IDS, which are
+#     status-gated in source: `shop-owner.patch-status` renders only while
+#     status === "accepted", `-2` only while "preparing", `-3` only while
+#     "out_for_delivery" (index.tsx:602/616/630). So "-2 appears, then disappears"
+#     is the accepted → preparing → ready_for_pickup chain observed directly,
+#     with no reliance on copy.
+#   * the prep picker is asserted by its modal opening ("Preparation time") and
+#     closing (`notVisible`), the latter being the PATCH firing.
+#   * the busy toggle is asserted by the action_failed alert NOT appearing — the
+#     only failure signal `patchAvailability` emits (index.tsx:387). Its state
+#     round-trip is a device-day observation and is NOT claimed here.
+#
+# KNOWN NON-DETERMINISM, stated rather than hidden: the queue is whatever the shop
+# holds, newest first, and the four segment chips share ONE id
+# (`shop-owner.set-segment`) because they are `.map`-rendered — so they are
+# selected by their own label. A run against a shop holding SEVERAL pending orders
+# acts on the first; each run places exactly one new order, which is what keeps
+# the accept path meaningful.
+# Fixtures: rider + shop-owner roster accounts; a running utils-server (the order
+# chain emits live events). Class: AUTOMATABLE. NOT device-verified — the device
+# day is ENV-blocked.
+appId: com.ride.bd
+name: "S7 Shop Owner - Dashboard, availability and order queue"
+tags: [shop-owner, s7]
+---
+# ── 1. Customer places the order (UI) ───────────────────────────────────────
+- runFlow:
+    env:
+      PHONE: "${RIDER_PHONE}"
+      PASSWORD: "${RIDER_PASSWORD}"
+    commands:
+      - runFlow: ../shared/auth/_login-rider.yaml
+- tapOn:
+    id: "customer.home.set-selected-category"
+    text: ".*Food.*|.*Shop.*"
+- tapOn:
+    text: ".*"
+    index: 0
+- tapOn:
+    id: "customer.shops.shop-detail.id.add-to-cart"
+- tapOn:
+    id: "customer.shops.shop-detail.id.push-order-create"
+- tapOn:
+    id: "customer.shops.order-create.id.handle-submit"
+# Order-create replaces into the tracking screen (order-create/[id].tsx:127); its
+# back control is unconditional there, so it is the arrival ground.
+- extendedWaitUntil:
+    visible:
+      id: "customer.shops.orders.id.on-back"
+    timeout: 30000
+# ── 2. Switch identity to the shop owner (shared subflow, ends on the dashboard)
+- runFlow:
+    env:
+      PHONE: "${SHOP_PHONE}"
+      PASSWORD: "${SHOP_PASSWORD}"
+    commands:
+      - runFlow: ../shared/auth/_login-shop-owner.yaml
+# ── 3. Availability (OWNER/MANAGER block) ───────────────────────────────────
+- assertVisible: "Open / Closed"
+- assertVisible: "Busy mode"
+- tapOn:
+    id: "shop-owner.patch-availability-2"
+- assertNotVisible: "Action failed"
+# Restore the pre-run state so the flow is repeatable.
+- tapOn:
+    id: "shop-owner.patch-availability-2"
+- assertNotVisible: "Action failed"
+# ── 4. Accept with a prep time ──────────────────────────────────────────────
+- tapOn:
+    id: "shop-owner.set-prep-target"
+- extendedWaitUntil:
+    visible: "Preparation time"
+    timeout: 15000
+# The prep chips share one id (`.map`) — the first (10 min) is the pick.
+- tapOn:
+    id: "shop-owner.set-prep-target-2"
+- extendedWaitUntil:
+    notVisible: "Preparation time"
+    timeout: 15000
+# ── 5. The accepted → preparing → ready chain, asserted on the gated ids ─────
+- tapOn:
+    text: "Active"
+- extendedWaitUntil:
+    visible:
+      id: "shop-owner.patch-status"
+    timeout: 20000
+- tapOn:
+    id: "shop-owner.patch-status"
+- extendedWaitUntil:
+    visible:
+      id: "shop-owner.patch-status-2"
+    timeout: 20000
+- tapOn:
+    id: "shop-owner.patch-status-2"
+- extendedWaitUntil:
+    notVisible:
+      id: "shop-owner.patch-status-2"
+    timeout: 20000
+- tapOn:
+    text: "Ready"
+- assertVisible: "Ready"

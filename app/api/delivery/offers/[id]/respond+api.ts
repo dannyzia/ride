@@ -8,6 +8,8 @@
  * claimer) is the DB backstop — a 23505 there answers 409 already_claimed.
  *
  * Accept (§6.1 step 4): shop notified (courier assigned) + customer notified;
+ * P2P parcel legs (no order): the SENDER (leg dropoff_user_id) is notified
+ * instead — no handover codes, pickup is a direct sender handover;
  * the shop order gains courier_user_id, courier_assigned_at and the F-11
  * handover codes (pickup_code shop→courier, delivery_otp courier→customer —
  * never returned to the courier here).
@@ -197,6 +199,18 @@ export async function POST(request: Request, { id }: { id: string }) {
           data: { order_id: order.id, status: 'courier_assigned' },
           priority: 'high',
           idempotencyKey: `shop_order_status:${order.id}:courier_assigned:${order.rider_user_id}`,
+        });
+      } else if (leg.source_vertical === 'parcel' && leg.dropoff_user_id) {
+        // P2P accept (§6.1 step 4, no shop): the sender learns a courier is
+        // assigned. No handover codes — pickup is a direct sender handover.
+        notifies.push({
+          userId: leg.dropoff_user_id,
+          type: 'delivery:status',
+          title: 'Courier assigned',
+          body: 'A courier accepted your parcel and is heading to the pickup.',
+          data: { leg_id: leg.id, parcel_id: leg.order_id, status: 'courier_assigned' },
+          priority: 'high',
+          idempotencyKey: `delivery_status:${leg.id}:courier_assigned`,
         });
       }
     });

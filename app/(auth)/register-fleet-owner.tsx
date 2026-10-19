@@ -128,6 +128,8 @@ export default function RegisterFleetOwnerScreen() {
                 password: creds.password,
                 role: "fleet_owner",
                 fleet,
+                // C1-1: consent carried via the handoff from the phone-entry gate.
+                terms_accepted: creds.terms_accepted,
               };
 
       const res = await fetch(url, {

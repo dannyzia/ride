@@ -473,99 +473,111 @@ export async function resubmit(
   kind: VerificationKind,
   updates?: RoleRecordPayload,
 ): Promise<{ status: 'pending'; resubmit_count: number }> {
+  // C1-7: the read-check-increment is ONE transaction with a FOR UPDATE row
+  // lock — two concurrent resubmits can no longer both read n=2 and both
+  // write n=3 (the second blocks on the lock, then sees n=3 and 409s).
   if (kind === 'shop') {
-    const [row] = await db
-      .select({ id: shops.id, n: shops.verification_resubmit_count })
-      .from(shops)
-      .where(and(eq(shops.owner_user_id, userId), eq(shops.verification_status, 'rejected'), isNull(shops.deleted_at)))
-      .limit(1);
-    if (!row) throw Object.assign(new Error('No rejected shop to resubmit'), { status: 409 });
-    if (row.n >= MAX_RESUBMITS)
-      throw Object.assign(new Error('Resubmit limit reached — contact support'), { status: 409 });
-    const s = updates?.shop;
-    await db
-      .update(shops)
-      .set({
-        ...(s
-          ? {
-              name: s.shop_name,
-              // slug is UNIQUE and derived per user — a renamed shop re-slices it.
-              slug: shopSlug(s.shop_name, userId),
-              shop_type_id: s.shop_type_id,
-              address_line: s.address_line,
-              license_url: s.license_url,
-              ...(s.food_safety_cert_url ? { food_safety_cert_url: s.food_safety_cert_url } : {}),
-            }
-          : {}),
-        verification_status: 'pending',
-        verification_reason: null,
-        verification_reject: null,
-        verification_resubmit_count: row.n + 1,
-        updated_at: new Date(),
-      })
-      .where(eq(shops.id, row.id));
-    return { status: 'pending', resubmit_count: row.n + 1 };
+    return db.transaction(async (tx) => {
+      const [row] = await tx
+        .select({ id: shops.id, n: shops.verification_resubmit_count })
+        .from(shops)
+        .where(and(eq(shops.owner_user_id, userId), eq(shops.verification_status, 'rejected'), isNull(shops.deleted_at)))
+        .limit(1)
+        .for('update');
+      if (!row) throw Object.assign(new Error('No rejected shop to resubmit'), { status: 409 });
+      if (row.n >= MAX_RESUBMITS)
+        throw Object.assign(new Error('Resubmit limit reached — contact support'), { status: 409 });
+      const s = updates?.shop;
+      await tx
+        .update(shops)
+        .set({
+          ...(s
+            ? {
+                name: s.shop_name,
+                // slug is UNIQUE and derived per user — a renamed shop re-slices it.
+                slug: shopSlug(s.shop_name, userId),
+                shop_type_id: s.shop_type_id,
+                address_line: s.address_line,
+                license_url: s.license_url,
+                ...(s.food_safety_cert_url ? { food_safety_cert_url: s.food_safety_cert_url } : {}),
+              }
+            : {}),
+          verification_status: 'pending',
+          verification_reason: null,
+          verification_reject: null,
+          verification_resubmit_count: row.n + 1,
+          updated_at: new Date(),
+        })
+        .where(eq(shops.id, row.id));
+      return { status: 'pending', resubmit_count: row.n + 1 } as const;
+    });
   }
 
   if (kind === 'fleet') {
-    const [row] = await db
-      .select({ id: fleets.id, n: fleets.verification_resubmit_count })
-      .from(fleets)
-      .where(and(eq(fleets.owner_user_id, userId), eq(fleets.verification_status, 'rejected')))
-      .limit(1);
-    if (!row) throw Object.assign(new Error('No rejected fleet to resubmit'), { status: 409 });
-    if (row.n >= MAX_RESUBMITS)
+    return db.transaction(async (tx) => {
+      const [row] = await tx
+        .select({ id: fleets.id, n: fleets.verification_resubmit_count })
+        .from(fleets)
+        .where(and(eq(fleets.owner_user_id, userId), eq(fleets.verification_status, 'rejected')))
+        .limit(1)
+        .for('update');
+      if (!row) throw Object.assign(new Error('No rejected fleet to resubmit'), { status: 409 });
+      if (row.n >= MAX_RESUBMITS)
+        throw Object.assign(new Error('Resubmit limit reached — contact support'), { status: 409 });
+      const f = updates?.fleet;
+      await tx
+        .update(fleets)
+        .set({
+          ...(f
+            ? {
+                name: f.fleet_name,
+                ...(f.business_name ? { business_name: f.business_name } : {}),
+                ...(f.trade_license_number ? { trade_license_number: f.trade_license_number } : {}),
+                trade_license_url: f.trade_license_url,
+                ...(f.tax_doc_url ? { tax_doc_url: f.tax_doc_url } : {}),
+              }
+            : {}),
+          verification_status: 'pending',
+          verification_reason: null,
+          verification_reject: null,
+          verification_resubmit_count: row.n + 1,
+          updated_at: new Date(),
+        })
+        .where(eq(fleets.id, row.id));
+      return { status: 'pending', resubmit_count: row.n + 1 } as const;
+    });
+  }
+
+  return db.transaction(async (tx) => {
+    const [crow] = await tx
+      .select({ id: couriers.id, n: couriers.verification_resubmit_count })
+      .from(couriers)
+      .where(and(eq(couriers.user_id, userId), eq(couriers.courier_type, 'food'), eq(couriers.verification_status, 'rejected')))
+      .limit(1)
+      .for('update');
+    if (!crow) throw Object.assign(new Error('No rejected delivery-man record to resubmit'), { status: 409 });
+    if (crow.n >= MAX_RESUBMITS)
       throw Object.assign(new Error('Resubmit limit reached — contact support'), { status: 409 });
-    const f = updates?.fleet;
-    await db
-      .update(fleets)
+    const d = updates?.delivery;
+    await tx
+      .update(couriers)
       .set({
-        ...(f
+        ...(d
           ? {
-              name: f.fleet_name,
-              ...(f.business_name ? { business_name: f.business_name } : {}),
-              ...(f.trade_license_number ? { trade_license_number: f.trade_license_number } : {}),
-              trade_license_url: f.trade_license_url,
-              ...(f.tax_doc_url ? { tax_doc_url: f.tax_doc_url } : {}),
+              nid_url: d.nid_url,
+              license_url: d.license_url,
+              ...(d.vehicle_note !== undefined ? { vehicle_note: d.vehicle_note } : {}),
             }
           : {}),
         verification_status: 'pending',
         verification_reason: null,
         verification_reject: null,
-        verification_resubmit_count: row.n + 1,
+        verification_resubmit_count: crow.n + 1,
         updated_at: new Date(),
       })
-      .where(eq(fleets.id, row.id));
-    return { status: 'pending', resubmit_count: row.n + 1 };
-  }
-
-  const [crow] = await db
-    .select({ id: couriers.id, n: couriers.verification_resubmit_count })
-    .from(couriers)
-    .where(and(eq(couriers.user_id, userId), eq(couriers.courier_type, 'food'), eq(couriers.verification_status, 'rejected')))
-    .limit(1);
-  if (!crow) throw Object.assign(new Error('No rejected delivery-man record to resubmit'), { status: 409 });
-  if (crow.n >= MAX_RESUBMITS)
-    throw Object.assign(new Error('Resubmit limit reached — contact support'), { status: 409 });
-  const d = updates?.delivery;
-  await db
-    .update(couriers)
-    .set({
-      ...(d
-        ? {
-            nid_url: d.nid_url,
-            license_url: d.license_url,
-            ...(d.vehicle_note !== undefined ? { vehicle_note: d.vehicle_note } : {}),
-          }
-        : {}),
-      verification_status: 'pending',
-      verification_reason: null,
-      verification_reject: null,
-      verification_resubmit_count: crow.n + 1,
-      updated_at: new Date(),
-    })
-    .where(eq(couriers.id, crow.id));
-  return { status: 'pending', resubmit_count: crow.n + 1 };
+      .where(eq(couriers.id, crow.id));
+    return { status: 'pending', resubmit_count: crow.n + 1 } as const;
+  });
 }
 
 /**

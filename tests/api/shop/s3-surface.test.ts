@@ -36,9 +36,20 @@ jest.mock("@/lib/auth", () => ({
     supabaseUser: {},
     dbUser: { id: "db-user-1", role: "rider" },
   })),
+  requireMemberRoles: jest.fn(() => async () => ({
+    supabaseUser: {},
+    dbUser: { id: "db-user-1", role: "rider" },
+  })),
 }));
 
 jest.mock("@/lib/wsNotify", () => ({ notifyWs: jest.fn() }));
+// Staff lane (Flow 15): the invite notification is asserted at the boundary
+// (args), not through the push/WS transports. No other SUT in this file
+// imports shopNotify, so a bare mock is sufficient.
+const mockNotifyStaffInvite = jest.fn();
+jest.mock("@/lib/shopNotify", () => ({
+  notifyStaffInvite: (...args: unknown[]) => mockNotifyStaffInvite(...args),
+}));
 jest.mock("@/lib/logger", () => ({
   logger: { info: jest.fn(), error: jest.fn(), warn: jest.fn(), debug: jest.fn() },
 }));
@@ -298,6 +309,7 @@ describe("POST /api/shop/[id]/members (invite-by-phone)", () => {
     mockUpdateQueue = [];
     mockInsertQueue = [];
     mockMemberRoleScript = { role: "OWNER", shopIds: [SHOP] };
+    mockNotifyStaffInvite.mockClear();
   });
 
   it("invite by phone mints the member row with invited_by", async () => {
@@ -320,6 +332,34 @@ describe("POST /api/shop/[id]/members (invite-by-phone)", () => {
     expect(res.status).toBe(404);
     const body = (await asJson(res)) as never as { error: string };
     expect(body.error).toBe("user_not_found");
+  });
+
+  it("successful invite notifies the invitee (push + WS) with shop + role", async () => {
+    mockSelectQueue.push(() => [{ id: "target-user", role: "customer" }]); // users by phone
+    mockSelectQueue.push(() => [{ name: "Karwan Cafe" }]); // shop name for the invite copy
+    mockInsertQueue.push(() => [{ id: "new-mem" }]);
+
+    const res = await membersPost(req("POST", { phone: "+8801700000001", role: "STAFF" }), {
+      id: SHOP,
+    });
+    expect(res.status).toBe(201);
+    expect(mockNotifyStaffInvite).toHaveBeenCalledWith({
+      memberId: "new-mem",
+      shopId: SHOP,
+      shopName: "Karwan Cafe",
+      inviteeUserId: "target-user",
+      role: "STAFF",
+    });
+  });
+
+  it("unknown phone sends no invite notification", async () => {
+    mockSelectQueue.push(() => []); // users by phone — empty
+
+    const res = await membersPost(req("POST", { phone: "+8809999999999", role: "STAFF" }), {
+      id: SHOP,
+    });
+    expect(res.status).toBe(404);
+    expect(mockNotifyStaffInvite).not.toHaveBeenCalled();
   });
 
   it("STAFF cannot invite (owner only)", async () => {

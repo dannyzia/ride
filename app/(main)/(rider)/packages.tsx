@@ -211,7 +211,13 @@ export default function PackagesScreen() {
     };
   }, []);
 
-  const renderPackage = ({ item }: { item: CallPackage }) => (
+  // D9-2 (skeptic §D9): payments are dormant until the month-3 launch
+  // (platform_config payments_enabled=false; the server 409s priced plans).
+  // Priced packages render disabled-with-copy (F-26 pattern); ৳0 trials stay
+  // live. Re-enable by deleting the priced-site dormant branch.
+  const renderPackage = ({ item }: { item: CallPackage }) => {
+    const pricedDormant = item.price_bdt > 0;
+    return (
     <View
       className="rounded-2xl p-5 mb-3"
       style={{ backgroundColor: surfaceBg, borderWidth: 1, borderColor: borderColor }}
@@ -274,19 +280,25 @@ export default function PackagesScreen() {
         </Text>
         <TouchableOpacity
           onPress={() => handleBuy(item)}
-          disabled={purchasing && pendingPkgId === item.id}
+          disabled={(purchasing && pendingPkgId === item.id) || pricedDormant}
           className="rounded-full px-5 py-2"
-          style={{ backgroundColor: colors.primary, opacity: purchasing && pendingPkgId === item.id ? 0.6 : 1 }}
+          style={{ backgroundColor: pricedDormant ? (isDark ? colors.darkSecondary : colors.gray100) : colors.primary, opacity: purchasing && pendingPkgId === item.id ? 0.6 : 1 }}
          testID="rider.packages.handle-buy">
           {purchasing && pendingPkgId === item.id ? (
             <ActivityIndicator size="small" color={colors.white} />
           ) : (
-            <Text className="text-white font-JakartaSemiBold text-sm">{t('packages.buy_now')}</Text>
+            <Text className="text-white font-JakartaSemiBold text-sm" style={pricedDormant ? { color: textSecondary } : undefined}>{pricedDormant ? t('payments.launch_later') : t('packages.buy_now')}</Text>
           )}
         </TouchableOpacity>
       </View>
+      {pricedDormant ? (
+        <Text className="text-xs font-Jakarta mt-2" style={{ color: textSecondary }}>
+          {t('payments.launch_later_desc')}
+        </Text>
+      ) : null}
     </View>
-  );
+    );
+  };
 
   return (
     <SafeAreaView className="flex-1" style={{ backgroundColor: bg }}>
@@ -339,7 +351,7 @@ export default function PackagesScreen() {
 
       {paymentURL && paymentID && (
         <PaymentWebView
-          bkashURL={paymentURL}
+          paymentURL={paymentURL}
           paymentID={paymentID}
           onSuccess={handlePaymentSuccess}
           onError={handlePaymentError}

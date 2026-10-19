@@ -1,0 +1,108 @@
+# rider/orders/01-tracking-timeline — F-11 customer order tracking (S7.1).
+#
+# Covers the two screens the S1–S6 work left un-flown:
+#   app/(main)/(customer)/(shops)/orders/index.tsx      the cross-shop list
+#   app/(main)/(customer)/(shops)/orders/[id].tsx       the tracking detail
+#
+# NAVIGATION IS DETERMINISTIC BY CONSTRUCTION: the flow never relies on the
+# back-stack shape (order-create REPLACES itself with the tracking screen, so what
+# sits beneath the detail depends on the entry path). It goes through the tab bar
+# and the shops hub every time instead, which is also how a user reaches it.
+#
+# WHAT IS ASSERTED, AND WHY IT IS REAL:
+#   * the detail renders its timeline section and the COD money block — both
+#     unconditional once loaded;
+#   * the CANCEL BAR raises its confirm dialog (shops_track.cancel_confirm_title),
+#     and the flow then takes "Keep order" — a cancel would destroy the very
+#     fixture the rest of this flow asserts against;
+#   * the LIST renders its own title and a tappable row, and the row opens the
+#     detail (asserted by the timeline reappearing);
+#   * the DISPUTE link navigates into report-issue, grounded on that screen's own
+#     back control;
+#   * PARTIAL-CONFIRM is asserted NEGATIVELY, deliberately: the affordance renders
+#     only when `unavailable_item_ids` is non-empty (the shop reported out-of-stock
+#     at accept). A fresh order has none, so the honest assertion is that the
+#     affordance is ABSENT. The POSITIVE path needs an out-of-stock accept fixture
+#     that does not exist yet — recorded as a gap, never silently skipped.
+# Fixtures: rider roster account with a live order (placed here), running
+# utils-server. Class: AUTOMATABLE. NOT device-verified — the device day is
+# ENV-blocked.
+appId: com.ride.bd
+name: "S7 Rider - Order tracking: list, timeline, cancel bar, dispute"
+tags: [rider, orders, s7]
+---
+- runFlow:
+    env:
+      PHONE: "${RIDER_PHONE}"
+      PASSWORD: "${RIDER_PASSWORD}"
+    commands:
+      - runFlow: ../../shared/auth/_login-rider.yaml
+# ── Place an order (verified S6 chain); it lands on the tracking detail ─────
+- tapOn:
+    id: "customer.home.set-selected-category"
+    text: ".*Food.*|.*Shop.*"
+- tapOn:
+    text: ".*"
+    index: 0
+- tapOn:
+    id: "customer.shops.shop-detail.id.add-to-cart"
+- tapOn:
+    id: "customer.shops.shop-detail.id.push-order-create"
+- tapOn:
+    id: "customer.shops.order-create.id.handle-submit"
+- extendedWaitUntil:
+    visible:
+      id: "customer.shops.orders.id.on-back"
+    timeout: 30000
+# ── Detail: timeline + COD money block ──────────────────────────────────────
+- extendedWaitUntil:
+    visible: "Order status"
+    timeout: 20000
+- assertVisible: "COD total"
+- assertVisible: "Pay cash when your order arrives."
+# No out-of-stock report on a fresh order — the affordance must be absent.
+- assertNotVisible:
+    id: "customer.shops.orders.id.handle-confirm-partial"
+# ── Cancel bar: the dialog opens, "Keep order" leaves the order alone ───────
+- tapOn:
+    id: "customer.shops.orders.id.handle-cancel"
+- extendedWaitUntil:
+    visible: "Cancel this order?"
+    timeout: 15000
+- tapOn:
+    text: "Keep order"
+- assertVisible: "Order status"
+# ── Tab back to Home → shops hub → the LIST ─────────────────────────────────
+- tapOn:
+    id: "customer._layout.on-press"
+    text: ".*Home.*"
+- extendedWaitUntil:
+    visible:
+      id: "customer.home.set-selected-category"
+    timeout: 20000
+- tapOn:
+    id: "customer.home.set-selected-category"
+    text: ".*Food.*|.*Shop.*"
+- extendedWaitUntil:
+    visible:
+      id: "customer.shops.push-orders"
+    timeout: 20000
+- tapOn:
+    id: "customer.shops.push-orders"
+- extendedWaitUntil:
+    visible: "My orders"
+    timeout: 20000
+- assertVisible:
+    id: "customer.shops.orders.push-orders"
+- tapOn:
+    id: "customer.shops.orders.push-orders"
+- extendedWaitUntil:
+    visible: "Order status"
+    timeout: 20000
+# ── Dispute link → report-issue ─────────────────────────────────────────────
+- tapOn:
+    id: "customer.shops.orders.id.push-report-issue"
+- extendedWaitUntil:
+    visible:
+      id: "customer.report-issue.el-1"
+    timeout: 20000

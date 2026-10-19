@@ -301,6 +301,44 @@ describe("scheduler auto-resolve — acknowledged alerts", () => {
 });
 
 /* ================================================================== */
+/*  Scenario 5 (C9-2): resolve never clobbers the admin ack stamp      */
+/* ================================================================== */
+
+describe("resolve endpoint — admin ack attribution survives", () => {
+  test("resolving an admin-acknowledged alert writes status ONLY", async () => {
+    mockSelectQueue([
+      [{ id: USER_ID, role: "rider" }],
+      [{
+        id: ALERT_ID,
+        user_id: USER_ID,
+        status: "acknowledged",
+        acknowledged_by: ADMIN_ID,
+        acknowledged_at: new Date("2026-08-21T10:05:00Z"),
+      }],
+    ]);
+    const lastUpdate = mockUpdate();
+
+    const res = await resolvePOST(jsonRequest({ alert_id: ALERT_ID }));
+    expect(res.status).toBe(200);
+    // Exact shape: no acknowledged_by/at keys at all — the admin's
+    // attribution row survives the resolve untouched.
+    expect(lastUpdate.set).toEqual({ status: "resolved" });
+  });
+
+  test("resolving an open (never-acknowledged) alert writes status ONLY", async () => {
+    mockSelectQueue([
+      [{ id: USER_ID, role: "rider" }],
+      [{ id: ALERT_ID, user_id: USER_ID, status: "open" }],
+    ]);
+    const lastUpdate = mockUpdate();
+
+    const res = await resolvePOST(jsonRequest({ alert_id: ALERT_ID }));
+    expect(res.status).toBe(200);
+    expect(lastUpdate.set).toEqual({ status: "resolved" });
+  });
+});
+
+/* ================================================================== */
 /*  Scenario 4: Admin list shows status and acknowledgment metadata    */
 /* ================================================================== */
 

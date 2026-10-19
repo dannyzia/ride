@@ -16,8 +16,17 @@
 // anything pulled in here ships to the app. The URL validator that consumes these
 // policies lives in ./storageUrl.ts (server-only) instead.
 
+/**
+ * Absolute object-size ceiling, bytes. SINGLE OWNER (D5-2): imported by the
+ * client compressor (which guarantees nothing larger is handed to the
+ * pipeline), by the presign route (which refuses to sign a larger declared
+ * size), and by the post-upload reconciler (which deletes anything larger
+ * that reached the bucket by another path). A second copy anywhere is a bug.
+ */
+export const MAX_UPLOAD_BYTES = 2 * 1024 * 1024;
+
 /** Folders the uploader may use; also the presign route's Zod enum source. */
-export const STORAGE_FOLDERS = ['profile', 'documents', 'vehicle'] as const;
+export const STORAGE_FOLDERS = ['profile', 'documents', 'vehicle', 'catalog'] as const;
 export type StorageFolder = (typeof STORAGE_FOLDERS)[number];
 
 /**
@@ -29,6 +38,7 @@ export const FOLDER_PREFIX: Record<StorageFolder, string> = {
   profile: 'profile',
   documents: 'documents',
   vehicle: 'vehicle',
+  catalog: 'catalog',
 };
 
 export function folderPrefix(folder: StorageFolder): string {
@@ -89,3 +99,14 @@ export type DocumentFolder = (typeof DOCUMENT_FOLDERS)[number];
 
 /** Folders that may hold a driver's profile photo. */
 export const PROFILE_FOLDERS: readonly StorageFolder[] = ['profile'];
+
+/**
+ * Folders that may hold shop product images — the policy the products
+ * management route validates `image_urls` against. Owner-unscoped by design:
+ * each staffer uploads under their own uid segment, and a product outlives
+ * any one staffer's tenure, so the route checks folder-prefix + host,
+ * never the uid segment.
+ */
+export const CATALOG_FOLDERS: readonly StorageFolder[] = ['catalog'];
+/** A folder the products endpoint accepts — derived here, never restated. */
+export type CatalogFolder = (typeof CATALOG_FOLDERS)[number];

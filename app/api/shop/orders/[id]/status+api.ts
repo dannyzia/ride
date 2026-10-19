@@ -8,7 +8,7 @@
  */
 import { db } from "@/src/db";
 import { shopOrders, shopOrderItems, deliveries } from "@/src/db/schema";
-import { requireAnyRole } from "@/lib/auth";
+import { requireMemberRoles } from "@/lib/auth";
 import { requireShopMember } from "@/lib/marketplaceRbac";
 import { parseJsonBody } from "@/lib/parseBody";
 import { logger } from "@/lib/logger";
@@ -17,7 +17,7 @@ import * as errors from "@/lib/errors";
 import { eq, and, inArray } from "drizzle-orm";
 import { z } from "zod";
 import { settleShopOrder } from "@/lib/shopLedger";
-import { notifyCustomerOrderStatus } from "@/lib/shopNotify";
+import { notifyCustomerOrderStatus, notifyCustomerPartialAccept } from "@/lib/shopNotify";
 
 const statusSchema = z.object({
   status: z.enum([
@@ -52,7 +52,11 @@ const VALID_TRANSITIONS: Record<string, string[]> = {
   dispatched: ["courier_assigned", "self_delivered", "cancelled"],
   courier_assigned: ["ready_for_pickup", "cancelled"],
   // S6: the courier picks up after the shop marks ready (F-11 handover).
-  ready_for_pickup: ["out_for_delivery", "delivered", "picked_up", "cancelled"],
+  // C5/C6-FIX: ready_for_pickup → self_delivered is the pickup-fulfillment
+  // counter handover (no leg exists, so the courier path can never own
+  // these orders). ready_for_pickup → delivered stays for the legacy
+  // in-person handover, now shop-gated above like every completion state.
+  ready_for_pickup: ["out_for_delivery", "delivered", "picked_up", "self_delivered", "cancelled"],
   picked_up: ["delivered"],
   out_for_delivery: ["delivered", "cancelled"],
 };
@@ -70,6 +74,8 @@ export async function PATCH(request: Request, { id }: { id: string }) {
 
     let guard: Response | null = null;
     let newStatus: string | undefined;
+    // C5-4: set inside the tx when the accept carries missing items.
+    let partialMissingCount = 0;
 
     await db.transaction(async (tx) => {
       const orderRows = await tx
@@ -114,9 +120,21 @@ export async function PATCH(request: Request, { id }: { id: string }) {
         // Not a shop member — check if the ordering rider
       }
 
-      // S6 (§6.1): dispatch states are SHOP-side only — the ordering rider
-      // may never drive courier search / assignment / pickup / self-delivery.
-      const SHOP_ONLY_STATES = ["dispatched", "courier_assigned", "picked_up", "self_delivered"];
+      // S6 (§6.1) + C5/C6-FIX unified delivered-transition: dispatch AND
+      // completion states are SHOP-side only. The ordering rider drives
+      // ONLY cancel — delivered/out_for_delivery join the gate so a rider
+      // can never complete their own order (the courier drives delivered
+      // via the leg action; the shop drives self_delivered for pickup).
+      // The gate and the completion path below are ONE change by
+      // construction: neither works without the other.
+      const SHOP_ONLY_STATES = [
+        "dispatched",
+        "courier_assigned",
+        "picked_up",
+        "self_delivered",
+        "out_for_delivery",
+        "delivered",
+      ];
       if (!isShopMember && SHOP_ONLY_STATES.includes(targetStatus)) {
         guard = Response.json(
           { error: "forbidden", message: "Only the shop can perform this transition" },
@@ -126,13 +144,75 @@ export async function PATCH(request: Request, { id }: { id: string }) {
       }
 
       if (!authorized) {
-        const { dbUser } = await requireAnyRole(["rider", "driver"])(request);
+        const { dbUser } = await requireMemberRoles(["rider", "driver"])(request);
         if (dbUser.id !== order.rider_user_id) {
           guard = Response.json(
             { error: "forbidden", message: "Not authorized" },
             { status: 403 },
           );
           return;
+        }
+      }
+
+      // C5/C6-FIX unified delivered-transition (courier vs pickup split):
+      // a courier-fulfillment order (a live leg exists) can NEVER complete
+      // through this route — the courier's leg action owns delivered (ONE tx:
+      // settleShopOrder + settleDeliveryLeg + leg close). The shop completing
+      // around a live leg is the livelock this redesign deletes.
+      // Pickup-fulfillment orders (no leg) complete here via self_delivered.
+      const COMPLETION_STATES = ["delivered", "out_for_delivery", "self_delivered"];
+      if (COMPLETION_STATES.includes(targetStatus)) {
+        const liveLegs = await tx
+          .select({ id: deliveries.id, status: deliveries.status })
+          .from(deliveries)
+          .where(
+            and(
+              eq(deliveries.order_id, id),
+              inArray(deliveries.status, ["created", "offered", "accepted", "picked_up"]),
+            ),
+          )
+          .limit(1);
+        const liveLeg = liveLegs[0];
+        if (liveLeg && (targetStatus === "delivered" || targetStatus === "out_for_delivery")) {
+          guard = Response.json(
+            {
+              error: "courier_owns_completion",
+              message: "A courier is assigned — completion runs through the courier delivery flow",
+            },
+            { status: 403 },
+          );
+          return;
+        }
+        if (liveLeg && targetStatus === "self_delivered") {
+          if (liveLeg.status === "accepted" || liveLeg.status === "picked_up") {
+            // The courier holds (or is collecting) the goods — the shop
+            // cannot self-complete under them.
+            guard = Response.json(
+              {
+                error: "courier_owns_completion",
+                message: "The courier holds this delivery — cancel the dispatch first",
+              },
+              { status: 403 },
+            );
+            return;
+          }
+          // Unclaimed chain (created/offered): fail it in-tx with the
+          // self-delivery (same shape as the cancel arm) so no further
+          // offers go out for a completed order.
+          await tx
+            .update(deliveries)
+            .set({
+              status: "failed",
+              offered_to_user_id: null,
+              offer_expires_at: null,
+              updated_at: new Date(),
+            })
+            .where(
+              and(
+                eq(deliveries.order_id, id),
+                inArray(deliveries.status, ["created", "offered"]),
+              ),
+            );
         }
       }
 
@@ -172,6 +252,7 @@ export async function PATCH(request: Request, { id }: { id: string }) {
           updates.unavailable_item_ids = unavailable;
           updates.subtotal_bdt = newSubtotal;
           updates.total_bdt = newSubtotal + (order.delivery_fee_bdt ?? 0);
+          if (unavailable.length > 0) partialMissingCount = unavailable.length;
         }
       }
       if (targetStatus === "preparing") updates.prepared_at = new Date();
@@ -185,8 +266,12 @@ export async function PATCH(request: Request, { id }: { id: string }) {
       if (targetStatus === "cancelled") {
         updates.cancelled_at = new Date();
         updates.cancel_reason = result.data.cancel_reason ?? null;
-        // S6 F-12: a cancel under way kills the live dispatch chain (created/
-        // offered legs) so no further offers go out for this order.
+        // S6 F-12: a cancel under way kills the live dispatch chain so no
+        // further offers go out for this order. C5/C6-FIX (C7-3 unified
+        // leg-reconciliation): ACCEPTED legs die here too — an accepted leg
+        // whose order is cancelled can never strand a courier holding a job
+        // for a dead order (matches the cancel+api arm's kill list; picked_up
+        // legs are unreachable — a picked-up order is not cancellable).
         await tx
           .update(deliveries)
           .set({
@@ -198,7 +283,7 @@ export async function PATCH(request: Request, { id }: { id: string }) {
           .where(
             and(
               eq(deliveries.order_id, id),
-              inArray(deliveries.status, ["created", "offered"]),
+              inArray(deliveries.status, ["created", "offered", "accepted"]),
             ),
           );
       }
@@ -224,21 +309,47 @@ export async function PATCH(request: Request, { id }: { id: string }) {
       // S3/§12: order revenue + commission land in the SAME tx as the
       // delivered transition — a settle failure rolls the status back (no
       // delivered order without its ledger entries). Audit (§11 review 1).
-      // S6: self-delivery settles the SAME way (the shop keeps the customer's
-      // delivery fee; there is no courier earnings/due row — §6.1 exhaustion
-      // fallback). No courier → no deliverySettlement writes.
+      // S6: self-delivery settles the SAME way, PLUS the delivery_fee credit
+      // (C6-4 — the shop keeps the customer's delivery fee; there is no
+      // courier earnings/due row — §6.1 exhaustion fallback). No courier →
+      // no deliverySettlement writes.
       if (targetStatus === "delivered" || targetStatus === "self_delivered") {
-        await settleShopOrder(tx, {
-          id: order.id,
-          shop_id: order.shop_id,
-          subtotal_bdt: order.subtotal_bdt,
-        });
+        await settleShopOrder(
+          tx,
+          {
+            id: order.id,
+            shop_id: order.shop_id,
+            subtotal_bdt: order.subtotal_bdt,
+            delivery_fee_bdt: order.delivery_fee_bdt ?? null,
+          },
+          { selfDelivered: targetStatus === "self_delivered" },
+        );
       }
 
       newStatus = targetStatus;
     });
 
     if (guard) return guard;
+
+    // C5-4: the shop's partial accept → the customer (fire-and-forget,
+    // deduped) — confirm the reduced order or cancel, never silently billed.
+    if (newStatus === "accepted" && partialMissingCount > 0) {
+      try {
+        const [cust] = await db
+          .select({ rider_user_id: shopOrders.rider_user_id })
+          .from(shopOrders)
+          .where(eq(shopOrders.id, id))
+          .limit(1);
+        if (cust?.rider_user_id) {
+          void notifyCustomerPartialAccept(id, cust.rider_user_id, partialMissingCount);
+        }
+      } catch (e: unknown) {
+        logger.warn("[shop/orders/status] partial-accept notify failed", {
+          orderId: id,
+          error: e instanceof Error ? e.message : String(e),
+        });
+      }
+    }
 
     // F-29: picked up / delivered → the ordering customer (fire-and-forget,
     // deduped — a retried transition can never double-push). S6 adds

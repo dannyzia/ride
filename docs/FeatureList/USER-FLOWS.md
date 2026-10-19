@@ -24,6 +24,7 @@
 - **Empty states are designed** (no shops open, no offers today, no settlements this week) — never blank lists. Degraded dispatch: requests queue as "searching (slow network)" with a cancel path.
 - **Language:** every screen renders Bangla/English from the shared copy table — flows never branch on language.
 - **Flow ↔ code mapping:** screens annotate their route files where known.
+- **F-02 supersession (STAGE C1-FIX, 2026-10-16):** the old "pending roles are NOT listed" clause is SUPERSEDED by OWNER-DECISION #9 as shipped in `app/(auth)/login-as.tsx` — pending/rejected roles ARE listed with status + reason but are not enterable (tap opens F-03 verification status). Any diagram text still saying NOT-listed/NOT-selectable is stale; the F-02 diagram above is corrected and wins.
 
 ---
 
@@ -56,9 +57,9 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-  A["Phone + OTP — session re-auth every N hours"] --> B{"Roles held (ACTIVE only — pending roles are NOT listed)"}
+  A["Phone + OTP — session re-auth every N hours"] --> B{"Roles held — ALL listed with status + reason; only ACTIVE enterable (pending = LISTED-but-not-enterable — OWNER-DECISION #9, supersedes the old NOT-listed clause — see LEGEND)"}
   B -->|"one active role"| C["Land directly — last-used role preselected next time"]
-  B -->|"multiple"| D["Login as buttons — only active held roles"]
+  B -->|"multiple"| D["Login as buttons — every held role listed; active enters, pending/rejected show status + reason and open F-03 status"]
   D --> E["Customer home — shops + ride"]
   D --> F["Driver home"]
   D --> G["Shop dashboard — banner: Acting as staff · Shop name (staff = orders-only)"]
@@ -66,7 +67,7 @@ flowchart TD
   D --> I["Delivery offers inbox"]
   E & F & G & H & I --> S["Settings — Add a role"] --> T{"Gate?"}
   T -->|"Customer"| U["Instant"]
-  T -->|"Others"| V["Pending — see F-03 status; NOT selectable in chooser"]
+  T -->|"Others"| V["Pending — see F-03 status; LISTED-but-not-enterable in chooser (status + reason shown)"]
   E & F & G & H & I --> W["Logout / Switch role (returns to chooser, no new OTP)"]
   X["Locked/suspended account"] --> Y["Locked screen — reason + support contact"]
 ```
@@ -214,7 +215,7 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-  A["Ride detail — 'Report an issue — available 24h after ride' (shown)"] --> B["Lost item — masked direct call to driver BEFORE filing"]
+  A["Ride detail — 'Report an issue — available 48h after ride' (shown; server truth: rider/fare-disputes+api.ts dispute_window_expired, client DISPUTE_WINDOW_MS)"] --> B["Lost item — masked direct call to driver BEFORE filing"]
   A --> C["Fare dispute / report issue — categorised + evidence (photos, GPS)"]
   C --> D["Status visible to BOTH parties"] --> E["Admin SLA — 72h"] --> F["Outcome + ledger adjustments"]
   C --> G["GPS anomaly auto-check — partial auto-credit before admin review"]

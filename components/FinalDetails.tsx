@@ -2,6 +2,7 @@ import { View, Text, Image, TouchableOpacity, Linking } from 'react-native'
 import { useCustomer, useDriverStore } from '@/store'
 import { icons } from '@/constants/data'
 import Ionicons from "@expo/vector-icons/Ionicons";
+import { useTranslation } from "react-i18next";
 import { logger } from "@/lib/logger";
 
 const FinalDetails = ({ paid, setPaid, page, number }: { paid: boolean; setPaid: (value: boolean) => void, page: string, number?: string }) => {
@@ -11,6 +12,7 @@ const FinalDetails = ({ paid, setPaid, page, number }: { paid: boolean; setPaid:
     } = useCustomer();
 
     const { nearbyDrivers, selectedDriverId } = useDriverStore();
+    const { t } = useTranslation();
 
     const selectedDriverDetails = nearbyDrivers?.find(
         (driver) => driver.id === selectedDriverId,
@@ -45,13 +47,13 @@ const FinalDetails = ({ paid, setPaid, page, number }: { paid: boolean; setPaid:
                 <View className="mt-8 flex-row items-center justify-between bg-neutral-100 p-4 rounded-lg border border-neutral-300">
                     <View>
                         <Text className="text-base font-JakartaMedium text-neutral-700">Need Help?</Text>
-                        <Text className="text-sm text-neutral-500">Call your driver</Text>
+                        <Text className="text-sm text-neutral-500">{t("final_details.call_driver")}</Text>
                     </View>
                     <TouchableOpacity
                         onPress={() => Linking.openURL(`tel:+91${number}`)}
                         className="bg-black px-4 py-2 rounded-full"
                     >
-                        <Text className="text-white font-JakartaSemiBold text-base">Call</Text>
+                        <Text className="text-white font-JakartaSemiBold text-base">{t("final_details.call")}</Text>
                     </TouchableOpacity>
                 </View>
             )}

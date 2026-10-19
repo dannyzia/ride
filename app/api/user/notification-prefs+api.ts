@@ -13,6 +13,11 @@ const DEFAULT_PREFS = {
   service_alerts: true,
   email_notifications: false,
   sms_notifications: true,
+  // D2-2 minimal mutes (STAGE D2-FIX): per-category gates for the LIVE
+  // classes, enforced server-side in lib/notify.ts dispatchBatch.
+  order_updates: true,
+  delivery_updates: true,
+  shop_updates: true,
 };
 
 const patchSchema = z.object({
@@ -21,6 +26,9 @@ const patchSchema = z.object({
   service_alerts: z.boolean().optional(),
   email_notifications: z.boolean().optional(),
   sms_notifications: z.boolean().optional(),
+  order_updates: z.boolean().optional(),
+  delivery_updates: z.boolean().optional(),
+  shop_updates: z.boolean().optional(),
 });
 
 export async function GET(request: Request) {

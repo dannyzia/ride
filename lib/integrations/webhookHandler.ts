@@ -1,12 +1,14 @@
 /**
- * Webhook Handler — receives, validates, and dispatches provider webhooks.
+ * Webhook Handler — DEFERRED POST-LAUNCH DRAFT. DO NOT CALL FROM API ROUTES.
  *
- * Security:
- * - HMAC-SHA256 signature validation (provider-specific secret)
- * - Replay protection via event_id dedup (UNIQUE constraint)
- * - Event logging to integration_sync_jobs
+ * Current status (plan 27 §15 D-viii):
+ * - validateWebhookSignature is implemented and unit-tested.
+ * - handleWebhook does NOT enforce signatures, has NO event_id dedup, and
+ *   does NOT invoke triggerSync.
+ * - Secret storage/handling and replay protection are unresolved.
  *
- * Never stores webhook secrets in plaintext — only hashes are in the DB.
+ * Real HMAC wiring, event_id dedup, and triggerSync invocation are explicitly
+ * post-launch work. This module must stay unwired until that work lands.
  */
 
 import { createHmac, timingSafeEqual } from "crypto";

@@ -102,6 +102,8 @@ interface ShopState {
 
   // Actions
   setShops: (shops: Shop[]) => void;
+  /** C5-8: page-N append free of the caller's captured closure. */
+  appendShops: (shops: Shop[]) => void;
   setShopsLoading: (loading: boolean) => void;
   setShopsPage: (page: number) => void;
   setSelectedShop: (shop: Shop | null) => void;
@@ -140,6 +142,7 @@ export const useShopStore = create<ShopState>((set, get) => ({
   ...INITIAL_STATE,
 
   setShops: (shops) => set({ shops }),
+  appendShops: (more) => set((state) => ({ shops: [...state.shops, ...more] })),
   setShopsLoading: (shopsLoading) => set({ shopsLoading }),
   setShopsPage: (shopsPage) => set({ shopsPage }),
   setSelectedShop: (selectedShop) => set({ selectedShop }),

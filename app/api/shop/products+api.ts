@@ -1,3 +1,4 @@
+// [public]
 /**
  * GET /api/shop/products?shop_id=...&page=1&limit=20
  * Public paginated product listing for a shop.

@@ -4,6 +4,11 @@ import { db } from "@/src/db";
 import { users } from "@/src/db/schema";
 import { eq } from "drizzle-orm";
 import { parseJsonBody } from "@/lib/parseBody";
+import {
+  rateLimitCount,
+  CHECK_USER_PHONE_MAX,
+  CHECK_USER_IP_MAX,
+} from "@/lib/otpRateLimit";
 import { logger } from "@/lib/logger";
 import { heldRoles } from "@/lib/launchRoles";
 
@@ -19,14 +24,34 @@ export async function POST(request: Request) {
 
   const { phone } = result.data;
 
+  // Bound phone-number enumeration on this public lookup: per phone AND
+  // per IP (rate_limits table), using the same class as send-otp.
+  const ip =
+    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+    request.headers.get("x-real-ip")?.trim() ??
+    "unknown";
+  const [phoneCount, ipCount] = await Promise.all([
+    rateLimitCount(`check-user:phone:${phone}`),
+    rateLimitCount(`check-user:ip:${ip}`),
+  ]);
+  if (phoneCount > CHECK_USER_PHONE_MAX || ipCount > CHECK_USER_IP_MAX) {
+    logger.warn("[check-user] rate limited", { phone, ip, phoneCount, ipCount });
+    return Response.json(
+      { error: "rate_limited", message: "Too many lookup requests. Try again later." },
+      { status: 429 },
+    );
+  }
+
   try {
     const user = await db
-      .select({ id: users.id, role: users.role })
+      .select({ id: users.id, role: users.role, deleted_at: users.deleted_at })
       .from(users)
       .where(eq(users.phone, phone))
       .limit(1);
 
-    if (user.length === 0) {
+    // C2-1/C2-4: a soft-deleted phone frees for re-registration — the public
+    // lookup reports it as non-existent.
+    if (user.length === 0 || user[0].deleted_at != null) {
       return Response.json({ exists: false, role: null, roles: [] }, { status: 200 });
     }
 

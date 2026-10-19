@@ -74,14 +74,14 @@ afterAll(() => {
 describe("POST /api/storage/upload-url", () => {
   test("401 unauthorized when token verification fails with 401", async () => {
     (verifySupabaseToken as jest.Mock).mockRejectedValue({ status: 401 });
-    const res = await POST(jsonRequest({ filename: "a.jpg" }));
+    const res = await POST(jsonRequest({ filename: "a.jpg", contentLength: 1024 }));
     expect(res.status).toBe(401);
     expect((await getJson(res)).error).toBe("unauthorized");
   });
 
   test("rethrows non-401 auth errors", async () => {
     (verifySupabaseToken as jest.Mock).mockRejectedValue(new Error("boom"));
-    await expect(POST(jsonRequest({ filename: "a.jpg" }))).rejects.toThrow("boom");
+    await expect(POST(jsonRequest({ filename: "a.jpg", contentLength: 1024 }))).rejects.toThrow("boom");
   });
 
   test("400 validation_error for invalid body", async () => {
@@ -91,34 +91,34 @@ describe("POST /api/storage/upload-url", () => {
 
   test("400 for disallowed contentType", async () => {
     const res = await POST(
-      jsonRequest({ filename: "a.jpg", contentType: "image/gif" }),
+      jsonRequest({ filename: "a.jpg", contentType: "image/gif", contentLength: 1024 }),
     );
     expect(res.status).toBe(400);
   });
 
   test("500 server_misconfigured when R2 env vars are missing", async () => {
     delete process.env.R2_BUCKET_NAME;
-    const res = await POST(jsonRequest({ filename: "a.jpg" }));
+    const res = await POST(jsonRequest({ filename: "a.jpg", contentLength: 1024 }));
     expect(res.status).toBe(500);
     expect((await getJson(res)).error).toBe("server_misconfigured");
   });
 
   test("429 rate_limited when the window count exceeds R2_UPLOAD_MAX", async () => {
     (rateLimitCount as jest.Mock).mockResolvedValue(R2_UPLOAD_MAX + 1);
-    const res = await POST(jsonRequest({ filename: "a.jpg" }));
+    const res = await POST(jsonRequest({ filename: "a.jpg", contentLength: 1024 }));
     expect(res.status).toBe(429);
     expect((await getJson(res)).error).toBe("rate_limited");
   });
 
   test("rate-limit key is scoped per user and checked before presigning", async () => {
-    await POST(jsonRequest({ filename: "a.jpg" }));
+    await POST(jsonRequest({ filename: "a.jpg", contentLength: 1024 }));
     expect(rateLimitCount).toHaveBeenCalledWith(`r2upload:${SUPABASE_UID}`);
     expect(getSignedUrl).toHaveBeenCalled();
   });
 
   test("key shape: folder/userId/timestamp-8charRandom-sanitizedFilename", async () => {
     const res = await POST(
-      jsonRequest({ filename: "../../my photo (1).jpg", folder: "profile" }),
+      jsonRequest({ filename: "../../my photo (1).jpg", folder: "profile", contentLength: 1024 }),
     );
     expect(res.status).toBe(200);
     const body = await getJson(res);
@@ -130,20 +130,35 @@ describe("POST /api/storage/upload-url", () => {
     expect((body.uploadUrl as string).length).toBeGreaterThan(0);
   });
 
-  test("PutObjectCommand carries Bucket, ContentType and immutable CacheControl", async () => {
+  test("PutObjectCommand carries Bucket, ContentType, immutable CacheControl and the declared ContentLength", async () => {
     await POST(
-      jsonRequest({ filename: "a.jpg", contentType: "image/png" }),
+      jsonRequest({ filename: "a.jpg", contentType: "image/png", contentLength: 2048 }),
     );
     expect(PutObjectCommand).toHaveBeenCalledWith({
       Bucket: "driver-documents",
       Key: expect.stringContaining(`${SUPABASE_UID}/`),
       ContentType: "image/png",
       CacheControl: "public, max-age=31536000, immutable",
+      ContentLength: 2048,
     });
   });
 
+  test("400 when contentLength is missing (unsigned size is refused)", async () => {
+    const res = await POST(jsonRequest({ filename: "a.jpg" }));
+    expect(res.status).toBe(400);
+    expect(getSignedUrl).not.toHaveBeenCalled();
+  });
+
+  test("400 when the declared contentLength exceeds MAX_UPLOAD_BYTES", async () => {
+    const res = await POST(
+      jsonRequest({ filename: "a.jpg", contentLength: 2 * 1024 * 1024 + 1 }),
+    );
+    expect(res.status).toBe(400);
+    expect(getSignedUrl).not.toHaveBeenCalled();
+  });
+
   test("presign expires in 300s and binds Content-Type + Cache-Control", async () => {
-    await POST(jsonRequest({ filename: "a.jpg" }));
+    await POST(jsonRequest({ filename: "a.jpg", contentLength: 1024 }));
 
     const options = (getSignedUrl as jest.Mock).mock.calls[0][2] as {
       expiresIn: number;
@@ -152,11 +167,16 @@ describe("POST /api/storage/upload-url", () => {
     expect(options.expiresIn).toBe(300);
     // Without signableHeaders the presigner signs only `host`, which leaves the
     // stored ContentType/CacheControl decided by whatever the client PUT sends.
-    expect([...options.signableHeaders].sort()).toEqual(["cache-control", "content-type"]);
+    // D5-2 binds content-length too, so a body of a different size is rejected.
+    expect([...options.signableHeaders].sort()).toEqual([
+      "cache-control",
+      "content-length",
+      "content-type",
+    ]);
   });
 
   test("defaults: folder=documents, contentType=image/jpeg", async () => {
-    const res = await POST(jsonRequest({ filename: "a.jpg" }));
+    const res = await POST(jsonRequest({ filename: "a.jpg", contentLength: 1024 }));
     expect(res.status).toBe(200);
     const body = await getJson(res);
     expect(body.key).toMatch(/^documents\//);
@@ -167,7 +187,7 @@ describe("POST /api/storage/upload-url", () => {
 
   test("publicUrl strips trailing slashes from the configured domain", async () => {
     process.env.EXPO_PUBLIC_R2_DOMAIN = "https://assets.ride.com.bd///";
-    const res = await POST(jsonRequest({ filename: "a.jpg" }));
+    const res = await POST(jsonRequest({ filename: "a.jpg", contentLength: 1024 }));
     const body = await getJson(res);
     expect(body.publicUrl).toMatch(/^https:\/\/assets\.ride\.com\.bd\/documents\//);
     expect(body.publicUrl).not.toContain("//documents");

@@ -8,7 +8,8 @@
  * DELETE /api/shop/[id]/members?user_id=... — remove member or leave-shop
  */
 import { db } from "@/src/db";
-import { shopMembers, users } from "@/src/db/schema";
+import { shopMembers, shops, users } from "@/src/db/schema";
+import { notifyStaffInvite } from "@/lib/shopNotify";
 import { requireShopMember } from "@/lib/marketplaceRbac";
 import { parseJsonBody } from "@/lib/parseBody";
 import { logger } from "@/lib/logger";
@@ -112,6 +113,25 @@ export async function POST(request: Request, { id }: { id: string }) {
         invited_by: membership.user_id,
       })
       .returning({ id: shopMembers.id });
+
+    // Staff lane (Flow 15): the invitee learns about the membership via
+    // push + WS — the row alone is invisible until their next cold boot.
+    // Fire-and-forget AFTER the insert resolves; never fails the invite.
+    const [shopRow] = await db
+      .select({ name: shops.name })
+      .from(shops)
+      .where(eq(shops.id, id))
+      .limit(1);
+    const memberId = inserted[0]?.id ?? null;
+    if (memberId) {
+      void notifyStaffInvite({
+        memberId,
+        shopId: id,
+        shopName: shopRow?.name ?? "",
+        inviteeUserId: targetUserId,
+        role: result.data.role as "MANAGER" | "STAFF",
+      });
+    }
 
     return Response.json(
       { member_id: inserted[0]?.id ?? null, message: "Member added" },

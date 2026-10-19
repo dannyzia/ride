@@ -218,6 +218,19 @@ export default function EmergencyAmbulanceScreen() {
                   ))
                 )}
               </View>
+              {/* C9-1: F-19 escalation state — the sweeper stamped
+                  escalated_at ONCE, re-broadcast wider, and notified the
+                  requester. Keyed on escalated_at (already in the REST
+                  detail payload the screen polls), not on status: the
+                  request is still broadcasting, just searching wider. */}
+              {!isTerminal && activeEmergency.escalated_at ? (
+                <View style={{ flexDirection: "row", alignItems: "center", marginTop: 8 }}>
+                  <Ionicons name="expand" size={16} color={colors.amber} />
+                  <Text style={{ fontSize: 13, fontFamily: "JakartaSemiBold", color: colors.amber, marginLeft: 8, flex: 1 }}>
+                    {t("ambulance.escalated_note")}
+                  </Text>
+                </View>
+              ) : null}
               <Text style={{ fontSize: 12, fontFamily: "Jakarta", color: textSecondary, marginTop: 8 }}>
                 {activeEmergency.service_level} · {activeEmergency.pickup_address}
               </Text>

@@ -10,7 +10,7 @@
  */
 import { db } from "@/src/db";
 import { workshopRequests, workshopServices, shops } from "@/src/db/schema";
-import { requireAnyRole } from "@/lib/auth";
+import { requireMemberRoles } from "@/lib/auth";
 import { applyWorkshopSla } from "@/lib/workshopSla";
 import { logger } from "@/lib/logger";
 import * as errors from "@/lib/errors";
@@ -18,7 +18,7 @@ import { eq, and, desc } from "drizzle-orm";
 
 export async function GET(request: Request) {
   try {
-    const { dbUser } = await requireAnyRole(["rider", "driver"])(request);
+    const { dbUser } = await requireMemberRoles(["rider", "driver"])(request);
 
     // Enforce the SLA for this customer's rows before reading.
     await applyWorkshopSla({ customerId: dbUser.id });

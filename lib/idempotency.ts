@@ -43,6 +43,7 @@ export const IDEMPOTENCY_ROUTES = {
   riderPasses: '/api/rider/passes',
   packagePurchase: '/api/package/purchase',
   shopOrderCreate: '/api/shop/orders',
+  parcelCreate: '/api/delivery/parcels',
 } as const;
 
 /** Extracts and validates the Idempotency-Key header. null = absent/invalid. */

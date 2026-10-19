@@ -76,13 +76,21 @@ export default function TopUp() {
             </TouchableOpacity>
           ))}
         </View>
+        {/* D9-2 (skeptic §D9): top-up dormant until payments launch
+            (platform_config payments_enabled=false; the server 409s). F-26
+            disabled-with-copy; handleContinue stays wired for the month-3
+            re-enable (delete `disabled` + the note). */}
         <TouchableOpacity
           className="rounded-full w-full py-[16px] items-center"
-          style={{ backgroundColor: colors.primary }}
+          style={{ backgroundColor: surfaceBg, borderWidth: 1, borderColor }}
           onPress={handleContinue}
+          disabled
          testID="customer.settings.top-up.handle-continue">
-          <Text className="text-[18px] font-JakartaBold text-goWhite">{t('top_up_settings.continue')}</Text>
+          <Text className="text-[18px] font-JakartaBold" style={{ color: textSecondary }}>{t('payments.launch_later')}</Text>
         </TouchableOpacity>
+        <Text className="text-[13px] font-Jakarta mt-3 text-center" style={{ color: textSecondary }}>
+          {t('payments.launch_later_desc')}
+        </Text>
       </ScrollView>
       <TouchableOpacity
         onPress={() => setTheme(isDark ? "light" : "dark")}

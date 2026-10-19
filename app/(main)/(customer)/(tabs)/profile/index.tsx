@@ -114,8 +114,10 @@ const Profile = () => {
 
   const handleSignOut = useCallback(async () => {
     try {
-      await supabase.auth.signOut();
+      // Cleanup FIRST while the session token is alive (D2-1 push revoke
+      // + H-1 socket teardown) — then kill the session.
       authCleanup();
+      await supabase.auth.signOut();
     } catch (err) {
       logger.error("[profile] sign out failed", err);
       Alert.alert(t('profile.sign_out_failed'), t('profile.please_try_again'));
@@ -254,11 +256,12 @@ const Profile = () => {
               onPress={() => router.push(EDIT_ROUTE)}
               testID="customer.profile.push-edit-profile"
             />
+            {/* D9-3 (skeptic §D9): display-only until C2-FIX change-phone
+                lands — no onPress, so SettingsRow renders it non-pressable. */}
             <SettingsRow
               icon="call-outline"
               label={t('profile.phone_number')}
               showChevron={false}
-              onPress={() => {}}
               rightElement={
                 <Text style={[styles.phoneValue, { color: textSecondary }]} numberOfLines={1}>
                   {profile.phone}

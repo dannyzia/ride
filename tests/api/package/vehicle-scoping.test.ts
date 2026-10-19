@@ -43,6 +43,12 @@ jest.mock("@/lib/fareFrameworkConfig", () => ({
   parseConfigNumber: jest.fn((_v: string, fallback: number) => fallback),
 }));
 
+// D9-2: money-movement master switch — ON here so the branch matrix
+// exercises the vehicle/status/idempotency branches, not the payments gate.
+jest.mock("@/lib/platformConfig", () => ({
+  getPlan05Bool: jest.fn(async () => true),
+}));
+
 import { PgDialect } from "drizzle-orm/pg-core";
 import type { SQL } from "drizzle-orm";
 import { db } from "@/src/db";

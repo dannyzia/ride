@@ -152,6 +152,14 @@ jest.mock("@/lib/auth", () => ({
         dbUser: mockAuthUser,
       };
     },
+  requireMemberRoles:
+    (_roles: string[]) =>
+    async () => {
+      return {
+        supabaseUser: { id: "auth-test" },
+        dbUser: mockAuthUser,
+      };
+    },
   requireFleetMember:
     (_fleetId: string, _roles?: readonly string[]) =>
     async () => {

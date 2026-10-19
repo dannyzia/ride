@@ -1,3 +1,4 @@
+// [public]
 import { db } from "@/src/db";
 import { faqs } from "@/src/db/schema";
 import { eq, and } from "drizzle-orm";

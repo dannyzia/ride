@@ -9,6 +9,7 @@ import { colors } from "@/theme/goRide";
 import { useIsDark, useAppearance } from "@/lib/useAppearance";
 import ProgressBar from "@/components/ProgressBar";
 import { useTranslation } from "react-i18next";
+import { LAUNCH_FREE_PACKAGE_CODE } from "@/lib/launchFreePackage";
 
 function daysBetween(fromIso: string, toIso: string): number {
   const diff = new Date(toIso).getTime() - new Date(fromIso).getTime();
@@ -87,6 +88,12 @@ export default function ActiveSubscription() {
             </View>
             <Text className="text-[14px] font-Jakarta mt-1" style={{ color: textSecondary }}>Activated: {formatDate(activeSubscription.purchased_at)}</Text>
             <Text className="text-[14px] font-Jakarta" style={{ color: textSecondary }}>Expires: {formatDate(activeSubscription.expires_at)} · {daysLeft} days left</Text>
+            {/* C10-1 grant source: match on the stable plan code, never on the admin-editable name. */}
+            {activeSubscription.package_code === LAUNCH_FREE_PACKAGE_CODE ? (
+              <Text className="text-[13px] font-Jakarta mt-1" style={{ color: textSecondary }}>
+                Free launch access · expires {formatDate(activeSubscription.expires_at)} · renews at ৳100/mo when payments open
+              </Text>
+            ) : null}
             {activeSubscription.is_trial ? (
               <Text className="text-[14px] font-Jakarta" style={{ color: textSecondary }}>Trial plan</Text>
             ) : null}

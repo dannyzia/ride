@@ -347,6 +347,7 @@ Server calls `supabase.auth.getUser(jwt)` to verify the token and extract user c
 {
   "subscription": {
     "id": "uuid", "package_id": "uuid", "package_name": "Starter 50",
+    "package_code": "launch_free | null (C10-1: stable plan identity — clients match on this, never on package_name)",
     "calls_remaining": 42, "daily_calls_used": 3, "daily_reset_at": "ISO-8601",
     "status": "active", "purchased_at": "ISO-8601", "expires_at": "ISO-8601", "is_trial": false
   }

@@ -20,6 +20,8 @@ interface ChatStore {
   sendMessage: (content: string) => Promise<ChatMessage | null>;
   onNewMessage: (msg: ChatMessage) => void;
   clearChat: () => void;
+  /** D6-1 registry alias: same wipe as clearChat under the uniform name. */
+  reset: () => void;
 }
 
 export const useChatStore = create<ChatStore>((set, get) => ({
@@ -101,4 +103,6 @@ export const useChatStore = create<ChatStore>((set, get) => ({
       hasMore: false,
       rideId: null,
     }),
+
+  reset: () => get().clearChat(),
 }));

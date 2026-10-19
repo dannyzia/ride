@@ -5,7 +5,7 @@
  */
 import { db } from "@/src/db";
 import { shopRfqs } from "@/src/db/schema";
-import { requireAnyRole } from "@/lib/auth";
+import { requireMemberRoles } from "@/lib/auth";
 import { requireShopMember } from "@/lib/marketplaceRbac";
 import { parseJsonBody } from "@/lib/parseBody";
 import { isVerticalEnabled } from "@/lib/platformConfig";
@@ -49,7 +49,7 @@ export async function POST(request: Request, { id }: { id: string }) {
       body = result.data;
     }
 
-    const { dbUser } = await requireAnyRole(["rider", "driver"])(request);
+    const { dbUser } = await requireMemberRoles(["rider", "driver"])(request);
 
     let guard: Response | null = null;
     let rfqOut: Record<string, unknown> | undefined;

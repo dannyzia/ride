@@ -13,6 +13,7 @@ import {
   IDEMPOTENCY_ROUTES,
 } from '@/lib/idempotency';
 import { parseJsonBody } from '@/lib/parseBody';
+import { getPlan05Bool } from '@/lib/platformConfig';
 import { z } from 'zod';
 import crypto from 'crypto';
 import * as errors from '@/lib/errors';
@@ -66,6 +67,13 @@ export async function POST(request: Request) {
       .limit(1);
     if (activeSub) {
       return Response.json({ error: 'active_subscription_exists', message: 'Rider already has an active pass' }, { status: 409 });
+    }
+
+    // D9-2 (skeptic §D9): money-movement master switch — 409 while
+    // payments_enabled is false (launch default). After the W-2 stacking
+    // check (cheaper, more specific) so stacking still reports stacking.
+    if (!(await getPlan05Bool('payments_enabled'))) {
+      return Response.json({ error: 'payments_not_enabled', message: 'Payments launch later — pass purchase is not live yet' }, { status: 409 });
     }
 
     if (!isConfigured()) return Response.json({ error: 'payment_not_configured', message: 'Payment provider not configured' }, { status: 503 });

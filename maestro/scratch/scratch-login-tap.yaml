@@ -1,0 +1,7 @@
+appId: com.ride.bd
+---
+- tapOn:
+    id: "login.set-password"
+- inputText: "test1234"
+- tapOn:
+    id: "login.handle-login"

@@ -58,13 +58,15 @@ export default function SettingsDeleteAccount() {
         setError(t('delete_account.not_authenticated'));
         return;
       }
-      const res = await fetch(`${API_URL}/api/user/delete-data`, {
-        method: "POST",
+      // C2-4: converged on the unified DELETE /api/user/account (same route
+      // the rider account-security screen uses — dues check + scrub + tombstone).
+      const res = await fetch(`${API_URL}/api/user/account`, {
+        method: "DELETE",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ confirm: "DELETE MY DATA" }),
+        body: JSON.stringify({ reason: "user_initiated" }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));

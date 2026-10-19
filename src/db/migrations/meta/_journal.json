@@ -533,6 +533,76 @@
       "when": 1761091200000,
       "tag": "0046_event_calendar_drop_demand_multiplier",
       "breakpoints": true
+    },
+    {
+      "idx": 76,
+      "version": "7",
+      "when": 1761091201000,
+      "tag": "0076_user_suspension_reason",
+      "breakpoints": true
+    },
+    {
+      "idx": 77,
+      "version": "7",
+      "when": 1761091202000,
+      "tag": "0077_ride_pin_lockout",
+      "breakpoints": true
+    },
+    {
+      "idx": 78,
+      "version": "7",
+      "when": 1761091203000,
+      "tag": "0078_ride_cash_handshake",
+      "breakpoints": true
+    },
+    {
+      "idx": 79,
+      "version": "7",
+      "when": 1761091204000,
+      "tag": "0079_shop_members_reinvite_partial",
+      "breakpoints": true
+    },
+    {
+      "idx": 80,
+      "version": "7",
+      "when": 1761091205000,
+      "tag": "0080_parcel_handover_fields",
+      "breakpoints": true
+    },
+    {
+      "idx": 81,
+      "version": "7",
+      "when": 1761091206000,
+      "tag": "0081_packages_code",
+      "breakpoints": true
+    },
+    {
+      "idx": 82,
+      "version": "7",
+      "when": 1761091207000,
+      "tag": "0082_pricing_supersedes",
+      "breakpoints": true
+    },
+    {
+      "idx": 83,
+      "version": "7",
+      "when": 1761091208000,
+      "tag": "0083_customer_complaints",
+      "breakpoints": true
+    },
+    {
+      "idx": 84,
+      "version": "7",
+      "when": 1761091209000,
+      "tag": "0084_users_locale",
+      "breakpoints": true
+    },
+    {
+      "idx": 85,
+      "version": "7",
+      "when": 1761091210000,
+      "tag": "0085_shop_ledger_delivery_fee",
+      "breakpoints": true
     }
   ]
 }

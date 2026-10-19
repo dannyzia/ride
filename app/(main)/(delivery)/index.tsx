@@ -84,9 +84,16 @@ export default function DeliveryInboxScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [ineligible, setIneligible] = useState(false);
   const [busy, setBusy] = useState(false);
+  // C7-5: the last respond failure, as an inbox i18n key — rendered on the
+  // offer row (expired / claimed / hold each get their own message, never
+  // silent). Cleared on the next respond attempt or successful reload.
+  const [respondError, setRespondError] = useState<string | null>(null);
 
   const load = useCallback(async (silent = false) => {
-    if (!silent) setLoading(true);
+    if (!silent) {
+      setLoading(true);
+      setRespondError(null);
+    }
     try {
       const session = await supabase.auth.getSession();
       const token = session.data.session?.access_token;
@@ -123,6 +130,7 @@ export default function DeliveryInboxScreen() {
   const respond = useCallback(
     async (legId: string, decision: "accept" | "reject") => {
       setBusy(true);
+      setRespondError(null);
       try {
         const session = await supabase.auth.getSession();
         const token = session.data.session?.access_token;
@@ -141,6 +149,17 @@ export default function DeliveryInboxScreen() {
             message?: string;
           } | null;
           logger.warn("[delivery inbox] respond failed", { status: res.status, error: body?.error });
+          const code = body?.error ?? "";
+          setRespondError(
+            code === "offer_expired"
+              ? "delivery.inbox.respond_expired"
+              : code === "already_claimed" || code === "concurrent_transition" || code === "offer_unavailable"
+                ? "delivery.inbox.respond_claimed"
+                : code === "dispatch_hold_active"
+                  ? "delivery.inbox.respond_hold"
+                  : "delivery.inbox.respond_failed",
+          );
+          await load(true);
           return;
         }
         if (decision === "accept") {
@@ -271,6 +290,14 @@ export default function DeliveryInboxScreen() {
                   <Text className="text-[11px] font-JakartaSemiBold uppercase mb-2" style={{ color: colors.primary }}>
                     {t("delivery.inbox.new_offer")}
                   </Text>
+                  {respondError ? (
+                    <View className="flex-row items-center rounded-lg px-3 py-2 mb-2" style={{ backgroundColor: colors.danger + "1A" }}>
+                      <Ionicons name="alert-circle-outline" size={15} color={colors.danger} />
+                      <Text className="text-[12px] font-Jakarta flex-1 ml-2" style={{ color: colors.danger }}>
+                        {t(respondError)}
+                      </Text>
+                    </View>
+                  ) : null}
                   <Text className="text-[16px] font-JakartaBold" style={{ color: C.text }}>
                     {offer.shop_name ??
                       t(`delivery.vertical.${VERTICAL_KEY[offer.source_vertical] ?? "shop_order"}`)}

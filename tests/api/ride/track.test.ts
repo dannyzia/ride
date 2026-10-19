@@ -65,11 +65,11 @@ describe("GET /api/ride/[id]/track (public)", () => {
     expect(db.select).not.toHaveBeenCalled();
   });
 
-  test("404 for an unknown ride", async () => {
+  test("404 ride_not_found for an unknown ride", async () => {
     mockSelectQueue([[]]);
     const res = await GET(new Request("http://localhost/x"), { id: RIDE_ID });
     expect(res.status).toBe(404);
-    expect((await getJson(res)).error).toBe("not_found");
+    expect((await getJson(res)).error).toBe("ride_not_found");
   });
 
   test("active ride exposes coordinates and driver identity", async () => {
@@ -127,6 +127,23 @@ describe("GET /api/ride/[id]/track (public)", () => {
     expect(body.status).toBe("dispatching");
     expect(body.driver_name).toBeNull();
     expect(body.origin_lat).toBe("23.8103");
+    expect(res.headers.get("x-robots-tag")).toBeNull();
+  });
+
+  test("scheduled ride degrades to nulls until it is live", async () => {
+    mockSelectQueue([[{ ...ACTIVE_RIDE, status: "scheduled" }], [{ name: "Kamal", rating: "4.70", vehicle_type: "bike_basic" }]]);
+
+    const res = await GET(new Request("http://localhost/x"), { id: RIDE_ID });
+    const body = await getJson(res);
+    expect(res.status).toBe(200);
+    expect(body.status).toBe("scheduled");
+    expect(body.driver_name).toBeNull();
+    expect(body.driver_rating).toBeNull();
+    expect(body.vehicle_type).toBeNull();
+    expect(body.origin_lat).toBeNull();
+    expect(body.origin_lng).toBeNull();
+    expect(body.destination_lat).toBeNull();
+    expect(body.destination_lng).toBeNull();
     expect(res.headers.get("x-robots-tag")).toBeNull();
   });
 

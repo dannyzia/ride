@@ -1,4 +1,4 @@
-import { View, Text, TouchableOpacity, ScrollView, Linking, StatusBar } from "react-native";
+import { View, Text, TouchableOpacity, ScrollView, StatusBar } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import Ionicons from "@expo/vector-icons/Ionicons";
@@ -19,12 +19,8 @@ export default function DriverInfo() {
   const textPrimary = isDark ? colors.textPrimaryDark : colors.textPrimaryLight;
   const textSecondary = isDark ? colors.textSecondaryDark : colors.textSecondaryLight;
 
-  const handleCall = () => {
-    if (driver?.phone) {
-      Linking.openURL(`tel:${driver.phone}`);
-    }
-  };
-
+  // C3-6: no raw tel: dial — in-app chat is the contact channel; masked
+  // call is DEFERRED (D-x, provider).
   const handleChat = () => {
     if (activeRide?.id) {
       router.push(`/(main)/(customer)/chat/${activeRide.id}`);
@@ -56,15 +52,12 @@ export default function DriverInfo() {
           </View>
         </View>
         <View className="flex-row gap-4">
-          <TouchableOpacity className="flex-1 rounded-full py-[14px] items-center" style={{ backgroundColor: colors.primary }} onPress={handleCall} testID="customer.driver-info.handle-call">
-            <Text className="text-[16px] font-JakartaBold text-goWhite">{t('driver_info.call')}</Text>
-          </TouchableOpacity>
           <TouchableOpacity
-            className="flex-1 border rounded-full py-[14px] items-center"
-            style={{ borderColor }}
+            className="flex-1 rounded-full py-[14px] items-center"
+            style={{ backgroundColor: colors.primary }}
             onPress={handleChat}
            testID="customer.driver-info.handle-chat">
-            <Text className="text-[16px] font-JakartaBold" style={{ color: textPrimary }}>{t('driver_info.chat')}</Text>
+            <Text className="text-[16px] font-JakartaBold text-goWhite">{t('driver_info.chat')}</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>

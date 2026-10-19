@@ -11,7 +11,13 @@ import { useIsDark } from "@/lib/useAppearance";
 import CustomButton from "@/components/CustomButton";
 
 export default function RegisterScreen() {
-  const { phone: phoneParam, role: roleParam } = useLocalSearchParams<{ phone?: string; role?: string }>();
+  const { phone: phoneParam, role: roleParam, terms: termsParam } = useLocalSearchParams<{
+    phone?: string;
+    role?: string;
+    terms?: string;
+  }>();
+  // C1-1: consent flag carried from the phone-entry gate via otp-verify.
+  const termsAccepted = termsParam === "1";
   const [name, setName] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -54,11 +60,19 @@ export default function RegisterScreen() {
       fleet_owner: "/(auth)/register-fleet-owner",
       delivery_man: "/(auth)/register-delivery-man",
     };
+    // C1-1: without the carried consent flag the server 400s terms_required.
+    if (!termsAccepted) {
+      setError("Please accept the Terms of Service and Privacy Policy to continue.");
+      setLoading(false);
+      return;
+    }
+
     if (roleParam && ROLE_WIZARD[roleParam]) {
       // M-6 (§16): the password rides the registrationHandoff (never route
       // params — URLs leak into history/devtools/crash reports). A missing
       // handoff on the wizard side re-prompts here.
-      setRegistrationHandoff({ phone: phoneParam ?? "", name, password });
+      // C1-1: consent rides the handoff so the wizard's submit carries it.
+      setRegistrationHandoff({ phone: phoneParam ?? "", name, password, terms_accepted: true });
       router.push(
         `${ROLE_WIZARD[roleParam]}?phone=${encodeURIComponent(phoneParam ?? "")}&role=${encodeURIComponent(roleParam)}`,
       );
@@ -77,6 +91,8 @@ export default function RegisterScreen() {
           // the other three roles (they submit their documents themselves).
           role: (roleParam ?? "rider") as "rider" | "driver",
           password,
+          // C1-1: consent flag — register+api 400s terms_required without it.
+          terms_accepted: true,
         }),
       });
 

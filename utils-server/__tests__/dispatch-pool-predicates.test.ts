@@ -43,7 +43,7 @@ jest.mock("../coldDrop", () => ({
 import { PgDialect } from "drizzle-orm/pg-core";
 import type { SQL } from "drizzle-orm";
 import { db } from "../../src/db";
-import { drivers, pricing } from "../../src/db/schema";
+import { drivers, pricing, rides } from "../../src/db/schema";
 import { getDriversInCells } from "../h3Index";
 import { buildCandidateList } from "../dispatch";
 
@@ -51,10 +51,13 @@ const BY_TABLE = new Map<unknown, Array<Record<string, unknown>>>();
 
 /** Predicate captured from the from(drivers) query's .where() call. */
 let driverWherePredicate: SQL | undefined;
+/** Predicates captured from from(rides) queries' .where() calls. */
+let rideWherePredicates: SQL[] = [];
 
 beforeEach(() => {
   BY_TABLE.clear();
   driverWherePredicate = undefined;
+  rideWherePredicates = [];
   jest.clearAllMocks();
 
   (db.select as jest.Mock).mockImplementation(() => ({
@@ -64,6 +67,7 @@ beforeEach(() => {
         leftJoin: jest.fn(() => chain),
         where: jest.fn((predicate: SQL) => {
           if (table === drivers) driverWherePredicate = predicate;
+          if (table === rides) rideWherePredicates.push(predicate);
           return {
             limit: jest.fn(async (n: number) => rows().slice(0, n)),
             groupBy: jest.fn(() => ({
@@ -93,6 +97,11 @@ function capturedPredicateSql(): { sql: string; params: unknown[] } {
   return { sql: rendered.sql, params: rendered.params as unknown[] };
 }
 
+function capturedRidePredicateSql(): string[] {
+  const dialect = new PgDialect();
+  return rideWherePredicates.map((predicate) => dialect.sqlToQuery(predicate).sql);
+}
+
 describe("candidate-pool WHERE predicate — dispatch.ts:198-217", () => {
   test("pool query filters at SQL level: is_online = true", async () => {
     (getDriversInCells as jest.Mock).mockReturnValue(["d1"]);
@@ -110,6 +119,17 @@ describe("candidate-pool WHERE predicate — dispatch.ts:198-217", () => {
     const { sql, params } = capturedPredicateSql();
     expect(sql).toContain('"drivers"."status" = $');
     expect(params).toContain("active");
+  });
+
+  test("pool query filters at SQL level: on_break = false (C4-2 — break is not offline)", async () => {
+    (getDriversInCells as jest.Mock).mockReturnValue(["d1"]);
+    await buildCandidateList("ride-p", 23.8103, 90.4125, 23.8203, 90.4225, "bike_basic", "z", []);
+
+    const { sql, params } = capturedPredicateSql();
+    // Removing this predicate flips the test red — an on-break driver would
+    // re-enter the pool while the break-mode copy promises no requests.
+    expect(sql).toContain('"drivers"."on_break" = $');
+    expect(params).toContain(false);
   });
 
   test("pool query filters at SQL level: vehicle_type gate precedes scoring", async () => {
@@ -140,5 +160,28 @@ describe("candidate-pool WHERE predicate — dispatch.ts:198-217", () => {
 
     const { sql } = capturedPredicateSql();
     expect(sql).toContain('"drivers"."id" in (');
+  });
+
+  test("vehicle-document expiry uses the Bangladesh calendar day, not server CURRENT_DATE", async () => {
+    (getDriversInCells as jest.Mock).mockReturnValue(["d1"]);
+    await buildCandidateList("ride-p", 23.8103, 90.4125, 23.8203, 90.4225, "bike_basic", "z", []);
+
+    const { sql } = capturedPredicateSql();
+    expect(sql).toContain("(now() AT TIME ZONE 'Asia/Dhaka')::date");
+    expect(sql).not.toContain("CURRENT_DATE");
+  });
+
+  test("daily quality boundary converts ride timestamps to the Bangladesh calendar day", async () => {
+    (getDriversInCells as jest.Mock).mockReturnValue(["d1"]);
+    BY_TABLE.set(drivers, [{ id: "d1" }]);
+    await buildCandidateList("ride-p", 23.8103, 90.4125, 23.8203, 90.4225, "bike_basic", "z", []);
+
+    const qualitySql = capturedRidePredicateSql().find((query) =>
+      query.includes('"rides"."status" in ('),
+    );
+    expect(qualitySql).toBeDefined();
+    expect(qualitySql).toContain("AT TIME ZONE 'Asia/Dhaka'");
+    expect(qualitySql).toContain("(now() AT TIME ZONE 'Asia/Dhaka')::date");
+    expect(qualitySql).not.toContain("CURRENT_DATE");
   });
 });

@@ -3,6 +3,7 @@ import { db } from '@/src/db';
 import { users, rides } from '@/src/db/schema';
 import { eq } from 'drizzle-orm';
 import { computeEstimatedDurationMinutes } from '@/lib/scheduleUtils';
+import { holdsRiderRole } from '@/lib/riderRole';
 import * as errors from '@/lib/errors';
 import { logger } from '@/lib/logger';
 
@@ -29,7 +30,8 @@ export async function GET(request: Request) {
     if (!user) {
       return Response.json({ error: 'user_not_found', message: 'User not found' }, { status: 404 });
     }
-    if (user.role !== 'rider') {
+    // C3-8: rider-role MEMBERSHIP (user_roles ∪ legacy users.role).
+    if (!(await holdsRiderRole(db, user.id, user.role))) {
       return Response.json({ error: 'forbidden', message: 'Access denied' }, { status: 403 });
     }
 

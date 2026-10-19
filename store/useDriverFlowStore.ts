@@ -6,6 +6,8 @@ interface Subscription {
   id: string;
   package_id: string;
   package_name: string;
+  // C10-1 grant-source identity (e.g. 'launch_free') — match on this, never on package_name.
+  package_code: string | null;
   calls_remaining: number;
   daily_calls_used: number;
   daily_reset_at: string;

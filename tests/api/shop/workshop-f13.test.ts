@@ -95,6 +95,9 @@ jest.mock("@/lib/auth", () => ({
   requireAnyRole:
     (_roles: string[]) =>
     async () => ({ supabaseUser: {}, dbUser: mockAuthUser }),
+  requireMemberRoles:
+    (_roles: string[]) =>
+    async () => ({ supabaseUser: {}, dbUser: mockAuthUser }),
 }));
 
 jest.mock("@/lib/marketplaceRbac", () => ({

@@ -1,6 +1,6 @@
 import { db } from "@/src/db";
-import { paymentEvents, users, rides, riderWalletTransactions, subscriptions, callLedger, promoRedemptions, drivers } from "@/src/db/schema";
-import { eq } from "drizzle-orm";
+import { paymentEvents, users, rides, riderWalletTransactions, subscriptions, callLedger, promoRedemptions, drivers, shops, shopOrders, fleetMembers, fleets, courierRemittanceDues, deliveryEarnings } from "@/src/db/schema";
+import { eq, inArray } from "drizzle-orm";
 import { verifySupabaseToken } from "@/lib/auth";
 import { logger } from "@/lib/logger";
 import * as errors from "@/lib/errors";
@@ -28,6 +28,18 @@ export async function POST(request: Request) {
       ? await db.select().from(callLedger).where(eq(callLedger.driver_id, driver.id)).limit(1000)
       : [];
 
+    // C2-5: export scope aligned to the delete policy — the export was
+    // customer-only; shop / fleet / courier datasets are included now.
+    const ownedShops = await db.select().from(shops).where(eq(shops.owner_user_id, dbUser.id)).limit(100);
+    const shopOrdersPlaced = await db.select().from(shopOrders).where(eq(shopOrders.rider_user_id, dbUser.id)).limit(1000);
+    const fleetMemberships = await db.select().from(fleetMembers).where(eq(fleetMembers.user_id, dbUser.id)).limit(100);
+    const fleetIds = [...new Set(fleetMemberships.map((m) => m.fleet_id))];
+    const fleetRows = fleetIds.length > 0
+      ? await db.select().from(fleets).where(inArray(fleets.id, fleetIds)).limit(100)
+      : [];
+    const courierDues = await db.select().from(courierRemittanceDues).where(eq(courierRemittanceDues.delivery_man_user_id, dbUser.id)).limit(1000);
+    const courierEarnings = await db.select().from(deliveryEarnings).where(eq(deliveryEarnings.delivery_man_user_id, dbUser.id)).limit(1000);
+
     const data = {
       profile: dbUser,
       rides: userRides,
@@ -36,6 +48,12 @@ export async function POST(request: Request) {
       subscriptions: subs,
       call_ledger: ledger,
       promo_redemptions: promos,
+      shops: ownedShops,
+      shop_orders: shopOrdersPlaced,
+      fleet_memberships: fleetMemberships,
+      fleets: fleetRows,
+      courier_remittance_dues: courierDues,
+      delivery_earnings: courierEarnings,
     };
 
     return Response.json(data, { status: 200 });

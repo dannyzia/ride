@@ -58,7 +58,7 @@ export default function TopUpMethod() {
   if (paymentUrl) {
     return (
       <PaymentWebView
-        bkashURL={paymentUrl}
+        paymentURL={paymentUrl}
         paymentID={paymentEventId}
         onSuccess={() => router.replace(`/(main)/(customer)/(tabs)/settings/top-up-success?amount=${amount}`)}
         onError={(err) => { setPaymentUrl(""); setError(err || t('top_up_method.payment_failed')); }}

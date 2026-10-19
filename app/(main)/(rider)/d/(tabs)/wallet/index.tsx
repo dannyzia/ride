@@ -21,6 +21,7 @@ import { useDriverStore } from "@/store/useDriverStore";
 
 import PaymentWebView from "@/components/PaymentWebView";
 import { useTranslation } from "react-i18next";
+import { LAUNCH_FREE_PACKAGE_CODE } from "@/lib/launchFreePackage";
 
 interface DuesData {
   subscription: {
@@ -71,6 +72,20 @@ export default function WalletScreen() {
   const [credits, setCredits] = useState<CancellationCredit[]>([]);
 
   const activeSubscription = useDriverStore((s) => s.activeSubscription);
+
+  // C10-1 grant source: match on the stable plan code, never on the admin-editable name.
+  const isLaunchFreeGrant = activeSubscription?.package_code === LAUNCH_FREE_PACKAGE_CODE;
+  // C10-3: no usable calls left (0, not the -1 unlimited sentinel) or past expiry.
+  const isSubDepleted =
+    !!activeSubscription &&
+    (activeSubscription.calls_remaining === 0 ||
+      new Date(activeSubscription.expires_at).getTime() < Date.now());
+  const expiryLabel = activeSubscription
+    ? new Date(activeSubscription.expires_at).toLocaleDateString(
+        "en-BD",
+        { day: "numeric", month: "short", timeZone: "Asia/Dhaka" },
+      )
+    : "";
 
   const bg = isDark ? colors.bgDark : colors.bgLight;
   const surfaceBg = isDark ? colors.surfaceElevatedDark : colors.surfaceLight;
@@ -295,15 +310,51 @@ export default function WalletScreen() {
                   className="text-[14px] font-JakartaSemiBold"
                   style={{ color: textPrimary }}
                 >
-                  {new Date(activeSubscription.expires_at).toLocaleDateString(
-                    "en-BD",
-                    { day: "numeric", month: "short", timeZone: "Asia/Dhaka" },
-                  )}
+                  {expiryLabel}
                 </Text>
               </View>
             </View>
+            {isLaunchFreeGrant ? (
+              <Text
+                className="text-[12px] font-Jakarta mt-2"
+                style={{ color: textSecondary }}
+              >
+                {t('wallet.grant_source', { date: expiryLabel })}
+              </Text>
+            ) : null}
+            {isSubDepleted ? (
+              <Text
+                className="text-[12px] font-JakartaBold mt-2"
+                style={{ color: colors.danger }}
+              >
+                {t('wallet.plan_expired_offers_paused')}
+              </Text>
+            ) : null}
           </View>
         )}
+
+        {/* C10-3: no active subscription (expired/lapsed) — offers are paused. */}
+        {!activeSubscription && !loading && !error ? (
+          <View
+            className="rounded-[12px] p-[14px] items-center"
+            style={{ backgroundColor: surfaceBg, borderWidth: 1, borderColor }}
+          >
+            <Text
+              className="text-[13px] font-Jakarta text-center mb-3"
+              style={{ color: textSecondary }}
+            >
+              {t('wallet.plan_expired_offers_paused')}
+            </Text>
+            <TouchableOpacity
+              className="bg-goPrimary rounded-full px-[24px] py-[12px]"
+              onPress={() => router.push("/(main)/(rider)/packages")}
+             testID="rider.d.wallet.push-packages">
+              <Text className="text-[15px] font-JakartaBold text-goWhite">
+                {t('driver_home.buy_package')}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        ) : null}
 
         {/* Dues Card */}
         {dues && dues.total_outstanding_bdt > 0 && (
@@ -343,19 +394,29 @@ export default function WalletScreen() {
           </View>
         )}
 
-        {/* Top Up Button */}
+        {/* Top Up Button — D9-2 (skeptic §D9): dormant until payments launch
+            (platform_config payments_enabled=false; the server 409s). F-26
+            disabled-with-copy; handleTopUp stays wired for the month-3
+            re-enable (delete `disabled` + the note). */}
         <TouchableOpacity
           className="rounded-[12px] py-[14px] items-center flex-row justify-center gap-2"
-          style={{ backgroundColor: colors.primary }}
+          style={{ backgroundColor: surfaceBg, borderWidth: 1, borderColor }}
           onPress={handleTopUp}
+          disabled
           accessibilityRole="button"
-          accessibilityLabel={t('wallet.top_up')}
+          accessibilityLabel={t('payments.launch_later')}
          testID="rider.d.wallet.handle-top-up">
-          <Ionicons name="add-circle-outline" size={20} color={colors.white} />
-          <Text className="text-[16px] font-JakartaBold text-white">
-            {t('wallet.top_up')}
+          <Ionicons name="add-circle-outline" size={20} color={textSecondary} />
+          <Text className="text-[16px] font-JakartaBold" style={{ color: textSecondary }}>
+            {t('payments.launch_later')}
           </Text>
         </TouchableOpacity>
+        <Text
+          className="text-[12px] font-Jakarta mt-1 text-center"
+          style={{ color: textSecondary }}
+        >
+          {t('payments.launch_later_desc')}
+        </Text>
 
         {/* Payout Method shortcut */}
         <TouchableOpacity
@@ -535,7 +596,7 @@ export default function WalletScreen() {
       {/* C2: PaymentWebView for wallet top-up */}
       {topUpUrl && topUpInvoiceId && (
         <PaymentWebView
-          bkashURL={topUpUrl}
+          paymentURL={topUpUrl}
           paymentID={topUpInvoiceId}
           purpose="wallet_topup"
           onSuccess={() => {

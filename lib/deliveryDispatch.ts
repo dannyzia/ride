@@ -14,8 +14,12 @@
  *     45s) × delivery_max_suggestions (seed 3) — both fresh-read from
  *     platform_config via requireConfigInt; a missing key propagates.
  *   - Decline/timeout → advance to the next ranked candidate the tick
- *     after the offer clears. Exhaustion → the shop falls back (F-12:
- *     retry / self-deliver / cancel — wired in app/api/shop).
+ *     after the offer clears: an 'offered' leg whose offer_expires_at has
+ *     elapsed is treated as a decline inside advanceDeliveryChain (status
+ *     flips to 'created', live-offer fields reset, tried-set + attempts
+ *     kept) and the normal advance runs. A live (unexpired) offer is never
+ *     stomped. Exhaustion → the shop falls back (F-12: retry /
+ *     self-deliver / cancel — wired in app/api/shop).
  *   - Mutual exclusion BOTH directions (Amendment 2, one active job):
  *     a driver carrying an active ride never receives delivery offers
  *     (filtered here), and utils-server/dispatch.ts excludes drivers with
@@ -86,7 +90,9 @@ export async function rankedDeliveryCandidates(
   const tried = new Set(leg.tried_claimer_ids ?? []);
 
   // Delivery Men: active + online couriers rows (any courier_type — the
-  // Delivery Man is universal, owner ruling #5).
+  // Delivery Man is universal, owner ruling #5). C7-2: verification_status
+  // = 'active' — couriers pending admin verification (including every row
+  // the retired self-signup created) are invisible to the pool.
   const courierRows = await db
     .select({
       user_id: couriers.user_id,
@@ -94,7 +100,11 @@ export async function rankedDeliveryCandidates(
       last_lng: couriers.last_lng,
     })
     .from(couriers)
-    .where(and(eq(couriers.status, 'active'), eq(couriers.is_online, true)));
+    .where(and(
+      eq(couriers.status, 'active'),
+      eq(couriers.verification_status, 'active'),
+      eq(couriers.is_online, true),
+    ));
 
   // Drivers: active + online AND Deliveries toggle ON (server-side gate #3).
   const driverRows = await db
@@ -293,18 +303,47 @@ export async function advanceDeliveryChain(legId: string): Promise<'offered' | '
     .where(eq(deliveries.id, legId))
     .limit(1)
     .for('update');
-  if (!leg || leg.status !== 'created') return 'noop';
+  if (!leg) return 'noop';
+
+  // B3: an expired 'offered' leg counts as a decline — flip back to
+  // 'created' and reset the live-offer fields, KEEPING the tried-set and
+  // offer_attempts (the expired candidate counts as tried). A live offer
+  // is never stomped.
+  let effectiveLeg = leg;
+  if (leg.status === 'offered') {
+    const expiresAt = leg.offer_expires_at ? new Date(leg.offer_expires_at).getTime() : NaN;
+    if (Number.isNaN(expiresAt) || expiresAt > Date.now()) return 'noop';
+    const flipped = await db
+      .update(deliveries)
+      .set({
+        status: 'created',
+        offered_to_user_id: null,
+        offer_expires_at: null,
+        updated_at: new Date(),
+      })
+      .where(and(eq(deliveries.id, legId), eq(deliveries.status, 'offered')))
+      .returning({ id: deliveries.id });
+    if (flipped.length === 0) return 'noop'; // raced with another writer
+    effectiveLeg = {
+      ...leg,
+      status: 'created',
+      offered_to_user_id: null,
+      offer_expires_at: null,
+    } as typeof leg;
+  } else if (leg.status !== 'created') {
+    return 'noop';
+  }
 
   const [maxSuggestions, windowSeconds] = await Promise.all([
     requireConfigInt('delivery_max_suggestions'),
     requireConfigInt('delivery_offer_window_seconds'),
   ]);
-  if (leg.offer_attempts >= maxSuggestions) {
+  if (effectiveLeg.offer_attempts >= maxSuggestions) {
     await exhaustDeliveryLeg(legId);
     return 'exhausted';
   }
 
-  const candidates = await rankedDeliveryCandidates(leg);
+  const candidates = await rankedDeliveryCandidates(effectiveLeg);
   const next = candidates[0];
   if (!next) {
     await exhaustDeliveryLeg(legId);
@@ -312,14 +351,14 @@ export async function advanceDeliveryChain(legId: string): Promise<'offered' | '
   }
 
   const expiresAt = new Date(Date.now() + windowSeconds * 1000);
-  const tried = [...new Set([...(leg.tried_claimer_ids ?? []), next.user_id])];
+  const tried = [...new Set([...(effectiveLeg.tried_claimer_ids ?? []), next.user_id])];
   const updated = await db
     .update(deliveries)
     .set({
       status: 'offered',
       offered_to_user_id: next.user_id,
       offer_expires_at: expiresAt,
-      offer_attempts: leg.offer_attempts + 1,
+      offer_attempts: effectiveLeg.offer_attempts + 1,
       tried_claimer_ids: tried,
       updated_at: new Date(),
     })
@@ -332,7 +371,7 @@ export async function advanceDeliveryChain(legId: string): Promise<'offered' | '
     candidate: next.user_id,
     kind: next.kind,
     distKm: Math.round(next.dist_km * 100) / 100,
-    attempt: leg.offer_attempts + 1,
+    attempt: effectiveLeg.offer_attempts + 1,
   });
   await notifyOffer(legId, next, expiresAt);
   return 'offered';
@@ -390,7 +429,7 @@ export async function exhaustDeliveryLeg(legId: string): Promise<void> {
           body: 'The delivery offer window ended without a courier. Retry, deliver it yourself, or cancel.',
           data: { order_id: order.id, leg_id: legId },
           priority: 'high',
-          idempotencyKey: `shop_delivery_exhausted:${order.id}:${legId}`,
+          idempotencyKey: `shop_delivery_exhausted:${order.id}:${legId}:${leg.offer_attempts}`,
         });
       }
       notifies.push({
@@ -399,8 +438,7 @@ export async function exhaustDeliveryLeg(legId: string): Promise<void> {
         title: 'Delivery is taking longer',
         body: 'We could not assign a courier yet. The shop is arranging your delivery.',
         data: { order_id: order.id, status: 'delivery_exhausted' },
-        priority: 'high',
-        idempotencyKey: `shop_order_status:${order.id}:delivery_exhausted:${order.rider_user_id}`,
+        priority: 'high',          idempotencyKey: `shop_order_status:${order.id}:delivery_exhausted:${order.rider_user_id}:${leg.offer_attempts}`,
       });
     }
   } else {
@@ -463,6 +501,29 @@ export async function deliveryDispatchTick(): Promise<{ advanced: number; exhaus
     )
     .limit(25);
   for (const row of fresh) {
+    const result = await advanceDeliveryChain(row.id);
+    if (result === 'offered') advanced += 1;
+    if (result === 'exhausted') exhausted += 1;
+  }
+
+  // Arm 2b — P2P parcel legs (POST /api/delivery/parcels): order_id is the
+  // parcel's own consignment uuid, so there is NO shopOrders row to join —
+  // they dispatch unconditionally once created, under the same offer window
+  // × suggestion cap. Exhaustion fails the leg + notifies the sender
+  // (exhaustDeliveryLeg's non-shop branch).
+  const freshParcels = await db
+    .select({ id: deliveries.id })
+    .from(deliveries)
+    .where(
+      and(
+        eq(deliveries.status, 'created'),
+        eq(deliveries.source_vertical, 'parcel'),
+        isNull(deliveries.delivery_man_user_id),
+        sql`${deliveries.offer_attempts} < ${maxSuggestions}`,
+      ),
+    )
+    .limit(25);
+  for (const row of freshParcels) {
     const result = await advanceDeliveryChain(row.id);
     if (result === 'offered') advanced += 1;
     if (result === 'exhausted') exhausted += 1;

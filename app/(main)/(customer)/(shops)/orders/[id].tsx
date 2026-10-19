@@ -50,6 +50,7 @@ interface OrderRow {
   cancelled_at: string | null;
   cancel_reason: string | null;
   cancel_fee_bdt: number | null;
+  delivery_otp: string | null;
   unavailable_item_ids: string[] | null;
   partial_confirmed_at: string | null;
   created_at: string;
@@ -512,6 +513,29 @@ export default function OrderTrackingScreen() {
             <Ionicons name="bicycle-outline" size={20} color={colors.primary} style={{ marginRight: 10 }} />
             <Text style={{ flex: 1, fontSize: 14, fontFamily: "JakartaMedium", color: textPrimary }}>
               {courierLabel}
+            </Text>
+          </View>
+        )}
+
+        {/* C7-1: customer delivery OTP — the courier→customer proof, shown
+            from pickup. The shop→courier pickup_code is staff-only and never
+            reaches this payload (orders/[id] strips it for riders). */}
+        {order.delivery_otp && ["picked_up", "out_for_delivery"].includes(order.status) && (
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              backgroundColor: surfaceBg,
+              borderWidth: 1,
+              borderColor: colors.primary,
+              borderRadius: 12,
+              padding: 14,
+              marginBottom: 16,
+            }}
+          >
+            <Ionicons name="key-outline" size={20} color={colors.primary} style={{ marginRight: 10 }} />
+            <Text style={{ flex: 1, fontSize: 14, fontFamily: "JakartaMedium", color: textPrimary }}>
+              {t("shops_track.delivery_otp", { code: order.delivery_otp })}
             </Text>
           </View>
         )}

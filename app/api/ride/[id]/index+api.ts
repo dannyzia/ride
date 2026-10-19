@@ -2,6 +2,7 @@ import { db } from '@/src/db';
 import { rides, users, drivers } from '@/src/db/schema';
 import { eq } from 'drizzle-orm';
 import { verifySupabaseToken } from '@/lib/auth';
+import { buildCashHandshake } from '@/lib/cashHandshake';
 import { z } from 'zod';
 import * as errors from '@/lib/errors';
 
@@ -31,10 +32,11 @@ export async function GET(request: Request, { id: rawId }: { id: string }) {
     // Get driver info if assigned
     let driverInfo = null;
     if (ride.driver_id) {
+      // C3-6: no driver phone in the match/details payloads — in-app chat
+      // is the contact channel; masked call is DEFERRED (D-x, provider).
       const [driver] = await db.select({
         id: drivers.id,
         name: users.name,
-        phone: users.phone,
         profile_image_url: users.profile_image_url,
         vehicle_type: drivers.vehicle_type,
         rating: drivers.rating,
@@ -46,13 +48,19 @@ export async function GET(request: Request, { id: rawId }: { id: string }) {
       driverInfo = driver ?? null;
     }
 
+    // C4-5: the start PIN is rider-identity only. Driver-identity responses
+    // strip start_pin / start_pin_attempts / start_pin_locked_at (and the
+    // otp alias) — the driver proves arrival, never the secret.
+    const isRiderIdentity = dbUser.id === ride.user_id;
+    const { start_pin: _stripPin, start_pin_attempts: _stripAttempts, start_pin_locked_at: _stripLocked, ...rideSansPin } = ride;
+
     const pickupLat = parseFloat(ride.origin_latitude?.toString() ?? '0');
     const pickupLng = parseFloat(ride.origin_longitude?.toString() ?? '0');
     const destLat = parseFloat(ride.destination_latitude?.toString() ?? '0');
     const destLng = parseFloat(ride.destination_longitude?.toString() ?? '0');
 
     const ridePayload = {
-      ...ride,
+      ...(isRiderIdentity ? ride : rideSansPin),
       origin_latitude: pickupLat,
       origin_longitude: pickupLng,
       destination_latitude: destLat,
@@ -64,7 +72,7 @@ export async function GET(request: Request, { id: rawId }: { id: string }) {
       destination_lat: destLat,
       destination_lng: destLng,
       fare_bdt: Number((ride.fare_breakdown as any)?.total_bdt ?? 0),
-      otp: ride.start_pin ?? '',
+      otp: isRiderIdentity ? (ride.start_pin ?? '') : '',
       driver_lat: 0,
       driver_lng: 0,
       driver: driverInfo,
@@ -76,7 +84,6 @@ export async function GET(request: Request, { id: rawId }: { id: string }) {
           first_name: driverInfo.name?.split(' ')[0] ?? '',
           last_name: driverInfo.name?.split(' ').slice(1).join(' ') ?? '',
           full_name: driverInfo.name ?? '',
-          phone: driverInfo.phone ?? '',
           rating: Number(driverInfo.rating ?? 0),
           total_trips: Number(driverInfo.rating_count ?? 0),
           avatar_url: driverInfo.profile_image_url ?? null,
@@ -87,7 +94,15 @@ export async function GET(request: Request, { id: rawId }: { id: string }) {
         }
       : null;
 
-    return Response.json({ ride: ridePayload, driver: driverPayload });
+    // C3-5 (STAGE C3-FIX, F-05 cash handshake → receipt entry): shared
+    // builder with complete+api so both surfaces agree.
+    const cashHandshake = buildCashHandshake(
+      ride.rider_cash_tendered_bdt,
+      ride.driver_cash_received_bdt,
+      ride.rider_payable_bdt,
+    );
+
+    return Response.json({ ride: ridePayload, driver: driverPayload, cash_handshake: cashHandshake });
   } catch (e: unknown) {
     if (errors.getErrorStatus(e) === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });

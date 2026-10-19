@@ -6,7 +6,7 @@
  */
 import { db } from "@/src/db";
 import { rentalRequests, rentalBids, awardedBidAssignments, rentalRequestEvents, drivers, users, fleetMembers } from "@/src/db/schema";
-import { requireAnyRole } from "@/lib/auth";
+import { requireAnyRole, requireMemberRoles } from "@/lib/auth";
 import { parseJsonBody } from "@/lib/parseBody";
 import { logger } from "@/lib/logger";
 import { notifyWs } from "@/lib/wsNotify";
@@ -141,7 +141,7 @@ export async function POST(request: Request, { id }: { id: string }) {
       return Response.json({ error: "invalid_uuid", message: "Invalid request id" }, { status: 400 });
     }
 
-    const { supabaseUser, dbUser } = await requireAnyRole(["rider", "driver"])(
+    const { supabaseUser, dbUser } = await requireMemberRoles(["rider", "driver"])(
       request,
     );
 
@@ -345,7 +345,7 @@ export async function PATCH(request: Request, { id }: { id: string }) {
       return Response.json({ error: "invalid_uuid", message: "Invalid request id" }, { status: 400 });
     }
 
-    const { supabaseUser, dbUser } = await requireAnyRole(["rider", "driver"])(
+    const { supabaseUser, dbUser } = await requireMemberRoles(["rider", "driver"])(
       request,
     );
 

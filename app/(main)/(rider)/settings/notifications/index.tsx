@@ -16,6 +16,10 @@ interface Prefs {
   service_alerts: boolean;
   email_notifications: boolean;
   sms_notifications: boolean;
+  // D2-2 minimal mutes (server-enforced in lib/notify.ts dispatchBatch).
+  order_updates: boolean;
+  delivery_updates: boolean;
+  shop_updates: boolean;
 }
 
 const DEFAULT_PREFS: Prefs = {
@@ -24,6 +28,9 @@ const DEFAULT_PREFS: Prefs = {
   service_alerts: true,
   email_notifications: false,
   sms_notifications: true,
+  order_updates: true,
+  delivery_updates: true,
+  shop_updates: true,
 };
 
 export default function DriverSettingsNotifications() {
@@ -98,6 +105,10 @@ export default function DriverSettingsNotifications() {
 
   const rows: { label: string; key: keyof Prefs }[] = [
     { label: "Ride requests", key: "ride_updates" },
+    // D2-2: per-category mutes for the live classes (server-enforced).
+    { label: t('notifications_screen.order_updates'), key: "order_updates" },
+    { label: t('notifications_screen.delivery_updates'), key: "delivery_updates" },
+    { label: t('notifications_screen.shop_updates'), key: "shop_updates" },
     { label: "Promos & offers", key: "promo_offers" },
     { label: "Service alerts", key: "service_alerts" },
     { label: "Email notifications", key: "email_notifications" },

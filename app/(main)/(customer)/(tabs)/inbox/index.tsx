@@ -29,8 +29,10 @@ interface NotificationRow {
   type: string;
   title: string;
   body: string | null;
-  titleKey?: string;
-  bodyKey?: string;
+  // D9-1: no titleKey/bodyKey indirection — it served only the purged
+  // SAMPLE_NOTIFICATIONS fallback (no producer ever sent those fields).
+  // Server rows carry literal title/body; rendering them directly keeps the
+  // i18n audit's dynamic-call surface free of unresolvable shapes.
   data: Record<string, unknown> | null;
   sent_at: string;
   created_at: string;
@@ -67,53 +69,10 @@ function extractDeepLink(data: Record<string, unknown> | null): string | null {
   return null;
 }
 
-const SAMPLE_NOTIFICATIONS: NotificationRow[] = [
-  {
-    id: "sample-promo",
-    type: "promo",
-    title: "Weekend discount inside",
-    body: "Enjoy 20% off your next three rides, this weekend only.",
-    titleKey: "inbox.sample_promo_title",
-    bodyKey: "inbox.sample_promo_body",
-    data: null,
-    sent_at: new Date().toISOString(),
-    created_at: new Date().toISOString(),
-  },
-  {
-    id: "sample-trip",
-    type: "trip",
-    title: "Trip reminder",
-    body: "You have a scheduled ride coming up tomorrow morning.",
-    titleKey: "inbox.sample_trip_title",
-    bodyKey: "inbox.sample_trip_body",
-    data: null,
-    sent_at: new Date().toISOString(),
-    created_at: new Date().toISOString(),
-  },
-  {
-    id: "sample-payment",
-    type: "payment",
-    title: "Payment received",
-    body: "Your wallet top-up of BDT 200 was successful.",
-    titleKey: "inbox.sample_payment_title",
-    bodyKey: "inbox.sample_payment_body",
-    data: null,
-    sent_at: new Date().toISOString(),
-    created_at: new Date().toISOString(),
-  },
-  {
-    id: "sample-system",
-    type: "system",
-    title: "Keep your app updated",
-    body: "Update to the latest version for the best experience.",
-    titleKey: "inbox.sample_system_title",
-    bodyKey: "inbox.sample_system_body",
-    data: null,
-    sent_at: new Date().toISOString(),
-    created_at: new Date().toISOString(),
-  },
-];
-
+// D9-1 (skeptic §D9): no fabricated fallback rows. A failed fetch renders
+// the error header above the empty state — never sample promo/payment rows
+// that read as real financial events. (The inbox.sample_* locale keys were
+// purged with the fallback in the same change.)
 export default function Inbox() {
   const { t } = useTranslation();
   const isDark = useIsDark();
@@ -228,9 +187,6 @@ export default function Inbox() {
         <Text style={[styles.stateSubtitle, { color: textSecondary }]}>
           {t('inbox.pull_to_retry')}
         </Text>
-        <Text style={[styles.sampleCaption, { color: textSecondary }]}>
-          {t('inbox.using_sample_data')}
-        </Text>
       </View>
     );
   }, [error, textSecondary, t]);
@@ -277,7 +233,7 @@ export default function Inbox() {
         </View>
       ) : (
         <FlatList
-          data={error ? SAMPLE_NOTIFICATIONS : notifications}
+          data={notifications}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.listContent}
           refreshControl={
@@ -293,11 +249,11 @@ export default function Inbox() {
           renderItem={({ item }) => (
             <NotificationCard
               type={toCardType(item.type)}
-              title={item.titleKey ? t(item.titleKey) : item.title}
-              body={item.bodyKey ? t(item.bodyKey) : item.body ?? ""}
-              isRead={error ? true : readIds.has(item.id)}
+              title={item.title}
+              body={item.body ?? ""}
+              isRead={readIds.has(item.id)}
               createdAt={item.sent_at}
-              onPress={error ? undefined : () => handlePress(item)}
+              onPress={() => handlePress(item)}
             />
           )}
         />
@@ -356,12 +312,6 @@ const styles = StyleSheet.create({
     fontFamily: "Jakarta-Regular",
     fontSize: 13,
     marginTop: 8,
-    textAlign: "center",
-  },
-  sampleCaption: {
-    fontFamily: "Jakarta-Regular",
-    fontSize: 11,
-    marginTop: 16,
     textAlign: "center",
   },
 });

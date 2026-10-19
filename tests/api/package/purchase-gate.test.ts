@@ -57,8 +57,15 @@ jest.mock("@/lib/launchRoles", () => ({
   heldRoles: jest.fn(async () => [{ role: "driver", status: "active" }]),
 }));
 
+// D9-2: money-movement master switch — ON here so the pre-existing gate
+// tests exercise the fraud gate, not the payments gate.
+jest.mock("@/lib/platformConfig", () => ({
+  getPlan05Bool: jest.fn(async () => true),
+}));
+
 import { db } from "@/src/db";
-import { initiatePortposPayment } from "@/lib/paymentEvents";
+import { initiatePortposPayment, createZeroAmountPaymentEvent } from "@/lib/paymentEvents";
+import { getPlan05Bool } from "@/lib/platformConfig";
 import { POST } from "@/app/api/package/purchase+api";
 
 type Row = Record<string, unknown>;
@@ -125,6 +132,10 @@ function getJson(res: Response): Promise<Record<string, unknown>> {
 
 beforeEach(() => {
   jest.clearAllMocks();
+  // Pin the payments master switch ON (same anti-poisoning rationale as
+  // tests/api/rider/passes.test.ts: a non-consuming OFF setup must never
+  // leak into the next test's gate read).
+  (getPlan05Bool as jest.Mock).mockResolvedValue(true);
 });
 
 describe("package purchase — fraud gate", () => {
@@ -211,6 +222,46 @@ describe("package purchase — fraud gate", () => {
     expect(res.status).toBe(200);
     expect(await getJson(res)).toMatchObject({ payment_event_id: "evt-1" });
     expect(initiatePortposPayment).toHaveBeenCalledTimes(1);
+  });
+
+  test("D9-2: priced plan while payments_enabled=false → 409 payments_not_enabled, no payment initiated", async () => {
+    (getPlan05Bool as jest.Mock).mockResolvedValueOnce(false);
+    mockSelectQueue([
+      USER_ROW,
+      DRIVER_ROW,
+      PACKAGE_ROW,
+    ]);
+    const res = await POST(makeRequest());
+
+    expect(res.status).toBe(409);
+    expect(await getJson(res)).toEqual({
+      error: "payments_not_enabled",
+      message: "Payments launch later — package purchase is not live yet",
+    });
+    expect(initiatePortposPayment).not.toHaveBeenCalled();
+  });
+
+  test("D9-2 FAULT: ৳0 trial bypasses the payments gate (launch_free keeps working)", async () => {
+    // OFF — and the trial path must skip the gate entirely (Once would leak:
+    // the gate is never reached for a ৳0 plan).
+    (getPlan05Bool as jest.Mock).mockResolvedValue(false);
+    (createZeroAmountPaymentEvent as jest.Mock).mockResolvedValueOnce({ id: "pe-trial" });
+    mockSelectQueue([
+      USER_ROW,
+      DRIVER_ROW,
+      // Trial at ৳0 — the gate must not fire; the trial path activates directly.
+      [{ id: PACKAGE_ROW[0].id, is_active: true, vehicle_type: null, is_trial: true, price_bdt: 0, name: "Trial", roles: ["driver"] }],
+      [],
+      gateCounts(0, 0, 0),
+      [],
+      [],
+    ]);
+    const res = await POST(makeRequest());
+
+    expect(res.status).toBe(200);
+    expect(await getJson(res)).toMatchObject({ payment_event_id: "pe-trial", activated: true });
+    expect(initiatePortposPayment).not.toHaveBeenCalled();
+    expect(getPlan05Bool).not.toHaveBeenCalled();
   });
 
   test("gate queries fraud_flags by driver with status='blocked' (SQL shape)", async () => {

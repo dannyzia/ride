@@ -23,6 +23,7 @@ import { useBarikoiMapStyle } from "@/utils/mapUtils";
 import { logger } from "@/lib/logger";
 import { getDriverFix } from "@/lib/driverLocationFix";
 import SosBanner from "@/components/SosBanner";
+import SosCounterpartyBanner from "@/components/SosCounterpartyBanner";
 import { VEHICLE_TYPES } from "@/lib/vehicleTypes";
 import { relativeTime } from "@/lib/time";
 import {
@@ -844,6 +845,8 @@ export default function DriverHome() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: bg }}>
       <SosBanner />
+      {/* C3-7: rider-SOS counterparty banner (driver is the counterparty). */}
+      <SosCounterpartyBanner />
       <StatusBar
         style={isDark ? "light" : "dark"}
         translucent
@@ -1285,9 +1288,6 @@ export default function DriverHome() {
           {activeSubscription ? (
             <View
               style={{
-                flexDirection: "row",
-                alignItems: "center",
-                justifyContent: "space-between",
                 backgroundColor: surfaceBg,
                 borderWidth: 1,
                 borderColor: borderColor,
@@ -1296,27 +1296,39 @@ export default function DriverHome() {
                 paddingVertical: spacing.sm,
               }}
             >
-              <Text style={{ fontFamily: "Jakarta-Regular", fontSize: 14, color: textSecondary }}>
-                {t('driver_home.calls_remaining')}
-              </Text>
-              <Text
+              <View
                 style={{
-                  fontFamily: "Jakarta-Bold",
-                  fontSize: 18,
-                  color: textPrimary,
-                  fontVariant: ["tabular-nums"],
+                  flexDirection: "row",
+                  alignItems: "center",
+                  justifyContent: "space-between",
                 }}
               >
-                {activeSubscription.calls_remaining === -1
-                  ? t('driver_home.unlimited')
-                  : activeSubscription.calls_remaining}
-              </Text>
+                <Text style={{ fontFamily: "Jakarta-Regular", fontSize: 14, color: textSecondary }}>
+                  {t('driver_home.calls_remaining')}
+                </Text>
+                <Text
+                  style={{
+                    fontFamily: "Jakarta-Bold",
+                    fontSize: 18,
+                    color: textPrimary,
+                    fontVariant: ["tabular-nums"],
+                  }}
+                >
+                  {activeSubscription.calls_remaining === -1
+                    ? t('driver_home.unlimited')
+                    : activeSubscription.calls_remaining}
+                </Text>
+              </View>
+              {/* C10-3: exhausted (0, not the -1 unlimited sentinel) or past expiry — offers are paused. */}
+              {(activeSubscription.calls_remaining === 0 ||
+                new Date(activeSubscription.expires_at).getTime() < Date.now()) ? (
+                <Text style={{ fontFamily: "Jakarta-Bold", fontSize: 13, color: colors.danger, marginTop: 4 }}>
+                  {t('driver_home.plan_expired_offers_paused')}
+                </Text>
+              ) : null}
             </View>
           ) : (
-            <TouchableOpacity
-              onPress={() => router.push("/(main)/(rider)/packages")}
-              accessibilityRole="button"
-              accessibilityLabel="Buy a package"
+            <View
               style={{
                 backgroundColor: surfaceBg,
                 borderWidth: 1,
@@ -1326,11 +1338,21 @@ export default function DriverHome() {
                 paddingVertical: spacing.sm,
                 alignItems: "center",
               }}
-             testID="rider.d.push-packages">
-              <Text style={{ fontFamily: "Jakarta-Bold", fontSize: 16, color: colors.primary }}>
-                {t('driver_home.buy_package')}
+            >
+              {/* C10-3: no active subscription (expired/lapsed) — offers are paused. */}
+              <Text style={{ fontFamily: "Jakarta-Bold", fontSize: 13, color: colors.danger, marginBottom: 8, textAlign: "center" }}>
+                {t('driver_home.plan_expired_offers_paused')}
               </Text>
-            </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => router.push("/(main)/(rider)/packages")}
+                accessibilityRole="button"
+                accessibilityLabel="Buy a package"
+               testID="rider.d.push-packages">
+                <Text style={{ fontFamily: "Jakarta-Bold", fontSize: 16, color: colors.primary }}>
+                  {t('driver_home.buy_package')}
+                </Text>
+              </TouchableOpacity>
+            </View>
           )}
 
           {nearestZone && (

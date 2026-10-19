@@ -1,0 +1,73 @@
+# auth/11-register-fleet-owner — fleet-owner onboarding wizard happy path (S7.1).
+#
+# Covers app/(auth)/register-fleet-owner.tsx (§2d): route in from phone-entry's
+# Register button (role chip 4 = fleet_owner), the three fields, the trade-license
+# upload, and the PENDING submit.
+#
+# canSubmit is `fleetName.trim().length >= 2 && !!licenseUrl`
+# (register-fleet-owner.tsx:86) — so the two OPTIONAL fields (business name,
+# license number) are typed anyway to prove they are accepted, while knowing they
+# are not part of the gate.
+#
+# DEVICE-ASSISTED STEP: the trade-license upload opens the OS image picker
+# (DocumentUploadCard.tsx:42); the operator picks a file and the flow waits up to
+# 180s for the card's post-upload state — the same contract as
+# driver-onboarding.yaml's eleven cards.
+#
+# The success signal is the wizard LEAVING (router.replace("/(main)/(customer)/home")
+# on the register path), so the submit button ceasing to exist is asserted rather
+# than the destination surface — mirroring auth/10-register-shop-owner.
+# Fixtures: FRESH phone, OTP bypass 123456.
+# Class: AUTOMATABLE. NOT device-verified — the device day is ENV-blocked.
+appId: com.ride.bd
+name: "S7 Auth - Register Fleet Owner wizard"
+tags: [auth, fleet, s7]
+---
+- stopApp: com.ride.bd
+- launchApp:
+    appId: com.ride.bd
+    clearState: true
+- extendedWaitUntil:
+    visible: "Enter your phone number"
+    timeout: 20000
+- tapOn:
+    id: "phone-entry.set-phone"
+- eraseText
+- inputText: ${NEW_FLEET_PHONE}
+# chip 4 = fleet_owner (phone-entry.tsx:249).
+- tapOn:
+    id: "phone-entry.set-role-4"
+- tapOn:
+    id: "phone-entry.handle-register"
+- runFlow:
+    env:
+      OTP_CODE: "123456"
+      NAME: "${NEW_FLEET_OWNER_NAME}"
+      PASSWORD: "${NEW_FLEET_PASSWORD}"
+    commands:
+      - runFlow: ../shared/auth/_register-credentials.yaml
+# ── The wizard ──────────────────────────────────────────────────────────────
+- extendedWaitUntil:
+    visible: "Register your fleet business"
+    timeout: 20000
+- tapOn:
+    id: "register-fleet-owner.set-fleet-name"
+- inputText: ${FLEET_NAME}
+- tapOn:
+    id: "register-fleet-owner.set-business-name"
+- inputText: ${FLEET_BUSINESS_NAME}
+- tapOn:
+    id: "register-fleet-owner.set-license-number"
+- inputText: ${FLEET_LICENSE_NUMBER}
+# Trade license upload — device-assisted (header note).
+- tapOn:
+    id: "register-fleet-owner.upload-trade-license"
+- extendedWaitUntil:
+    visible: "Tap to replace document"
+    timeout: 180000
+- tapOn:
+    id: "register-fleet-owner.submit"
+- extendedWaitUntil:
+    notVisible:
+      id: "register-fleet-owner.submit"
+    timeout: 30000

@@ -1,7 +1,14 @@
 /**
- * deliveryHandler.ts — Courier socket registry + presence updates for delivery marketplace.
- * Maintains courier presence (is_online/last_seen_at/last_lat/last_lng) for food heroes.
+ * deliveryHandler.ts — Courier presence updates for the delivery marketplace.
+ * Maintains courier presence (is_online/last_seen_at/last_lat/last_lng).
  * Presence writes are throttled: ≥15s per courier or 100m+ position change.
+ *
+ * B5-1 (§B5, plan 27 §6.1): the WS delivery lane is DELETED — the
+ * courierSockets registry, registerCourier/unregisterCourier,
+ * sendToCourier/broadcastToCouriers and the delivery:connect case are gone
+ * with the courier-bidding marketplace (delivery:bid_request broadcast +
+ * scheduler job 55). What remains is presence only: delivery:heartbeat →
+ * handleHeartbeat and the job-52 sweepStaleCouriers.
  */
 import type { WebSocket } from 'ws';
 import { db } from '../src/db';
@@ -9,40 +16,12 @@ import { couriers } from '../src/db/schema';
 import { eq, and, sql } from 'drizzle-orm';
 import { logger } from '../lib/logger';
 
-// Courier socket registry — Map<userId, WebSocket>
-const courierSockets = new Map<string, WebSocket>();
-
 // Presence throttle state — Map<userId, { lastFlush, lastLat, lastLng }>
 const presenceState = new Map<string, { lastFlush: number; lastLat: number; lastLng: number }>();
 
 const PRESENCE_THROTTLE_MS = 15_000; // 15 seconds
 const PRESENCE_DISTANCE_M = 100; // 100 meters
 const PRESENCE_STALE_MS = 90_000; // 90 seconds — offline threshold
-
-/**
- * Register a courier's WebSocket connection.
- */
-export function registerCourier(userId: string, ws: WebSocket): void {
-  courierSockets.set(userId, ws);
-  // Mark online on connect
-  db.update(couriers)
-    .set({ is_online: true, last_seen_at: new Date() })
-    .where(eq(couriers.user_id, userId))
-    .catch((err: unknown) => logger.error('Courier presence update failed', err));
-}
-
-/**
- * Unregister a courier's WebSocket connection.
- */
-export function unregisterCourier(userId: string): void {
-  courierSockets.delete(userId);
-  presenceState.delete(userId);
-  // Mark offline on disconnect
-  db.update(couriers)
-    .set({ is_online: false })
-    .where(eq(couriers.user_id, userId))
-    .catch((err: unknown) => logger.error('Courier presence offline failed', err));
-}
 
 /**
  * Handle courier heartbeat — updates presence with throttling.
@@ -96,45 +75,10 @@ export async function sweepStaleCouriers(): Promise<number> {
   return (result as unknown as { rowCount?: number }).rowCount ?? 0;
 }
 
-/**
- * Get connected courier count.
- */
-export function getConnectedCourierCount(): number {
-  return courierSockets.size;
-}
-
-/**
- * Send message to a specific courier.
- */
-export function sendToCourier(userId: string, event: string, payload: unknown): void {
-  const ws = courierSockets.get(userId);
-  if (ws && ws.readyState === 1) {
-    // N18: unified WS envelope — `{ type, ... }` like every other channel
-    ws.send(JSON.stringify({ type: event, ...(payload as Record<string, unknown>) }));
-  }
-}
-
-/**
- * Broadcast to all connected couriers matching a filter.
- */
-export function broadcastToCouriers(
-  event: string,
-  payload: unknown,
-  filter?: (userId: string) => boolean,
-): void {
-  // N18: unified WS envelope — `{ type, ... }` like every other channel
-  const message = JSON.stringify({ type: event, ...(payload as Record<string, unknown>) });
-  for (const [userId, ws] of courierSockets) {
-    if (ws.readyState === 1 && (!filter || filter(userId))) {
-      ws.send(message);
-    }
-  }
-}
-
 // ── Helpers ──
 
 /**
- * Handle delivery WebSocket messages.
+ * Handle delivery WebSocket messages (presence only — B5-1).
  */
 export function handleDeliveryMessage(
   ws: WebSocket,
@@ -148,12 +92,6 @@ export function handleDeliveryMessage(
       const { lat, lng } = payload as { lat: number; lng: number };
       if (metadata.userId && typeof lat === 'number' && typeof lng === 'number') {
         handleHeartbeat(metadata.userId, lat, lng);
-      }
-      break;
-    }
-    case "delivery:connect": {
-      if (metadata.userId) {
-        registerCourier(metadata.userId, ws);
       }
       break;
     }

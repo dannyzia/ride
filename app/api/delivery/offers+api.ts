@@ -36,6 +36,10 @@ interface LegDetailRow {
   customer_name: string | null;
   customer_phone: string | null;
   parcel_class: string | null;
+  // P2P handover data (migration 0080): on parcel legs customer_* is the
+  // SENDER (dropoff_user_id); receiver_phone is the dropoff contact.
+  item_note: string | null;
+  receiver_phone: string | null;
 }
 
 /** Shape an offer/active leg with the full §6.1 dispatch details. */
@@ -62,6 +66,8 @@ async function legWithDetails(legId: string): Promise<LegDetailRow | null> {
       customer_name: users.name,
       customer_phone: users.phone,
       parcel_class: deliveries.source_vertical,
+      item_note: deliveries.item_note,
+      receiver_phone: deliveries.receiver_phone,
     })
     .from(deliveries)
     .leftJoin(shopOrders, eq(deliveries.order_id, shopOrders.id))

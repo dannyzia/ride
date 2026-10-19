@@ -10,7 +10,7 @@
  */
 import { db } from "@/src/db";
 import { rentalRequests, rentalRequestEvents, rentalVehicleTypeEnum, rateLimits } from "@/src/db/schema";
-import { requireAnyRole } from "@/lib/auth";
+import { requireMemberRoles } from "@/lib/auth";
 import { parseJsonBody } from "@/lib/parseBody";
 import { isVerticalEnabled, getConfigInt } from "@/lib/platformConfig";
 import { logger } from "@/lib/logger";
@@ -77,7 +77,7 @@ export async function POST(request: Request) {
   try {
     // N19: auth precedes the feature flag — an unauthenticated caller gets 401,
     // never a flag-state probe (403 feature_disabled).
-    const { supabaseUser, dbUser } = await requireAnyRole(["rider", "driver"])(
+    const { supabaseUser, dbUser } = await requireMemberRoles(["rider", "driver"])(
       request,
     );
 
@@ -226,7 +226,7 @@ export async function POST(request: Request) {
 
 export async function GET(request: Request) {
   try {
-    const { supabaseUser, dbUser } = await requireAnyRole(["rider", "driver"])(
+    const { supabaseUser, dbUser } = await requireMemberRoles(["rider", "driver"])(
       request,
     );
 

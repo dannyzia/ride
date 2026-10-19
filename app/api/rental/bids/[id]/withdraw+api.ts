@@ -4,7 +4,7 @@
  */
 import { db } from "@/src/db";
 import { rentalBids, rentalRequests, awardedBidAssignments, rentalRequestEvents } from "@/src/db/schema";
-import { requireAnyRole, requireFleetMember } from "@/lib/auth";
+import { requireMemberRoles, requireFleetMember } from "@/lib/auth";
 import { parseJsonBody } from "@/lib/parseBody";
 import { logger } from "@/lib/logger";
 import { getConfigInt } from "@/lib/platformConfig";
@@ -24,7 +24,7 @@ export async function POST(request: Request, { id }: { id: string }) {
       return Response.json({ error: "invalid_uuid", message: "Invalid bid id" }, { status: 400 });
     }
 
-    const { dbUser } = await requireAnyRole(["rider", "driver"])(request);
+    const { dbUser } = await requireMemberRoles(["rider", "driver"])(request);
 
     const bidRows = await db
       .select()

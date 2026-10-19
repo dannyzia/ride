@@ -16,9 +16,11 @@
 import * as FileSystem from 'expo-file-system';
 import * as ImageManipulator from 'expo-image-manipulator';
 import { logger } from './logger';
-import { ALLOWED_MEDIA_TYPES } from './storageFolders';
+import { ALLOWED_MEDIA_TYPES, MAX_UPLOAD_BYTES } from './storageFolders';
 
-export const MAX_UPLOAD_BYTES = 2 * 1024 * 1024;
+// Re-exported so existing import sites keep working; the value lives in
+// ./storageFolders (D5-2 single owner — do not redeclare here).
+export { MAX_UPLOAD_BYTES };
 
 // Tunable, verify on device.
 export const COMPRESS_PASS_1 = { width: 1200, compress: 0.75 };

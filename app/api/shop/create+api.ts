@@ -5,7 +5,7 @@
  */
 import { db } from "@/src/db";
 import { shops, shopMembers } from "@/src/db/schema";
-import { requireAnyRole } from "@/lib/auth";
+import { requireMemberRoles } from "@/lib/auth";
 import { parseJsonBody } from "@/lib/parseBody";
 import { isVerticalEnabled } from "@/lib/platformConfig";
 import { logger } from "@/lib/logger";
@@ -32,7 +32,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const { supabaseUser, dbUser } = await requireAnyRole(["rider", "driver"])(
+    const { supabaseUser, dbUser } = await requireMemberRoles(["rider", "driver"])(
       request,
     );
 

@@ -31,6 +31,8 @@ import {
   abortChain,
 } from "./dispatchChain";
 import { recordColdDrop } from "./coldDrop";
+import { buildMatchedDriverCard } from "./matchPayload";
+import { buildSosCounterpartyMessage, sosCounterpartyWire } from "./sosCounterparty";
 import { estimateEtaMinutes } from "./eta";
 import { db } from "../src/db";
 import { startDbWatchdog } from "./dbWatchdog";
@@ -451,9 +453,11 @@ const server = http.createServer(async (req, res) => {
   if (req.url === "/internal/ws/notify" && req.method === "POST") {
     // Z2: marketplace per-state-change notifications from the API process.
     // Body: { events: [{ event, to: [{ kind, user_id?, fleet_id? }], payload }] }
-    // kind: 'user' (rental bidder + courier registries) | 'fleet' (active
-    // fleet_members) | 'couriers' (all connected couriers) | 'shop_staff'
-    // (active shop_members). Every send is best-effort.
+    // kind: 'user' (rental bidder registry) | 'fleet' (active fleet_members)
+    // | 'shop_staff' (active shop_members). Every send is best-effort.
+    // B5-1 (§6.1): the 'couriers' kind is retired with the WS delivery lane
+    // (courierSockets registry deleted) — courier fan-out now travels via
+    // push + the dispatched-offers inbox, never a courier socket.
     let body = "";
     req.on("data", (chunk) => {
       body += chunk;
@@ -472,7 +476,6 @@ const server = http.createServer(async (req, res) => {
           return;
         }
         const { sendToBidder, sendToFleetMembers } = await import("./rentalHandler");
-        const { sendToCourier, broadcastToCouriers } = await import("./deliveryHandler");
         let sent = 0;
         for (const e of events) {
           if (!e?.event) continue;
@@ -480,13 +483,9 @@ const server = http.createServer(async (req, res) => {
             try {
               if (to.kind === "user" && to.user_id) {
                 sendToBidder(to.user_id, e.event, e.payload ?? {});
-                sendToCourier(to.user_id, e.event, e.payload ?? {});
                 sent += 1;
               } else if (to.kind === "fleet" && to.fleet_id) {
                 await sendToFleetMembers(to.fleet_id, e.event, e.payload ?? {});
-                sent += 1;
-              } else if (to.kind === "couriers") {
-                broadcastToCouriers(e.event, e.payload ?? {});
                 sent += 1;
               } else if (to.kind === "shop_staff" && to.shop_id) {
                 const members = await db
@@ -632,7 +631,28 @@ const server = http.createServer(async (req, res) => {
             delivered++;
           }
         }
-        writeJson(200, { ok: true, delivered });
+        // C3-7: counterparty fan-out — rider SOS banners the driver, driver
+        // SOS safe-exits the rider. Exactly one message to exactly the
+        // counterparty (contacts/admin travel their own channels).
+        let counterpartyDelivered = false;
+        const counterpartyMsg = buildSosCounterpartyMessage(alert);
+        if (counterpartyMsg && alert.ride_id) {
+          const [ride] = await db
+            .select({ user_id: rides.user_id, driver_id: rides.driver_id })
+            .from(rides)
+            .where(eq(rides.id, alert.ride_id))
+            .limit(1);
+          if (ride) {
+            if (alert.role === "rider" && ride.driver_id) {
+              sendToDriver(ride.driver_id, sosCounterpartyWire(counterpartyMsg));
+              counterpartyDelivered = true;
+            } else if (alert.role === "driver") {
+              sendToRider(ride.user_id, sosCounterpartyWire(counterpartyMsg));
+              counterpartyDelivered = true;
+            }
+          }
+        }
+        writeJson(200, { ok: true, delivered, counterparty_delivered: counterpartyDelivered });
       } catch {
         writeJson(400, { error: "invalid_body" });
       }
@@ -973,7 +993,13 @@ wss.on("connection", (ws: WebSocket) => {
 
             const [user] = await withTimeout(
               db
-                .select({ id: users.id, role: users.role })
+                .select({
+                  id: users.id,
+                  role: users.role,
+                  account_status: users.account_status,
+                  suspension_reason: users.suspension_reason,
+                  deleted_at: users.deleted_at,
+                })
                 .from(users)
                 .where(eq(users.auth_uid, supabaseUser.id))
                 .limit(1),
@@ -981,6 +1007,19 @@ wss.on("connection", (ws: WebSocket) => {
             );
             if (!user) {
               send(ws, { type: "auth:error", message: "user_not_found" });
+              return;
+            }
+            // C2-1: suspension/deletion gate — same chain as REST guards.
+            if (user.deleted_at != null) {
+              send(ws, { type: "auth:error", message: "account_deleted" });
+              return;
+            }
+            if (user.account_status === "suspended") {
+              send(ws, {
+                type: "auth:error",
+                message: "account_suspended",
+                reason: user.suspension_reason ?? null,
+              });
               return;
             }
             if (
@@ -1351,6 +1390,20 @@ wss.on("connection", (ws: WebSocket) => {
           client.role === "driver" &&
           client.driverId
         ) {
+          // B5-2: ownership guard (mirrors ride:arrived) — a non-owner
+          // driver's update reaches no subscriber and runs no deviation
+          // check. The ride lookup is the gate for everything below.
+          const locRideId = msg.ride_id as string;
+          if (!locRideId) {
+            send(ws, { type: "error", message: "missing_ride_id" });
+            break;
+          }
+          const [locRide] = await db.select({ driver_id: rides.driver_id })
+            .from(rides).where(eq(rides.id, locRideId)).limit(1);
+          if (!locRide || locRide.driver_id !== client.driverId) {
+            send(ws, { type: "error", message: "not_your_ride" });
+            break;
+          }
           // Phase F/G: ring buffer + active accept→start trace (same feed
           // as heartbeats — a driver has at most one traced ride).
           recordDriverPoint(
@@ -1376,9 +1429,10 @@ wss.on("connection", (ws: WebSocket) => {
             }
           }
 
-          // Forward to rider tracking this ride
-          const rideId = msg.ride_id as string;
-          if (rideId) {
+          // Forward to rider tracking this ride (ride_id proven present by
+          // the ownership guard above — locRideId is the same value).
+          const rideId = locRideId;
+          {
             // Find rider tracking this ride
             for (const [, riderClient] of connectedRiders) {
               if (riderClient.subscribedRideId === rideId) {
@@ -1656,6 +1710,8 @@ wss.on("connection", (ws: WebSocket) => {
           const [startRide] = await db
             .select({
               start_pin: rides.start_pin,
+              start_pin_attempts: rides.start_pin_attempts,
+              start_pin_locked_at: rides.start_pin_locked_at,
               status: rides.status,
               user_id: rides.user_id,
               driver_id: rides.driver_id,
@@ -1671,14 +1727,38 @@ wss.on("connection", (ws: WebSocket) => {
             send(ws, { type: "error", message: "not_your_ride" });
             break;
           }
-          if (!startRide.start_pin || startRide.start_pin !== pin) {
+          // C3-4: locked rides reject even the correct PIN.
+          if (startRide.start_pin_locked_at != null) {
             send(ws, {
               type: "ride:start_failed",
               ride_id: rideId,
-              error: "invalid_pin",
+              error: "pin_locked",
             });
             break;
           }
+          if (!startRide.start_pin || startRide.start_pin !== pin) {
+            // Minor (C4-FIX): attempts_remaining derives from
+            // PIN_MAX_ATTEMPTS — a hardcoded 3 here would drift the day the
+            // lockout threshold changes.
+            const { recordPinFailure, PIN_MAX_ATTEMPTS } = await import("../lib/ridePinLockout");
+            const { attempts, locked } = await recordPinFailure(db, rideId);
+            send(ws, {
+              type: "ride:start_failed",
+              ride_id: rideId,
+              error: locked ? "pin_locked" : "invalid_pin",
+              attempts_remaining: locked ? 0 : Math.max(0, PIN_MAX_ATTEMPTS - attempts),
+            });
+            break;
+          }
+          // Correct PIN on an unlocked ride — reset the miss counter.
+          import("../lib/ridePinLockout")
+            .then(({ resetPinAttempts }) => resetPinAttempts(db, rideId))
+            .catch((e: unknown) =>
+              logger.warn("[ws] PIN reset failed (non-fatal)", {
+                ride_id: rideId,
+                error: e instanceof Error ? e.message : String(e),
+              }),
+            );
           const [updatedRide] = await db
             .update(rides)
             .set({ status: "in_progress", started_at: new Date() })
@@ -2198,7 +2278,6 @@ async function executeMatchFlow(
   const [driverRow] = await db
     .select({
       name: users.name,
-      phone: users.phone,
       rating: drivers.rating,
       vehicle_type: drivers.vehicle_type,
       status: drivers.status,
@@ -2423,12 +2502,8 @@ async function executeMatchFlow(
       dropoff: dropoffReveal,
       ...(includeFirmFee ? { pickup_fee_firm_bdt: firm!.result.firmFeePaisa } : {}),
       ride: {
-        driver: {
-          name: driverRow?.name ?? "",
-          phone: driverRow?.phone ?? "",
-          rating: driverRow?.rating != null ? parseFloat(driverRow.rating) : null,
-          vehicle_type: driverRow?.vehicle_type ?? "",
-        },
+        // C3-6: no driver.phone — in-app chat is the contact channel.
+        driver: buildMatchedDriverCard(driverRow),
       },
     });
 
@@ -2451,6 +2526,18 @@ async function executeMatchFlow(
     // verbally from the rider; the server verifies the driver's entry
     // against rides.start_pin on "ride:start".
     sendToDriverSocket({ type: "offer:accepted", ride_id: rideId, dropoff: dropoffReveal });
+
+    // C3-3: the PIN also goes to the PASSENGER's phone by SMS (the secondary
+    // contact on book-for-other rides, the rider otherwise) — fire-and-
+    // forget, never blocks the match.
+    import("../lib/ridePinSms")
+      .then(({ sendMatchPinSms }) => sendMatchPinSms(db, { ride_id: rideId, start_pin: startPin }))
+      .catch((e: unknown) =>
+        logger.warn("[match] PIN SMS failed (non-blocking)", {
+          ride_id: rideId,
+          error: e instanceof Error ? e.message : String(e),
+        }),
+      );
   }
 
   // Background acceptance rate update
@@ -2962,13 +3049,16 @@ async function startup() {
         removeDriver(driverId);
         // BUG-FIX: never swallow disconnect cleanup — a failure here leaves the
         // driver marked online in the DB (ghost in future pools). Log + retry once.
-        handleDriverDisconnect(driverId).catch((e) => {
+        // B5-3: pass the evicted client so the driver_sessions row closes
+        // (handleDriverDisconnect reads driverSessionId off the client — a
+        // no-client call leaks the session row while closing everything else).
+        handleDriverDisconnect(driverId, client).catch((e) => {
           logger.error("[ws] stale driver disconnect cleanup failed — retrying", {
             driverId,
             error: e.message,
           });
           setTimeout(() => {
-            handleDriverDisconnect(driverId).catch((retryErr) => {
+            handleDriverDisconnect(driverId, client).catch((retryErr) => {
               logger.error("[ws] stale driver disconnect cleanup retry failed", {
                 driverId,
                 error: retryErr.message,

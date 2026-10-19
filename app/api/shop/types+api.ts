@@ -1,3 +1,4 @@
+// [public]
 /**
  * GET /api/shop/types — public active shop categories, display order.
  *

@@ -1,54 +1,21 @@
+// [public]
 /**
- * POST /api/fleet/webhook?provider=uber
+ * POST /api/fleet/webhook — DORMANT STUB (plan 27 §15 D-viii).
  *
- * Public endpoint that receives webhook callbacks from external providers.
- * Validates signature, prevents replay, dispatches to the adapter.
- *
- * No JWT required — providers authenticate via webhook signature.
+ * Fleet integrations are deferred until after launch. This route intentionally
+ * accepts no provider, reads no request body, validates no signature, and
+ * writes nothing: every call receives the same 410 refusal. The webhook
+ * draft in lib/integrations/webhookHandler.ts is NOT wired here.
  */
-
-import { handleWebhook } from "@/lib/integrations/webhookHandler";
 import { logger } from "@/lib/logger";
 
-export async function POST(request: Request) {
-  try {
-    const url = new URL(request.url);
-    const provider = url.searchParams.get("provider");
-
-    if (!provider) {
-      return Response.json(
-        { error: "invalid_param", message: "Provider query param required" },
-        { status: 400 },
-      );
-    }
-
-    // Read raw body for signature validation
-    const rawBody = await request.text();
-
-    // Extract signature from headers (provider-specific)
-    const signature =
-      request.headers.get("X-Hub-Signature-256") ??
-      request.headers.get("X-Signature") ??
-      request.headers.get("X-Webhook-Signature") ??
-      null;
-
-    const result = await handleWebhook(provider, rawBody, signature);
-
-    logger.info("[fleet/webhook] processed", {
-      provider,
-      status: result.status,
-      message: result.message,
-    });
-
-    return Response.json(
-      { message: result.message },
-      { status: result.status },
-    );
-  } catch (err) {
-    logger.error("[fleet/webhook] error", err);
-    return Response.json(
-      { error: "internal_error", message: "Webhook processing failed" },
-      { status: 500 },
-    );
-  }
+export async function POST(_request?: Request) {
+  logger.warn("[fleet/webhook] deferred integration webhook received");
+  return Response.json(
+    {
+      error: "fleet_integrations_deferred",
+      message: "Fleet integrations are deferred until after launch",
+    },
+    { status: 410 },
+  );
 }

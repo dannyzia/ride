@@ -2,7 +2,7 @@
 import { z } from "zod";
 import { db } from "../../src/db";
 import { users, drivers, fleets, fleetMembers, userRoles, shopTypes } from "../../src/db/schema";
-import { and, eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { supabaseAdmin } from "../../lib/supabaseServer";
 import { parseJsonBody } from "@/lib/parseBody";
 import { consumeVerification } from "@/lib/verifiedPhones";
@@ -20,6 +20,10 @@ const schema = z
     phone: z.string().regex(/^\+880\d{10}$/, "Invalid Bangladesh phone number"),
     name: z.string().min(2).max(100),
     role: z.enum(LAUNCH_ROLES),
+    // C1-1 (STAGE C1-FIX): T&C + Privacy consent flag, carried from the
+    // phone-entry checkbox gate. Optional at the Zod layer so a missing
+    // flag surfaces as 400 terms_required (not a generic validation error).
+    terms_accepted: z.boolean().optional(),
     password: z.string().min(6, "Password must be at least 6 characters"),
     vehicle_type: VEHICLE_TYPE_ZOD_ENUM.optional(),
     shop: z
@@ -54,7 +58,11 @@ export async function POST(request: Request) {
   const result = await parseJsonBody(request, schema);
   if (!result.ok) return result.response;
 
-  const { phone, name, role, password, vehicle_type, shop, fleet, delivery } = result.data;
+  const { phone, name, role, password, vehicle_type, shop, fleet, delivery, terms_accepted } = result.data;
+
+  // C1-1: new registrations must carry explicit T&C + Privacy consent.
+  if (terms_accepted !== true)
+    return Response.json({ error: "terms_required", message: "Terms of Service and Privacy Policy acceptance is required" }, { status: 400 });
 
   // Payload completeness BEFORE any write (each new role needs its documents).
   if (role === "shop_owner" && !shop)
@@ -81,16 +89,23 @@ export async function POST(request: Request) {
       );
   }
 
+  // C1-8: OTP-consumption order — the phone_exists check runs BEFORE the
+  // OTP is consumed, so a duplicate-phone tap does not burn a live OTP.
+  // Accepted harshness (documented): a Supabase/DB failure AFTER the consume
+  // still burns the OTP and the user re-verifies (correct security posture —
+  // verifications are single-use, 5-min TTL; see lib/verifiedPhones.ts).
+  // C2-4: a purged (soft-deleted) phone frees for re-registration — the
+  // dedupe ignores tombstoned rows (their phone is already `deleted:*`).
+  const [existing] = await db.select().from(users).where(and(eq(users.phone, phone), isNull(users.deleted_at)));
+  if (existing) {
+    return Response.json({ error: 'phone_exists', message: 'Phone number already registered' }, { status: 409 });
+  }
+
   if (!consumeVerification(phone)) {
     return Response.json(
       { error: "phone_not_verified", message: "Phone number must be verified via OTP first" },
       { status: 403 },
     );
-  }
-
-  const [existing] = await db.select().from(users).where(eq(users.phone, phone));
-  if (existing) {
-    return Response.json({ error: 'phone_exists', message: 'Phone number already registered' }, { status: 409 });
   }
 
   const {
@@ -117,7 +132,7 @@ export async function POST(request: Request) {
     const created = await db.transaction(async (tx) => {
       const [user] = await tx
         .insert(users)
-        .values({ auth_uid: authUid, phone, name, role })
+        .values({ auth_uid: authUid, phone, name, role, terms_accepted_at: new Date() })
         .returning();
 
       // §1/§2: every signup path records the account's membership role.

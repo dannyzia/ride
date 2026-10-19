@@ -7,6 +7,8 @@ import { z } from "zod";
 import { parseJsonBody } from "@/lib/parseBody";
 import * as errors from "@/lib/errors";
 
+// C2-7 (STAGE C2-FIX): share_usage_data defaults to TRUE — flagged to the
+// owner as a product decision (opt-out analytics), NOT changed in this stage.
 const DEFAULT_CONTROLS = {
   share_usage_data: true,
   personalized_ads: false,

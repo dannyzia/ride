@@ -156,7 +156,10 @@ async function main(): Promise<void> {
   console.log("[a8-rig] seed complete");
 
   // ── measure ────────────────────────────────────────────────────────────────
-  const { activateRentalRequests, activateDeliveryRequests, dispatchNotifyQueue } = await import(
+  // B5-1: activateDeliveryRequests deleted (job 55 retired) — the rig no
+  // longer measures the courier-bidding arm. Delivery rows are still seeded
+  // (job 51 TTL sweep reads delivery_requests) and cleaned up.
+  const { activateRentalRequests, dispatchNotifyQueue } = await import(
     "../utils-server/activationJobs"
   );
   const { activateEmergencyRequests } = await import("../utils-server/emergencyActivation");
@@ -169,7 +172,6 @@ async function main(): Promise<void> {
 
   const jobNames = [
     "54_activateRentalRequests",
-    "55_activateDeliveryRequests",
     "56_activateEmergencyRequests",
     "46_sweepDeadlines",
     "47_sweepAssignmentSla",
@@ -184,11 +186,6 @@ async function main(): Promise<void> {
   const runners: Array<(tx: unknown) => Promise<unknown>> = [
     async (tx) => {
       const { count, notifyQueue } = await activateRentalRequests(tx as never);
-      await dispatchNotifyQueue(notifyQueue);
-      return count;
-    },
-    async (tx) => {
-      const { count, notifyQueue } = await activateDeliveryRequests(tx as never);
       await dispatchNotifyQueue(notifyQueue);
       return count;
     },

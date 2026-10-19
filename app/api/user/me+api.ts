@@ -50,6 +50,8 @@ export async function GET(request: Request) {
     }, { status: 200 });
 
   } catch (err: unknown) {
+    const authBody = errors.authErrorBody(err);
+    if (authBody) return Response.json(authBody.body, { status: authBody.status });
     if (errors.getErrorStatus(err) === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     logger.error("[user/me] error", err);
     return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });

@@ -22,10 +22,12 @@ export default function SettingsLogoutConfirmation() {
 
   const handleLogout = async () => {
     try {
-      await supabase.auth.signOut();
+      // Cleanup FIRST while the session token is alive (D2-1 push revoke
+      // + H-1 socket teardown) — then kill the session.
       // doc 03 R2.5 #4 (binding): no manual router.replace — the auth gate
       // handles the redirect after the session drops.
       authCleanup();
+      await supabase.auth.signOut();
     } catch (err) {
       logger.error("Logout failed", err);
     }

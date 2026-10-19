@@ -7,6 +7,7 @@ import { sendNotification } from "../../../lib/notify";
 import { sendSmsSos } from "../../../lib/dprelay";
 import { z } from "zod";
 import { parseJsonBody } from "@/lib/parseBody";
+import { counterpartyUserId, isParticipant, resolveRideParticipantIds } from "@/lib/rideParticipants";
 import * as errors from "@/lib/errors";
 
 // T-1: this endpoint serves BOTH riders and drivers (the plan's canonical
@@ -46,6 +47,11 @@ export async function POST(request: Request) {
     // is actually part of (as rider or as driver). Without this, any user
     // could attach alerts to arbitrary ride ids, and the per-ride dedupe
     // below would let them suppress someone else's open alert.
+    // C3-7: rides.driver_id is a drivers.id, NOT a users.id — resolve it
+    // first (lib/rideParticipants, the C3-1 writer). Comparing directly
+    // 403s every driver SOS with ride context, which would silently kill
+    // the driver-SOS → rider-safe-exit fan-out below.
+    let participantIds: { riderUserId: string; driverUserId: string | null } | null = null;
     if (ride_id) {
       const [ride] = await db
         .select({ user_id: rides.user_id, driver_id: rides.driver_id })
@@ -55,9 +61,8 @@ export async function POST(request: Request) {
       if (!ride) {
         return Response.json({ error: "ride_not_found", message: "Ride not found" }, { status: 404 });
       }
-      const isRider = ride.user_id === dbUser.id;
-      const isDriver = ride.driver_id === dbUser.id;
-      if (!isRider && !isDriver) {
+      participantIds = await resolveRideParticipantIds(db, ride);
+      if (!isParticipant(participantIds, dbUser.id)) {
         return Response.json({ error: "not_your_ride", message: "You can only send an SOS for your own ride" }, { status: 403 });
       }
     }
@@ -110,6 +115,27 @@ export async function POST(request: Request) {
         { alert_id: inserted.id },
         { priority: "high" },
       ).catch((e) => logger.warn("[sos/alert] push notification failed", e));
+
+      // C3-7: counterparty fan-out — rider SOS banners the driver, driver
+      // SOS safe-exits the rider. One push to exactly the counterparty (the
+      // WS leg rides /internal/sos/alert below); contacts + admin keep
+      // their own channels, never batched into this one.
+      if (ride_id && participantIds) {
+        const counterpartyId = counterpartyUserId(participantIds, dbUser.id);
+        if (counterpartyId) {
+          const isRiderSos = dbUser.id === participantIds.riderUserId;
+          sendNotification(
+            counterpartyId,
+            "sos:counterparty",
+            isRiderSos ? "🚨 Rider emergency" : "🚨 Driver emergency",
+            isRiderSos
+              ? "Your rider sent an emergency alert. Check on them via ride chat."
+              : "Your driver sent an emergency alert. If you feel unsafe, exit the vehicle in a safe place and call 999.",
+            { alert_id: inserted.id, ride_id },
+            { priority: "high" },
+          ).catch((e) => logger.warn("[sos/alert] counterparty push failed", e));
+        }
+      }
 
       // Notify admin devices (best-effort)
       const [adminUser] = await db

@@ -1,0 +1,88 @@
+# rider/roles/01-verification-status — F-03 applicant-side status screen (S7.1).
+#
+# Covers app/(main)/(customer)/verification-status.tsx: the per-role timeline and
+# the ONE-TAP "Fix & resubmit" path into the prefilled wizard (M-5). Its only
+# inbound edge is the login-as chooser (login-as.tsx:129), so the flow arrives
+# exactly that way: a gated-role row whose status is NOT active routes here.
+#
+# SEED, DECLARED: MULTI_ROLE_PHONE must hold a `delivery_man` role that is
+# REJECTED (not pending, not active) plus some other ACTIVE role so the chooser
+# appears at all. A rejected row is what renders the resubmit affordance — the
+# PENDING branch renders "Under review…" with NO button
+# (verification-status.tsx:141-172), which is why the pending case is asserted in
+# auth/09-login-as-chooser instead. The two flows split the two branches; neither
+# pretends to cover both.
+#
+# WHY THE ASSERTIONS ARE THE ONES THEY ARE: `Submitted:` / `Failed field:` /
+# `Resubmit limit reached` are all brace-interpolated JSX children
+# (verification-status.tsx:130-165), so they are not harvestable copy literals and
+# asserting them would be asserting a string the corpus cannot vouch for. The
+# flow asserts the brace-free timeline literal ("Documents received ✓") plus the
+# BEHAVIOUR: the resubmit control exists for a rejected role, and tapping it lands
+# on that role's wizard.
+#
+# NOT CLAIMED: field-level PREFILL. The wizard seeds its inputs from
+# GET /api/user/roles on `?resubmit=1`, but Maestro cannot read a TextInput's
+# value, so prefill verification is a device-day observation. What IS proven here
+# is that the resubmit POST succeeded and the push carried the resubmit param —
+# the wizard screen renders, which it only does after that call returns ok
+# (verification-status.tsx:113).
+# Class: AUTOMATABLE. NOT device-verified — the device day is ENV-blocked.
+appId: com.ride.bd
+name: "S7 Rider - Verification status timeline and resubmit"
+tags: [rider, roles, s7]
+---
+- stopApp: com.ride.bd
+- launchApp:
+    appId: com.ride.bd
+    clearState: true
+- extendedWaitUntil:
+    visible: "Enter your phone number"
+    timeout: 20000
+- tapOn:
+    id: "phone-entry.set-phone"
+- eraseText
+- inputText: ${MULTI_ROLE_PHONE}
+- tapOn:
+    id: "phone-entry.handle-login"
+- extendedWaitUntil:
+    visible: "Welcome Back"
+    timeout: 15000
+- tapOn:
+    id: "login.set-password"
+- inputText: ${MULTI_ROLE_PASSWORD}
+- tapOn:
+    id: "login.handle-login"
+- extendedWaitUntil:
+    visible: "Login as"
+    timeout: 20000
+# The REJECTED gated-role row routes into this screen (login-as.tsx:126).
+- tapOn:
+    id: "login-as.enter-delivery-man"
+# ── The timeline ────────────────────────────────────────────────────────────
+- extendedWaitUntil:
+    visible:
+      id: "customer.verification-status.el-1"
+    timeout: 20000
+# The timeline literal below is HARD-CODED JSX (verification-status.tsx contains
+# no t() calls — "Copy is plain English" is its own header note), so it is a
+# locale-only literal and is baselined in flow-locale-baseline.json with the
+# i18n-gap reason. The screen's IDENTITY is grounded on its back control, which
+# needs no copy at all.
+- assertVisible: "Documents received ✓"
+# ── The structured-reject affordance → the prefilled wizard ─────────────────
+- extendedWaitUntil:
+    visible:
+      id: "customer.verification-status.resubmit"
+    timeout: 20000
+- tapOn:
+    id: "customer.verification-status.resubmit"
+# Seed note: the rejected role named above is delivery_man → its wizard is the
+# delivery-man one. Change the row id above and this ground together.
+- extendedWaitUntil:
+    visible: "Deliver for every shop and customer"
+    timeout: 20000
+- assertVisible:
+    id: "register-delivery-man.upload-nid"
+- assertVisible:
+    id: "register-delivery-man.submit"

@@ -10,12 +10,32 @@
  */
 import { db } from "@/src/db";
 import { shopProducts } from "@/src/db/schema";
+import { CATALOG_FOLDERS, LEGACY_STORAGE_BUCKET, folderPrefix } from "@/lib/storageFolders";
+import { isAllowedStorageUrl } from "@/lib/storageUrl";
 import { requireShopMember } from "@/lib/marketplaceRbac";
 import { parseJsonBody } from "@/lib/parseBody";
 import { logger } from "@/lib/logger";
 import * as errors from "@/lib/errors";
 import { eq, and, isNull, desc } from "drizzle-orm";
 import { z } from "zod";
+
+/**
+ * D5-1: every image URL must be Ride-owned storage under a catalog folder
+ * (R2 `catalog/` prefix on our domain, or a legacy-bucket row). Owner-
+ * UNSCOPED: each staffer uploads under their own uid segment and a product
+ * outlives any one staffer, so only folder-prefix + host are checked — the
+ * same shape as the documents/profile policies minus the uid segment.
+ */
+function areAllowedCatalogUrls(urls: string[]): boolean {
+  return urls.every((url) =>
+    CATALOG_FOLDERS.some((folder) =>
+      isAllowedStorageUrl(url, {
+        bucket: LEGACY_STORAGE_BUCKET,
+        r2Prefix: folderPrefix(folder),
+      }),
+    ),
+  );
+}
 
 export async function GET(request: Request, { id }: { id: string }) {
   try {
@@ -74,6 +94,12 @@ export async function POST(request: Request, { id }: { id: string }) {
 
     const result = await parseJsonBody(request, createProductSchema);
     if (!result.ok) return result.response;
+    if (result.data.image_urls && !areAllowedCatalogUrls(result.data.image_urls)) {
+      return Response.json(
+        { error: "invalid_image_url", message: "Product images must be uploaded through the app" },
+        { status: 400 },
+      );
+    }
 
     const [product] = await db
       .insert(shopProducts)
@@ -131,6 +157,12 @@ export async function PATCH(request: Request, { id }: { id: string }) {
 
     const result = await parseJsonBody(request, updateProductSchema);
     if (!result.ok) return result.response;
+    if (result.data.image_urls && !areAllowedCatalogUrls(result.data.image_urls)) {
+      return Response.json(
+        { error: "invalid_image_url", message: "Product images must be uploaded through the app" },
+        { status: 400 },
+      );
+    }
 
     const { id: productId, ...updates } = result.data;
 

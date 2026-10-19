@@ -142,19 +142,22 @@ export async function POST(request: Request, { id }: { id: string }) {
         });
       }
 
-      // F-17 single-fleet rule, reconciled with the universal fleet model:
-      // drivers.fleet_id is NOT NULL — a solo driver sits in an implicit solo
-      // NATIVE fleet. Leaving that FOR ONE'S OWN solo fleet is the normal
-      // join-a-business-fleet path (same as the direct attach's B1 transfer);
-      // leaving a REAL fleet (another owner's BUSINESS/EXTERNAL/HYBRID fleet)
-      // is REJECTED — the consent path never silently moves a driver who
-      // works for someone else.
+      // F-17 single-fleet rule, reconciled with the universal fleet model
+      // (C8-1): drivers.fleet_id is NOT NULL — a solo driver sits in an
+      // implicit solo NATIVE fleet. Leaving one's OWN fleet (owner_user_id =
+      // caller — the normal solo-driver join-a-business-fleet path, same as
+      // the direct attach's B1 transfer) is allowed; leaving a fleet owned
+      // by SOMEONE ELSE is REJECTED — the consent path never silently moves
+      // a driver who works for someone else. The ownership comparison (not
+      // fleet_type) is what matters: a grown NATIVE fleet owned by X is
+      // still X's fleet, and a solo NATIVE fleet owned by the caller is
+      // still theirs to leave.
       const [currentFleet] = await tx
         .select({ id: fleets.id, fleet_type: fleets.fleet_type, owner_user_id: fleets.owner_user_id })
         .from(fleets)
         .where(eq(fleets.id, existingDriver.fleet_id))
         .limit(1);
-      if (currentFleet && currentFleet.fleet_type !== "NATIVE") {
+      if (currentFleet && currentFleet.owner_user_id !== dbUser.id) {
         throw Object.assign(
           new Error("You already belong to another fleet — leave it before accepting"),
           { status: 409, errorCode: "single_fleet_rule" },

@@ -49,6 +49,9 @@ export async function GET(request: Request) {
         ...sub,
         package_name: pkg?.name ?? "Unknown",
         package_vehicle_type: pkg?.vehicle_type ?? null,
+        // C10-1 grant-source identity: stable plan code (e.g. 'launch_free').
+        // Clients match on this, never on the admin-editable package_name.
+        package_code: pkg?.code ?? null,
       },
     });
   } catch (err: unknown) {

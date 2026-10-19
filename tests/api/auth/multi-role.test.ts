@@ -65,6 +65,12 @@ jest.mock("@/src/db", () => ({
   },
 }));
 
+jest.mock("@/lib/otpRateLimit", () => ({
+  rateLimitCount: jest.fn(async () => 0),
+  CHECK_USER_PHONE_MAX: 30,
+  CHECK_USER_IP_MAX: 120,
+}));
+
 jest.mock("@/lib/supabaseServer", () => {
   const chain: Record<string, unknown> = {};
   chain.select = jest.fn().mockReturnValue(chain);
@@ -141,6 +147,26 @@ describe("GET /api/user/roles", () => {
     };
     expect(body.roles.map((r) => r.role)).toEqual(["rider", "shop_owner"]);
     expect(body.roles[1]).toMatchObject({ status: "pending", reason: null, is_primary: false });
+  });
+
+  it("active shop membership appends the synthetic shop_staff chooser entry", async () => {
+    queueHeldRoles({ primary: "rider", heldRoles: [{ role: "rider" }] });
+    mockSelectQueue.push(() => [{ id: "sm-1" }]); // staff probe: active membership
+
+    const res = await rolesGet(authRequest("/api/user/roles"));
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { roles: { role: string; status: string }[] };
+    expect(body.roles.map((r) => r.role)).toEqual(["rider", "shop_staff"]);
+    expect(body.roles[1]).toMatchObject({ status: "active", is_primary: false });
+  });
+
+  it("no shop membership → no shop_staff entry (invite-only, never self-added)", async () => {
+    queueHeldRoles({ primary: "rider", heldRoles: [{ role: "rider" }] });
+    mockSelectQueue.push(() => []); // staff probe: no membership
+
+    const res = await rolesGet(authRequest("/api/user/roles"));
+    const body = (await res.json()) as { roles: { role: string }[] };
+    expect(body.roles.map((r) => r.role)).toEqual(["rider"]);
   });
 
   it("a rejected shop surfaces the admin reason to the applicant", async () => {

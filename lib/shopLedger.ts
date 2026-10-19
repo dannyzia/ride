@@ -24,21 +24,32 @@ export interface SettleableOrder {
   id: string;
   shop_id: string;
   subtotal_bdt: number;
+  /**
+   * Customer-paid delivery fee snapshot (shopOrders.delivery_fee_bdt).
+   * Credited to the shop ONLY via the self-delivery path below — a
+   * courier-delivered order never books it (the fee is the courier's COD
+   * remittance per §12, NOT shop revenue).
+   */
+  delivery_fee_bdt?: number | null;
 }
 
 /**
  * Settle a delivered order inside the caller's transaction:
- * credit `order_revenue` (items total = subtotal_bdt; the delivery fee is the
- * courier's COD remittance per §12, NOT shop revenue) and debit
- * `commission` when the fresh-read `shop_commission_percent` is non-zero.
- * Idempotent within the tx (existing-row check) and across processes
- * (unique index backstop).
+ * credit `order_revenue` (items total = subtotal_bdt) and debit
+ * `commission` when the fresh-read `shop_commission_percent` is non-zero
+ * (commission is assessed on the items subtotal only — never on the
+ * delivery fee). C6-4: when `opts.selfDelivered` is set AND the order
+ * carries a positive delivery fee, credit `delivery_fee` (+fee) — the shop
+ * delivered it itself, so the shop keeps the fee (§6.1 exhaustion
+ * fallback; no courier earnings/due row exists for these orders).
+ * Idempotent within the tx (existing-row check per entry_type) and across
+ * processes (unique index backstop).
  */
 export async function settleShopOrder(
   tx: ShopTx,
   order: SettleableOrder,
-  opts: { note?: string } = {},
-): Promise<{ order_revenue_bdt: number; commission_bdt: number }> {
+  opts: { note?: string; selfDelivered?: boolean } = {},
+): Promise<{ order_revenue_bdt: number; commission_bdt: number; delivery_fee_bdt: number }> {
   const existing = await tx
     .select({ entry_type: shopLedger.entry_type })
     .from(shopLedger)
@@ -46,7 +57,7 @@ export async function settleShopOrder(
 
   if (existing.some((r) => r.entry_type === "order_revenue")) {
     // In-tx idempotence: treat as already settled.
-    return { order_revenue_bdt: order.subtotal_bdt, commission_bdt: 0 };
+    return { order_revenue_bdt: order.subtotal_bdt, commission_bdt: 0, delivery_fee_bdt: 0 };
   }
 
   await tx.insert(shopLedger).values({
@@ -72,7 +83,21 @@ export async function settleShopOrder(
     }
   }
 
-  return { order_revenue_bdt: order.subtotal_bdt, commission_bdt: -commissionBdt };
+  // C6-4: self-delivery fee credit. Gated on the flag, NOT on the fee's
+  // presence — a courier-delivered order carrying a fee snapshot must never
+  // book this entry (its fee settles via settleDeliveryLeg instead).
+  const feeBdt = opts.selfDelivered ? (order.delivery_fee_bdt ?? 0) : 0;
+  if (feeBdt > 0 && !existing.some((r) => r.entry_type === "delivery_fee")) {
+    await tx.insert(shopLedger).values({
+      shop_id: order.shop_id,
+      order_id: order.id,
+      entry_type: "delivery_fee",
+      amount_bdt: feeBdt,
+      note: opts.note ?? null,
+    });
+  }
+
+  return { order_revenue_bdt: order.subtotal_bdt, commission_bdt: -commissionBdt, delivery_fee_bdt: feeBdt > 0 ? feeBdt : 0 };
 }
 
 async function readPercent(): Promise<number> {
@@ -94,8 +119,9 @@ async function readPercent(): Promise<number> {
  * Used by the admin force-cancel path (§7 A1 + plan line 276: "admin
  * force-cancel writes reversal entries") and by nothing else. It does NOT edit
  * the original rows — shop_ledger is append-only — it appends ONE `reversal`
- * row equal to the negative of everything the order booked (revenue credit +
- * commission debit), so the shop's balance for that order nets to zero.
+ * row equal to the negative of everything the order booked (revenue +
+ * self-delivery fee credits, commission debit), so the shop's balance for
+ * that order nets to zero.
  *
  * "Where money moved" is literal: an order that never reached its settlement
  * point has no ledger rows and returns 0 with nothing written.

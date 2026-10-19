@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import { API_URL } from "@/lib/config";
 import { View, Text, TextInput, TouchableOpacity } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
@@ -9,8 +10,16 @@ import { useIsDark } from "@/lib/useAppearance";
 import CustomButton from "@/components/CustomButton";
 
 export default function OtpVerifyScreen() {
-  const { phone: phoneParam, role: roleParam } = useLocalSearchParams<{ phone?: string; role?: string }>();
+  const { phone: phoneParam, role: roleParam, terms: termsParam } = useLocalSearchParams<{
+    phone?: string;
+    role?: string;
+    terms?: string;
+  }>();
   const phone = phoneParam ?? "";
+  // C1-1: consent flag carried from the phone-entry gate → register.
+  const termsCarried = termsParam === "1";
+  // C1-9: bilingual copy (D3 rider) — no hardcoded screen strings.
+  const { t } = useTranslation();
 
   const [otp, setOtp] = useState("");
   const [loading, setLoading] = useState(false);
@@ -18,6 +27,14 @@ export default function OtpVerifyScreen() {
   const [error, setError] = useState("");
   const [sessionId, setSessionId] = useState<string | null>(null);
   const otpSentRef = useRef(false);
+  // C1-3a: 30s client-side resend cooldown (the server 5/5min cap stays
+  // the abuse bound — this is UX pacing, not security).
+  const [cooldown, setCooldown] = useState(0);
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const t = setTimeout(() => setCooldown((c) => c - 1), 1000);
+    return () => clearTimeout(t);
+  }, [cooldown]);
 
   const isDark = useIsDark();
 
@@ -43,14 +60,16 @@ export default function OtpVerifyScreen() {
       const data = await response.json();
 
       if (!response.ok) {
-        setError(data.message || "Failed to send OTP");
+        setError(data.message || t("auth.otp_verify.err_failed"));
         logger.error("[auth] send-otp failed", data);
         return;
       }
 
       setSessionId(data.sessionId);
+      // C1-3a: start the 30s cooldown on every successful send.
+      setCooldown(30);
     } catch (e) {
-      setError("Failed to send OTP. Please try again.");
+      setError(t("auth.otp_verify.err_failed"));
       logger.error("[auth] send otp error", e);
     } finally {
       setSending(false);
@@ -63,14 +82,19 @@ export default function OtpVerifyScreen() {
     sendOtp();
   }, [sendOtp]);
 
+  // C1-3b escape (REPAIR-1): named so the testID codemod derives
+  // otp-verify.change-number from source (an inline router.back() arrow
+  // derives nothing and falls back to el-1, which does not round-trip).
+  const changeNumber = () => router.back();
+
   const handleVerifyOtp = async () => {
     if (otp.length !== 6) {
-      setError("Enter a valid 6-digit OTP");
+      setError(t("auth.otp_verify.err_invalid"));
       return;
     }
 
     if (!sessionId) {
-      setError("Please wait for the OTP to be sent");
+      setError(t("auth.otp_verify.err_wait"));
       return;
     }
 
@@ -87,7 +111,7 @@ export default function OtpVerifyScreen() {
       const data = await response.json();
 
       if (!response.ok || !data.verified) {
-        setError(data.message || "Invalid OTP");
+        setError(data.message || t("auth.otp_verify.err_failed"));
         logger.error("[auth] verify-otp failed", data);
         return;
       }
@@ -116,9 +140,12 @@ export default function OtpVerifyScreen() {
         logger.warn("[auth] check-user failed, continuing to register", checkErr);
       }
 
-      router.push(`/(auth)/register?phone=${encodeURIComponent(phone)}&role=${roleParam ?? "rider"}`);
+      // C1-1: carry the consent flag forward — register+api 400s without it.
+      router.push(
+        `/(auth)/register?phone=${encodeURIComponent(phone)}&role=${roleParam ?? "rider"}${termsCarried ? "&terms=1" : ""}`,
+      );
     } catch (e) {
-      setError("Failed to verify OTP. Please try again.");
+      setError(t("auth.otp_verify.err_failed"));
       logger.error("[auth] verify otp error", e);
     } finally {
       setLoading(false);
@@ -133,13 +160,13 @@ export default function OtpVerifyScreen() {
         className="text-[28px] font-JakartaBold font-bold mb-1"
         style={{ color: textPrimary }}
       >
-        Verify OTP
+        {t("auth.otp_verify.title")}
       </Text>
       <Text
         className="text-[14px] font-JakartaBold mb-6"
         style={{ color: textSecondary }}
       >
-        Enter the 6-digit code sent to {phone}
+        {t("auth.otp_verify.subtitle", { phone })}
       </Text>
 
       <View
@@ -149,7 +176,7 @@ export default function OtpVerifyScreen() {
         <TextInput
           className="flex-1 py-4 text-[15px] font-JakartaBold"
           style={{ color: textPrimary }}
-          placeholder="Enter 6-digit OTP"
+          placeholder={t("auth.otp_verify.placeholder")}
           placeholderTextColor={placeholderColor}
           keyboardType="number-pad"
           value={otp}
@@ -171,21 +198,37 @@ export default function OtpVerifyScreen() {
       ) : null}
 
       <CustomButton
-        title={loading ? "Verifying..." : "Verify OTP"}
+        title={loading ? t("auth.otp_verify.verifying") : t("auth.otp_verify.verify")}
         onPress={handleVerifyOtp}
         disabled={isLoading || !sessionId}
        testID="otp-verify.handle-verify-otp"/>
 
       <TouchableOpacity
         onPress={sendOtp}
-        disabled={isLoading}
+        disabled={isLoading || cooldown > 0}
         className="items-center mt-4"
        testID="otp-verify.send-otp">
         <Text
           className="text-[14px] font-JakartaBold"
-          style={{ color: colors.primary }}
+          style={{ color: cooldown > 0 ? textSecondary : colors.primary }}
         >
-          Resend OTP
+          {cooldown > 0
+            ? t("auth.otp_verify.resend_in", { seconds: cooldown })
+            : t("auth.otp_verify.resend")}
+        </Text>
+      </TouchableOpacity>
+
+      {/* C1-3b: change-number escape — the auth layout hides the header,
+          so a wrong-number user would otherwise be stranded here. */}
+      <TouchableOpacity
+        onPress={changeNumber}
+        className="items-center mt-3"
+        testID="otp-verify.change-number">
+        <Text
+          className="text-[14px] font-JakartaBold"
+          style={{ color: textSecondary }}
+        >
+          {t("auth.otp_verify.change_number")}
         </Text>
       </TouchableOpacity>
     </SafeAreaView>

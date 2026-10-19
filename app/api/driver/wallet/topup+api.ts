@@ -3,6 +3,7 @@ import { drivers, users } from "@/src/db/schema";
 import { eq } from "drizzle-orm";
 import { verifySupabaseToken } from "@/lib/auth";
 import { parseJsonBody } from "@/lib/parseBody";
+import { getPlan05Bool } from "@/lib/platformConfig";
 import { logger } from "@/lib/logger";
 import { initiatePortposPayment } from "@/lib/paymentEvents";
 import {
@@ -38,6 +39,12 @@ export async function POST(originalRequest: Request) {
     if (!parsed.ok) return parsed.response;
 
     const amountBdt = parsed.data.amount_bdt;
+
+    // D9-2 (skeptic §D9): money-movement master switch — 409 while
+    // payments_enabled is false (launch default).
+    if (!(await getPlan05Bool('payments_enabled'))) {
+      return Response.json({ error: 'payments_not_enabled', message: 'Payments launch later — wallet top-up is not live yet' }, { status: 409 });
+    }
 
     // ── Idempotency-Key convention (decision 01M23628A1566SK1D5XXV1NT5G).
     // Header optional (absent → fresh server key); present → (route, key)

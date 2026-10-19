@@ -113,17 +113,20 @@ declare interface Customer extends UserData {
         address: string;
     }) => void;
     clearDestinationLocation: () => void;
+    reset: () => void;
 }
 
 declare interface StoreRole {
     role: string | null;
     setRole: (data: { role: string }) => void;
+    reset: () => void;
 }
 
 
 declare interface Driver extends UserData {
     distanceAway?: number;
     price?: string | null;
+    reset: () => void;
 }
 
 
@@ -160,6 +163,7 @@ declare interface DriverStore {
     removeDriverLocation: (driverId: string) => void;
     clearSelectedDriver: () => void;
     removeNearbyDriver: (driverId: string) => void;
+    reset: () => void;
 }
 
 
@@ -183,6 +187,7 @@ declare interface RidesStore {
     selectedRide: null | RideData;
     setRides: (allRides: RideData[]) => void;
     setSelectedRide: (id: string) => void;
+    reset: () => void;
 }
 
 
@@ -191,6 +196,7 @@ declare interface DriverDetails {
     isVerified: null | boolean;
     setOnDuty: (onDuty: boolean) => void;
     setIsVerified: (verified: boolean) => void;
+    reset: () => void;
 }
 
 
@@ -247,4 +253,5 @@ declare interface RideOffer {
     removeRideOffer: (rideId: string) => void;
     giveRideDetails: (rideId: string) => RideOfferDetails | undefined;
     changeStatus: (rideId: string, newStatus: string) => void;
+    reset: () => void;
 }

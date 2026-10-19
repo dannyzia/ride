@@ -118,11 +118,13 @@ describe("storage contract: signer and client agree", () => {
     expect(presignBody.contentType).toBe("image/png");
 
     // ── 2. The route, driven for real (S3 presigner mocked). ───────────────
+    // D5-2: the client declares the exact compressed size it is about to PUT.
     const res = await POST({
       json: async () => ({
         filename: "photo.png",
         folder: "documents",
         contentType: presignBody.contentType,
+        contentLength: presignBody.contentLength,
       }),
     } as unknown as Request);
     expect(res.status).toBe(200);
@@ -130,6 +132,7 @@ describe("storage contract: signer and client agree", () => {
     const signed = (PutObjectCommand as unknown as jest.Mock).mock.calls[0][0] as {
       ContentType: string;
       CacheControl: string;
+      ContentLength: number;
     };
     const signableHeaders = (getSignedUrl as jest.Mock).mock.calls[0][2]
       .signableHeaders as Set<string>;
@@ -143,9 +146,18 @@ describe("storage contract: signer and client agree", () => {
     expect(ALLOWED_MEDIA_TYPES).toContain(putHeaders["Content-Type"]);
     expect(putHeaders["Content-Type"]).toBe(presignBody.contentType);
 
+    // D5-2 size binding: the declared size is the compressed size, and the
+    // route signs that same number into the PUT.
+    expect(presignBody.contentLength).toBe(1024);
+    expect(signed.ContentLength).toBe(presignBody.contentLength);
+
     // Signature covers exactly the headers the client sends (plus host).
+    // content-length is transport-set by FileSystem from the file bytes — it
+    // is signed but never appears in the app-level headers object, so it is
+    // carved out of the equality rather than asserted absent.
+    expect(signableHeaders.has("content-length")).toBe(true);
     expect(Object.keys(putHeaders).map((h) => h.toLowerCase()).sort()).toEqual(
-      [...signableHeaders].sort(),
+      [...signableHeaders].filter((h) => h !== "content-length").sort(),
     );
 
   });
@@ -163,7 +175,7 @@ describe("storage contract: signer and client agree", () => {
 
     // ── 2. Route with NO folder: it must address that same key prefix. ─────
     const res = await POST({
-      json: async () => ({ filename: "photo.png", contentType: "image/png" }),
+      json: async () => ({ filename: "photo.png", contentType: "image/png", contentLength: 1024 }),
     } as unknown as Request);
     expect(res.status).toBe(200);
     const { key } = (await res.json()) as { key: string };
@@ -192,7 +204,7 @@ describe("storage contract: signer and client agree", () => {
 
     // ── 2. The key the route builds from the same input. ───────────────────
     const res = await POST({
-      json: async () => ({ filename: hostile, contentType: "image/png" }),
+      json: async () => ({ filename: hostile, contentType: "image/png", contentLength: 1024 }),
     } as unknown as Request);
     expect(res.status).toBe(200);
     const { key } = (await res.json()) as { key: string };

@@ -1,0 +1,23 @@
+appId: com.ride.bd
+---
+- tapOn:
+    text: "Sign In"
+    optional: true
+- extendedWaitUntil:
+    visible: ".*phone number.*"
+    timeout: 10000
+- tapOn:
+    id: "phone-entry.set-phone"
+- inputText: "1700000001"
+- tapOn:
+    id: "phone-entry.set-role-2"
+- tapOn:
+    id: "phone-entry.handle-login"
+- extendedWaitUntil:
+    visible: "Welcome Back"
+    timeout: 15000
+- tapOn:
+    id: "login.set-password"
+- inputText: "test1234"
+- tapOn:
+    id: "login.handle-login"

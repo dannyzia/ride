@@ -476,6 +476,21 @@ for (const c of copyClaims) {
     .map((s) => s.replace(/^\.\*|\.\*$/g, "").replace(/[.*+?^${}[\]\\]/g, "").trim())
     .map(norm)
     .filter((s) => s.length >= 3);
+  // CHECK 3b's candidate set: the literal AS WRITTEN — regex anchors and pipes
+  // removed, NOTHING else. `cands` above strips regex metacharacters, and `.` is
+  // one of them, so a claim ending in a sentence period normalized to a form no
+  // locale value can equal (locale values keep their period). 3b then reported
+  // "resolves in NO locale file" for copy that IS verbatim a locale value.
+  // MEASURED 2026-10-16: "Pay cash when your order arrives." and "Cancel this
+  // order?" (`shops_track.cod_hint` / `shops_track.cancel_confirm_title`, both
+  // live) were reported locale-only. The stripped set is still used for the
+  // dead/masked tiers, where a regex claim must keep working.
+  const rawCands = c.raw
+    .replace(/[()]/g, "")
+    .split("|")
+    .map((s) => s.replace(/^\.\*|\.\*$/g, "").trim())
+    .map(norm)
+    .filter((s) => s.length >= 3);
   if (!cands.length) continue;
 
   // Resolve every candidate so the best (most specific) rescue is the one we
@@ -490,7 +505,7 @@ for (const c of copyClaims) {
     // hard-coded JSX: it renders correctly and the flow passes, but the string
     // is not localizable, so the assertion breaks the day that screen is wired
     // to a locale key (or run under a non-en locale).
-    if (!cands.some((x) => localeValues.has(x))) {
+    if (!cands.some((x) => localeValues.has(x)) && !rawCands.some((x) => localeValues.has(x))) {
       localeMiss.push({ ...c, cand: hit.cand, via: hit.w.just });
     }
     continue;
@@ -565,11 +580,19 @@ if (maskedCopy.length) {
 // works — but the string is not localizable, so the assertion breaks the day
 // that screen is wired to a locale key, or runs under a non-en locale.
 //
-// This blocks NEW such literals. The 74 that already exist are baselined in
+// This blocks NEW such literals. The pre-existing ones are baselined in
 // maestro/tools/flow-locale-baseline.json rather than force-fixed here: a
 // mechanical block on all of them would reject working, committed flows across
 // ~15 files and bury a real regression under a wall of pre-existing noise. The
 // baseline is a ratchet, not an excuse — it should only ever shrink.
+//
+// Do NOT quote the "39" / "74" figures in older round notes as the current
+// state: the number printed at the end of a run counts DISTINCT baselined
+// literals still hitting this tier, which is neither the baseline's entry count
+// nor a constant. MEASURED 2026-10-16: 65 literals / 48 entries — part of the
+// drop from 74 is the rawCands fix above, which stopped mis-reporting claims
+// that end in a sentence period (locale values keep their period; the regex
+// metacharacter strip removed it).
 const baselinePath = path.join(__dirname, "flow-locale-baseline.json");
 let localeBaseline = new Set();
 try {

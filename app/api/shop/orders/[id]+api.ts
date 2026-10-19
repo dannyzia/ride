@@ -13,7 +13,7 @@ import {
   deliveries,
 } from "@/src/db/schema";
 import { requireShopMember } from "@/lib/marketplaceRbac";
-import { requireAnyRole } from "@/lib/auth";
+import { requireMemberRoles } from "@/lib/auth";
 import { logger } from "@/lib/logger";
 import * as errors from "@/lib/errors";
 import { CUSTOMER_CANCELLABLE_STATES, cancelFeeBdt } from "@/lib/shopOrderCancel";
@@ -50,7 +50,7 @@ export async function GET(request: Request, { id }: { id: string }) {
       // Not a shop member — fall through to the ordering-rider check.
     }
     if (!authorized) {
-      const { dbUser } = await requireAnyRole(["rider", "driver"])(request);
+      const { dbUser } = await requireMemberRoles(["rider", "driver"])(request);
       if (dbUser.id !== order.rider_user_id) {
         return Response.json(
           { error: "forbidden", message: "Not authorized" },
@@ -100,8 +100,13 @@ export async function GET(request: Request, { id }: { id: string }) {
       (CUSTOMER_CANCELLABLE_STATES as readonly string[]).includes(order.status);
     const cancelFee = cancellable ? await cancelFeeBdt(order.status) : null;
 
+    // C7-1 privacy: the shop→courier handover code is staff-only. The
+    // rider-identity payload carries delivery_otp only (the C4-5 pattern) —
+    // a rider holding pickup_code could socially-engineer a handover.
+    const { pickup_code: _stripPickupCode, ...orderForRider } = order;
+
     return Response.json({
-      order,
+      order: authorized ? order : orderForRider,
       items,
       shop_name: shopRow?.name ?? null,
       leg: leg ?? null,

@@ -209,6 +209,12 @@ jest.mock("@/lib/auth", () => ({
       supabaseUser: { id: "auth-actor" },
       dbUser: { id: "auth-actor" },
     }),
+  requireMemberRoles:
+    (_roles: readonly string[]) =>
+    async () => ({
+      supabaseUser: { id: "auth-actor" },
+      dbUser: { id: "auth-actor" },
+    }),
 }));
 
 // ── Mock ambulanceCerts (pick handler checks cert for ambulance) ────

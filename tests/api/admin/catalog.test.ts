@@ -3,8 +3,9 @@
  * city-boundaries, rider-intro-configs, cancellation-policies.
  * Invariants:
  *  - packages: soft-delete (deleted_at + is_active), PUT is the update verb
- *  - pricing: floor_length_km is numeric(10,2) — the PATCH layer must
- *    string-coerce it or drizzle rejects the write
+ *  - pricing: D1-1 append-versioned (see tests/api/admin/pricing-versions.test.ts
+ *    for the PATCH contract — mint successor, never mutate, string-coerced
+ *    floor_length_km for numeric(10,2)); the GET shape below is unchanged
  *  - city-boundaries: duplicate name 409, and EVERY write busts the in-process
  *    city boundary cache (stale polygons would misroute zone validation)
  *  - rider-intro-configs: GET maps the zone join into a flat shape; DELETE
@@ -178,29 +179,9 @@ describe("admin pricing", () => {
     expect((await getJson(res)).pricing).toEqual(rows);
   });
 
-  test("PATCH string-coerces floor_length_km for the numeric(10,2) column", async () => {
-    mockUpdateReturning([{ id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1" }]);
-
-    const res = await pricingRoute.PATCH(jsonRequest({
-      id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1",
-      per_km_bdt: 1500,
-      floor_length_km: 1.5,
-      is_active: true,
-    }));
-    expect(res.status).toBe(200);
-    expect(updates[0].set).toMatchObject({
-      per_km_bdt: 1500,
-      floor_length_km: "1.5", // numeric col expects a string
-      is_active: true,
-    });
-  });
-
-  test("PATCH 404 pricing_not_found when the row is gone", async () => {
-    mockUpdateReturning([]);
-    const res = await pricingRoute.PATCH(jsonRequest({ id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1", per_km_bdt: 1500 }));
-    expect(res.status).toBe(404);
-    expect((await getJson(res)).error).toBe("pricing_not_found");
-  });
+  // D1-1: PATCH no longer updates in place (it mints a successor version or
+  // 400/409s) — the PATCH contract moved to pricing-versions.test.ts, which
+  // also pins the floor_length_km string coercion for numeric(10,2).
 });
 
 describe("admin city-boundaries", () => {

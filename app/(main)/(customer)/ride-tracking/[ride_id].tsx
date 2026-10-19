@@ -9,7 +9,6 @@ import {
   Alert,
   Share,
   StatusBar,
-  Linking,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
@@ -25,7 +24,10 @@ import { colors, radii } from "@/theme/goRide";
 import { useIsDark, useAppearance } from "@/lib/useAppearance";
 import { useTranslation } from "react-i18next";
 import PinInput from "@/components/PinInput";
+import SosCounterpartyBanner from "@/components/SosCounterpartyBanner";
+import SosBanner from "@/components/SosBanner";
 import LiveMeter from "@/components/LiveMeter";
+import ExtraChargeApproval from "@/components/ExtraChargeApproval";
 import { isPinMismatch, PIN_REVERT_DELAY_MS } from "@/lib/pin";
 import { relativeTime } from "@/lib/time";
 import { formatBDT } from "@/lib/format";
@@ -43,7 +45,6 @@ interface DriverInfo {
   first_name: string;
   last_name: string;
   full_name: string;
-  phone: string;
   rating: number;
   total_trips: number;
   avatar_url: string | null;
@@ -401,6 +402,11 @@ export default function RideTrackingScreen() {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: bg }]}>
       <StatusBar translucent backgroundColor="transparent" barStyle={isDark ? "light-content" : "dark-content"} />
+      {/* C3-7: driver-SOS counterparty banner (rider safe-exit message). */}
+      <SosCounterpartyBanner rideId={ride_id} />
+      {/* C9-2: the rider's OWN active-SOS banner — kept visible mid-ride so
+          resolving one's own alert stays one tap away while tracking. */}
+      <SosBanner />
 
       {/* Reconnecting banner — socket dropped mid-ride; tracking is frozen
           until the background reconnect (lib/riderSocket.ts) restores it. */}
@@ -506,6 +512,11 @@ export default function RideTrackingScreen() {
         {/* Drag handle */}
         <View style={[styles.handle, { backgroundColor: borderColor }]} />
 
+        {/* C4-3: pending toll/parking proposals render live on the active
+            ride (null when none) — discovery is push + WS driven, the
+            10s poller inside is only a fallback. */}
+        <ExtraChargeApproval rideId={typeof ride_id === "string" ? ride_id : null} />
+
         {/* ── EN ROUTE / ARRIVED ── */}
         {(trackingState === "en_route" || trackingState === "arrived") && (
           <>
@@ -553,11 +564,8 @@ export default function RideTrackingScreen() {
               <Text style={[styles.addressText, { color: textPrimary }]} numberOfLines={2}>{ride.pickup_address}</Text>
             </View>
 
+            {/* C3-6: no raw tel: dial — in-app chat is the contact channel. */}
             <View style={styles.actionRow}>
-              <TouchableOpacity style={[styles.actionBtn, { backgroundColor: isDark ? colors.darkSecondary : colors.gray100 }]} onPress={() => { if (driver?.phone) Linking.openURL(`tel:${driver.phone}`); }} testID="customer.ride-tracking.ride_id.el-2">
-                <Ionicons name="call" size={20} color={colors.primary} />
-                <Text style={[styles.actionBtnText, { color: textPrimary }]}>{t('ride_tracking.call')}</Text>
-              </TouchableOpacity>
               <TouchableOpacity style={[styles.actionBtn, { backgroundColor: isDark ? colors.darkSecondary : colors.gray100 }]} onPress={() => router.push(`/(main)/(customer)/chat/${ride_id}`)} testID="customer.ride-tracking.ride_id.push-chat">
                 <Ionicons name="chatbubble" size={20} color={colors.primary} />
                 <Text style={[styles.actionBtnText, { color: textPrimary }]}>{t('ride_tracking.chat')}</Text>
@@ -627,10 +635,6 @@ export default function RideTrackingScreen() {
             </View>
 
             <View style={styles.actionRow}>
-              <TouchableOpacity style={[styles.actionBtn, { backgroundColor: isDark ? colors.darkSecondary : colors.gray100 }]} onPress={() => { if (driver?.phone) Linking.openURL(`tel:${driver.phone}`); }} testID="customer.ride-tracking.ride_id.el-3">
-                <Ionicons name="call" size={20} color={colors.primary} />
-                <Text style={[styles.actionBtnText, { color: textPrimary }]}>{t('ride_tracking.call')}</Text>
-              </TouchableOpacity>
               <TouchableOpacity style={[styles.actionBtn, { backgroundColor: isDark ? colors.darkSecondary : colors.gray100 }]} onPress={() => router.push(`/(main)/(customer)/chat/${ride_id}`)} testID="customer.ride-tracking.ride_id.push-chat-2">
                 <Ionicons name="chatbubble" size={20} color={colors.primary} />
                 <Text style={[styles.actionBtnText, { color: textPrimary }]}>{t('ride_tracking.chat')}</Text>

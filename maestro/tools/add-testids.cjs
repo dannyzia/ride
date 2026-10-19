@@ -201,7 +201,10 @@ function processFile(absPath, rel, globalSeen) {
           if (existingVal) {
             // Strip ANY testID value (positional or mangled) — the generator
             // re-derives everything from source. Delete the whole attribute
-            // plus one preceding whitespace char.
+            // plus one preceding whitespace char. (Preserve-branch lives in
+            // write mode only; strip->regen must PROVE derivability, so a
+            // vacuous strip is itself a failure — see the non-vacuity guard
+            // in testid-idempotence.cjs.)
             const start = existing.getStart(sf);
             edits.push({ pos: start - 1, len: existing.getEnd() - start + 1, text: '' });
           }

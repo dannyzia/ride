@@ -22,10 +22,6 @@
       "reason": "Pre-existing hard-coded JSX, present when the locale-only gate was added (2026-10-03). It renders correctly today, so the flow is not broken. Wire the string to a t() locale key on the screen that renders it, then DELETE this entry - the baseline is a ratchet and must only shrink."
     },
     {
-      "lit": "tap to replace document",
-      "reason": "Pre-existing hard-coded JSX, present when the locale-only gate was added (2026-10-03). It renders correctly today, so the flow is not broken. Wire the string to a t() locale key on the screen that renders it, then DELETE this entry - the baseline is a ratchet and must only shrink."
-    },
-    {
       "lit": "driver documents",
       "reason": "Pre-existing hard-coded JSX, present when the locale-only gate was added (2026-10-03). It renders correctly today, so the flow is not broken. Wire the string to a t() locale key on the screen that renders it, then DELETE this entry - the baseline is a ratchet and must only shrink."
     },

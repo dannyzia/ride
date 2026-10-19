@@ -1,5 +1,6 @@
 import { db } from '@/src/db';
 import { rides, users } from '@/src/db/schema';
+import { counterpartyUserId, isParticipant, resolveRideParticipantIds } from '@/lib/rideParticipants';
 import { eq } from 'drizzle-orm';
 import { verifySupabaseToken } from '@/lib/auth';
 import { logger } from '@/lib/logger';
@@ -23,12 +24,15 @@ export async function GET(request: Request, { id }: { id: string }) {
     const [ride] = await db.select().from(rides).where(eq(rides.id, rideId)).limit(1);
     if (!ride) return Response.json({ error: 'ride_not_found', message: 'Ride not found' }, { status: 404 });
 
-    if (ride.user_id !== user.id && ride.driver_id !== user.id) {
+    // C3-1: ride.driver_id is a drivers.id — resolve to the users.id so the
+    // counterparty is a real user row (and drivers stop 403ing here).
+    const participantIds = await resolveRideParticipantIds(db, ride);
+    if (!isParticipant(participantIds, user.id)) {
       return Response.json({ error: 'not_ride_participant', message: 'You are not a participant in this ride' }, { status: 403 });
     }
 
     const isRider = ride.user_id === user.id;
-    const otherUserId = isRider ? ride.driver_id : ride.user_id;
+    const otherUserId = counterpartyUserId(participantIds, user.id);
 
     let otherUserName = 'Driver';
     let otherUserPhone = '';
@@ -44,6 +48,7 @@ export async function GET(request: Request, { id }: { id: string }) {
     return Response.json({
       current_user_id: user.id,
       current_user_role: user.role,
+      other_user_id: otherUserId,
       other_user_name: otherUserName,
       other_user_phone: otherUserPhone,
       ride_active: (CHAT_ACTIVE_STATUSES as readonly string[]).includes(ride.status),

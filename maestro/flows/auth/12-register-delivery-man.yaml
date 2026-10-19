@@ -1,0 +1,89 @@
+# auth/12-register-delivery-man — delivery-man onboarding wizard happy path (S7.1).
+#
+# Covers app/(auth)/register-delivery-man.tsx (§2e): route in from phone-entry's
+# Register button (role chip 5 = delivery_man — the same chip the S6 delivery
+# flows use to LOG IN), the NID + driving-license uploads, the optional vehicle
+# note, and the PENDING submit. The account is created with the courier capability
+# PENDING until the admin queue approves it (§7).
+#
+# canSubmit is `!!nidUrl && !!licenseUrl` (register-delivery-man.tsx:91): BOTH
+# uploads are required, so this flow drives both — no optional-upload path reaches
+# submit.
+#
+# WHY THE UPLOADS ARE ASSERTED THIS WAY (not the driver-onboarding shape): the
+# card's two states are distinct literals — "Tap to upload document" before,
+# "Tap to replace document" after (DocumentUploadCard.tsx:107-114) — but BOTH
+# cards render the SAME literal, so `wait for "Tap to replace document"` after
+# the second tap is satisfied by the FIRST card and proves nothing (a vacuous
+# wait, the anti-pattern this repo gates against). This flow therefore asserts
+# the PRE-state between the two uploads (proving only the NID card flipped) and
+# then waits for the pre-state to vanish ENTIRELY (proving the license card
+# flipped too). That is a real, discriminating assertion with the same cost.
+#
+# DEVICE-ASSISTED STEPS (×2): each card opens the OS image picker
+# (ImagePicker.launchImageLibraryAsync, DocumentUploadCard.tsx:42); the operator
+# picks a file per card. There is no test-mode picker bypass on disk.
+#
+# The success signal is the wizard LEAVING (router.replace("/(main)/(customer)/home")
+# on the register path), asserted on the submit button ceasing to exist — not on
+# the destination surface, which is an auth-gate decision rather than this
+# wizard's contract (mirrors auth/10 and auth/11).
+# Fixtures: FRESH phone, OTP bypass 123456.
+# Class: AUTOMATABLE. NOT device-verified — the device day is ENV-blocked.
+appId: com.ride.bd
+name: "S7 Auth - Register Delivery Man wizard"
+tags: [auth, delivery, s7]
+---
+- stopApp: com.ride.bd
+- launchApp:
+    appId: com.ride.bd
+    clearState: true
+- extendedWaitUntil:
+    visible: "Enter your phone number"
+    timeout: 20000
+- tapOn:
+    id: "phone-entry.set-phone"
+- eraseText
+- inputText: ${NEW_AGENT_PHONE}
+# chip 5 = delivery_man (phone-entry.tsx:266).
+- tapOn:
+    id: "phone-entry.set-role-5"
+- tapOn:
+    id: "phone-entry.handle-register"
+- runFlow:
+    env:
+      OTP_CODE: "123456"
+      NAME: "${NEW_AGENT_NAME}"
+      PASSWORD: "${NEW_AGENT_PASSWORD}"
+    commands:
+      - runFlow: ../shared/auth/_register-credentials.yaml
+# ── The wizard ──────────────────────────────────────────────────────────────
+- extendedWaitUntil:
+    visible: "Deliver for every shop and customer"
+    timeout: 20000
+# Both uploads required (header note). Start state: every card un-uploaded.
+- assertVisible: "Tap to upload document"
+- tapOn:
+    id: "register-delivery-man.upload-nid"
+- extendedWaitUntil:
+    visible: "Tap to replace document"
+    timeout: 180000
+# Discriminating ground: the PRE-state must still be on screen, i.e. only the NID
+# card flipped and the license card is still awaiting its pick.
+- assertVisible: "Tap to upload document"
+- tapOn:
+    id: "register-delivery-man.upload-license"
+# Not "is the post-state visible" (it already was) — the pre-state must be GONE,
+# which can only happen once BOTH cards carry a document.
+- extendedWaitUntil:
+    notVisible: "Tap to upload document"
+    timeout: 180000
+- tapOn:
+    id: "register-delivery-man.set-vehicle-note"
+- inputText: ${AGENT_VEHICLE_NOTE}
+- tapOn:
+    id: "register-delivery-man.submit"
+- extendedWaitUntil:
+    notVisible:
+      id: "register-delivery-man.submit"
+    timeout: 30000

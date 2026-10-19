@@ -13,7 +13,9 @@ export async function GET(request: Request) {
     if (!dbUser) return Response.json({ error: 'user_not_found', message: 'User not found' }, { status: 404 });
 
     const stored = (dbUser.linked_accounts as { provider: string; label: string; connected: boolean; connected_at: string | null }[] | null) ?? [];
-    return Response.json({ linked_accounts: stored }, { status: 200 });
+    // C2-6 (Copy Truth): social linking is dormant — the qualifier rides with
+    // the payload so surfaces never present linking as live.
+    return Response.json({ linked_accounts: stored, dormant: true }, { status: 200 });
   } catch (err: unknown) {
     if (errors.getErrorStatus(err) === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
     logger.error("[user/linked-accounts] GET error", err);

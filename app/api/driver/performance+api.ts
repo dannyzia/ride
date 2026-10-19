@@ -123,11 +123,18 @@ export async function GET(request: Request) {
         gte(rides.completed_at, monthStart),
       ));
 
+    // Minor (C4-FIX): cancellation_rate window mix, RECORDED — the old code
+    // divided an ALL-TIME cancelled count by an ALL-TIME assigned count
+    // while the same payload reports trips_this_week / trips_this_month, so
+    // the rate floated free of every window the screen actually shows. It is
+    // now a trailing-30-day rate: cancelled_30d / assigned_30d.
+    const monthWindowStart = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
     const [cancelledRow] = await db.select({ cnt: count() })
       .from(rides)
       .where(and(
         eq(rides.driver_id, driver.id),
         eq(rides.status, "cancelled"),
+        gte(rides.updated_at, monthWindowStart),
       ));
 
     const [totalAssignedRow] = await db.select({ cnt: count() })
@@ -135,6 +142,7 @@ export async function GET(request: Request) {
       .where(and(
         eq(rides.driver_id, driver.id),
         sql`status IN ('completed', 'cancelled')`,
+        gte(rides.updated_at, monthWindowStart),
       ));
 
     const [onlineRow] = await db.select({

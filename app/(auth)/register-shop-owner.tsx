@@ -169,6 +169,8 @@ export default function RegisterShopOwnerScreen() {
                 password: creds.password,
                 role: "shop_owner",
                 shop,
+                // C1-1: consent carried via the handoff from the phone-entry gate.
+                terms_accepted: creds.terms_accepted,
               };
 
       const res = await fetch(url, {

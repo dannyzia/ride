@@ -18,6 +18,7 @@ import { isStage1Plus } from '@/lib/fareFrameworkConfig';
 import { PICKUP_CATEGORY } from '@/lib/vehicleTypes';
 import { PICKUP_TRUEUP_CONFIG_KEYS, computePickupTrueup, type PickupTrueupResult } from '@/lib/pickupTrueup';
 import { pickupFeeV6 } from '@/lib/pickupFee';
+import { buildCashHandshake } from '@/lib/cashHandshake';
 import { lookupZoneFee } from '@/lib/zoneFee';
 import * as errors from '@/lib/errors';
 
@@ -61,6 +62,42 @@ const rideId = segments[segments.indexOf("ride") + 1];
         },
         { status: 409 },
       );
+    }
+
+    // C3-5 (STAGE C3-FIX, F-05 cash handshake): optional driver confirmation
+    // of the cash amount actually received (integer paisa). Bodyless
+    // completes stay valid — only parse when a body was sent. Real requests
+    // expose .text(); legacy test doubles may expose only .json() or
+    // neither, which both mean "no body".
+    let cashReceivedBdt: number | null = null;
+    let rawBody = "";
+    try {
+      if (typeof request.text === "function") {
+        rawBody = await request.text();
+      } else if (typeof request.json === "function") {
+        const body = (await request.json()) as unknown;
+        rawBody =
+          body && typeof body === "object" && Object.keys(body).length > 0
+            ? JSON.stringify(body)
+            : "";
+      }
+    } catch {
+      return Response.json({ error: 'invalid_body', message: 'Request body must be valid JSON' }, { status: 400 });
+    }
+    if (rawBody.trim().length > 0) {
+      let parsedBody: unknown;
+      try {
+        parsedBody = JSON.parse(rawBody);
+      } catch {
+        return Response.json({ error: 'invalid_body', message: 'Request body must be valid JSON' }, { status: 400 });
+      }
+      const cashParsed = z.object({
+        cash_received_bdt: z.number().int().min(0).max(10_000_000).optional(),
+      }).safeParse(parsedBody);
+      if (!cashParsed.success) {
+        return Response.json({ error: 'invalid_cash_amount', message: 'cash_received_bdt must be a non-negative integer (paisa)' }, { status: 400 });
+      }
+      cashReceivedBdt = cashParsed.data.cash_received_bdt ?? null;
     }
 
     // Get pricing for fare calculation
@@ -406,6 +443,9 @@ const rideId = segments[segments.indexOf("ride") + 1];
           fare_v6_shadow_computed_at: completedAt,
           // v6 zone fee — 100% to driver, no commission
           zone_fee_bdt: zoneFeeBdt,
+          // C3-5 (F-05 cash handshake): driver-confirmed amount received,
+          // persisted in the same atomic completion write.
+          ...(cashReceivedBdt != null ? { driver_cash_received_bdt: cashReceivedBdt } : {}),
         })
         .where(and(eq(rides.id, rideId), eq(rides.status, "in_progress")))
         .returning();
@@ -472,7 +512,8 @@ const rideId = segments[segments.indexOf("ride") + 1];
       // The driver collects driver_net in cash (L13); crediting it here would
       // pay fares out of withdrawable top-up money on the first payout.
       // Referral receivables have no completion trigger in this schema (no
-      // rides.referral_* columns) — they settle via /api/user/referral.
+      // rides.referral_* columns) — and referrals are dormant (C3-2: GET
+      // /api/user/referral is a 410 stub), so nothing settles here.
       const receivable = computeCompletionWalletReceivable(ride);
       if (receivable) {
         await tx.insert(driverWalletTransactions).values({
@@ -556,7 +597,9 @@ const rideId = segments[segments.indexOf("ride") + 1];
 
     // Emit WebSocket event + push notification to rider
     if (ride.user_id) {
-      sendNotification(ride.user_id, 'ride:completed', 'Ride Complete', 'Thanks for riding with us! Rate your driver.', { ride_id: rideId }).catch(() => {});
+      // D2-5: match-class key — one push per (ride, event), ever. D2-3 copyKey
+      // resolves the body in the rider's stored locale.
+      sendNotification(ride.user_id, 'ride:completed', 'Ride Complete', 'Thanks for riding with us! Rate your driver.', { ride_id: rideId }, { idempotencyKey: `ride:${rideId}:completed`, copyKey: 'ride_completed' }).catch(() => {});
     }
     const wsPort = process.env.UTILS_SERVER_PORT ?? "3001";
     const internalSecret = process.env.WEBSOCKET_INTERNAL_SECRET;
@@ -575,6 +618,8 @@ const rideId = segments[segments.indexOf("ride") + 1];
           driver_net_bdt: authoritative.driver_net_bdt,
           ride_time_min: rideTimeMin,
           fare_breakdown: authoritative,
+          rider_cash_tendered_bdt: ride.rider_cash_tendered_bdt ?? null,
+          driver_cash_received_bdt: cashReceivedBdt,
         }),
       }).catch((e) =>
         logger.warn("[ride/complete] WS emit failed", { error: errors.getErrorMessage(e) }),
@@ -599,6 +644,9 @@ const rideId = segments[segments.indexOf("ride") + 1];
       rider_payable_bdt: finalRiderPayableBdt,
       wallet_debit_bdt: walletDebitBdt,
       cash_to_collect_bdt: authoritative.total_bdt + storedPrefSurcharge - appliedDiscountBdt,
+      // C3-5 (F-05 cash handshake → receipt entry): shared builder with the
+      // receipt route so both surfaces agree on change_due / amounts_match.
+      cash_handshake: buildCashHandshake(ride.rider_cash_tendered_bdt, cashReceivedBdt, finalRiderPayableBdt),
     });
   } catch (err: unknown) {
     if (errors.getErrorStatus(err) === 401 || errors.getErrorStatus(err) === 403) {

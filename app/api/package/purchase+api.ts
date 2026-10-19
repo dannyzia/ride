@@ -27,6 +27,7 @@ import {
   IDEMPOTENCY_ROUTES,
 } from "@/lib/idempotency";
 import { activateSubscription } from "@/lib/activateSubscription";
+import { getPlan05Bool } from "@/lib/platformConfig";
 import {
   getFareFrameworkConfig,
   parseConfigNumber,
@@ -174,6 +175,20 @@ export async function POST(request: Request) {
           message: "Package not found or inactive",
         },
         { status: 422 },
+      );
+    }
+
+    // D9-2 (skeptic §D9): money-movement master switch. Priced plans 409
+    // while payments_enabled is false (launch default); ৳0 trials bypass so
+    // launch_free activation keeps working. Fresh-read every request
+    // (AGENTS.md: never cache platform_config).
+    if (pkg.price_bdt > 0 && !(await getPlan05Bool("payments_enabled"))) {
+      return Response.json(
+        {
+          error: "payments_not_enabled",
+          message: "Payments launch later — package purchase is not live yet",
+        },
+        { status: 409 },
       );
     }
 

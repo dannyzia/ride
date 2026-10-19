@@ -1,6 +1,6 @@
 // @ts-nocheck — Jest mock factories produce untyped chains; runtime tests verify correctness.
 /**
- * Activation seam WATERMARK tests — Jobs 54/55 (rental/delivery).
+ * Activation seam WATERMARK tests — Job 54 (rental).
  *
  * Rebuilt on the batch2 router-mock pattern; supersedes the F46-era
  * shift-queue harness whose "watermark" tests passed for the wrong
@@ -8,12 +8,15 @@
  * because the watermark excluded the row — deleting
  * `rentalWatermark = newest` kept every old test green).
  *
+ * B5-1 (2026-10-16, plan 27 §6.1): job 55 (delivery activation) retired
+ * with the courier-bidding marketplace — its watermark describes + the
+ * NO-shop/shop branch contracts were deleted with activateDeliveryRequests.
+ *
  * Contract partition (do not blur — owners only):
- *   - THIS file: watermark semantics for jobs 54/55 (tick-N non-repeat,
- *     later-row pickup, epoch restart TD-15) + the job 55 NO-shop
- *     broadcast branch (source_shop_order_id = null).
+ *   - THIS file: watermark semantics for job 54 (tick-N non-repeat,
+ *     later-row pickup, epoch restart TD-15).
  *   - utils-server/__tests__/batch2-ws-and-activation.test.ts: N11 key
- *     shapes, M4 queue contract, job 55 shop branch.
+ *     shapes, M4 queue contract.
  *   - tests/api/emergency/activation-watermark.test.ts: job 56 watermark.
  *   - tests/api/emergency/ambulance.test.ts: emergency state machine.
  *
@@ -30,11 +33,8 @@ import { jest } from '@jest/globals';
 import { db } from '@/src/db';
 import {
   activateRentalRequests,
-  activateDeliveryRequests,
 } from '@/utils-server/activationJobs';
 import { getConnectedBidderIds, sendToBidder } from '@/utils-server/rentalHandler';
-import { broadcastToCouriers } from '@/utils-server/deliveryHandler';
-import { sendToUser } from '@/utils-server/index';
 import { sendNotifications } from '@/lib/notify';
 
 /** gt(col, bound) calls recorded since the last where() consumption. */
@@ -134,15 +134,6 @@ jest.mock('@/utils-server/rentalHandler', () => ({
   sendToBidder: jest.fn(),
 }));
 
-jest.mock('@/utils-server/deliveryHandler', () => ({
-  broadcastToCouriers: jest.fn(),
-  sendToCourier: jest.fn(),
-}));
-
-jest.mock('@/utils-server/index', () => ({
-  sendToUser: jest.fn(),
-}));
-
 // ─── Fixtures ─────────────────────────────────────────────────────────────
 
 // 2026-09-01T10:00Z. Every test's created_at must be LATER than the last
@@ -166,23 +157,6 @@ const rentalRow = (id: string, createdAt: Date) => ({
   rental_options: null,
   scheduled_start_at: null,
   duration_hours: null,
-});
-
-const deliveryRow = (id: string, createdAt: Date, source_shop_order_id: string | null) => ({
-  id,
-  status: 'pending',
-  pickup_address: 'Shop location',
-  pickup_lat: '23.8103',
-  pickup_lng: '90.4125',
-  dropoff_address: 'Customer address',
-  dropoff_lat: '23.8200',
-  dropoff_lng: '90.4200',
-  required_vehicle_type: null,
-  declared_fee_bdt: 10000,
-  deadline_at: new Date(createdAt.getTime() + 600000),
-  package_description: 'Box',
-  source_shop_order_id,
-  created_at: createdAt,
 });
 
 const ELIGIBLE = { zones: [{ fleet_id: 'f1' }], members: [{ user_id: 'm1' }] };
@@ -277,56 +251,5 @@ describe('Job 54 — rental activation watermark', () => {
   // ADVANCE (non-repeat test) + post-watermark pickup (later-rows test).
 });
 
-describe('Job 55 — delivery activation watermark', () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-    mockGtLog.length = 0;
-    db.__setMockRows({ rental: [], delivery: [], zones: [], fleets: [], members: [], shopOrders: [] });
-  });
-
-  it('epoch init + empty scan: first-ever tick filters gt(created_at, epoch) and returns 0', async () => {
-    // MUST be the first job-55 test in this file — see the job-54 twin above.
-    const boundsBefore = mockGtBounds.length;
-    const { count, notifyQueue } = await activateDeliveryRequests();
-    const createdBounds = mockGtBounds
-      .slice(boundsBefore)
-      .filter((b) => b.colName === 'created_at');
-    expect(createdBounds).toHaveLength(1);
-    expect(createdBounds[0].bound.getTime()).toBe(0);
-
-    expect(count).toBe(0);
-    expect(notifyQueue).toEqual([]);
-    expect(broadcastToCouriers).not.toHaveBeenCalled();
-  });
-
-  it('no-shop branch: broadcasts to couriers with no shop WS/push side effects', async () => {
-    db.__setMockRows({ delivery: [deliveryRow('del-1', new Date(T0 + 30 * 60000), null)] });
-
-    const { count, notifyQueue } = await activateDeliveryRequests();
-
-    expect(count).toBe(1);
-    expect(broadcastToCouriers).toHaveBeenCalledTimes(1);
-    expect(broadcastToCouriers).toHaveBeenCalledWith(
-      'delivery:bid_request',
-      expect.objectContaining({ request_id: 'del-1' }),
-    );
-    expect(notifyQueue).toEqual([]); // no shop order → no customer push
-    expect(sendToUser).not.toHaveBeenCalled();
-    // Shop branch (source_shop_order_id present) is owned by
-    // batch2-ws-and-activation.test.ts — intentionally not duplicated here.
-  });
-
-  it('watermark advance: re-seeded pending row is not re-broadcast', async () => {
-    const row = deliveryRow('del-2', new Date(T0 + 35 * 60000), null);
-    db.__setMockRows({ delivery: [row] });
-
-    expect((await activateDeliveryRequests()).count).toBe(1);
-
-    db.__setMockRows({ delivery: [row] });
-    const second = await activateDeliveryRequests();
-
-    expect(second.count).toBe(0);
-    expect(second.notifyQueue).toEqual([]);
-    expect(broadcastToCouriers).toHaveBeenCalledTimes(1); // only the tick-1 broadcast
-  });
-});
+// B5-1 (2026-10-16, plan 27 §6.1): the Job 55 delivery-activation watermark
+// describe lived here — deleted with activateDeliveryRequests.

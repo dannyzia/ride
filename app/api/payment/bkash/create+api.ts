@@ -1,3 +1,4 @@
+// [public]
 // bKash payment create — INERT STUB
 // Superseded by PortPos (ADR-018). PortPos handles all payments via /api/payment/portpos/callback.
 // Kept for backwards compatibility with any residual GlideX calls.

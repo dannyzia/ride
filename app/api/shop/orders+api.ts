@@ -5,8 +5,8 @@
  * GET  /api/shop/orders?shop_id=... — list orders for a shop (owner/member)
  */
 import { db } from "@/src/db";
-import { shopOrders, shopOrderItems, shopProducts, shopMembers, shops, shopTypes } from "@/src/db/schema";
-import { requireAnyRole } from "@/lib/auth";
+import { shopOrders, shopOrderItems, shopProducts, shopMembers, shops, shopTypes, deliveries } from "@/src/db/schema";
+import { requireMemberRoles } from "@/lib/auth";
 import { requireShopMember } from "@/lib/marketplaceRbac";
 import { parseJsonBody } from "@/lib/parseBody";
 import { isVerticalEnabled } from "@/lib/platformConfig";
@@ -22,7 +22,7 @@ import {
 } from "@/lib/idempotency";
 import { logger } from "@/lib/logger";
 import * as errors from "@/lib/errors";
-import { eq, and, isNull, count, desc, sql } from "drizzle-orm";
+import { eq, and, isNull, count, desc, inArray, sql } from "drizzle-orm";
 import { z } from "zod";
 
 const orderItemSchema = z.object({
@@ -62,7 +62,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const { supabaseUser, dbUser } = await requireAnyRole(["rider", "driver"])(
+    const { supabaseUser, dbUser } = await requireMemberRoles(["rider", "driver"])(
       request,
     );
 
@@ -379,7 +379,30 @@ export async function GET(request: Request) {
       .limit(limit)
       .offset(offset);
 
-    return Response.json({ orders: rows, total, page, limit });
+    // C5/C6-FIX: the dashboard's Delivered button must disappear for
+    // courier orders — one batched live-leg lookup for the page (a live leg
+    // = created/offered/accepted/picked_up; delivered/failed are history).
+    const orderIds = rows.map((r) => r.id);
+    const liveLegRows =
+      orderIds.length > 0
+        ? await db
+            .select({ order_id: deliveries.order_id })
+            .from(deliveries)
+            .where(
+              and(
+                inArray(deliveries.order_id, orderIds),
+                inArray(deliveries.status, ["created", "offered", "accepted", "picked_up"]),
+              ),
+            )
+        : [];
+    const liveLegSet = new Set(liveLegRows.map((r) => r.order_id));
+
+    return Response.json({
+      orders: rows.map((r) => ({ ...r, has_live_leg: liveLegSet.has(r.id) })),
+      total,
+      page,
+      limit,
+    });
   } catch (err: unknown) {
     const status = errors.getErrorStatus(err);
     if (status === 401)

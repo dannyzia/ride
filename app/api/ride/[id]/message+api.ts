@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { db } from '@/src/db';
 import { chatMessages, rides, users } from '@/src/db/schema';
+import { counterpartyUserId, isParticipant, resolveRideParticipantIds } from '@/lib/rideParticipants';
 import { eq } from 'drizzle-orm';
 import { verifySupabaseToken } from '@/lib/auth';
 import { logger } from '@/lib/logger';
@@ -33,7 +34,9 @@ export async function POST(request: Request, { id }: { id: string }) {
     const [ride] = await db.select().from(rides).where(eq(rides.id, rideId)).limit(1);
     if (!ride) return Response.json({ error: 'ride_not_found', message: 'Ride not found' }, { status: 404 });
 
-    if (ride.user_id !== user.id && ride.driver_id !== user.id) {
+    // C3-1: ride.driver_id is a drivers.id — resolve before comparing.
+    const participantIds = await resolveRideParticipantIds(db, ride);
+    if (!isParticipant(participantIds, user.id)) {
       return Response.json({ error: 'not_ride_participant', message: 'You are not a participant in this ride' }, { status: 403 });
     }
 
@@ -51,7 +54,8 @@ export async function POST(request: Request, { id }: { id: string }) {
     const wsPort = process.env.UTILS_SERVER_PORT ?? '3001';
     const internalSecret = process.env.WEBSOCKET_INTERNAL_SECRET;
     if (internalSecret) {
-      const otherUserId = ride.user_id === user.id ? ride.driver_id : ride.user_id;
+      // C3-1: relay to the OTHER users.id (never the raw drivers.id).
+      const otherUserId = counterpartyUserId(participantIds, user.id);
       fetch(`http://127.0.0.1:${wsPort}/internal/chat/send`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${internalSecret}` },

@@ -1,0 +1,87 @@
+# auth/09-login-as-chooser — the OWNER-DECISION #9 role chooser (S7.1).
+#
+# Covers app/(auth)/login-as.tsx: a phone holding MORE THAN ONE ACTIVE role picks
+# which surface to land in. Reached ONLY from the auth gate / splash forwarder
+# (app/_layout.tsx:148, app/index.tsx:121) — never by in-app navigation — so this
+# flow arrives the way the app does: a login on a multi-role account.
+#
+# SELECTORS ARE LITERAL ON PURPOSE. The five rows are fixed literal ids
+# (`login-as.enter-<role>`, login-as.tsx:186-190) and there is NO env
+# substitution inside an `id:` anywhere in this suite — a selector built from a
+# variable is unresolvable to flow-xcheck (`login-as.enter-${ROLE}` is in no map)
+# and unverifiable on device. The seed therefore has to match the ids named
+# below, rather than the ids being bent to match any seed.
+#
+# What is asserted, and why each assertion is real behaviour:
+#   * the chooser renders (title "Login as" + subtitle) with one row per HELD
+#     role, addressed by those literal ids;
+#   * a PENDING role is NOT enterable: login-as.tsx:126 routes a non-active row
+#     to /(main)/(customer)/verification-status, so tapping the pending row must
+#     land on the status screen — asserted, not assumed. That IS what
+#     "pending-not-enterable" means as behaviour;
+#   * the ACTIVE row enters its home (rider → the booking sheet's destination
+#     row), proving the chooser actually switches surface.
+#
+# REQUIRED SEED (declared, not worked around): MULTI_ROLE_PHONE holds an ACTIVE
+# `rider` role AND a `delivery_man` role that is NOT active (pending/rejected),
+# so `login-as.enter-delivery-man` is the non-enterable row and
+# `login-as.enter-rider` is the enterable one. The flow FAILS LOUDLY on a wrong
+# seed rather than skipping — an unseeded run must not read as green.
+# Class: AUTOMATABLE. NOT device-verified — the device day is ENV-blocked.
+appId: com.ride.bd
+name: "S7 Auth - Login-as chooser (multi-role, pending not enterable)"
+tags: [auth, roles, s7]
+---
+- stopApp: com.ride.bd
+- launchApp:
+    appId: com.ride.bd
+    clearState: true
+- extendedWaitUntil:
+    visible: "Enter your phone number"
+    timeout: 20000
+- tapOn:
+    id: "phone-entry.set-phone"
+- eraseText
+- inputText: ${MULTI_ROLE_PHONE}
+- tapOn:
+    id: "phone-entry.handle-login"
+- extendedWaitUntil:
+    visible: "Welcome Back"
+    timeout: 15000
+- tapOn:
+    id: "login.set-password"
+- inputText: ${MULTI_ROLE_PASSWORD}
+- tapOn:
+    id: "login.handle-login"
+# The chooser — the account holds >1 role, so the gate routes here rather than
+# straight to a home.
+- extendedWaitUntil:
+    visible: "Login as"
+    timeout: 20000
+- assertVisible: "This number holds more than one role"
+- assertVisible:
+    id: "login-as.enter-rider"
+- assertVisible:
+    id: "login-as.enter-delivery-man"
+# ── Pending role: labelled + NOT enterable ──────────────────────────────────
+- assertVisible: "Pending verification"
+- tapOn:
+    id: "login-as.enter-delivery-man"
+# Non-active rows route to the status screen (login-as.tsx:126). An enterable
+# row would go to that role's home instead, so this is the discriminating assert.
+- extendedWaitUntil:
+    visible:
+      id: "customer.verification-status.el-1"
+    timeout: 20000
+# ── Active role: the chooser really does switch surface ─────────────────────
+- tapOn:
+    id: "customer.verification-status.el-1"
+- extendedWaitUntil:
+    visible: "Login as"
+    timeout: 20000
+- tapOn:
+    id: "login-as.enter-rider"
+- extendedWaitUntil:
+    visible:
+      id: "customer.home.el-2"
+    timeout: 30000

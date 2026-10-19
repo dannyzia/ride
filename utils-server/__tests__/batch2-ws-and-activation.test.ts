@@ -148,21 +148,18 @@ jest.mock("../rentalDispatchChain", () => ({
   getEligibleFleets: jest.fn().mockResolvedValue(["f1"]),
 }));
 
-jest.mock("../deliveryHandler", () => ({
-  broadcastToCouriers: jest.fn(),
-  sendToCourier: jest.fn(),
-}));
+// B5-1: the deliveryHandler WS lane (broadcastToCouriers/sendToCourier) is
+// deleted — presence-only module now. No mock: nothing imports the lane.
 
 jest.mock("../index", () => ({
   sendToUser: jest.fn(),
 }));
 
 const { db } = require("../../src/db");
-const { transitionEmergencyRequest, broadcastEmergencyNewRequest } = require("../emergencyChain");
+const { transitionEmergencyRequest, cancelEmergencyRequest, broadcastEmergencyNewRequest } = require("../emergencyChain");
 const { getEligibleEmergencyDriverUserIds } = require("../../lib/ambulanceCerts");
 const {
   activateRentalRequests,
-  activateDeliveryRequests,
   dispatchNotifyQueue,
 } = require("../activationJobs");
 const { sendNotification, sendNotifications } = require("../../lib/notify");
@@ -191,6 +188,70 @@ describe("N14 — transitionEmergencyRequest emits after commit", () => {
     const result = await transitionEmergencyRequest("req-1", "driver-1", "en_route_pickup");
     expect(result.status).toBe("en_route_pickup");
     expect(mockSeq).toEqual(["commit", "emit"]);
+  });
+});
+
+// B4-1 — cancelEmergencyRequest relays emergency:cancel strictly after commit.
+describe("B4-1 — cancelEmergencyRequest emits emergency:cancel only after commit", () => {
+  beforeEach(() => {
+    mockSeq.length = 0;
+    db.__setMockRows({
+      emergency: [
+        {
+          id: "req-1",
+          status: "assigned",
+          caller_user_id: "caller-1",
+          accepted_cert_id: "cert-1",
+        },
+      ],
+      certs: [{ id: "cert-1", user_id: "driver-1" }],
+    });
+  });
+
+  it("the assignee is told about the cancel after the tx commits", async () => {
+    const result = await cancelEmergencyRequest("req-1", "driver-1", "cancel");
+    expect(result.status).toBe("cancelled");
+    expect(mockSeq).toEqual(["commit", "emit"]);
+  });
+
+  it("a rolled-back tx never relays the cancel", async () => {
+    // Fault inject: make the first commit thunk throw so the callback never
+    // runs and mockSeq stays at ["toplevel-reject"] after the rollback.
+    const dbMock = require("../../src/db").db as any;
+    const originalTransaction = dbMock.transaction;
+    dbMock.transaction = async (fn: any) => {
+      try {
+        await fn({
+          select: jest.fn(() => {
+            const c: any = () => {};
+            c.from = jest.fn(() => c);
+            c.where = jest.fn(() => c);
+            c.innerJoin = jest.fn(() => c);
+            c.limit = jest.fn(async () => [{ user_id: "driver-1" }]);
+            c.for = jest.fn(async () => []);
+            c.then = (res: any) => Promise.resolve([]).then(res);
+            return c;
+          }),
+          update: jest.fn(() => ({
+            set: () => ({
+              where: () => ({
+                returning: async () => [{ id: "req-1", status: "cancelled", cancelled_at: new Date(), cancel_reason: "cancel", updated_at: new Date() }],
+              }),
+            }),
+            returning: async () => [{ id: "req-1", status: "cancelled", cancelled_at: new Date(), cancel_reason: "cancel", updated_at: new Date() }],
+          })),
+        } as any);
+      } catch {
+        mockSeq.push("toplevel-reject");
+        throw new Error("rollback-injected");
+      }
+    };
+
+    await expect(cancelEmergencyRequest("req-1", "driver-1", "cancel")).rejects.toThrow("rollback-injected");
+    expect(mockSeq).toEqual(["toplevel-reject"]);
+    expect(mockSeq).not.toContain("emit");
+
+    dbMock.transaction = originalTransaction;
   });
 });
 
@@ -246,15 +307,9 @@ describe("N11 — activation jobs pass idempotency keys to sendNotification", ()
     expect(sendNotifications).toHaveBeenCalledWith(notifyQueue);
   });
 
-  it("job 55 delivery-created push uses delivery_created:{request_id}", async () => {
-    const { notifyQueue } = await activateDeliveryRequests();
-    expect(sendNotification).not.toHaveBeenCalled();
-    expect(notifyQueue).toHaveLength(1);
-    expect(notifyQueue[0].userId).toBe("rider-1");
-    expect(notifyQueue[0].idempotencyKey).toBe("delivery_created:dreq-1");
-    await dispatchNotifyQueue(notifyQueue);
-    expect(sendNotifications).toHaveBeenCalledWith(notifyQueue);
-  });
+  // B5-1 (plan 27 §6.1): job 55 retired — the delivery-created arm died with
+  // the courier-bidding marketplace. Customer delivery notifications now
+  // travel via the §6.1 dispatched-offers flow (push + inbox).
 });
 
 // ══════════════════════════════════════════════════════════════════════

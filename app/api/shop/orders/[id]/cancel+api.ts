@@ -13,7 +13,7 @@
  */
 import { db } from "@/src/db";
 import { shopOrders, shopOrderItems, shopProducts, deliveries } from "@/src/db/schema";
-import { requireAnyRole } from "@/lib/auth";
+import { requireMemberRoles } from "@/lib/auth";
 import { CUSTOMER_CANCELLABLE_STATES, cancelFeeBdt } from "@/lib/shopOrderCancel";
 import { logger } from "@/lib/logger";
 import { notifyWs } from "@/lib/wsNotify";
@@ -27,7 +27,7 @@ export async function POST(request: Request, { id }: { id: string }) {
       return Response.json({ error: "invalid_uuid", message: "Invalid order id" }, { status: 400 });
     }
 
-    const { dbUser } = await requireAnyRole(["rider", "driver"])(request);
+    const { dbUser } = await requireMemberRoles(["rider", "driver"])(request);
 
     let guard: Response | null = null;
     let feeBdt = 0;

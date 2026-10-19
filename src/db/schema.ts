@@ -281,6 +281,8 @@ export const users = pgTable(
     rating_count: integer("rating_count").notNull().default(0),
     rating_sum: integer("rating_sum").notNull().default(0),
     account_status: varchar("account_status", { length: 20 }).default("active"),
+    // C2-1 (STAGE C2-FIX): stored suspension reason surfaced on 403 account_suspended.
+    suspension_reason: varchar("suspension_reason", { length: 500 }),
     fraud_score: integer("fraud_score").default(0),
     total_rides: integer("total_rides").default(0),
     total_spent_bdt: integer("total_spent_bdt").default(0),
@@ -290,11 +292,18 @@ export const users = pgTable(
       .notNull()
       .default(0),
     notification_prefs: jsonb("notification_prefs"),
+    // D2-3 (STAGE D2-FIX): recipient locale for server-side push copy
+    // ('en' | 'bn'; notifyCopy dictionary, default 'en').
+    locale: varchar("locale", { length: 5 }).notNull().default("en"),
     security_settings: jsonb("security_settings"),
     linked_accounts: jsonb("linked_accounts"),
     data_controls: jsonb("data_controls"),
     // v6: whether the rider has seen the zone-fee explainer sheet
     zone_fee_explained: boolean("zone_fee_explained").notNull().default(false),
+    // C1-1 (STAGE C1-FIX): T&C + Privacy consent timestamp. Nullable so
+    // legacy rows pre-dating the gate stay valid; new registrations stamp
+    // it from the carried terms_accepted flag (400 terms_required if absent).
+    terms_accepted_at: timestamptz("terms_accepted_at"),
     deleted_at: timestamptz("deleted_at"),
     created_at: timestamptz("created_at").notNull().defaultNow(),
     updated_at: timestamptz("updated_at").notNull().defaultNow(),
@@ -495,6 +504,10 @@ export const packages = pgTable(
   {
     id: uuid("id").defaultRandom().primaryKey(),
     name: varchar("name", { length: 100 }).notNull(),
+    // C10-1 grant-source identity: stable machine code for a plan (e.g.
+    // 'launch_free'). The display NAME is admin-editable; clients must match
+    // on code, never on name.
+    code: varchar("code", { length: 50 }),
     call_count: integer("call_count").notNull(),
     duration_days: integer("duration_days").notNull(),
     price_bdt: integer("price_bdt").notNull(),
@@ -523,6 +536,9 @@ export const packages = pgTable(
     // plain UNIQUE(name) would permanently reserve a retired name — and would
     // not even apply to the 4 live+soft-deleted name groups already in the DB.
     uniqueIndex("packages_name_live_uq").on(t.name).where(sql`${t.deleted_at} IS NULL`),
+    // C10-1: at most one live row per code (NULL = ad-hoc plan, unconstrained),
+    // so the launch_free identity is a schema property, not just a lock.
+    uniqueIndex("packages_code_live_uq").on(t.code).where(sql`${t.code} IS NOT NULL AND ${t.deleted_at} IS NULL`),
   ],
 );
 
@@ -750,6 +766,10 @@ export const rides = pgTable(
     // Shown to the rider (to read aloud) and verified against the driver's entry
     // before the ride transitions to in_progress.
     start_pin: varchar("start_pin", { length: 8 }),
+    // C3-4 (STAGE C3-FIX): start-PIN attempt counter + lockout timestamp.
+    // ×3 mismatches lock the ride (correct PIN fails after lock) + admin notify.
+    start_pin_attempts: integer("start_pin_attempts").notNull().default(0),
+    start_pin_locked_at: timestamptz("start_pin_locked_at"),
     arrived_at: timestamptz("arrived_at"),
     eta_minutes: smallint("eta_minutes"),
     started_at: timestamptz("started_at"),
@@ -781,6 +801,13 @@ export const rides = pgTable(
     driver_fare_bdt: integer("driver_fare_bdt"),
     rider_payable_bdt: integer("rider_payable_bdt"),
     tip_bdt: integer("tip_bdt").default(0),
+    // C3-5 (STAGE C3-FIX, F-05 cash handshake): rider notes the cash they
+    // will hand over (change-making) during in_progress via cash-note+api;
+    // the driver confirms the amount actually received at complete.
+    // Integer paisa; change_due is derived (tendered − rider_payable_bdt).
+    rider_cash_tendered_bdt: integer("rider_cash_tendered_bdt"),
+    rider_cash_noted_at: timestamptz("rider_cash_noted_at"),
+    driver_cash_received_bdt: integer("driver_cash_received_bdt"),
     platform_subsidy_bdt: integer("platform_subsidy_bdt"),
     preference_surcharge_bdt: integer("preference_surcharge_bdt")
       .notNull()
@@ -1108,6 +1135,12 @@ export const pricing = pgTable(
       scale: 2,
     }),
     is_active: boolean("is_active").notNull().default(true),
+    // D1-1 rate-basis pin: pricing is append-versioned. Admin edits NEVER
+    // update a row in place — they insert a successor (supersedes_id points
+    // at the deactivated predecessor) and move the is_active pointer.
+    // ride.pricing_id pins the immutable row, so a mid-ride edit cannot move
+    // a live ride's rate basis. Rollback = move the pointer back.
+    supersedes_id: uuid("supersedes_id").references((): any => pricing.id),
     free_wait_minutes: integer("free_wait_minutes").notNull().default(3),
     wait_fee_per_minute_bdt: integer("wait_fee_per_minute_bdt").notNull().default(200),
     brta_fare_ceiling_bdt: integer("brta_fare_ceiling_bdt"),
@@ -1123,6 +1156,7 @@ export const pricing = pgTable(
       .on(t.zone_id, t.vehicle_type)
       .where(sql`is_active = true`),
     index("pricing_vehicle_type_idx").on(t.vehicle_type),
+    index("pricing_supersedes_idx").on(t.supersedes_id),
   ],
 );
 
@@ -1478,6 +1512,12 @@ export const referrals = pgTable(
   ],
 );
 
+// D1-4 wallet write-ownership: this table is the money event for every
+// drivers.driver_wallet_balance_bdt mutation — the balance update and this
+// row commit in the SAME tx (same-tx balance_after subselect). Writers:
+// cancellationCompensation, paymentRepair, ride tip, ride complete.
+// Divergences (no tx/event row — harden, don't copy): gamification
+// grantAchievement, scheduler job 23. See AGENTS.md § Write Ownership.
 export const driverWalletTransactions = pgTable(
   "driver_wallet_transactions",
   {
@@ -1499,6 +1539,12 @@ export const driverWalletTransactions = pgTable(
   ],
 );
 
+// D1-4 wallet write-ownership: this table is the money event for every
+// users.rider_wallet_balance_bdt mutation — the balance update and this row
+// commit in the SAME tx (same-tx balance_after subselect). Writers:
+// paymentRepair, rider/points (event is point_transactions), ride tip,
+// walletCashback, ride complete, admin fare-disputes + riders refund.
+// See AGENTS.md § Write Ownership.
 export const riderWalletTransactions = pgTable(
   "rider_wallet_transactions",
   {
@@ -3036,7 +3082,10 @@ export const shops = pgTable("shops", {
 
 /**
  * Shop staff membership.
- * offboarding = set removed_at; re-add if ever needed.
+ * offboarding = set removed_at; re-invite mints a NEW row (C6-3: the
+ * live-uniqueness is partial over removed_at IS NULL, so a removed member
+ * can be invited again while a double-invite of an ACTIVE member still
+ * 23505s into the route's 409 already_member).
  */
 export const shopMembers = pgTable("shop_members", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -3048,7 +3097,7 @@ export const shopMembers = pgTable("shop_members", {
   joined_at: timestamptz("joined_at").notNull().defaultNow(),
   removed_at: timestamptz("removed_at"),
 }, (t) => [
-  uniqueIndex("shop_members_unique_idx").on(t.shop_id, t.user_id),
+  uniqueIndex("shop_members_unique_idx").on(t.shop_id, t.user_id).where(sql`${t.removed_at} IS NULL`),
   index("shop_members_user_idx").on(t.user_id),
   index("shop_members_shop_idx").on(t.shop_id),
 ]);
@@ -3220,6 +3269,9 @@ export const workshopRequestStatusEnum = pgEnum("workshop_request_status", [
 export const shopLedgerEntryTypeEnum = pgEnum("shop_ledger_entry_type", [
   "order_revenue",
   "commission",
+  // C6-4: self-delivery fee credit — the shop keeps the customer's delivery
+  // fee when no courier exists (self_delivered, §6.1 exhaustion fallback).
+  "delivery_fee",
   "payout",
   "adjustment",
   "reversal",
@@ -3780,8 +3832,12 @@ export const deliveries = pgTable("deliveries", {
   dropoff_address: text("dropoff_address").notNull(),
   dropoff_lat: numeric("dropoff_lat", { precision: 9, scale: 6 }).notNull(),
   dropoff_lng: numeric("dropoff_lng", { precision: 9, scale: 6 }).notNull(),
-  // §1: dropoff customer ref (the ordering customer)
+  // §1: dropoff customer ref (the ordering customer — on `parcel` legs the
+  // SENDING customer: they track the parcel and receive its pushes).
   dropoff_user_id: uuid("dropoff_user_id").references((): any => users.id),
+  // P2P handover data (migration 0080): sender-entered, courier-read.
+  item_note: text("item_note"),
+  receiver_phone: varchar("receiver_phone", { length: 20 }),
   delivery_fee_bdt: integer("delivery_fee_bdt").notNull(), // paisa, customer-paid at order time
   status: deliveryLegStatusEnum("status").notNull().default("created"),
   // Delivery man OR driver with the Deliveries toggle on (Amendment 2).
@@ -3873,6 +3929,46 @@ export const courierRemittanceDues = pgTable("courier_remittance_dues", {
  * the barrier is unique forever, so a retry after success replays instead
  * of re-charging (TD-15: DB-backed, never in-memory).
  */
+/**
+ * F-39 customer-complaint chain (STAGE D1-FIX, owner ruling 2026-10-17):
+ * a courier flags a short-paying customer against the F-38 short-pay
+ * evidence (the courier_remittance_dues row carrying the short-pay note);
+ * the shop escalates to the platform; an admin bans (users suspension via
+ * the C2-1 gate) or dismisses. Status: open → escalated → banned|dismissed.
+ * Standard posture: RLS forced + zero anon/authenticated grants (migration).
+ * Audit: every admin decision writes an audit_logs row (A3).
+ */
+export const complaintStatusEnum = pgEnum("customer_complaint_status", [
+  "open",
+  "escalated",
+  "banned",
+  "dismissed",
+]);
+
+export const customerComplaints = pgTable("customer_complaints", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  order_id: uuid("order_id").notNull().references((): any => shopOrders.id),
+  leg_id: uuid("leg_id").references((): any => deliveries.id),
+  raised_by_user_id: uuid("raised_by_user_id").notNull().references((): any => users.id),
+  shop_id: uuid("shop_id").notNull().references((): any => shops.id),
+  against_user_id: uuid("against_user_id").notNull().references((): any => users.id),
+  evidence_due_id: uuid("evidence_due_id").references((): any => courierRemittanceDues.id),
+  reason: text("reason").notNull(),
+  courier_note: text("courier_note"),
+  status: complaintStatusEnum("status").notNull().default("open"),
+  escalated_by: uuid("escalated_by").references((): any => users.id),
+  escalated_at: timestamptz("escalated_at"),
+  decided_by: uuid("decided_by").references((): any => users.id),
+  decided_at: timestamptz("decided_at"),
+  decision_reason: text("decision_reason"),
+  created_at: timestamptz("created_at").notNull().defaultNow(),
+  updated_at: timestamptz("updated_at").notNull().defaultNow(),
+}, (t) => [
+  index("customer_complaints_shop_idx").on(t.shop_id, t.status),
+  index("customer_complaints_status_idx").on(t.status, t.created_at),
+  index("customer_complaints_against_idx").on(t.against_user_id),
+]);
+
 export const idempotencyKeys = pgTable("idempotency_keys", {
   id: uuid("id").defaultRandom().primaryKey(),
   route: varchar("route", { length: 120 }).notNull(),

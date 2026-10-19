@@ -1,3 +1,4 @@
+// [public]
 /**
  * GET /api/shop/list?page=1&limit=20&search=...&type=<slug>
  * Public paginated shop listing (active, non-deleted shops).

@@ -127,7 +127,13 @@ describe("POST /api/admin/riders/[id]/suspend", () => {
 
     expect(directUpdates).toHaveLength(1);
     expect(directUpdates[0].table).toBe(users);
-    expect(directUpdates[0].set).toEqual({ account_status: "suspended" });
+    // C2-1: the suspend persists the reason so the 403 account_suspended
+    // surfaces it (plus updated_at). Scoping assertions below are unchanged.
+    expect(directUpdates[0].set).toEqual({
+      account_status: "suspended",
+      suspension_reason: "abuse",
+      updated_at: expect.any(Date),
+    });
     const rendered = new PgDialect().sqlToQuery(directUpdates[0].where as SQL);
     expect(rendered.sql).toContain('"users"."id" = $');
     expect(rendered.sql).toContain('"users"."role" = $');

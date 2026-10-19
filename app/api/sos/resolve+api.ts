@@ -19,6 +19,13 @@ const resolveSchema = z.object({
  * 'acknowledged' status so that admin-acknowledged alerts are not stuck.
  * The scheduler also resolves after the configured timeout automatically
  * (see utils-server/scheduler.ts).
+ *
+ * C9-2: the resolve writes status ONLY — it must not stamp
+ * acknowledged_by/at. Those columns are the ADMIN's ack attribution
+ * (written solely by POST /api/admin/sos-alerts/[id]/ack); stamping the
+ * creator's id here clobbered it, rewriting history to claim the creator
+ * acknowledged their own alert. There is no resolved_by column (DDL
+ * avoided on purpose) — the status transition itself is the record.
  */
 export async function POST(request: Request) {
   try {
@@ -74,13 +81,11 @@ export async function POST(request: Request) {
       );
     }
 
+    // C9-2: status-only write — the admin's acknowledged_by/at attribution
+    // (if any) survives the resolve untouched.
     await db
       .update(sosAlerts)
-      .set({
-        status: "resolved",
-        acknowledged_by: dbUser.id,
-        acknowledged_at: new Date(),
-      })
+      .set({ status: "resolved" })
       .where(eq(sosAlerts.id, alert_id));
 
     logger.info("[sos/resolve] alert resolved", {

@@ -25,6 +25,7 @@ import { parseJsonBody } from "@/lib/parseBody";
 import { VEHICLE_TYPE_ZOD_ENUM } from "@/lib/vehicleTypes";
 import { getStagedPromo, clearStagedPromo } from "@/lib/promoCache";
 import { normalizeBdPhone, isSamePhone, isConsentFresh } from "@/lib/bookForOther";
+import { holdsRiderRole } from "@/lib/riderRole";
 import * as errors from "@/lib/errors";
 
 const requestSchema = z.object({
@@ -95,7 +96,9 @@ export async function POST(request: Request) {
       .limit(1);
     if (!user)
       return Response.json({ error: 'user_not_found', message: 'User not found' }, { status: 404 });
-    if (user.role !== "rider")
+    // C3-8: rider-role MEMBERSHIP (user_roles ∪ legacy users.role) — a
+    // shop_owner-primary account holding the rider role books successfully.
+    if (!(await holdsRiderRole(db, user.id, user.role)))
       return Response.json({ error: 'forbidden', message: 'Access denied' }, { status: 403 });
 
     const parsed = await parseJsonBody(request, requestSchema);

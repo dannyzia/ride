@@ -1,8 +1,9 @@
 import { db } from '@/src/db';
 import { eq, and, inArray, desc } from 'drizzle-orm';
-import { userDevices, notifications } from '@/src/db/schema';
+import { userDevices, notifications, users } from '@/src/db/schema';
 import { logger } from '@/lib/logger';
 import * as errors from '@/lib/errors';
+import { resolveCopy, type NotifyCopyKey } from '@/lib/notifyCopy';
 
 const EXPO_PUSH_URL = 'https://exp.host/--/api/v2/push/send';
 // Expo accepts up to 100 push messages per batch request
@@ -29,6 +30,39 @@ export interface NotificationRequest {
   priority?: 'default' | 'high';
   /** Deterministic dedup key (e.g. `rental_activation:{id}:{userId}`). */
   idempotencyKey?: string;
+  /**
+   * D2-3: server-side copy key. When present, dispatchBatch resolves
+   * title/body from the en/bn dictionary in the recipient's stored
+   * locale. The literal title/body above stay as fallback (dict miss →
+   * literal, never blank).
+   */
+  copyKey?: NotifyCopyKey;
+  /** {var} fill-ins for the copy template (addresses, names, reasons). */
+  copyVars?: Record<string, string | number>;
+}
+
+/**
+ * D2-2 minimal mutes: notification type → users.notification_prefs key.
+ * Only the LIVE classes are mutable (orders / delivery / shop activity);
+ * everything else (sos, emergency, account, payment, promos, incentives,
+ * support, documents, fleet, lead …) always sends. Promo mutes follow
+ * promos (deferred, P5). Prefix-ordered: first match wins.
+ */
+const MUTE_CATEGORY_BY_PREFIX: [prefix: string, prefKey: string][] = [
+  ['shop:order_status', 'order_updates'],
+  ['shop:delivery_', 'delivery_updates'],
+  ['shop:', 'shop_updates'],
+  ['delivery:', 'delivery_updates'],
+  ['ride:', 'ride_updates'],
+  ['rental:', 'order_updates'],
+];
+
+/** Mute pref key for a type, or null when the type always sends. */
+export function mutePrefKeyForType(type: string): string | null {
+  for (const [prefix, prefKey] of MUTE_CATEGORY_BY_PREFIX) {
+    if (type.startsWith(prefix)) return prefKey;
+  }
+  return null;
 }
 
 interface PushOutcome {
@@ -62,7 +96,12 @@ export async function sendNotification(
   title: string,
   body: string,
   data?: Record<string, string>,
-  options?: { priority?: 'default' | 'high'; idempotencyKey?: string },
+  options?: {
+    priority?: 'default' | 'high';
+    idempotencyKey?: string;
+    copyKey?: NotifyCopyKey;
+    copyVars?: Record<string, string | number>;
+  },
 ): Promise<{ sent: number; failed: number }> {
   const results = await dispatchBatch([
     {
@@ -73,6 +112,8 @@ export async function sendNotification(
       data,
       priority: options?.priority,
       idempotencyKey: options?.idempotencyKey,
+      copyKey: options?.copyKey,
+      copyVars: options?.copyVars,
     },
   ]);
   return results[0];
@@ -149,8 +190,39 @@ async function dispatchBatch(
 
     if (pending.length === 0) return results;
 
-    // ── 2. Device tokens, grouped per distinct user (one query per chunk).
+    // ── 1b. D2-2 mutes + D2-3 locale: one users query for the batch's
+    // distinct recipients (prefs + locale travel together). Unmapped types
+    // always send; absent prefs/locale rows default to send + 'en'.
     const userIds = [...new Set(pending.map((r) => r.userId))];
+    const prefsByUser = await fetchPrefsAndLocaleByUser(userIds);
+    const beforeMute = pending.length;
+    pending = pending.filter((r) => {
+      const prefKey = mutePrefKeyForType(r.type);
+      if (!prefKey) return true;
+      const prefs = prefsByUser.get(r.userId)?.prefs ?? {};
+      return (prefs as Record<string, unknown>)[prefKey] !== false;
+    });
+    if (pending.length < beforeMute) {
+      logger.debug('[notify] muted categories suppressed', {
+        count: beforeMute - pending.length,
+      });
+    }
+
+    if (pending.length === 0) return results;
+
+    // ── 1c. D2-3: resolve copyKey titles/bodies in the recipient locale.
+    // A dict miss keeps the caller's literal (never blank).
+    for (const req of pending) {
+      if (!req.copyKey) continue;
+      const locale = prefsByUser.get(req.userId)?.locale;
+      const copy = resolveCopy(req.copyKey, locale, req.copyVars);
+      if (copy) {
+        req.title = copy.title;
+        req.body = copy.body;
+      }
+    }
+
+    // ── 2. Device tokens, grouped per distinct user (one query per chunk).
     const tokensByUser = await fetchTokensByUser(userIds);
 
     // ── 3. One multi-row INSERT records the batch's sent-keys (dedup gate).
@@ -302,6 +374,42 @@ async function dispatchBatch(
   return results;
 }
 
+/**
+ * D2-2/D2-3 grouped recipient lookup: notification_prefs + locale per
+ * user (one query per chunk). Missing rows default to {} / 'en' downstream.
+ */
+async function fetchPrefsAndLocaleByUser(
+  userIds: string[],
+): Promise<Map<string, { prefs: unknown; locale: unknown }>> {
+  const map = new Map<string, { prefs: unknown; locale: unknown }>();
+  for (const id of userIds) map.set(id, { prefs: {}, locale: 'en' });
+  try {
+    for (let i = 0; i < userIds.length; i += QUERY_CHUNK_SIZE) {
+      const rows = await db
+        .select({
+          id: users.id,
+          notification_prefs: users.notification_prefs,
+          locale: users.locale,
+        })
+        .from(users)
+        .where(inArray(users.id, userIds.slice(i, i + QUERY_CHUNK_SIZE)));
+      for (const row of rows) {
+        map.set(row.id, {
+          prefs: (row.notification_prefs as Record<string, unknown> | null) ?? {},
+          locale: (row.locale as string | null) ?? 'en',
+        });
+      }
+    }
+  } catch (err: unknown) {
+    // Prefs/locale are best-effort gates: a lookup failure must never
+    // silence the batch — every recipient keeps the send + 'en' default.
+    logger.warn('[notify] prefs/locale lookup failed, sending unmuted', {
+      error: errors.getErrorMessage(err),
+    });
+  }
+  return map;
+}
+
 /** Grouped device lookup: tokens per user, most-recently-active first. */
 async function fetchTokensByUser(userIds: string[]): Promise<Map<string, string[]>> {
   const map = new Map<string, string[]>();
@@ -379,16 +487,26 @@ async function runWithConcurrency<T, R>(
  * Wire notification calls into ride lifecycle events.
  * Call from API routes after ride status transitions.
  */
-export function notifyRideMatched(riderId: string, _driverId: string): void {
-  sendNotification(riderId, 'ride:matched', 'Driver Found', 'Your driver is on the way!').catch(() => {});
+export function notifyRideMatched(riderId: string, _driverId: string, rideId?: string): void {
+  sendNotification(riderId, 'ride:matched', 'Driver Found', 'Your driver is on the way!', rideId ? { ride_id: rideId } : undefined, {
+    // D2-5: match-class key — one push per (ride, event), ever.
+    ...(rideId ? { idempotencyKey: `ride:${rideId}:matched` } : {}),
+    copyKey: 'ride_matched',
+  }).catch(() => {});
 }
 
-export function notifyRideCompleted(riderId: string, _driverId: string): void {
-  sendNotification(riderId, 'ride:completed', 'Ride Complete', 'Thanks for riding with us! Rate your driver.').catch(() => {});
+export function notifyRideCompleted(riderId: string, _driverId: string, rideId?: string): void {
+  sendNotification(riderId, 'ride:completed', 'Ride Complete', 'Thanks for riding with us! Rate your driver.', rideId ? { ride_id: rideId } : undefined, {
+    ...(rideId ? { idempotencyKey: `ride:${rideId}:completed` } : {}),
+    copyKey: 'ride_completed',
+  }).catch(() => {});
 }
 
-export function notifyDriverArrived(riderId: string): void {
-  sendNotification(riderId, 'driver:arrived', 'Driver Arrived', 'Your driver has arrived at the pickup location.').catch(() => {});
+export function notifyDriverArrived(riderId: string, rideId?: string): void {
+  sendNotification(riderId, 'driver:arrived', 'Driver Arrived', 'Your driver has arrived at the pickup location.', rideId ? { ride_id: rideId } : undefined, {
+    ...(rideId ? { idempotencyKey: `ride:${rideId}:arrived` } : {}),
+    copyKey: 'driver_arrived',
+  }).catch(() => {});
 }
 
 /**

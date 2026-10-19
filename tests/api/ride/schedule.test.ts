@@ -185,13 +185,18 @@ describe("POST /api/ride/schedule — gates", () => {
   });
 
   test("403 forbidden for non-riders", async () => {
+    // C3-8: the gate is membership (user_roles ∪ users.role). The driver
+    // holds no rider membership, so the 2nd select (membership) is empty.
+    let selectCalls = 0;
     (db.select as jest.Mock).mockImplementation(() => {
+      const rows = selectCalls === 0 ? [{ id: USER_ID, role: "driver", phone: "+8801700000000" }] : [];
+      selectCalls++;
       const chain: any = {
         from: () => chain,
         where: () => chain,
-        limit: async () => [{ id: USER_ID, role: "driver", phone: "+8801700000000" }],
+        limit: async () => rows,
         then: (res: (v: unknown) => void, rej: (e: unknown) => void) =>
-          Promise.resolve([{ id: USER_ID, role: "driver", phone: "+8801700000000" }]).then(res, rej),
+          Promise.resolve(rows).then(res, rej),
       };
       return chain;
     });

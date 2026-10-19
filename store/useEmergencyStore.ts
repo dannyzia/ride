@@ -15,6 +15,10 @@ export interface EmergencyRequest {
   requires_paramedic: boolean;
   service_level: string | null;
   status: string;
+  // C9-1: F-19 60s ack-timeout escalation stamp (sweeper writes it ONCE,
+  // re-broadcasts wider, notifies the requester). Present in the detail GET
+  // payload; the requester timeline keys its "searching wider" entry on it.
+  escalated_at?: string | null;
   expires_at: string;
   created_at: string;
   accepted_cert_id?: string | null;

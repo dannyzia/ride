@@ -54,10 +54,14 @@ async function seed() {
       ('delivery_offer_window_seconds',        '45',    now()),
       ('delivery_max_suggestions',             '3',     now()),
       ('cod_remittance_overdue_days',          '7',     now()),
-      ('cod_dispatch_hold_threshold_bdt',      '0',     now())
+      ('cod_dispatch_hold_threshold_bdt',      '0',     now()),
+      -- D9-2 (skeptic §D9): money-movement master switch. Default false —
+      -- priced package/topup/pass purchases 409 until month-3 payments
+      -- launch. One flag (PATCH /api/admin/config) restores everything.
+      ('payments_enabled',                     'false', now())
     ON CONFLICT (key) DO NOTHING;
   `);
-  console.log("platform_config seeded (21 keys)");
+  console.log("platform_config seeded (22 keys)");
   await client.end();
 }
 seed().catch(console.error);

@@ -27,6 +27,37 @@ export function getErrorStatus(err: unknown): number | undefined {
   return typeof status === "number" ? status : undefined;
 }
 
+/** C2-1: map a guard-thrown account error to its HTTP body + status.
+ * Returns null when the error carries no account machine code. */
+export function authErrorBody(err: unknown): {
+  status: number;
+  body: { error: string; message: string; reason?: string | null };
+} | null {
+  const code = getErrorCode(err);
+  const status = getErrorStatus(err);
+  if (code === "account_suspended" && status === 403) {
+    const reason =
+      err && typeof err === "object" && "reason" in err
+        ? ((err as { reason?: unknown }).reason as string | null)
+        : null;
+    return {
+      status: 403,
+      body: {
+        error: "account_suspended",
+        message: "Account suspended",
+        reason: typeof reason === "string" ? reason : null,
+      },
+    };
+  }
+  if (code === "account_deleted" && status === 401) {
+    return {
+      status: 401,
+      body: { error: "account_deleted", message: "Account deleted" },
+    };
+  }
+  return null;
+}
+
 /** Postgres error code (e.g. "23505" unique violation). */
 export function getErrorCode(err: unknown): string | undefined {
   const code = asErrorLike(err)?.code;

@@ -1,45 +1,50 @@
 import { db } from "@/src/db";
-import { users, rides, riderAddresses } from "@/src/db/schema";
+import { users } from "@/src/db/schema";
 import { eq } from "drizzle-orm";
-import { verifySupabaseToken } from "@/lib/auth";
+import { resolveToken } from "@/lib/auth";
 import { parseJsonBody } from "@/lib/parseBody";
 import { logger } from "@/lib/logger";
 import { z } from "zod";
 import * as errors from "@/lib/errors";
+import { checkDeleteDues, scrubAccountTx } from "@/lib/accountDelete";
 
 const deleteDataSchema = z.object({
   confirm: z.literal("DELETE MY DATA").optional(),
 });
 
+/**
+ * C2-4 (STAGE C2-FIX) — legacy alias of the unified delete. The customer
+ * delete-data screen still posts here; it runs the SAME dues precondition +
+ * scrub writer as DELETE /api/user/account (single implementation in
+ * lib/accountDelete.ts), so there is one delete semantic, not two.
+ */
 export async function POST(request: Request) {
   try {
-    const user = await verifySupabaseToken(request);
+    const supabaseUser = await resolveToken(request);
 
-    const [dbUser] = await db.select({ id: users.id }).from(users).where(eq(users.auth_uid, user.id)).limit(1);
+    const [dbUser] = await db.select({ id: users.id, deleted_at: users.deleted_at })
+      .from(users).where(eq(users.auth_uid, supabaseUser.id)).limit(1);
     if (!dbUser) return Response.json({ error: 'user_not_found', message: 'User not found' }, { status: 404 });
+    if (dbUser.deleted_at != null) {
+      return Response.json({ success: true, already_deleted: true }, { status: 200 });
+    }
 
     const parsed = await parseJsonBody(request, deleteDataSchema);
     if (!parsed.ok) return parsed.response;
 
-    await db.transaction(async (tx) => {
-      await tx.update(users)
-        .set({
-          name: "[deleted]",
-          phone: "[deleted]",
-          email: null,
-          profile_image_url: null,
-          updated_at: new Date(),
-        })
-        .where(eq(users.id, dbUser.id));
-
-      await tx.update(riderAddresses)
-        .set({ address: "[deleted]", details: null, deleted_at: new Date(), updated_at: new Date() })
-        .where(eq(riderAddresses.user_id, dbUser.id));
-
-      await tx.update(rides)
-        .set({ origin_address: "[deleted]", destination_address: "[deleted]" })
-        .where(eq(rides.user_id, dbUser.id));
+    const failure = await db.transaction(async (tx) => {
+      const dues = await checkDeleteDues(tx, dbUser.id);
+      if (dues) return dues;
+      await scrubAccountTx(tx, dbUser.id);
+      return null;
     });
+
+    if (failure) {
+      return Response.json(
+        { error: 'dues_outstanding', message: 'Outstanding dues must be settled before deletion', kind: failure.kind, amount_bdt: failure.amount_bdt },
+        { status: 409 },
+      );
+    }
 
     return Response.json({ success: true }, { status: 200 });
 

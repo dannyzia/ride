@@ -44,9 +44,9 @@ const actionSchema = z
     // fail: reason (required for fail).
     failure_reason: z.string().min(1).max(500).optional(),
   })
-  .refine((d) => !(d.action === 'pickup') || !!d.code, {
-    message: 'code is required for pickup',
-  })
+  // No pickup-code refine: shop legs enforce the F-11 code in-route
+  // (pickup_code_mismatch); P2P parcel legs have no code — direct sender
+  // handover.
   .refine((d) => !(d.action === 'fail') || !!d.failure_reason, {
     message: 'failure_reason is required for fail',
   });
@@ -136,50 +136,63 @@ export async function POST(request: Request, { id }: { id: string }) {
           );
           return;
         }
-        if (!order) {
-          guard = Response.json({ error: 'no_order', message: 'Handover codes are shop-order only' }, { status: 409 });
-          return;
-        }
-        // F-11 handover: the courier must present the shop's pickup code.
-        if (parsed.data.code !== order.pickup_code) {
-          guard = Response.json({ error: 'pickup_code_mismatch', message: 'Wrong pickup code' }, { status: 409 });
-          return;
-        }
-        // The shop must have marked the item ready first (§6.1 step 5–6).
-        if (order.status !== 'ready_for_pickup') {
-          guard = Response.json({ error: 'order_not_ready', message: 'Shop has not marked the item ready' }, { status: 409 });
-          return;
+        // P2P parcel legs (no order): direct sender handover — no code, no
+        // readiness gate. Shop legs keep the F-11 code + ready gates.
+        if (order) {
+          // F-11 handover: the courier must present the shop's pickup code.
+          if (parsed.data.code !== order.pickup_code) {
+            guard = Response.json({ error: 'pickup_code_mismatch', message: 'Wrong pickup code' }, { status: 409 });
+            return;
+          }
+          // The shop must have marked the item ready first (§6.1 step 5–6).
+          if (order.status !== 'ready_for_pickup') {
+            guard = Response.json({ error: 'order_not_ready', message: 'Shop has not marked the item ready' }, { status: 409 });
+            return;
+          }
         }
         await tx
           .update(deliveries)
           .set({ status: 'picked_up', picked_up_at: now, updated_at: now })
           .where(and(eq(deliveries.id, leg.id), eq(deliveries.status, 'accepted')));
-        await tx
-          .update(shopOrders)
-          .set({ status: 'picked_up', picked_up_at: now, updated_at: now })
-          .where(and(eq(shopOrders.id, order.id), eq(shopOrders.status, 'ready_for_pickup')));
+        if (order) {
+          await tx
+            .update(shopOrders)
+            .set({ status: 'picked_up', picked_up_at: now, updated_at: now })
+            .where(and(eq(shopOrders.id, order.id), eq(shopOrders.status, 'ready_for_pickup')));
 
-        // §6.1 step 6: shop notified (handed over) + customer notified.
-        for (const userId of await shopOrderRecipients(tx, order.shop_id)) {
+          // §6.1 step 6: shop notified (handed over) + customer notified.
+          for (const userId of await shopOrderRecipients(tx, order.shop_id)) {
+            notifies.push({
+              userId,
+              type: 'shop:order_status',
+              title: 'Item handed over',
+              body: 'The courier picked up the item.',
+              data: { order_id: order.id, status: 'picked_up' },
+              priority: 'high',
+              idempotencyKey: `shop_picked_up:${order.id}:${userId}`,
+            });
+          }
           notifies.push({
-            userId,
+            userId: order.rider_user_id,
             type: 'shop:order_status',
-            title: 'Item handed over',
-            body: 'The courier picked up the item.',
+            title: 'Order picked up',
+            body: 'The courier picked up your order and is on the way.',
             data: { order_id: order.id, status: 'picked_up' },
             priority: 'high',
-            idempotencyKey: `shop_picked_up:${order.id}:${userId}`,
+            idempotencyKey: `shop_order_status:${order.id}:picked_up:${order.rider_user_id}`,
+          });
+        } else if (leg.source_vertical === 'parcel' && leg.dropoff_user_id) {
+          // P2P pickup: the sender tracks the parcel on dropoff_user_id.
+          notifies.push({
+            userId: leg.dropoff_user_id,
+            type: 'delivery:status',
+            title: 'Parcel picked up',
+            body: 'The courier picked up your parcel and is on the way.',
+            data: { leg_id: leg.id, parcel_id: leg.order_id, status: 'picked_up' },
+            priority: 'high',
+            idempotencyKey: `delivery_status:${leg.id}:picked_up`,
           });
         }
-        notifies.push({
-          userId: order.rider_user_id,
-          type: 'shop:order_status',
-          title: 'Order picked up',
-          body: 'The courier picked up your order and is on the way.',
-          data: { order_id: order.id, status: 'picked_up' },
-          priority: 'high',
-          idempotencyKey: `shop_order_status:${order.id}:picked_up:${order.rider_user_id}`,
-        });
         return;
       }
 
@@ -192,6 +205,7 @@ export async function POST(request: Request, { id }: { id: string }) {
           return;
         }
         // F-15 proof: receiver OTP (shop-order legs) OR a proof photo.
+        // P2P parcel legs have no OTP machinery — the photo is mandatory.
         if (order) {
           const otpOk = !!parsed.data.otp && parsed.data.otp === order.delivery_otp;
           const photoOk = !!parsed.data.proof_photo_url;
@@ -202,10 +216,17 @@ export async function POST(request: Request, { id }: { id: string }) {
             );
             return;
           }
+        } else if (leg.source_vertical === 'parcel' && !parsed.data.proof_photo_url) {
+          guard = Response.json(
+            { error: 'delivery_proof_required', message: 'Attach a proof photo for parcel delivery' },
+            { status: 400 },
+          );
+          return;
         }
         // F-38: amount collected is mandatory COD evidence (short-pay lands on
-        // the remittance due as recorded shortfall).
-        if (order && parsed.data.amount_collected_bdt === undefined) {
+        // the remittance due as recorded shortfall). P2P legs record the
+        // fee cash the receiver paid.
+        if (parsed.data.amount_collected_bdt === undefined) {
           guard = Response.json(
             { error: 'amount_collected_required', message: 'Record the cash collected' },
             { status: 400 },
@@ -230,14 +251,17 @@ export async function POST(request: Request, { id }: { id: string }) {
             .update(shopOrders)
             .set({ status: 'delivered', delivered_at: now, updated_at: now })
             .where(and(eq(shopOrders.id, order.id), eq(shopOrders.status, 'picked_up')));
-          // §12 money: shop revenue credit + courier earnings + COD due, ONE tx.
+          // §12 money: shop revenue credit + courier settlement, ONE tx.
           await settleShopOrder(tx, order, { note: 'delivered (courier)' });
-          settlement.value = await settleDeliveryLeg(tx, {
-            legId: leg.id,
-            orderId: order.id,
-            courierUserId: auth.dbUser.id,
-          });
         }
+        // Courier settlement, BOTH families: for P2P legs orderId is the
+        // parcel consignment uuid — settleDeliveryLeg credits the earnings
+        // and skips the remittance due (no shop to remit to).
+        settlement.value = await settleDeliveryLeg(tx, {
+          legId: leg.id,
+          orderId: order ? order.id : leg.order_id,
+          courierUserId: auth.dbUser.id,
+        });
 
         // F-15 trust signal: delivery-men complete counters (drivers keep
         // ride counters separate).
@@ -268,6 +292,17 @@ export async function POST(request: Request, { id }: { id: string }) {
             data: { order_id: order.id, status: 'delivered' },
             priority: 'high',
             idempotencyKey: `shop_order_status:${order.id}:delivered:${order.rider_user_id}`,
+          });
+        } else if (leg.source_vertical === 'parcel' && leg.dropoff_user_id) {
+          // P2P delivered: the sender (dropoff_user_id) closes the loop.
+          notifies.push({
+            userId: leg.dropoff_user_id,
+            type: 'delivery:status',
+            title: 'Parcel delivered',
+            body: 'Your parcel was delivered.',
+            data: { leg_id: leg.id, parcel_id: leg.order_id, status: 'delivered' },
+            priority: 'high',
+            idempotencyKey: `delivery_status:${leg.id}:delivered`,
           });
         }
         return;
@@ -307,6 +342,17 @@ export async function POST(request: Request, { id }: { id: string }) {
           data: { order_id: order.id, status: 'delivery_failed' },
           priority: 'high',
           idempotencyKey: `shop_order_status:${order.id}:delivery_failed:${order.rider_user_id}`,
+        });
+      } else if (leg.source_vertical === 'parcel' && leg.dropoff_user_id) {
+        // P2P fail: no shop fallback exists — tell the sender plainly.
+        notifies.push({
+          userId: leg.dropoff_user_id,
+          type: 'delivery:status',
+          title: 'Parcel delivery failed',
+          body: 'The courier could not deliver your parcel. Place it again to retry.',
+          data: { leg_id: leg.id, parcel_id: leg.order_id, status: 'failed' },
+          priority: 'high',
+          idempotencyKey: `delivery_status:${leg.id}:failed`,
         });
       }
     });

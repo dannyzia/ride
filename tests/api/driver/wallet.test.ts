@@ -22,11 +22,18 @@ jest.mock("@/lib/paymentEvents", () => ({
   initiatePortposPayment: jest.fn(),
 }));
 
+// D9-2: money-movement master switch — ON here so the pre-existing topup
+// tests exercise the validation/identity branches, not the payments gate.
+jest.mock("@/lib/platformConfig", () => ({
+  getPlan05Bool: jest.fn(async () => true),
+}));
+
 import { db } from "@/src/db";
 import { verifySupabaseToken } from "@/lib/auth";
 import { initiatePortposPayment } from "@/lib/paymentEvents";
 import { GET } from "@/app/api/driver/wallet+api";
 import { POST } from "@/app/api/driver/wallet/topup+api";
+import { getPlan05Bool } from "@/lib/platformConfig";
 
 const SUPABASE_UID = "11111111-1111-4111-a111-111111111111";
 const USER_ID = "22222222-2222-4222-8222-222222222222";
@@ -66,6 +73,7 @@ function mockSelectQueue(queue: Row[][]): void {
 
 beforeEach(() => {
   jest.clearAllMocks();
+  (getPlan05Bool as jest.Mock).mockResolvedValue(true);
   (verifySupabaseToken as jest.Mock).mockResolvedValue({ id: SUPABASE_UID });
   (initiatePortposPayment as jest.Mock).mockResolvedValue({
     payment_url: "https://portpos/checkout",
@@ -145,6 +153,15 @@ describe("POST /api/driver/wallet/topup", () => {
     const res = await POST(request({ amount_bdt: 9_999 }));
     expect(res.status).toBe(400);
     expect((await getJson(res)).error).toBe("validation_error");
+  });
+
+  test("D9-2: payments_enabled=false → 409 payments_not_enabled, no payment initiated", async () => {
+    (getPlan05Bool as jest.Mock).mockResolvedValueOnce(false);
+    mockSelectQueue([[{ id: USER_ID }], [{ id: DRIVER_ID }]]);
+    const res = await POST(request(VALID));
+    expect(res.status).toBe(409);
+    expect((await getJson(res)).error).toBe("payments_not_enabled");
+    expect(initiatePortposPayment).not.toHaveBeenCalled();
   });
 
   test("success: payment_events owner called with user_id + driver_id + purpose wallet_topup", async () => {

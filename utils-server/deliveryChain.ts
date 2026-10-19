@@ -8,10 +8,8 @@ import {
   deliveryRequests,
   deliveryBids,
   deliveryLegs,
-  couriers,
 } from '../src/db/schema';
-import { eq, and, sql, desc } from 'drizzle-orm';
-import { logger } from '../lib/logger';
+import { eq, and } from 'drizzle-orm';
 
 /**
  * Create a delivery leg after bid acceptance (§B.0 — called from API accept-bid tx).
@@ -25,46 +23,10 @@ export async function createLeg(requestId: string, courierUserId: string): Promi
   });
 }
 
-/**
- * Get eligible couriers for a delivery request broadcast.
- * Parcel: active drivers with matching vehicle type, online, within k-ring.
- * Food: active food couriers, online (last_seen_at within 90s), within k-ring.
- */
-export async function getEligibleCouriers(
-  requestId: string,
-): Promise<Array<{ user_id: string; courier_type: string; h3_cell?: string }>> {
-  const [req] = await db
-    .select()
-    .from(deliveryRequests)
-    .where(eq(deliveryRequests.id, requestId))
-    .limit(1);
-
-  if (!req || req.status !== 'pending') return [];
-
-  // Get all active couriers of the right type
-  const courierType = req.required_vehicle_type ? 'parcel' : 'food';
-
-  const eligible = await db
-    .select({
-      user_id: couriers.user_id,
-      courier_type: couriers.courier_type,
-      last_lat: couriers.last_lat,
-      last_lng: couriers.last_lng,
-    })
-    .from(couriers)
-    .where(and(
-      eq(couriers.courier_type, courierType),
-      eq(couriers.status, 'active'),
-      eq(couriers.is_online, true),
-    ));
-
-  // In production, filter by k-ring proximity using H3.
-  // For now, return all eligible couriers (geo filtering is a follow-up).
-  return eligible.map((c) => ({
-    user_id: c.user_id,
-    courier_type: c.courier_type,
-  }));
-}
+// B5-1 (plan 27 §6.1): getEligibleCouriers deleted — dead since the
+// courier-bidding broadcast died (no callers; the job-55 broadcast arm +
+// WS lane are gone). Eligibility now lives in lib/deliveryDispatch.ts
+// (sequential §6.1 dispatch over the deliveries legs table).
 
 /**
  * Cancel a delivery request (customer-initiated).

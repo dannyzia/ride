@@ -3,6 +3,7 @@
  * Alerts, Subscription, Settings, mode switching.
  * Pattern A theming.
  */
+import { useEffect, useState } from "react";
 import { View, Text, TouchableOpacity, ScrollView } from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useRouter } from "expo-router";
@@ -11,6 +12,8 @@ import { useIsDark } from "@/lib/useAppearance";
 import { useFleetStore } from "@/store/useFleetStore";
 import FleetScreen from "@/components/fleet/FleetScreen";
 import FleetTabBar from "@/components/fleet/FleetTabBar";
+import { getAuthHeaders } from "@/lib/fleetAuth";
+import { logger } from "@/lib/logger";
 
 function MenuItem({ icon, label, onPress, isDark, danger }: {
   icon: keyof typeof Ionicons.glyphMap; label: string; onPress: () => void; isDark: boolean; danger?: boolean;
@@ -37,6 +40,33 @@ export default function FleetMore() {
   const exitFleet = useFleetStore((s) => s.exitFleet);
   const textPrimary = isDark ? colors.textPrimaryDark : colors.textPrimaryLight;
   const textSecondary = isDark ? colors.textSecondaryDark : colors.textSecondaryLight;
+  // C8-4: "Switch to Driver" is role-aware — the account may hold no driver
+  // capability at all (pure business-fleet owner). heldRoles comes from the
+  // authenticated GET /api/user/roles (the login-as chooser source). While
+  // unknown (loading or fetch failure) the button stays visible to preserve
+  // the pre-C8-4 behavior; it hides only once we KNOW no active driver
+  // role is held. Rider is the universal fallback surface — always shown.
+  const [holdsDriver, setHoldsDriver] = useState<boolean | null>(null);
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        const headers = await getAuthHeaders();
+        if (!headers) return;
+        const serverUrl = process.env.EXPO_PUBLIC_SERVER_URL ?? "";
+        const res = await fetch(`${serverUrl}/api/user/roles`, { headers });
+        if (!res.ok) return;
+        const data = await res.json();
+        const roles = Array.isArray(data.roles) ? data.roles : [];
+        if (active) {
+          setHoldsDriver(roles.some((r: { role: string; status: string }) => r.role === "driver" && r.status === "active"));
+        }
+      } catch (err) {
+        logger.warn("[fleet-more] held-roles fetch failed", err);
+      }
+    })();
+    return () => { active = false; };
+  }, []);
 
   return (
     <FleetScreen title="More" scrollable={false}>
@@ -54,11 +84,14 @@ export default function FleetMore() {
         <MenuItem icon="storefront" label="Shops" onPress={() => router.push("/(main)/(customer)/(shops)")} isDark={isDark} />
         <MenuItem icon="notifications" label="Alerts" onPress={() => router.push("/(main)/(fleet)/alerts")} isDark={isDark} />
         <MenuItem icon="card" label="Subscription" onPress={() => router.push("/(main)/(fleet)/subscription")} isDark={isDark} />
-        <MenuItem icon="build" label="Maintenance" onPress={() => {}} isDark={isDark} />
-        <MenuItem icon="git-network" label="Integrations" onPress={() => {}} isDark={isDark} />
+        {/* C8-4: Maintenance + Integrations were dead buttons (empty onPress,
+            screens ship with Stage 1 at the earliest) — removed per the Copy
+            Truth rule rather than left tappable-to-nothing. */}
 
         <Text style={{ fontFamily: "Jakarta-Bold", fontSize: 13, color: textSecondary, textTransform: "uppercase", letterSpacing: 0.5, marginTop: 16, marginBottom: 8 }}>Switch Mode</Text>
-        <MenuItem icon="bicycle" label="Switch to Driver" onPress={() => { exitFleet("DRIVER"); router.replace("/(main)/(rider)/d"); }} isDark={isDark} />
+        {holdsDriver === false ? null : (
+          <MenuItem icon="bicycle" label="Switch to Driver" onPress={() => { exitFleet("DRIVER"); router.replace("/(main)/(rider)/d"); }} isDark={isDark} />
+        )}
         <MenuItem icon="person" label="Switch to Rider" onPress={() => { exitFleet("RIDER"); router.replace("/(main)/(customer)"); }} isDark={isDark} />
       </ScrollView>
       <FleetTabBar />

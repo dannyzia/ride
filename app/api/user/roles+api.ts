@@ -13,8 +13,8 @@
  * not admin-scoped).
  */
 import { db } from '@/src/db';
-import { shopTypes } from '@/src/db/schema';
-import { eq, and } from 'drizzle-orm';
+import { shopMembers, shopTypes } from '@/src/db/schema';
+import { eq, and, isNull } from 'drizzle-orm';
 import { z } from 'zod';
 import { verifySupabaseToken } from '@/lib/auth';
 import { supabaseAdmin } from '@/lib/supabaseServer';
@@ -72,7 +72,27 @@ export async function GET(request: Request) {
   try {
     const userId = await callerUserId(request);
     const roles = await heldRoles(userId);
-    return Response.json({ roles, launch_roles: LAUNCH_ROLES });
+    // Staff lane (Flow 15): invited staff hold no user_roles row — surface
+    // a synthetic chooser entry when an active shop_members row exists.
+    // Shaped like a HeldRole at the JSON level; never written to user_roles.
+    const [staffRow] = await db
+      .select({ id: shopMembers.id })
+      .from(shopMembers)
+      .where(and(eq(shopMembers.user_id, userId), isNull(shopMembers.removed_at)))
+      .limit(1);
+    const entries: unknown[] = [...roles];
+    if (staffRow) {
+      entries.push({
+        role: 'shop_staff',
+        status: 'active',
+        reason: null,
+        is_primary: false,
+        submitted_at: null,
+        resubmit_count: 0,
+        reject: null,
+      });
+    }
+    return Response.json({ roles: entries, launch_roles: LAUNCH_ROLES });
   } catch (err: unknown) {
     const status = errors.getErrorStatus(err);
     if (status === 401)

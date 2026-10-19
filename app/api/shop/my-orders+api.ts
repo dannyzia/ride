@@ -7,14 +7,14 @@
  */
 import { db } from "@/src/db";
 import { shopOrders, shops } from "@/src/db/schema";
-import { requireAnyRole } from "@/lib/auth";
+import { requireMemberRoles } from "@/lib/auth";
 import { logger } from "@/lib/logger";
 import * as errors from "@/lib/errors";
 import { eq, and, desc } from "drizzle-orm";
 
 export async function GET(request: Request) {
   try {
-    const { dbUser } = await requireAnyRole(["rider", "driver"])(request);
+    const { dbUser } = await requireMemberRoles(["rider", "driver"])(request);
 
     const url = new URL(request.url);
     const shopId = url.searchParams.get("shop_id");

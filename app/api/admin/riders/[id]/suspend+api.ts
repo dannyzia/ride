@@ -20,8 +20,13 @@ export async function POST(request: Request, { id }: { id: string }) {
     const parsed = await parseJsonBody(request, suspendSchema);
     if (!parsed.ok) return parsed.response;
 
+    // C2-1: persist the reason so the 403 account_suspended surfaces it.
     await db.update(users)
-      .set({ account_status: 'suspended' })
+      .set({
+        account_status: 'suspended',
+        suspension_reason: parsed.data.reason ?? null,
+        updated_at: new Date(),
+      })
       .where(and(eq(users.id, id), eq(users.role, 'rider')));
 
     return Response.json({ success: true });

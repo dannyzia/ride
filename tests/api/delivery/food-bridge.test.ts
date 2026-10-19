@@ -154,6 +154,12 @@ jest.mock("@/lib/auth", () => ({
       supabaseUser: { id: "auth-rider" },
       dbUser: { id: riderId, role: "rider" },
     }),
+  requireMemberRoles:
+    (_roles: string[]) =>
+    async () => ({
+      supabaseUser: { id: "auth-rider" },
+      dbUser: { id: riderId, role: "rider" },
+    }),
   verifySupabaseToken: jest.fn(async () => ({ id: "auth-rider" })),
 }));
 

@@ -73,7 +73,7 @@ jest.mock("../rentalDispatchChain", () => ({
 jest.mock("../deliveryHandler", () => ({ sweepStaleCouriers: jest.fn(async () => 0) }));
 jest.mock("../activationJobs", () => ({
   activateRentalRequests: jest.fn(async () => ({ count: 0, notifyQueue: [] })),
-  activateDeliveryRequests: jest.fn(async () => ({ count: 0, notifyQueue: [] })),
+  // B5-1: activateDeliveryRequests deleted (job 55 retired) — no mock.
   dispatchNotifyQueue: jest.fn(async () => undefined),
 }));
 jest.mock("../emergencyChain", () => ({ sweepExpiredEmergencies: jest.fn(async () => 0) }));

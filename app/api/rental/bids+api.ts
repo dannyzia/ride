@@ -64,6 +64,21 @@ export async function POST(request: Request) {
       );
     }
 
+    // C8-3: bid writes are OWNER|MANAGER|DISPATCHER only (the fleet-ack
+    // precedent + F-18's named personas). ACCOUNTANT/VIEWER memberships pass
+    // the marketplace gate above but may not bid — 403, same shape as the
+    // withdraw/complete routes' requireFleetMember rejection.
+    const biddingMembership = memberships.find((m) => m.fleet_id === fleetId);
+    if (
+      !biddingMembership ||
+      !["OWNER", "MANAGER", "DISPATCHER"].includes(biddingMembership.role)
+    ) {
+      return Response.json(
+        { error: "forbidden", message: "Bidding requires an OWNER, MANAGER, or DISPATCHER fleet role" },
+        { status: 403 },
+      );
+    }
+
     // Verify request exists and is bid-eligible
     const reqRows = await db
       .select()

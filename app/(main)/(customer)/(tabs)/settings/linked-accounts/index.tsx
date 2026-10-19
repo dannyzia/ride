@@ -90,7 +90,7 @@ export default function SettingsLinkedAccounts() {
                 style={{ backgroundColor: surfaceBg, borderColor }}
                 disabled
                testID="customer.settings.linked-accounts.el-1">
-                <Text className="text-[14px] font-Jakarta" style={{ color: textSecondary }}>{t('linked_accounts.add_account')}</Text>
+                <Text className="text-[14px] font-Jakarta" style={{ color: textSecondary }}>{t('linked_accounts.add_account_dormant')}</Text>
               </TouchableOpacity>
             </View>
           </View>

@@ -63,6 +63,10 @@ interface ShopOrder {
   fulfillment: string;
   prep_minutes: number | null;
   created_at: string;
+  pickup_code: string | null;
+  // C5/C6-FIX: live courier leg on this order — the Delivered button
+  // disappears while set (the courier path owns completion).
+  has_live_leg: boolean;
 }
 
 interface PlanRow {
@@ -561,6 +565,15 @@ export default function ShopDashboardScreen() {
                   ? ` · ${t("shop.dashboard.prep_est", { n: o.prep_minutes })}`
                   : ""}
               </Text>
+              {/* C7-1: shop→courier handover code — rendered whenever the
+                  order carries one (courier_assigned / picked_up). */}
+              {o.pickup_code ? (
+                <View className="flex-row items-center rounded-lg px-3 py-2 mb-3" style={{ backgroundColor: colors.primary + "1A" }}>
+                  <Text className="text-[12px] font-JakartaBold" style={{ color: C.text }}>
+                    {t("shop.dashboard.pickup_code", { code: o.pickup_code })}
+                  </Text>
+                </View>
+              ) : null}
 
               {o.status === "pending" ? (
                 <View className="flex-row gap-2">
@@ -620,14 +633,39 @@ export default function ShopDashboardScreen() {
                 </TouchableOpacity>
               ) : null}
 
-              {o.status === "out_for_delivery" ? (
+              {/* C5/C6-FIX unified delivered-transition: the courier path
+                  owns completion for courier orders (no Delivered button
+                  while a live leg exists — the server 403s around it too).
+                  Pickup-fulfillment orders complete here via self_delivered
+                  at the counter handover. */}
+              {o.has_live_leg && (o.status === "out_for_delivery" || o.status === "picked_up" || o.status === "courier_assigned" || o.status === "dispatched") ? (
+                <View className="rounded-lg px-3 py-2 items-center" style={{ borderWidth: 1, borderColor: C.border }}>
+                  <Text className="text-[12px]" style={{ color: C.sub }}>
+                    {t("shop.dashboard.courier_delivering")}
+                  </Text>
+                </View>
+              ) : null}
+              {!o.has_live_leg && o.fulfillment === "pickup" && (o.status === "ready_for_pickup" || o.status === "out_for_delivery") ? (
+                <TouchableOpacity
+                  className="rounded-xl py-2 items-center"
+                  style={{ backgroundColor: colors.primary }}
+                  disabled={actingId === o.id}
+                  onPress={() => void patchStatus(o, "self_delivered")}
+                 
+                 testID="shop-owner.patch-status-3">
+                  <Text className="text-[12px]" style={{ color: colors.white }}>
+                    {t("shop.dashboard.handed_over")}
+                  </Text>
+                </TouchableOpacity>
+              ) : null}
+              {!o.has_live_leg && o.fulfillment !== "pickup" && o.status === "out_for_delivery" ? (
                 <TouchableOpacity
                   className="rounded-xl py-2 items-center"
                   style={{ backgroundColor: colors.primary }}
                   disabled={actingId === o.id}
                   onPress={() => void patchStatus(o, "delivered")}
                  
-                 testID="shop-owner.patch-status-3">
+                 testID="shop-owner.patch-status-4">
                   <Text className="text-[12px]" style={{ color: colors.white }}>
                     {t("shop.dashboard.delivered")}
                   </Text>

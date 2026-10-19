@@ -4,170 +4,6 @@ import { logger } from "@/lib/logger";
 
 type PlainDriver = Omit<Driver, 'setTime' | 'setPrice' | 'setUser' | 'setUserLocation' | 'setId' | 'setProfileImageURL' | 'setRating' | 'setFullName' | 'setRole'>;
 
-// export const useDriverStore = create<DriverStore>((set) => ({
-//     drivers: [], //from database all drivers
-//     nearbyDrivers: [],
-//     selectedDriverId: null,
-//     setSelectedDriverId: (driverId: string) => {
-//         set(() => ({
-//             selectedDriverId: driverId
-//         }))
-//     },
-//     setNearbyDrivers: (drivers: PlainDriver[]) => {
-//         set(() => ({
-//             nearbyDrivers: drivers
-//         }))
-//     },
-//     setDrivers: (drivers: PlainDriver[]) => {
-//         set(() => ({
-//             drivers
-//         }))
-//     },
-//     updateDriverLocation: (driverId: string, latitude: number, longitude: number, address: string) => {
-//         set(state => ({
-//             nearbyDrivers: state.drivers.map(driver =>
-//                 driver.id === driverId ? (
-//                     {
-//                         ...driver,
-//                         userLatitude: latitude,
-//                         userLongitude: longitude,
-//                         userAddress: address
-//                     }
-//                 )
-//                     : driver
-//             )
-//         }))
-//     },
-//     removeDriverLocation: (driverId: string) => {
-//         set(state => ({
-//             nearbyDrivers: state.drivers.map(driver =>
-//                 driver.id === driverId
-//                     ? {
-//                         ...driver,
-//                         userLatitude: null,
-//                         userLongitude: null,
-//                         userAddress: null
-//                     }
-//                     : driver
-//             )
-//         }))
-//     },
-//     removeNearbyDriver: (driverId: string) => {
-//         set(state => ({
-//             nearbyDrivers: state.nearbyDrivers.filter(driver => driver.id !== driverId)
-//         }));
-//     },
-//     clearSelectedDriver: () => {
-//         set(() => ({
-//             selectedDriverId: null
-//         }))
-//     }
-// }))
-
-
-// export const useDriverStore = create<DriverStore>((set, get) => ({
-//     drivers: [], // from database all drivers
-//     nearbyDrivers: [],
-//     selectedDriverId: null,
-//     selectedDriverDetails: null,
-
-//     setSelectedDriverId: (driverId: string) => {
-//         set(() => ({
-//             selectedDriverId: driverId
-//         }));
-//     },
-//     giveRiderDetails: (riderId: string) => {
-//         const riderDetails = get().drivers.find(rider => rider.id === riderId);
-//         return riderDetails;
-//     },
-//     setSelectedDriverDetails: (driver: PlainDriver) => {
-//         set(() => ({
-//             selectedDriverDetails: driver
-//         }));
-//     },
-
-//     setNearbyDrivers: (drivers: PlainDriver | PlainDriver[]) => {
-//         set(state => {
-//             const newDrivers = Array.isArray(drivers) ? drivers : [drivers]; // Ensure drivers is always an array
-
-//             // Add or update the drivers in the state
-//             const updatedNearbyDrivers = newDrivers.reduce((acc, driver) => {
-//                 const existingIndex = acc.findIndex(d => d.id === driver.id);
-//                 if (existingIndex !== -1) {
-//                     // If driver already exists, update it
-//                     acc[existingIndex] = driver;
-//                 } else {
-//                     // If driver doesn't exist, add it
-//                     acc.push(driver);
-//                 }
-//                 return acc;
-//             }, [...state.nearbyDrivers]); // Start with existing nearby drivers
-
-//             return { nearbyDrivers: updatedNearbyDrivers };
-//         });
-//     },
-
-
-//     setDrivers: (drivers: PlainDriver[]) => {
-//         set(() => ({
-//             drivers
-//         }));
-//     },
-
-//     updateDriverLocation: (driverId: string, latitude: number, longitude: number, address: string) => {
-//         set(state => ({
-//             nearbyDrivers: state.drivers.map(driver =>
-//                 driver.id === driverId
-//                     ? {
-//                         ...driver,
-//                         userLatitude: latitude,
-//                         userLongitude: longitude,
-//                         userAddress: address
-//                     }
-//                     : driver
-//             )
-//         }));
-//     },
-//     updateSelectedDriverLocation: (latitude: number, longitude: number, address: string) => {
-//         set(state => ({
-//             selectedDriverDetails: state.selectedDriverDetails ? {
-//                 ...state.selectedDriverDetails,
-//                 userLatitude: latitude,
-//                 userLongitude: longitude,
-//                 userAddress: address
-//             } : null
-//         }));
-//     },
-
-
-//     removeDriverLocation: (driverId: string) => {
-//         set(state => ({
-//             nearbyDrivers: state.drivers.map(driver =>
-//                 driver.id === driverId
-//                     ? {
-//                         ...driver,
-//                         userLatitude: null,
-//                         userLongitude: null,
-//                         userAddress: null
-//                     }
-//                     : driver
-//             )
-//         }));
-//     },
-
-//     removeNearbyDriver: (driverId: string) => {
-//         set(state => ({
-//             nearbyDrivers: state.nearbyDrivers.filter(driver => driver.id !== driverId)
-//         }));
-//     },
-//     clearSelectedDriver: () => {
-//         set(() => ({
-//             selectedDriverId: null,
-//             selectedDriverDetails: null
-//         }));
-//     }
-// }));
-
 export const useDriverStore = create<DriverStore>((set, get) => ({
     drivers: [], // from database all drivers
     nearbyDrivers: [],
@@ -293,6 +129,17 @@ export const useDriverStore = create<DriverStore>((set, get) => ({
             selectedDriverId: null,
             selectedDriverDetails: null
         }));
+    },
+    // D6-1 wholesale reset: sign-out teardown restores the whole slot.
+    // (Kept in the barrel — RideLayout/FinalDetails read it from here — so
+    // it resets like every other store instead of leaking across accounts.)
+    reset: () => {
+        set(() => ({
+            drivers: [],
+            nearbyDrivers: [],
+            selectedDriverId: null,
+            selectedDriverDetails: null
+        }));
     }
 }));
 
@@ -330,9 +177,16 @@ export const useRideOfferStore = create<RideOffer>((set, get) => ({
                     : offer
             )
         }))
+    },
+    // D6-1 wholesale reset: clears accumulated RideOfferDetails[] customer
+    // PII (names, phone numbers, pickup/dropoff addresses) on sign-out.
+    reset: () => {
+        set(() => ({
+            rideOffer: [],
+            activeRideId: null
+        }));
     }
 }))
-
 
 
 export const useDriver = create<Driver>((set) => ({
@@ -369,11 +223,29 @@ export const useDriver = create<Driver>((set) => ({
     setRole: ({ role }) => {
         set(() => ({ role }));
     },
+    // D6-1 wholesale reset (barrel driver identity).
+    reset: () => {
+        set(() => ({
+            id: null,
+            role: null,
+            profile_image_url: null,
+            rating: null,
+            full_name: null,
+            userLatitude: null,
+            userLongitude: null,
+            userAddress: null,
+            time: null,
+            email: null,
+            price: null,
+        }));
+    },
 }))
 
 export const useAppUserStore = create<StoreRole>((set) => ({
     role: null,
     setRole: ({ role }) => set(() => ({ role })),
+    // D6-1 wholesale reset.
+    reset: () => set(() => ({ role: null })),
 }));
 
 
@@ -426,6 +298,23 @@ export const useCustomer = create<Customer>((set) => ({
             destinationLatitude: null,
             destinationLongitude: null,
         }))
+    },
+    // D6-1 wholesale reset (barrel customer identity + location PII).
+    reset: () => {
+        set(() => ({
+            id: null,
+            role: null,
+            profile_image_url: null,
+            rating: null,
+            full_name: null,
+            userLatitude: null,
+            userLongitude: null,
+            email: null,
+            userAddress: null,
+            destinationAddress: null,
+            destinationLatitude: null,
+            destinationLongitude: null,
+        }));
     }
 }));
 
@@ -438,7 +327,9 @@ export const useRidesStore = create<RidesStore>((set) => ({
             const selectRide = state.Rides.find(ride => ride.ride_id === id);
             return { selectedRide: selectRide }
         })
-    }
+    },
+    // D6-1 wholesale reset.
+    reset: () => set({ Rides: [], selectedRide: null }),
 }))
 
 export const useDriverDetails = create<DriverDetails>((set) => ({
@@ -454,6 +345,8 @@ export const useDriverDetails = create<DriverDetails>((set) => ({
             isVerified: verified
         }))
     },
+    // D6-1 wholesale reset: duty state must not survive sign-out.
+    reset: () => set({ onDuty: false, isVerified: null }),
 }))
 
 

@@ -196,6 +196,8 @@ const driverBody = () => ({
   role: "driver",
   password: "test1234",
   vehicle_type: "bike_basic",
+  // C1-1: T&C + Privacy consent — register+api 400s terms_required without it.
+  terms_accepted: true,
 });
 
 beforeEach(() => {
@@ -278,7 +280,18 @@ describe("POST /api/register — launch_free hook (owner ruling 2026-09-27)", ()
     expect(insertedPackages[0].vals.call_count).toBe(-1);
     expect(insertedPackages[0].vals.price_bdt).toBe(0);
     expect(insertedPackages[0].vals.name).toBe("Launch Free");
+    // C10-1: minted rows carry the stable code — clients match on it, never on name.
+    expect(insertedPackages[0].vals.code).toBe("launch_free");
     expect(plan.id).toBe(PLAN_ID);
+  });
+
+  it("C10-1: ensure adopts a legacy NULL-code Launch Free row (stamps code, no duplicate insert)", async () => {
+    // First select (by code) misses; second (legacy by name) hits. The mock
+    // serves queued rows in select order.
+    mockSelectQueue = [[], [{ id: PLAN_ID, name: "Launch Free", code: null }]];
+    const plan = await ensureLaunchFreePackage();
+    expect(plan.id).toBe(PLAN_ID);
+    expect(mockInserts.filter((i) => i.table === schema.packages)).toHaveLength(0);
   });
 
   it("M-3: concurrent ensure creators converge on ONE plan row (in-lock recheck contract)", async () => {
@@ -324,5 +337,40 @@ describe("POST /api/register — launch_free hook (owner ruling 2026-09-27)", ()
     const plan = await ensureLaunchFreePackage();
     expect(plan.id).toBe(PLAN_ID);
     expect(mockInserts.filter((i) => i.table === schema.packages)).toHaveLength(0);
+  });
+});
+
+// ── C1-1 (STAGE C1-FIX): T&C + Privacy consent gate ───────────────────────
+// New registrations must carry terms_accepted:true (from the phone-entry
+// checkbox); a missing flag 400s terms_required and burns no OTP.
+// C1-8: the phone_exists check runs BEFORE the OTP is consumed, so a
+// duplicate-phone tap does not burn a live verification.
+describe("POST /api/register — T&C consent gate (C1-1) + OTP order (C1-8)", () => {
+  it("400s terms_required without the consent flag (all five paths carry it)", async () => {
+    const { terms_accepted: _omit, ...noConsent } = driverBody();
+    const res = await registerRoute(makeRequest(noConsent));
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toBe("terms_required");
+    // The gate fires before any verification is touched.
+    const { consumeVerification } = require("@/lib/verifiedPhones");
+    expect(consumeVerification).not.toHaveBeenCalled();
+  });
+
+  it("stamps users.terms_accepted_at when consent is carried", async () => {
+    const res = await registerRoute(makeRequest(driverBody()));
+    expect(res.status).toBe(201);
+    const userInserts = mockInserts.filter((i) => i.table === schema.users);
+    expect(userInserts).toHaveLength(1);
+    expect(userInserts[0].vals.terms_accepted_at).toBeInstanceOf(Date);
+  });
+
+  it("duplicate phone 409s WITHOUT consuming the OTP (C1-8 order)", async () => {
+    // First DB read (users by phone) finds the existing row.
+    mockSelectQueue = [[{ id: USER_ID, phone: "+8801700000099" }]];
+    const res = await registerRoute(makeRequest(driverBody()));
+    expect(res.status).toBe(409);
+    expect((await res.json()).error).toBe("phone_exists");
+    const { consumeVerification } = require("@/lib/verifiedPhones");
+    expect(consumeVerification).not.toHaveBeenCalled();
   });
 });

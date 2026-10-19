@@ -95,7 +95,7 @@ export default function SubscriptionCheckout() {
   if (paymentUrl && paymentEventId) {
     return (
       <PaymentWebView
-        bkashURL={paymentUrl}
+        paymentURL={paymentUrl}
         paymentID={paymentEventId}
         onSuccess={() => { setPaymentUrl(""); router.replace("/(main)/(rider)/subscription-confirmation"); }}
         onError={(msg) => { setPaymentUrl(""); setError(msg); }}

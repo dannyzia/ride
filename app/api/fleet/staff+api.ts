@@ -6,10 +6,11 @@
  * List gated to any ACTIVE member; invite gated to OWNER.
  */
 import { db } from "@/src/db";
-import { fleetMembers, users } from "@/src/db/schema";
+import { fleetMembers, fleets, users } from "@/src/db/schema";
 import { and, asc, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import { requireFleetMember } from "@/lib/auth";
+import { notifyFleetStaffInvite } from "@/lib/fleetNotify";
 import { logger } from "@/lib/logger";
 import * as errors from "@/lib/errors";
 import { parseJsonBody } from "@/lib/parseBody";
@@ -125,9 +126,17 @@ export async function POST(request: Request) {
     }
     const targetUserId = targetUser.id;
 
-    // Check not already an active member.
+    // C8-5: the duplicate check filters removed_at — a REMOVED row is not a
+    // live membership. Re-inviting a removed user REACTIVATES the same row
+    // (the fm_fleet_user_idx unique on (fleet_id, user_id) is NOT partial,
+    // so a blind INSERT would 23505); only a live (removed_at IS NULL) row
+    // 409s. NOTE (OWNER-minting consistency): unlike the shop R10 rule
+    // (OWNER = the shops.owner_user_id creator row, never invited), a fleet
+    // OWNER may mint further OWNER rows here — fleet ownership is a
+    // membership role, not a creator column (fleets.owner_user_id is the
+    // business registrant, a separate fact).
     const [existing] = await db
-      .select({ id: fleetMembers.id })
+      .select({ id: fleetMembers.id, removed_at: fleetMembers.removed_at })
       .from(fleetMembers)
       .where(
         and(
@@ -137,7 +146,7 @@ export async function POST(request: Request) {
       )
       .limit(1);
 
-    if (existing) {
+    if (existing && !existing.removed_at) {
       return Response.json(
         {
           error: "already_member",
@@ -147,31 +156,65 @@ export async function POST(request: Request) {
       );
     }
 
-    // Insert new fleet member.
-    const [member] = await db
-      .insert(fleetMembers)
-      .values({
-        fleet_id: fleetId,
-        user_id: targetUserId,
-        role: body.data.role as
-          | "OWNER"
-          | "MANAGER"
-          | "DISPATCHER"
-          | "ACCOUNTANT"
-          | "VIEWER",
-        status: "active",
-      })
-      .returning({ id: fleetMembers.id });
+    const role = body.data.role as
+      | "OWNER"
+      | "MANAGER"
+      | "DISPATCHER"
+      | "ACCOUNTANT"
+      | "VIEWER";
+
+    let memberId: string;
+    let reactivated = false;
+    if (existing) {
+      // Re-invite: revive the removed row with the new role.
+      const [revived] = await db
+        .update(fleetMembers)
+        .set({ removed_at: null, status: "active", role, updated_at: new Date() })
+        .where(eq(fleetMembers.id, existing.id))
+        .returning({ id: fleetMembers.id });
+      memberId = revived.id;
+      reactivated = true;
+    } else {
+      // Insert new fleet member.
+      const [member] = await db
+        .insert(fleetMembers)
+        .values({
+          fleet_id: fleetId,
+          user_id: targetUserId,
+          role,
+          status: "active",
+        })
+        .returning({ id: fleetMembers.id });
+      memberId = member.id;
+    }
 
     logger.info("[fleet/staff] member added", {
       fleet_id: fleetId,
-      user_id: body.data.user_id,
+      user_id: targetUserId,
       role: body.data.role,
-      member_id: member.id,
+      member_id: memberId,
+      reactivated,
+    });
+
+    // C8-5: the invitee learns about the membership via keyed push + WS
+    // (the C6-2 shop bell pattern) — the row alone is invisible until their
+    // next cold boot. Fire-and-forget AFTER the write resolves; never fails
+    // the invite.
+    const [fleetRow] = await db
+      .select({ name: fleets.name })
+      .from(fleets)
+      .where(eq(fleets.id, fleetId))
+      .limit(1);
+    void notifyFleetStaffInvite({
+      memberId,
+      fleetId,
+      fleetName: fleetRow?.name ?? "",
+      inviteeUserId: targetUserId,
+      role,
     });
 
     return Response.json(
-      { member_id: member.id, success: true },
+      { member_id: memberId, success: true, reactivated },
       { status: 201 },
     );
   } catch (err: unknown) {

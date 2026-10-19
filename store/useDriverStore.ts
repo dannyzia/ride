@@ -26,6 +26,8 @@ export interface DriverState {
   } | null;
   activeSubscription: {
     id: string;
+    // C10-1 grant-source identity (e.g. 'launch_free') — served by GET /api/package/active.
+    package_code?: string | null;
     calls_remaining: number;
     daily_calls_used: number;
     daily_reset_at: string;

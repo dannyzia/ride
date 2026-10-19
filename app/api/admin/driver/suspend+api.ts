@@ -1,7 +1,7 @@
 // POST /api/admin/driver/suspend
 // F15-API-02. Suspend an active driver with reason.
 import { db } from '@/src/db';
-import { drivers } from '@/src/db/schema';
+import { drivers, users } from '@/src/db/schema';
 import { eq } from 'drizzle-orm';
 import { requireAdminPermission } from '@/lib/adminRbac';
 import { notifyAccountStatus } from '@/lib/notify';
@@ -29,6 +29,13 @@ export async function POST(request: Request) {
       .update(drivers)
       .set({ status: 'suspended', is_online: false, updated_at: new Date() })
       .where(eq(drivers.id, driver_id));
+
+    // C2-1: mirror onto the users row so the shared REST/WS gate 403s with
+    // the stored reason (driver.status alone only gates dispatch today).
+    await db
+      .update(users)
+      .set({ account_status: 'suspended', suspension_reason: reason, updated_at: new Date() })
+      .where(eq(users.id, driver.user_id));
 
     logger.info('[admin/driver/suspend] suspended', {
       driverId: driver_id,

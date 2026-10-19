@@ -2,13 +2,18 @@ import { db } from '@/src/db';
 import { rides, users, drivers } from '@/src/db/schema';
 import { eq, and, sql } from 'drizzle-orm';
 import { verifySupabaseToken } from '@/lib/auth';
+import { holdsRiderRole } from '@/lib/riderRole';
 import * as errors from '@/lib/errors';
 
 export async function GET(request: Request) {
   try {
     const supabaseUser = await verifySupabaseToken(request);
     const [user] = await db.select().from(users).where(eq(users.auth_uid, supabaseUser.id)).limit(1);
-    if (!user || user.role !== 'rider') {
+    if (!user) {
+      return Response.json({ error: 'user_not_found', message: 'User not found' }, { status: 404 });
+    }
+    // C3-8: rider-role MEMBERSHIP (user_roles ∪ legacy users.role).
+    if (!(await holdsRiderRole(db, user.id, user.role))) {
       return Response.json({ error: 'forbidden', message: 'Access denied' }, { status: 403 });
     }
 
@@ -25,9 +30,10 @@ export async function GET(request: Request) {
 
     let driverInfo = null;
     if (ride.driver_id) {
+      // C3-6 residual: no driver phone in the active-ride payload either —
+      // in-app chat is the contact channel.
       const [driver] = await db.select({
         name: users.name,
-        phone: users.phone,
         vehicle_type: drivers.vehicle_type,
         rating: drivers.rating,
       }).from(drivers)

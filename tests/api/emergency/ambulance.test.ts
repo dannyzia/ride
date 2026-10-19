@@ -134,6 +134,14 @@ jest.mock("@/lib/auth", () => ({
           dbUser: { id: "db-user-1", role: "rider" },
         }),
   ),
+  requireMemberRoles: jest.fn(
+    () =>
+      async () =>
+        Promise.resolve({
+          supabaseUser: { id: "auth-1" },
+          dbUser: { id: "db-user-1", role: "rider" },
+        }),
+  ),
 }));
 
 // ── §H.6: TTL sweep (broadcasting + expires_at < now → failed) ───────────

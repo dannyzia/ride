@@ -100,7 +100,8 @@
       "driver": "Driver",
       "shop_owner": "Shop Owner",
       "fleet_owner": "Fleet Owner",
-      "delivery_man": "Delivery Man"
+      "delivery_man": "Delivery Man",
+      "shop_staff": "Shop Staff"
     },
     "login_as": {
       "title": "Login as",
@@ -111,7 +112,51 @@
       "status_rejected": "Rejected",
       "status_closed": "Closed",
       "session_less_hint": "Sign in again to switch in.",
-      "resubmit": "Resubmit"
+      "resubmit": "Resubmit",
+      "last_used": "Last used"
+    },
+    "account_locked": {
+      "title": "Account suspended",
+      "reason_prefix": "Reason",
+      "no_reason": "Your account is suspended. Contact support for details.",
+      "contact_support": "Contact support",
+      "sign_out": "Sign out"
+    },
+    "terms": {
+      "required": "Please accept the Terms of Service and Privacy Policy to continue.",
+      "agree_prefix": "I agree to the",
+      "terms_link": "Terms of Service",
+      "privacy_link": "Privacy Policy",
+      "and": "and"
+    },
+    "otp_verify": {
+      "title": "Verify OTP",
+      "subtitle": "Enter the 6-digit code sent to {{phone}}",
+      "placeholder": "Enter 6-digit OTP",
+      "verify": "Verify OTP",
+      "verifying": "Verifying...",
+      "resend": "Resend OTP",
+      "resend_in": "Resend OTP in {{seconds}}s",
+      "change_number": "Wrong number? Go back to change it",
+      "err_invalid": "Enter a valid 6-digit OTP",
+      "err_wait": "Please wait for the OTP to be sent",
+      "err_failed": "Failed to verify OTP. Please try again."
+    },
+    "verification_status": {
+      "title": "Verification status",
+      "loading": "Loading…",
+      "empty": "No gated roles yet.",
+      "load_failed": "Could not load your verification status. Please try again.",
+      "submitted": "Submitted: {{date}}",
+      "docs_received": "Documents received ✓",
+      "active": "Active — this role now appears in your Login-as choices.",
+      "pending": "Under review — expected within 24 hours. You will be notified.",
+      "needs_fixes": "Needs fixes",
+      "failed_field": "Failed field: {{field}}",
+      "example": "Example of an acceptable document: {{example}}",
+      "limit_reached": "Resubmit limit reached ({{count}}/{{max}}) — please contact support.",
+      "resubmit": "Fix & resubmit ({{count}}/{{max}})",
+      "back": "Back"
     },
     "shop_owner": {
       "title": "Shop Owner",
@@ -185,7 +230,7 @@
     "expires": "Expires",
     "cancellation_credits": "Cancellation Credits",
     "pending": "pending",
-    "no_withdrawals": "Wallet balance is credited at ride completion and from gamification rewards. Withdrawals are not yet available.",
+    "no_withdrawals": "Wallet balance is credited at ride completion and from gamification rewards. Payouts launch later — withdrawals are not available yet.",
     "payout_method": {
       "title": "Payout Method",
       "not_authenticated": "Not authenticated",
@@ -327,11 +372,17 @@
     "no_credits": "No cancellation compensations yet",
     "recent_transactions": "Recent Transactions",
     "payout_method": "Payout Method",
-    "no_withdrawals": "Withdrawals are not yet available.",
+    "no_withdrawals": "Payouts launch later — withdrawals are not available yet.",
     "bonus": "bonus",
     "total_pending": "Total pending",
-    "wallet_note": "Wallet balance is credited at ride completion and from gamification rewards. Withdrawals are not yet available.",
-    "unlimited": "Unlimited"
+    "wallet_note": "Wallet balance is credited at ride completion and from gamification rewards. Payouts launch later — withdrawals are not available yet.",
+    "unlimited": "Unlimited",
+    "grant_source": "Free launch access · expires {{date}} · renews at ৳100/mo when payments open",
+    "plan_expired_offers_paused": "Plan expired — offers are paused"
+  },
+  "payments": {
+    "launch_later": "Payments launch later",
+    "launch_later_desc": "Wallet top-ups, ride passes and call packages will be available when payments launch."
   },
   "profile": {
     "edit_profile": "Edit Profile",
@@ -490,6 +541,7 @@
     "retry": "Retry",
     "cannot_go_online": "Cannot go online",
     "check_subscription": "Check your subscription status.",
+    "plan_expired_offers_paused": "Plan expired — offers are paused",
     "network_error": "Network error. Please try again.",
     "ride_cancelled": "Ride cancelled",
     "rider_cancelled": "Rider cancelled the ride",
@@ -638,7 +690,12 @@
     "rate_rider": "Rate Rider",
     "back_to_home": "Back to Home",
     "switch_light_theme": "Switch to light theme",
-    "switch_dark_theme": "Switch to dark theme"
+    "switch_dark_theme": "Switch to dark theme",
+    "cash_received_label": "Cash received from rider (optional)",
+    "cash_received_placeholder": "e.g. 250",
+    "cash_settled": "Cash settled — amounts match.",
+    "return_change": "Return {{amount}} change to the rider.",
+    "cash_mismatch": "Received {{received}} vs rider tendered {{tendered}} — verify before closing."
   },
   "enter_otp": {
     "title": "Ride Pin",
@@ -648,7 +705,8 @@
     "not_connected": "Not connected to server. Please try again.",
     "no_response": "No response from server. Please try again.",
     "starting": "Starting...",
-    "start_ride": "Start Ride"
+    "start_ride": "Start Ride",
+    "pin_locked": "Too many wrong attempts — this ride is locked. Contact support."
   },
   "break_mode": {
     "title": "Break Mode",
@@ -681,6 +739,15 @@
     "no_contacts": "No emergency contacts configured",
     "no_alerts": "No recent alerts",
     "add_contacts": "Add Contacts"
+  },
+  "final_details": {
+    "call_driver": "Call your driver",
+    "call": "Call"
+  },
+  "document_upload": {
+    "uploading": "Uploading...",
+    "tap_replace": "Tap to replace document",
+    "tap_upload": "Tap to upload document"
   },
   "call_ledger": {
     "this_week": "This Week",
@@ -900,7 +967,6 @@
     "status_complete": "Trip complete",
     "trips_count": "{{count}} trips",
     "away": "away",
-    "call": "Call",
     "chat": "Chat",
     "your_ride_pin": "Your ride PIN",
     "ride_pin": "Ride PIN",
@@ -1040,29 +1106,9 @@
     "failed": "Couldn't submit your rating"
   },
   "referral": {
-    "share_reward": "Your friend gets {{amount}} on their first ride — and so do you!",
-    "share_message": "Join me on Ride with my code {{code}}!",
-    "unknown": "Unknown number",
-    "rewarded": "Rewarded",
-    "pending": "Pending",
     "title": "Refer & earn",
     "toggle_theme": "Toggle light or dark theme",
-    "load_failed": "Couldn't load your referrals",
-    "pull_to_retry": "Pull down to retry",
-    "no_referrals": "No referrals yet",
-    "no_referrals_sub": "Share your code — you both earn when they ride",
-    "your_code": "Your referral code",
-    "no_code": "No code yet",
-    "a11y_share_code": "Share your referral code",
-    "share": "Share",
-    "a11y_copy_code": "Copy referral code",
-    "copied": "Copied!",
-    "copy": "Copy",
-    "invited": "Invited",
-    "successful": "Successful",
-    "earned": "Earned",
-    "recent": "Recent referrals",
-    "recent_empty": "People you refer will appear here"
+    "coming_soon": "Referral invites and rewards are coming soon."
   },
   "emergency_sos": {
     "acknowledged": "Acknowledged",
@@ -1085,7 +1131,12 @@
     "confirm_send_title": "Send emergency alert?",
     "confirm_send_body": "Your location and ride details go to our safety team immediately.",
     "call_999_send_a11y": "Call 999 and send the emergency alert",
-    "call_999_send": "Call 999 + Send"
+    "call_999_send": "Call 999 + Send",
+    "counterparty_rider_title": "Rider emergency",
+    "counterparty_rider_body": "Your rider sent an emergency alert. Check on them via ride chat.",
+    "counterparty_driver_title": "Driver emergency",
+    "counterparty_driver_body": "Your driver sent an emergency alert. If you feel unsafe, exit the vehicle in a safe place and call 999.",
+    "counterparty_tap_chat": "TAP FOR RIDE CHAT"
   },
   "schedule_ride": {
     "checking_fare": "Checking fare…",
@@ -1368,7 +1419,6 @@
     "expires": "Expires {{date}}",
     "discount_days": "{{percent}}% off · valid {{days}} days",
     "rides_suffix": " · up to {{count}} rides",
-    "buy": "Buy Pass",
     "activated": "Pass activated!",
     "failed": "Couldn't load ride passes",
     "purchase_failed": "Purchase didn't complete — try again.",
@@ -1410,7 +1460,6 @@
   "driver_info": {
     "title": "Driver",
     "driver": "Driver",
-    "call": "Call",
     "chat": "Chat",
     "na": "N/A"
   },
@@ -1437,16 +1486,7 @@
     "no_notifications_sub": "Updates about your rides will appear here.",
     "load_failed": "Couldn't load notifications",
     "pull_to_retry": "Pull down to retry",
-    "using_sample_data": "Showing sample data",
-    "toggle_theme": "Toggle light or dark theme",
-    "sample_promo_title": "Weekend discount inside",
-    "sample_promo_body": "Enjoy 20% off your next three rides, this weekend only.",
-    "sample_trip_title": "Trip reminder",
-    "sample_trip_body": "You have a scheduled ride coming up tomorrow morning.",
-    "sample_payment_title": "Payment received",
-    "sample_payment_body": "Your wallet top-up of BDT 200 was successful.",
-    "sample_system_title": "Keep your app updated",
-    "sample_system_body": "Update to the latest version for the best experience."
+    "toggle_theme": "Toggle light or dark theme"
   },
   "notifications_screen": {
     "alert_types": "Alert Types",
@@ -1457,6 +1497,9 @@
     "saved": "Preferences saved",
     "toggle_theme": "Toggle light or dark theme",
     "ride_updates": "Ride updates",
+    "order_updates": "Order updates",
+    "delivery_updates": "Delivery updates",
+    "shop_updates": "Shop activity",
     "promo_offers": "Promo offers",
     "service_alerts": "Service alerts",
     "email_notifications": "Email notifications",
@@ -1534,7 +1577,7 @@
     "connected_services": "Connected Services",
     "empty": "No linked accounts yet",
     "connected": "Connected",
-    "add_account": "Add Account"
+    "add_account_dormant": "Add Account (coming soon)"
   },
   "logout_confirmation": {
     "title": "Log out?",
@@ -1559,8 +1602,7 @@
     "pay": "Pay {{amount}}"
   },
   "top_up_settings": {
-    "enter_amount": "Enter Amount",
-    "continue": "Continue"
+    "enter_amount": "Enter Amount"
   },
   "top_up_success": {
     "title": "Top Up Successful!",
@@ -1585,6 +1627,7 @@
     "status_completed": "Trip complete",
     "terminal_cancelled": "Emergency cancelled",
     "terminal_no_accept": "No ambulance accepted in time",
+    "escalated_note": "Searching a wider area — we notified you of the delay.",
     "err_missing_title": "Missing Info",
     "err_missing_body": "Pickup location and patient condition are required",
     "err_broadcast": "Could not broadcast emergency",
@@ -1626,7 +1669,11 @@
       "reject": "Reject",
       "empty_title": "No offers right now",
       "empty_body": "New delivery offers will appear here. Pull to refresh.",
-      "history": "Recent deliveries"
+      "history": "Recent deliveries",
+      "respond_expired": "This offer expired — it was passed to the next courier.",
+      "respond_claimed": "This offer was already taken by another courier.",
+      "respond_hold": "Outstanding COD dues block new deliveries — settle them in Earnings.",
+      "respond_failed": "Could not respond to this offer. Pull to refresh and try again."
     },
     "active": {
       "title": "Active delivery",
@@ -1704,30 +1751,24 @@
   },
   "delivery_create": {
     "title": "Send a Package",
-    "err_missing_addresses": "Please enter both pickup and dropoff addresses",
+    "err_missing_fields": "Enter pickup, dropoff, item note and receiver phone",
     "err_create_failed": "Failed to create delivery request",
     "pickup_address": "Pickup Address",
     "pickup_placeholder": "Where should the courier pick up?",
     "dropoff_address": "Dropoff Address",
     "dropoff_placeholder": "Where should it be delivered?",
-    "package_optional": "Package (optional)",
+    "item_note": "What's inside?",
     "package_placeholder": "What are you sending?",
-    "weight_optional": "Weight in kg (optional)",
-    "weight_placeholder": "Estimated weight",
-    "vehicle_type_optional": "Vehicle Type (optional)",
-    "find_couriers": "Find Couriers"
+    "receiver_phone": "Receiver phone",
+    "receiver_phone_placeholder": "Who pays cash on delivery?",
+    "submit_parcel": "Place Delivery"
   },
   "delivery_detail": {
     "title": "Delivery Detail",
-    "not_found": "Request not found",
-    "bid_accepted_title": "Bid Accepted",
-    "courier_assigned": "Courier has been assigned!",
-    "err_accept_failed": "Failed to accept bid",
-    "accept_bid": "Accept Bid",
-    "agreed_price": "Agreed Price",
-    "bids_count": "{{count}} Bid(s)",
-    "waiting_for_bids": "Waiting for bids...",
-    "couriers_reviewing": "Couriers are reviewing your request..."
+    "not_found": "Parcel not found",
+    "note": "Item",
+    "receiver": "Receiver",
+    "fee_cash": "Delivery fee — cash on delivery"
   },
   "rental_bidder": {
     "title": "Rental Requests",
@@ -2005,6 +2046,7 @@
       "prep_picker_title": "Preparation time",
       "prep_min": "{{n}} min",
       "prep_est": "~{{n}} min prep",
+      "pickup_code": "Pickup code: {{code}} — show it to the courier at handover.",
       "accept": "Accept",
       "reject": "Reject",
       "reject_title": "Reject order",
@@ -2012,6 +2054,8 @@
       "prepare": "Start preparing",
       "mark_ready": "Mark ready",
       "delivered": "Mark delivered",
+      "handed_over": "Mark handed over",
+      "courier_delivering": "Courier is delivering — completion runs in the courier flow.",
       "segment_new": "New",
       "segment_active": "Active",
       "segment_ready": "Ready",
@@ -2046,7 +2090,9 @@
       "category": "Category",
       "active": "Available for order",
       "rfq": "Quote-based product",
-      "invalid_product": "Enter a name and a positive price"
+      "invalid_product": "Enter a name and a positive price",
+      "photo_add": "Add photo",
+      "photo_failed": "Could not upload photo — try another"
     },
     "workshop": {
       "title": "Workshop",
@@ -2126,6 +2172,7 @@
     "courier_picked_up": "Courier picked up your order",
     "courier_delivered": "Order delivered",
     "courier_failed": "No courier available - the shop will arrange delivery",
+    "delivery_otp": "Delivery code: {{code}} — share it with the courier when your order arrives.",
     "prep_estimate": "Prep: about {{minutes}} min",
     "step_placed": "Order placed",
     "step_accepted": "Shop accepted",

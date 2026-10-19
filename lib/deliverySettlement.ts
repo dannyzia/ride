@@ -15,8 +15,10 @@
  *     SHOP (F-33 custody: +items, −fee earned). The due is the order's
  *     subtotal snapshot — the fee cash is already the courier's earnings.
  *     A recorded amount_collected_bdt different from the expected COD total
- *     is the F-38 short-pay evidence: the due records what was actually
- *     collected, and the shortfall is visible in the courier's dues list.
+ *     is the F-38 short-pay evidence (D1-2 Reading A, owner ruling
+ *     2026-10-17): the due stays the FULL subtotal — the shortfall is
+ *     courier liability, recorded on the due row's remittance_note so
+ *     "never paid" is never a one-sided claim.
  */
 import { and, eq, inArray, sql } from 'drizzle-orm';
 import { db } from '@/src/db';

@@ -22,7 +22,7 @@ import {
   users,
 } from "@/src/db/schema";
 import { requireShopMember } from "@/lib/marketplaceRbac";
-import { requireAnyRole } from "@/lib/auth";
+import { requireMemberRoles } from "@/lib/auth";
 import { parseJsonBody } from "@/lib/parseBody";
 import { settleShopOrder } from "@/lib/shopLedger";
 import { applyWorkshopSla, WORKSHOP_CONFIRM_SLA_HOURS } from "@/lib/workshopSla";
@@ -154,7 +154,7 @@ export async function POST(request: Request, { id }: { id: string }) {
       return Response.json({ error: "invalid_uuid", message: "Invalid shop id" }, { status: 400 });
     }
 
-    const { dbUser } = await requireAnyRole(["rider", "driver"])(request);
+    const { dbUser } = await requireMemberRoles(["rider", "driver"])(request);
 
     const result = await parseJsonBody(request, createSchema);
     if (!result.ok) return result.response;

@@ -25,6 +25,8 @@ jest.mock("@/lib/otpRateLimit", () => ({
   OTP_PHONE_MAX: 5,
   OTP_IP_MAX: 30,
   OTP_VERIFY_MAX: 10,
+  CHECK_USER_PHONE_MAX: 30,
+  CHECK_USER_IP_MAX: 120,
 }));
 jest.mock("@/lib/verifiedPhones", () => ({
   markVerified: jest.fn(),
@@ -215,6 +217,27 @@ describe("POST /api/auth/check-user", () => {
     expect(res.status).toBe(400);
   });
 
+  test("429 rate_limited when the phone exceeds its cap", async () => {
+    (rateLimitCount as jest.Mock).mockImplementation(async (key: string) =>
+      key.startsWith("check-user:phone:") ? 31 : 0,
+    );
+    const res = await checkUser(jsonRequest({ phone: "+8801712345678" }));
+    expect(res.status).toBe(429);
+    expect((await getJson(res)).error).toBe("rate_limited");
+    expect(db.select).not.toHaveBeenCalled();
+  });
+
+  test("429 rate_limited when the IP exceeds its cap", async () => {
+    (rateLimitCount as jest.Mock).mockImplementation(async (key: string) =>
+      key.startsWith("check-user:ip:") ? 121 : 0,
+    );
+    const res = await checkUser(
+      jsonRequest({ phone: "+8801712345678" }, { "x-forwarded-for": "1.2.3.4, 5.6.7.8" }),
+    );
+    expect(res.status).toBe(429);
+    expect(db.select).not.toHaveBeenCalled();
+  });
+
   test("exists=false for an unknown phone", async () => {
     (db.select as jest.Mock).mockImplementation(() => {
       const chain: any = {
@@ -340,6 +363,65 @@ describe("POST /api/auth/verify-token", () => {
     expect(res.status).toBe(200);
     expect((await getJson(res)).exists).toBe(true);
   }, 10_000);
+
+  test("C2-1: suspended rider → 403 account_suspended with the stored reason", async () => {
+    (supabaseAdmin.auth.getUser as jest.Mock).mockResolvedValue({
+      data: { user: { id: "supabase-uid" } },
+      error: null,
+    });
+    mockFrom([{ data: { id: "u-s", role: "rider", phone: "+8801712345678", name: "S", account_status: "suspended", suspension_reason: "fare abuse", deleted_at: null } }]);
+    const res = await verifyToken(jsonRequest(undefined, { Authorization: "Bearer good" }));
+    expect(res.status).toBe(403);
+    expect(await getJson(res)).toEqual({ error: "account_suspended", message: "Account suspended", reason: "fare abuse" });
+  });
+
+  test("C2-1: deleted account → 401 account_deleted", async () => {
+    (supabaseAdmin.auth.getUser as jest.Mock).mockResolvedValue({
+      data: { user: { id: "supabase-uid" } },
+      error: null,
+    });
+    mockFrom([{ data: { id: "u-d", role: "rider", phone: "+8801712345678", name: "D", account_status: "active", suspension_reason: null, deleted_at: "2026-10-01T00:00:00.000Z" } }]);
+    const res = await verifyToken(jsonRequest(undefined, { Authorization: "Bearer good" }));
+    expect(res.status).toBe(401);
+    expect((await getJson(res)).error).toBe("account_deleted");
+  });
+
+  test("active shop membership surfaces shop_staff in active_roles (staff lane)", async () => {
+    (supabaseAdmin.auth.getUser as jest.Mock).mockResolvedValue({
+      data: { user: { id: "supabase-uid" } },
+      error: null,
+    });
+    // Table-aware chain: users resolves via select→eq→single, the staff
+    // probe via select→eq→is→limit→maybeSingle.
+    (supabaseAdmin.from as jest.Mock).mockImplementation((table: string) => {
+      if (table === "shop_members") {
+        return {
+          select: () => ({
+            eq: () => ({
+              is: () => ({
+                limit: () => ({ maybeSingle: async () => ({ data: { id: "sm-1" } }) }),
+              }),
+            }),
+          }),
+        };
+      }
+      return {
+        select: () => ({
+          eq: () => ({
+            single: async () => ({
+              data: { id: "u-1", role: "rider", phone: "+8801712345678", name: "Zia" },
+            }),
+          }),
+        }),
+      };
+    });
+
+    const res = await verifyToken(jsonRequest(undefined, { Authorization: "Bearer good" }));
+    expect(res.status).toBe(200);
+    // The suite's heldRoles mock holds one active driver role; the staff
+    // probe appends the synthetic entry that routes the chooser.
+    expect(await getJson(res)).toMatchObject({ active_roles: ["driver", "shop_staff"] });
+  });
 
   test("registration race lost: row never commits → exists=false", async () => {
     (supabaseAdmin.auth.getUser as jest.Mock).mockResolvedValue({

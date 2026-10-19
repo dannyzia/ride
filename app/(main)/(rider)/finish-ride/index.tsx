@@ -2,6 +2,7 @@ import { colors, spacing, radii } from "@/theme/goRide";
 import { API_URL } from "@/lib/config";
 import { SuccessCheckmark } from "@/components/SuccessCheckmark";
 import TollParkingModal from "@/components/TollParkingModal";
+import CashHandshakeCard, { CashHandshakeView } from "@/components/CashHandshakeCard";
 import DriverActionBar from "@/components/DriverActionBar";
 import RideInfoCard from "@/components/RideInfoCard";
 import {
@@ -10,6 +11,7 @@ import {
   Alert,
   TouchableOpacity,
   Linking,
+  TextInput,
   TextStyle,
 } from "react-native";
 import React, { useEffect, useState, useRef } from "react";
@@ -40,6 +42,8 @@ interface CompletionSummary {
   zone_fee_bdt?: number;
   waiting_charge_bdt?: number;
   night_mult_applied?: number;
+  // C4-6: server cash handshake (tendered vs received → change_due/match).
+  cash_handshake?: CashHandshakeView | null;
 }
 
 const FinishRide = () => {
@@ -60,6 +64,9 @@ const FinishRide = () => {
   const { ws } = useWSStore();
   const [showModal, setShowModal] = useState<boolean>(false);
   const [showTollModal, setShowTollModal] = useState(false);
+  // C4-6: cash the driver actually received, in taka (optional — empty
+  // keeps the bodyless complete the server already tolerates).
+  const [cashReceivedTaka, setCashReceivedTaka] = useState("");
   const [completion, setCompletion] = useState<CompletionSummary | null>(null);
   const [completedRideId, setCompletedRideId] = useState<string | null>(null);
   const lastLocationRef = useRef<Location.LocationObject | null>(null);
@@ -229,12 +236,21 @@ const FinishRide = () => {
     }
 
     try {
+      // C4-6: collect cash_received_bdt (integer paisa). Empty/invalid input
+      // sends the legacy bodyless POST — the server treats both as valid.
+      const trimmedCash = cashReceivedTaka.trim();
+      const cashTaka = trimmedCash === "" ? NaN : Number(trimmedCash);
+      const cashReceivedBdt =
+        trimmedCash !== "" && Number.isFinite(cashTaka) && cashTaka >= 0
+          ? Math.round(cashTaka * 100)
+          : null;
       const res = await fetch(`${API_URL}/api/ride/${activeRideId}/complete`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
+        ...(cashReceivedBdt != null ? { body: JSON.stringify({ cash_received_bdt: cashReceivedBdt }) } : {}),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
@@ -252,6 +268,7 @@ const FinishRide = () => {
         rider_payable_bdt?: number;
         wallet_debit_bdt?: number;
         cash_to_collect_bdt?: number;
+        cash_handshake?: CashHandshakeView | null;
       } = await res.json().catch(() => ({}));
       const fb = data.fare_breakdown ?? {};
       setCompletion({
@@ -266,6 +283,7 @@ const FinishRide = () => {
         zone_fee_bdt: fb.zone_fee_bdt ?? undefined,
         waiting_charge_bdt: fb.waiting_charge_bdt ?? undefined,
         night_mult_applied: fb.night_mult_applied ?? undefined,
+        cash_handshake: data.cash_handshake ?? null,
       });
       setCompletedRideId(activeRideId);
       removeRideOffer(activeRideId);
@@ -388,6 +406,39 @@ const FinishRide = () => {
 
         {/* Slide */}
         <View style={{ marginTop: spacing["3xl"] }}>
+          {/* C4-6: cash actually received (taka) — sent as cash_received_bdt. */}
+          <View style={{ marginBottom: spacing.md }}>
+            <Text
+              style={{
+                fontSize: 13,
+                color: textSecondary,
+                fontFamily: "Jakarta-SemiBold",
+                marginBottom: spacing.xs,
+              }}
+            >
+              {t('finish_ride.cash_received_label')}
+            </Text>
+            <TextInput
+              value={cashReceivedTaka}
+              onChangeText={setCashReceivedTaka}
+              keyboardType="numeric"
+              placeholder={t('finish_ride.cash_received_placeholder')}
+              placeholderTextColor={textSecondary}
+              accessibilityLabel={t('finish_ride.cash_received_label')}
+              style={{
+                borderWidth: 1,
+                borderColor: isDark ? colors.borderDark : colors.borderLight,
+                borderRadius: radii.md,
+                paddingHorizontal: spacing.md,
+                paddingVertical: spacing.sm,
+                fontSize: 16,
+                fontFamily: "Jakarta-SemiBold",
+                color: textPrimary,
+                backgroundColor: isDark ? colors.surfaceElevatedDark : colors.surfaceLight,
+                fontVariant: ["tabular-nums"],
+              }}              
+              testID="rider.finish-ride.set-cash-received-taka"/>
+          </View>
           <Text
             style={{
               textAlign: "center",
@@ -480,6 +531,9 @@ const FinishRide = () => {
           >
             {t('finish_ride.collect_cash', { amount: formatBDT(cashPaisa, { decimals: true }) })}
           </Text>
+
+          {/* C4-6: handshake result — settled vs change_due from the server. */}
+          <CashHandshakeCard handshake={completion?.cash_handshake ?? null} />
 
           {/* N3: forfeited upfront tip — never let a promised tip vanish silently */}
           {(completion?.upfront_tip_forfeited_bdt ?? 0) > 0 && (

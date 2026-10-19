@@ -1,11 +1,13 @@
 /**
- * activationJobs.ts — F46 activation seam (Jobs 54-55).
+ * activationJobs.ts — F46 activation seam (Job 54).
  *
- * The REST→WS bridge: polls for newly created rental/delivery requests
- * and broadcasts them to eligible bidder/courier sockets.
+ * The REST→WS bridge: polls for newly created rental requests
+ * and broadcasts them to eligible bidder sockets.
  *
  * Job 54: rental activation (broadcasting → bid_request)
- * Job 55: delivery activation (pending → bid_request + shop:delivery_created)
+ * Job 55: RETIRED 2026-10-16 (B5-1, plan 27 §6.1) — delivery activation
+ * (pending → bid_request + shop:delivery_created) is gone with the
+ * courier-bidding marketplace. activateDeliveryRequests deleted.
  *
  * Uses in-memory watermark for efficiency; restarts re-broadcast all
  * still-active rows (idempotent — doubles as crash recovery per TD-15).
@@ -15,27 +17,23 @@
  * Expo push HTTP held the scheduler connection idle-in-transaction
  * (unbounded wall-clock, derivation undermined). The scans now return a
  * notifyQueue; the scheduler dispatches pushes AFTER withJobBudget returns
- * (see scheduler.ts jobs 54/55). Pushes keep N11 deterministic idempotency
+ * (see scheduler.ts job 54; job 55 retired B5-1). Pushes keep N11 deterministic idempotency
  * keys so the watermark restart-rebroadcast never re-pushes.
  */
 import { db } from '../src/db';
 import type { DbClient } from './tx';
 import {
   rentalRequests,
-  deliveryRequests,
   fleetMembers,
   fleetServiceZones,
-  shopOrders,
   fleets,
 } from '../src/db/schema';
 import { eq, and, gt, sql, inArray } from 'drizzle-orm';
 import { logger } from '../lib/logger';
 import { getConnectedBidderIds, sendToBidder } from './rentalHandler';
-import { broadcastToCouriers } from './deliveryHandler';
-// sendNotifications: batched push path (job 54 member fan-out + job 55
-// customer pushes) — dispatched by the scheduler OUTSIDE the budget tx (M4).
+// sendNotifications: batched push path (job 54 member fan-out) —
+// dispatched by the scheduler OUTSIDE the budget tx (M4).
 import { sendNotifications, type NotificationRequest } from '../lib/notify';
-import { sendToUser } from './index';
 
 /** A push tuple deferred out of the budget tx for post-tx dispatch (M4). */
 export type NotifyQueue = NotificationRequest[];
@@ -183,104 +181,7 @@ export async function activateRentalRequests(tx: DbClient = db): Promise<{
   return { count: broadcastCount, notifyQueue };
 }
 
-// ── Job 55: Delivery activation ──────────────────────────────────────────
-
-// Epoch-initialized: on restart, re-broadcast all still-active rows (crash recovery TD-15)
-let deliveryWatermark: Date = new Date(0);
-
-/**
- * Scan for pending delivery requests newer than watermark,
- * then broadcast to eligible courier sockets.
- * Also emits shop:delivery_created (F24) for food delivery orders.
- *
- * M4: the customer push is RETURNED in the notifyQueue (with its N11 key)
- * for post-budget dispatch; the WS send stays here (in-memory).
- */
-export async function activateDeliveryRequests(tx: DbClient = db): Promise<{
-  count: number;
-  notifyQueue: NotifyQueue;
-}> {
-  const pending = await tx
-    .select()
-    .from(deliveryRequests)
-    .where(
-      and(
-        eq(deliveryRequests.status, 'pending'),
-        gt(deliveryRequests.created_at, deliveryWatermark),
-      ),
-    );
-
-  if (pending.length === 0) return { count: 0, notifyQueue: [] };
-
-  let broadcastCount = 0;
-  const notifyQueue: NotifyQueue = [];
-
-  for (const req of pending) {
-    // Broadcast to all connected couriers (they filter by eligibility client-side
-    // or we could filter here by vehicle type if required_vehicle_type is set)
-    const broadcastPayload = {
-      request_id: req.id,
-      pickup_address: req.pickup_address,
-      pickup_lat: req.pickup_lat,
-      pickup_lng: req.pickup_lng,
-      dropoff_address: req.dropoff_address,
-      dropoff_lat: req.dropoff_lat,
-      dropoff_lng: req.dropoff_lng,
-      required_vehicle_type: req.required_vehicle_type,
-      declared_fee_bdt: req.declared_fee_bdt,
-      deadline_at: req.deadline_at,
-      package_description: req.package_description,
-    };
-
-    broadcastToCouriers('delivery:bid_request', broadcastPayload);
-    broadcastCount++;
-
-    // F24: if food delivery (has source_shop_order_id), emit shop:delivery_created
-    // to the customer via the rider/driver registry (sendToUser) + push fallback
-    if (req.source_shop_order_id) {
-      try {
-        const [shopOrder] = await tx
-          .select({ rider_user_id: shopOrders.rider_user_id })
-          .from(shopOrders)
-          .where(eq(shopOrders.id, req.source_shop_order_id))
-          .limit(1);
-
-        if (shopOrder) {
-          const payload = {
-            type: 'shop:delivery_created',
-            order_id: req.source_shop_order_id,
-            delivery_request_id: req.id,
-          };
-
-          // Try WS first via rider/driver registry (in-memory — budget-safe)
-          sendToUser(shopOrder.rider_user_id, payload);
-
-          // M4: push deferred to post-budget dispatch.
-          // N11: idempotency key — restart re-broadcast must not re-push.
-          notifyQueue.push({
-            userId: shopOrder.rider_user_id,
-            type: 'default',
-            title: 'Your order is being delivered',
-            body: 'A courier has been assigned to your food order',
-            data: { order_id: req.source_shop_order_id, type: 'delivery_created' },
-            idempotencyKey: `delivery_created:${req.id}`,
-          });
-        }
-      } catch (err) {
-        logger.warn('[activation] shop:delivery_created failed', {
-          request_id: req.id,
-          err,
-        });
-      }
-    }
-  }
-
-  // Advance watermark
-  const newest = pending.reduce((max, r) =>
-    new Date(r.created_at) > max ? new Date(r.created_at) : max,
-    deliveryWatermark,
-  );
-  deliveryWatermark = newest;
-
-  return { count: broadcastCount, notifyQueue };
-}
+// ── Job 55: RETIRED 2026-10-16 (B5-1, plan 27 §6.1) ─────────────────────────
+// Delivery activation (pending delivery_requests → delivery:bid_request +
+// shop:delivery_created) deleted with the courier-bidding marketplace.
+// The job number is NOT reused; scheduler.ts carries the matching tombstone.

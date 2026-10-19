@@ -11,6 +11,7 @@ import { shops, shopMembers, ambulanceCertifications, drivers } from '@/src/db/s
 import { eq, and, isNull, or, gt } from 'drizzle-orm';
 import { logger } from './logger';
 import { serviceLevelSatisfies } from './ambulanceCerts';
+import { membershipForbidden, assertMemberRole } from './membershipGate';
 
 export type ShopMemberRole = 'OWNER' | 'MANAGER' | 'STAFF';
 
@@ -49,7 +50,7 @@ export function requireShopMember(
       .maybeSingle();
 
     if (userErr || !dbUser) {
-      throw Object.assign(new Error('Forbidden'), { status: 403 });
+      membershipForbidden('Forbidden');
     }
 
     // Check active membership
@@ -67,26 +68,15 @@ export function requireShopMember(
 
     const membership = rows[0];
     if (!membership) {
-      throw Object.assign(new Error('Forbidden'), {
-        status: 403,
-        message: 'Not a member of this shop',
-      });
+      membershipForbidden('Not a member of this shop');
     }
 
     if (membership.status !== 'active') {
-      throw Object.assign(new Error('Forbidden'), {
-        status: 403,
-        message: 'Shop membership is not active',
-      });
+      membershipForbidden('Shop membership is not active');
     }
 
-    // Role check
-    if (allowedRoles && !allowedRoles.includes(membership.role)) {
-      throw Object.assign(new Error('Forbidden'), {
-        status: 403,
-        message: `Requires one of: ${allowedRoles.join(', ')}`,
-      });
-    }
+    // Role check — shared family helper (message shape pinned there).
+    assertMemberRole({ role: membership.role, allowedRoles });
 
     // F15: shop must be active
     const shopRows = await db
@@ -97,10 +87,7 @@ export function requireShopMember(
 
     const shop = shopRows[0];
     if (!shop || shop.status !== 'active') {
-      throw Object.assign(new Error('Forbidden'), {
-        status: 403,
-        message: 'Shop is not active',
-      });
+      membershipForbidden('Shop is not active');
     }
 
     return { supabaseUser, dbUser, membership };
@@ -211,7 +198,7 @@ export interface DeliveryAgentAuthResult {
   supabaseUser: User;
   dbUser: { id: string; role: string };
   kind: 'courier' | 'driver';
-  courier: { id: string; status: string } | null;
+  courier: { id: string; status: string; verification_status: string } | null;
   driver: { id: string; deliveries_enabled: boolean } | null;
 }
 
@@ -227,15 +214,19 @@ export async function requireDeliveryAgent(
     .maybeSingle();
   if (!dbUser) throw Object.assign(new Error('Forbidden'), { status: 403 });
 
+  // C7-2: the dispatch pool consults verification_status = 'active' — the
+  // agent gate must too. A courier whose admin verification is still
+  // pending (including every row the retired self-signup created) 403s
+  // here even though its operational status reads 'active'.
   const { data: courier } = await supabaseAdmin
     .from('couriers')
-    .select('id, status')
+    .select('id, status, verification_status')
     .eq('user_id', dbUser.id)
     .in('status', ['active'])
     .limit(1)
     .maybeSingle();
-  if (courier) {
-    return { supabaseUser, dbUser, kind: 'courier', courier, driver: null };
+  if (courier && (courier as { verification_status?: string }).verification_status === 'active') {
+    return { supabaseUser, dbUser, kind: 'courier', courier: courier as DeliveryAgentAuthResult['courier'], driver: null };
   }
 
   const { data: driver } = await supabaseAdmin
@@ -281,11 +272,14 @@ export function requireCourier(type: 'parcel' | 'food') {
 
     const { data: courier } = await supabaseAdmin
       .from('couriers')
-      .select('id, courier_type, status')
+      .select('id, courier_type, status, verification_status')
       .eq('user_id', dbUser.id)
       .eq('courier_type', type)
       .maybeSingle();
-    if (!courier || courier.status !== 'active') throw Object.assign(new Error('Forbidden'), { status: 403, message: 'courier_required' });
+    // C7-2: unverified couriers are invisible (same rule as the agent gate).
+    if (!courier || courier.status !== 'active' || (courier as { verification_status?: string }).verification_status !== 'active') {
+      throw Object.assign(new Error('Forbidden'), { status: 403, message: 'courier_required' });
+    }
 
     let driver: { id: string; vehicle_type: string } | null = null;
     if (type === 'parcel') {

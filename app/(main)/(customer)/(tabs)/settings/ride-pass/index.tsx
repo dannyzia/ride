@@ -94,7 +94,7 @@ export default function RidePassPurchase() {
   if (paymentUrl) {
     return (
       <PaymentWebView
-        bkashURL={paymentUrl}
+        paymentURL={paymentUrl}
         paymentID={paymentEventId}
         purpose="rider_pass"
         onSuccess={() => { setPaymentUrl(""); Alert.alert(t('common.success'), t('ride_pass.activated')); fetchPasses(); }}
@@ -115,6 +115,14 @@ export default function RidePassPurchase() {
         <View className="flex-1 items-center justify-center"><ActivityIndicator size="large" color={colors.primary} /></View>
       ) : (
         <ScrollView className="flex-1 px-6" contentContainerStyle={{ paddingVertical: 16 }}>
+          {/* D9-2 (skeptic §D9): pass purchase dormant until payments launch
+              (platform_config payments_enabled=false; the server 409s). F-26
+              disabled-with-copy; re-enable by deleting this banner and the
+              dormant branch on the Buy button. */}
+          <View className="rounded-xl px-4 py-3 mb-4 border" style={{ backgroundColor: surfaceBg, borderColor }}>
+            <Text className="text-sm font-JakartaSemiBold" style={{ color: textPrimary }}>{t('payments.launch_later')}</Text>
+            <Text className="text-xs font-Jakarta mt-1" style={{ color: textSecondary }}>{t('payments.launch_later_desc')}</Text>
+          </View>
           {activeSub && (
             <View
               className="rounded-xl p-4 mb-6 border"
@@ -160,10 +168,12 @@ export default function RidePassPurchase() {
                   <Text className="text-lg font-JakartaBold" style={{ color: colors.primary }}>{formatBDT(p.price_bdt)}</Text>
                   <Text className="text-xs font-Jakarta" style={{ color: textSecondary }}>{t('ride_pass.discount_days', { percent: p.discount_percent, days: p.validity_days })}{p.max_rides ? t('ride_pass.rides_suffix', { count: p.max_rides }) : ""}</Text>
                 </View>
-                <TouchableOpacity onPress={() => buyPass(p.id)} disabled={purchasing === p.id}
+                {/* Dormant until payments launch: disabled keeps buyPass wired
+                    for the month-3 re-enable (delete `disabled` + banner). */}
+                <TouchableOpacity onPress={() => buyPass(p.id)} disabled
                   className="py-2 px-4 rounded-full"
-                  style={{ backgroundColor: purchasing === p.id ? disabledBg : colors.primary }} testID="customer.settings.ride-pass.buy-pass">
-                  <Text className="text-goWhite font-JakartaBold text-sm">{purchasing === p.id ? "..." : t('ride_pass.buy')}</Text>
+                  style={{ backgroundColor: disabledBg }} testID="customer.settings.ride-pass.buy-pass">
+                  <Text className="font-JakartaBold text-sm" style={{ color: textSecondary }}>{purchasing === p.id ? "..." : t('payments.launch_later')}</Text>
                 </TouchableOpacity>
               </View>
             </View>

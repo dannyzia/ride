@@ -60,7 +60,7 @@ describe("shopLedger — settlement writer (§12)", () => {
       ["order_revenue", 10_000],
       ["commission", -800], // 8% of 10000 paisa, integer rounding
     ]);
-    expect(out).toEqual({ order_revenue_bdt: 10_000, commission_bdt: -800 });
+    expect(out).toEqual({ order_revenue_bdt: 10_000, commission_bdt: -800, delivery_fee_bdt: 0 });
     // commission is fresh-read — never a code constant
     expect(mockRequireInt).toHaveBeenCalledWith("shop_commission_percent");
   });
@@ -90,6 +90,59 @@ describe("shopLedger — settlement writer (§12)", () => {
     });
 
     expect(inserts).toHaveLength(0);
+  });
+
+  it("credits the delivery fee to the shop on self-delivery (C6-4)", async () => {
+    mockRequireInt.mockResolvedValue(8);
+    const { tx, inserts } = makeTx();
+
+    const out = await settleShopOrder(
+      tx,
+      {
+        id: "order-5",
+        shop_id: "shop-1",
+        subtotal_bdt: 10_000,
+        delivery_fee_bdt: 2_000, // customer-paid, snapshotted at placement
+      },
+      { selfDelivered: true },
+    );
+
+    expect(inserts.map((i) => [i.entry_type, i.amount_bdt])).toEqual([
+      ["order_revenue", 10_000],
+      ["commission", -800], // 8% of the items subtotal — never on the fee
+      ["delivery_fee", 2_000], // the shop delivered it itself, so it keeps the fee
+    ]);
+    expect(out).toEqual({ order_revenue_bdt: 10_000, commission_bdt: -800, delivery_fee_bdt: 2_000 });
+  });
+
+  it("books no delivery_fee row for a courier delivery even when a fee snapshot is present", async () => {
+    mockRequireInt.mockResolvedValue(0);
+    const { tx, inserts } = makeTx();
+
+    const out = await settleShopOrder(tx, {
+      id: "order-6",
+      shop_id: "shop-1",
+      subtotal_bdt: 50_000,
+      delivery_fee_bdt: 2_000, // the courier's COD remittance — settleDeliveryLeg owns it
+    });
+
+    expect(inserts).toHaveLength(1);
+    expect(inserts[0]).toMatchObject({ entry_type: "order_revenue", amount_bdt: 50_000 });
+    expect(out.delivery_fee_bdt).toBe(0);
+  });
+
+  it("books no delivery_fee row for self-delivery with a zero fee", async () => {
+    mockRequireInt.mockResolvedValue(0);
+    const { tx, inserts } = makeTx();
+
+    await settleShopOrder(
+      tx,
+      { id: "order-7", shop_id: "shop-1", subtotal_bdt: 50_000, delivery_fee_bdt: 0 },
+      { selfDelivered: true },
+    );
+
+    expect(inserts).toHaveLength(1);
+    expect(inserts[0]).toMatchObject({ entry_type: "order_revenue" });
   });
 
   it("propagates a missing config key as a 500 (no invented zero)", async () => {

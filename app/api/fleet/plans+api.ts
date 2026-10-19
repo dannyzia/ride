@@ -1,8 +1,12 @@
 /**
- * GET  /api/fleet/plans              — List active subscription plans (public-ish)
+ * GET  /api/fleet/plans              — List active subscription plans (fleet-gated)
  * POST /api/fleet/plans?fleet_id=... — Subscribe fleet to a plan (OWNER only)
  *
- * GET requires no fleet context (plans are platform-wide catalog).
+ * GET requires auth + fleet capability (an ACTIVE fleet_members row OR fleet
+ * ownership) — the full catalog is never sent to a non-matching client
+ * (S5/§14 VISIBILITY; corrected 2026-10-17 — this header previously said
+ * "public-ish / no fleet context", which has not been true since the
+ * server-side caller gate shipped).
  * POST requires OWNER via requireFleetMember — only the fleet owner can
  * change the fleet's subscription.
  *
@@ -29,10 +33,12 @@ const subscribeSchema = z.object({
 
 /**
  * GET — the active fleet-plan catalog. S5/§14 VISIBILITY: the full catalog is
- * never sent to a caller with no fleet capability (shipped unauthenticated —
- * §14: "the full catalog is never sent to a non-matching client"). A caller
- * qualifies with an ACTIVE fleet_members row OR by owning any fleet
- * (solo NATIVE owners included — the portal is their surface too).
+ * never sent to a caller with no fleet capability (§14: "the full catalog is
+ * never sent to a non-matching client"). A caller qualifies with an ACTIVE
+ * fleet_members row OR by owning any fleet (solo NATIVE owners included —
+ * the portal is their surface too). Unauthenticated callers get 401;
+ * authenticated callers with no fleet capability get 403
+ * fleet_membership_required.
  */
 export async function GET(request: Request) {
   try {

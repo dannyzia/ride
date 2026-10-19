@@ -12,8 +12,10 @@ import { API_URL } from "@/lib/config";
 import { logger } from "@/lib/logger";
 import { useIsDark } from "@/lib/useAppearance";
 
+// D9-3 (skeptic §D9): the checkout URL is PortPos-hosted (bKash, Nagad,
+// cards) — the legacy bkashURL prop name was renamed to paymentURL.
 interface PaymentWebViewProps {
-  bkashURL: string;
+  paymentURL: string;
   paymentID: string;
   purpose?: string;
   onSuccess: () => void;
@@ -33,7 +35,7 @@ function formatPurpose(slug: string): string {
 }
 
 export default function PaymentWebView({
-  bkashURL,
+  paymentURL,
   paymentID,
   purpose,
   onSuccess,
@@ -90,7 +92,7 @@ export default function PaymentWebView({
   }, []);
 
   useEffect(() => {
-    if (visible && bkashURL) {
+    if (visible && paymentURL) {
       const timer = setTimeout(() => startPolling(), 1000);
       return () => {
         clearTimeout(timer);
@@ -98,7 +100,7 @@ export default function PaymentWebView({
       };
     }
     return stopPolling;
-  }, [visible, bkashURL, startPolling, stopPolling]);
+  }, [visible, paymentURL, startPolling, stopPolling]);
 
   useEffect(() => {
     return () => stopPolling();
@@ -166,7 +168,7 @@ export default function PaymentWebView({
 
         {/* WebView */}
         <WebView
-          source={{ uri: bkashURL }}
+          source={{ uri: paymentURL }}
           javaScriptEnabled
           domStorageEnabled
           startInLoadingState

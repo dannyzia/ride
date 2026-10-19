@@ -1,0 +1,80 @@
+# rider/roles/02-add-role — Profile → Add a role (S7.1).
+#
+# Covers app/(main)/(customer)/add-role/index.tsx (§2, OWNER-DECISION #8/#9):
+# the roles the account HOLDS (with pending/reject state surfaced in-app — R6),
+# the roles it can still ADD, and the R9 path that EXPANDS this account rather
+# than creating a second one (the gated roles push their wizard with
+# `?mode=addRole`, and that wizard POSTs /api/user/roles instead of /api/register).
+#
+# SELECTOR NOTE — why the addable rows are addressed by LABEL, not id: the
+# addable block is `.map`-rendered with ONE shared literal id
+# (`customer.add-role.push-push`), so all remaining addable roles carry the same
+# id and the role is chosen by its label (`auth.roles.shop_owner` = "Shop Owner").
+# The HELD rows use per-role ids from a Record (`add-role.row-<role>`), which
+# testid-manifest cannot see (a computed `testID={…}` is not a string literal) —
+# so those rows are asserted by their section copy instead.
+#
+# SEED, DECLARED: MULTI_ROLE_PHONE holds an ACTIVE `rider` role and does NOT hold
+# `shop_owner` (the addable row must render). The chooser step is conditional
+# because a single-role account is routed straight through the gate.
+# Class: AUTOMATABLE. NOT device-verified — the device day is ENV-blocked.
+appId: com.ride.bd
+name: "S7 Rider - Add a role (held roles, gated add path)"
+tags: [rider, roles, s7]
+---
+- stopApp: com.ride.bd
+- launchApp:
+    appId: com.ride.bd
+    clearState: true
+- extendedWaitUntil:
+    visible: "Enter your phone number"
+    timeout: 20000
+- tapOn:
+    id: "phone-entry.set-phone"
+- eraseText
+- inputText: ${MULTI_ROLE_PHONE}
+- tapOn:
+    id: "phone-entry.handle-login"
+- extendedWaitUntil:
+    visible: "Welcome Back"
+    timeout: 15000
+- tapOn:
+    id: "login.set-password"
+- inputText: ${MULTI_ROLE_PASSWORD}
+- tapOn:
+    id: "login.handle-login"
+- runFlow:
+    when:
+      visible:
+        id: "login-as.enter-rider"
+    commands:
+      - tapOn:
+          id: "login-as.enter-rider"
+- extendedWaitUntil:
+    visible:
+      id: "customer.home.el-2"
+    timeout: 30000
+# ── Profile → Add a role ────────────────────────────────────────────────────
+- runFlow: ../../shared/util/_open-profile-tab.yaml
+- tapOn:
+    id: "customer.profile.push-add-role"
+- extendedWaitUntil:
+    visible: "Add a role"
+    timeout: 20000
+- assertVisible: "One account can hold several roles"
+- assertVisible: "Your roles"
+- assertVisible: "Add another role"
+# The gated addables' hint — proves the verification-gated branch rendered
+# (add-role.tsx renders auth.add_role.verification_gated for them).
+- assertVisible: "Needs admin verification"
+# ── The gated add path (R9: expand THIS account, not a second one) ──────────
+- tapOn:
+    id: "customer.add-role.push-push"
+    text: "Shop Owner"
+- extendedWaitUntil:
+    visible: "Set up your shop — it goes live after admin verification"
+    timeout: 20000
+- assertVisible:
+    id: "register-shop-owner.set-shop-name"
+- assertVisible:
+    id: "register-shop-owner.submit"

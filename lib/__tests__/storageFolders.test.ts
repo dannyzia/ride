@@ -9,6 +9,7 @@
 // so a divergence between the prefix the uploader writes and the prefix the
 // endpoint accepts fails here instead of on a device.
 import {
+  CATALOG_FOLDERS,
   DEFAULT_STORAGE_FOLDER,
   DOCUMENT_FOLDERS,
   FOLDER_PREFIX,
@@ -58,11 +59,27 @@ const DOCUMENT_ENDPOINT_EXPECTATION: Record<StorageFolder, boolean> = {
   documents: true,
   vehicle: true,
   profile: false,
+  catalog: false,
 };
 
 /** Same exhaustive guard for `/api/driver/me` (the profile photo). */
 const PROFILE_ENDPOINT_EXPECTATION: Record<StorageFolder, boolean> = {
   profile: true,
+  documents: false,
+  vehicle: false,
+  catalog: false,
+};
+
+/**
+ * Same exhaustive guard for the products management route (D5-1): product
+ * images live under `catalog/` only. Owner-unscoped (any staffer uploads
+ * under their own uid), so the expectation is evaluated through the same
+ * owner-scoped composition — a catalog URL under the caller's own uid is
+ * the representative case.
+ */
+const CATALOG_ENDPOINT_EXPECTATION: Record<StorageFolder, boolean> = {
+  catalog: true,
+  profile: false,
   documents: false,
   vehicle: false,
 };
@@ -81,6 +98,7 @@ describe('storage folder contract', () => {
       profile: 'profile',
       documents: 'documents',
       vehicle: 'vehicle',
+      catalog: 'catalog',
     });
   });
 });
@@ -134,6 +152,30 @@ describe('/api/driver/me — profile photo folders', () => {
           accepted: isAllowedFolderStorageUrl(uploadedUrlFor(folder), PROFILE_FOLDERS, UID),
         }).toEqual({ folder, accepted: PROFILE_ENDPOINT_EXPECTATION[folder] });
       }
+    });
+  });
+});
+
+describe('products route — catalog image folders (D5-1)', () => {
+  it('classifies EVERY folder in STORAGE_FOLDERS explicitly', () => {
+    withEnv(() => {
+      for (const folder of STORAGE_FOLDERS) {
+        expect({
+          folder,
+          accepted: isAllowedFolderStorageUrl(uploadedUrlFor(folder), CATALOG_FOLDERS, UID),
+        }).toEqual({ folder, accepted: CATALOG_ENDPOINT_EXPECTATION[folder] });
+      }
+      // The policy constant and the observed behaviour cannot drift apart.
+      expect([...CATALOG_FOLDERS].sort()).toEqual(
+        STORAGE_FOLDERS.filter((f) => CATALOG_ENDPOINT_EXPECTATION[f]).sort(),
+      );
+    });
+  });
+
+  it('still rejects a driver document stored as a product image', () => {
+    withEnv(() => {
+      expect(isAllowedFolderStorageUrl(uploadedUrlFor('documents'), CATALOG_FOLDERS, UID)).toBe(false);
+      expect(isAllowedFolderStorageUrl(uploadedUrlFor('vehicle'), CATALOG_FOLDERS, UID)).toBe(false);
     });
   });
 });

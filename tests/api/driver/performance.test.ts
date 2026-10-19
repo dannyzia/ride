@@ -6,6 +6,8 @@
  *  - month: calendar month in five buckets W1–W5 (days 1-7/8-14/15-21/22-28/29-31)
  *  - invalid period → 400 invalid_period
  *  - cancellation rate divides by assigned (completed+cancelled), not all rides
+ *  - C4-FIX: the rate is trailing-30-day (cancelled_30d / assigned_30d) —
+ *    the old all-time/all-time mix floated free of the week/month windows
  */
 /* eslint-disable import/first */
 jest.mock("@/lib/auth", () => ({
@@ -42,8 +44,8 @@ const DRIVER: Row = { id: DRIVER_ID, acceptance_rate: "92.50", rating: "4.70" };
 const COUNTS = [
   [{ cnt: 10 }], // trips this week
   [{ cnt: 40 }], // trips this month
-  [{ cnt: 4 }], // cancelled (all time)
-  [{ cnt: 50 }], // assigned = completed + cancelled
+  [{ cnt: 4 }], // cancelled (trailing 30d)
+  [{ cnt: 50 }], // assigned = completed + cancelled (trailing 30d)
   [{ total_minutes: "600" }], // online minutes this week → 10.0 h
 ];
 

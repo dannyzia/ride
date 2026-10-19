@@ -1,0 +1,4 @@
+appId: com.ride.bd
+---
+- tapOn:
+    id: "phone-entry.set-role-2"

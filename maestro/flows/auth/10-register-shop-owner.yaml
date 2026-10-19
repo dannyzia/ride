@@ -1,0 +1,83 @@
+# auth/10-register-shop-owner — shop-owner onboarding wizard happy path (S7.1).
+#
+# Covers app/(auth)/register-shop-owner.tsx (§2c): the route into the wizard from
+# phone-entry's Register button (role chip 3 = shop_owner → otp-verify →
+# register.tsx → ROLE_WIZARD push, register.tsx:53), the full field set, the
+# category list, and the submit that creates the account with the shop PENDING.
+#
+# TWO STEPS ARE DEVICE-ASSISTED, and both are marked in-flow:
+#   1. DocumentUploadCard opens the OS image picker
+#      (ImagePicker.launchImageLibraryAsync, DocumentUploadCard.tsx:42). The
+#      operator picks a file; the flow waits up to 180s for the card to flip to
+#      its post-upload state, exactly as driver-onboarding.yaml does for its
+#      eleven cards. There is no test-mode picker bypass on disk.
+#   2. The CATEGORY rows are DB-rows (`GET /api/shop/types`, register-shop-owner.tsx:
+#      110) whose labels are not in the app/locale corpus, so the label is
+#      RUNNER-SUPPLIED (`${SHOP_TYPE_LABEL}`) — the same mechanism
+#      driver-onboarding.yaml uses for `${BODY_TYPE:Bike}`. The default names a
+#      NON-restaurant type on purpose: a restaurant type additionally reveals the
+#      food-safety card and keeps canSubmit false without it
+#      (register-shop-owner.tsx:120-125), which would make a single-path flow
+#      non-deterministic.
+#
+# The final assertion is the wizard LEAVING — submit's success path calls
+# router.replace("/(main)/(customer)/home") (register-shop-owner.tsx:181), so the
+# submit button ceasing to exist is the success signal. It is asserted that way
+# rather than on the destination screen because a brand-new account's landing
+# surface is an auth-gate decision, not this wizard's contract.
+# Fixtures: FRESH phone (a used one is rejected), OTP bypass 123456.
+# Class: AUTOMATABLE. NOT device-verified — the device day is ENV-blocked.
+appId: com.ride.bd
+name: "S7 Auth - Register Shop Owner wizard"
+tags: [auth, shop-owner, s7]
+---
+- stopApp: com.ride.bd
+- launchApp:
+    appId: com.ride.bd
+    clearState: true
+- extendedWaitUntil:
+    visible: "Enter your phone number"
+    timeout: 20000
+- tapOn:
+    id: "phone-entry.set-phone"
+- eraseText
+- inputText: ${NEW_SHOP_PHONE}
+# chip 3 = shop_owner (phone-entry.tsx:232), then REGISTER (not login) — only
+# handle-register routes to otp-verify with the role param (phone-entry.tsx:104).
+- tapOn:
+    id: "phone-entry.set-role-3"
+- tapOn:
+    id: "phone-entry.handle-register"
+- runFlow:
+    env:
+      OTP_CODE: "123456"
+      NAME: "${NEW_SHOP_OWNER_NAME}"
+      PASSWORD: "${NEW_SHOP_PASSWORD}"
+    commands:
+      - runFlow: ../shared/auth/_register-credentials.yaml
+# ── The wizard ──────────────────────────────────────────────────────────────
+- extendedWaitUntil:
+    visible: "Set up your shop — it goes live after admin verification"
+    timeout: 20000
+- tapOn:
+    id: "register-shop-owner.set-shop-name"
+- inputText: ${SHOP_NAME}
+- tapOn:
+    id: "register-shop-owner.set-address"
+- inputText: ${SHOP_ADDRESS}
+# DB-driven category label (see header note 2).
+- tapOn:
+    text: "${SHOP_TYPE_LABEL:Grocery}"
+# Trade license upload — device-assisted (header note 1).
+- tapOn:
+    id: "register-shop-owner.upload-trade-license"
+- extendedWaitUntil:
+    visible: "Tap to replace document"
+    timeout: 180000
+- tapOn:
+    id: "register-shop-owner.submit"
+# Success signal: the wizard is gone (router.replace — see header).
+- extendedWaitUntil:
+    notVisible:
+      id: "register-shop-owner.submit"
+    timeout: 30000

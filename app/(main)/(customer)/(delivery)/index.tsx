@@ -1,5 +1,7 @@
 /**
- * Delivery requests list — customer's active and past deliveries.
+ * P2P parcels list (plan 27 §6.1) — the sender's own parcel legs, newest
+ * first. The retired bidding history stays on GET /api/delivery/requests
+ * and is not shown here.
  */
 import React, { useEffect, useState, useCallback } from 'react';
 import {
@@ -20,12 +22,13 @@ import { logger } from '@/lib/logger';
 import { formatBDT } from "@/lib/format";
 import { useTranslation } from 'react-i18next';
 
-interface DeliveryRequest {
-  id: string;
+interface ParcelLeg {
+  leg_id: string;
+  parcel_id: string;
   status: string;
   pickup_address: string;
   dropoff_address: string;
-  quoted_fee_bdt: number | null;
+  delivery_fee_bdt: number | null;
   created_at: string;
 }
 
@@ -33,7 +36,7 @@ export default function DeliveryListScreen() {
   const { t } = useTranslation();
   const router = useRouter();
   const isDark = useIsDark();
-  const [deliveries, setDeliveries] = useState<DeliveryRequest[]>([]);
+  const [deliveries, setDeliveries] = useState<ParcelLeg[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -42,12 +45,12 @@ export default function DeliveryListScreen() {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.access_token) return;
 
-      const res = await fetch(`${process.env.EXPO_PUBLIC_SERVER_URL}/api/delivery/requests`, {
+      const res = await fetch(`${process.env.EXPO_PUBLIC_SERVER_URL}/api/delivery/parcels`, {
         headers: { Authorization: `Bearer ${session.access_token}` },
       });
       if (res.ok) {
         const data = await res.json();
-        setDeliveries(data.deliveries ?? []);
+        setDeliveries(data.parcels ?? []);
       }
     } catch (err) {
       logger.error('Failed to fetch deliveries', err);
@@ -71,21 +74,23 @@ export default function DeliveryListScreen() {
   const textSecondary = isDark ? colors.textSecondaryDark : colors.textSecondaryLight;
   const borderColor = isDark ? colors.borderDark : colors.borderLight;
 
+  // S6 universal-leg states (created → offered → accepted → picked_up →
+  // delivered | failed).
   const statusColors: Record<string, string> = {
-    pending: colors.amber,
-    assigned: colors.primary,
+    created: colors.amber,
+    offered: colors.amber,
+    accepted: colors.primary,
     picked_up: colors.primary,
-    in_transit: colors.primary,
     delivered: '#22C55E',
     failed: colors.danger,
     cancelled: colors.danger,
   };
 
-  const renderDelivery = ({ item }: { item: DeliveryRequest }) => (
+  const renderDelivery = ({ item }: { item: ParcelLeg }) => (
     <TouchableOpacity
       className="rounded-xl p-4 mb-3"
       style={{ backgroundColor: surfaceBg, borderWidth: 1, borderColor }}
-      onPress={() => router.push(`/(main)/(customer)/(delivery)/request-detail?id=${item.id}`)}
+      onPress={() => router.push(`/(main)/(customer)/(delivery)/request-detail?id=${item.leg_id}`)}
       activeOpacity={0.7}
      testID="customer.delivery.push-request-detail">
       <View className="flex-row justify-between items-start mb-2">
@@ -104,9 +109,9 @@ export default function DeliveryListScreen() {
           </Text>
         </View>
       </View>
-      {item.quoted_fee_bdt != null && (
+      {item.delivery_fee_bdt != null && (
         <Text className="text-sm font-JakartaMedium" style={{ color: colors.primary }}>
-          {formatBDT(item.quoted_fee_bdt)}
+          {formatBDT(item.delivery_fee_bdt)}
         </Text>
       )}
     </TouchableOpacity>
@@ -152,7 +157,7 @@ export default function DeliveryListScreen() {
         <FlatList
           data={deliveries}
           renderItem={renderDelivery}
-          keyExtractor={(item) => item.id}
+          keyExtractor={(item) => item.leg_id}
           contentContainerStyle={{ padding: 16 }}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         />

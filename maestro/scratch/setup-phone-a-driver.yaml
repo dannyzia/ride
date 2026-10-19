@@ -1,0 +1,22 @@
+appId: com.ride.bd
+---
+- tapOn:
+    id: "phone-entry.set-phone"
+- eraseText
+- inputText: "1700000001"
+- tapOn:
+    id: "phone-entry.set-role-2"
+- tapOn:
+    id: "phone-entry.handle-login"
+- extendedWaitUntil:
+    visible: "Welcome Back"
+    timeout: 15000
+- tapOn:
+    id: "login.set-password"
+- eraseText
+- inputText: "test1234"
+- tapOn:
+    id: "login.handle-login"
+- extendedWaitUntil:
+    visible: ".*Calls Remaining.*|.*Connected.*|.*Go Online.*|.*Offline.*"
+    timeout: 30000

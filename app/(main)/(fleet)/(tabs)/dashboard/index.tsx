@@ -182,6 +182,10 @@ export default function FleetDashboard() {
 
           <Text style={{ fontFamily: "Jakarta-Bold", fontSize: 16, color: textPrimary, marginBottom: 12 }}>Quick Actions</Text>
           <View style={{ gap: 10 }}>
+            {/* C8-2: the fleet-surface marketplace entry — rental feed +
+                my-bids/SLA-ack + ambulance accept. A pure business-fleet
+                owner (no drivers row) bids end-to-end from here. */}
+            <QuickAction label="Marketplace" icon="pricetag" onPress={() => router.push("/(main)/(fleet)/marketplace")} isDark={isDark} />
             <QuickAction label="Vehicles" icon="car-sport" onPress={() => router.push("/(main)/(fleet)/(tabs)/operations")} isDark={isDark} />
             <QuickAction label="Drivers" icon="people" onPress={() => router.push("/(main)/(fleet)/(tabs)/operations")} isDark={isDark} />
             <QuickAction label="Trips" icon="map" onPress={() => router.push("/(main)/(fleet)/(tabs)/finance/trips")} isDark={isDark} />

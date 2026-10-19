@@ -10,7 +10,7 @@ import { jest } from '@jest/globals';
 import { requireCourier } from '@/lib/marketplaceRbac';
 import { isVerticalEnabled } from '@/lib/platformConfig';
 import { roleHasPermission } from '@/lib/adminRbac';
-import { sweepStaleCouriers, getConnectedCourierCount, handleHeartbeat, registerCourier, unregisterCourier } from '@/utils-server/deliveryHandler';
+import { sweepStaleCouriers, handleHeartbeat } from '@/utils-server/deliveryHandler';
 jest.mock("@/lib/ambulanceCerts", () => ({
   serviceLevelSatisfies: jest.fn(() => true),
 }));
@@ -144,7 +144,7 @@ describe('Delivery Marketplace (Phase 3)', () => {
   beforeEach(() => {
     mockSupabaseAdmin.from = mockChainForTable({
       users: { id: 'db-user-1', role: 'rider' },
-      couriers: { id: 'c1', courier_type: 'food', status: 'active' },
+      couriers: { id: 'c1', courier_type: 'food', status: 'active', verification_status: 'active' },
     });
   });
 
@@ -175,7 +175,7 @@ describe('Delivery Marketplace (Phase 3)', () => {
     it('rejects when courier is suspended (403)', async () => {
       mockSupabaseAdmin.from = mockChainForTable({
         users: { id: 'db-user-1', role: 'rider' },
-        couriers: { id: 'c1', courier_type: 'food', status: 'suspended' },
+        couriers: { id: 'c1', courier_type: 'food', status: 'suspended', verification_status: 'active' },
       });
       const req = new Request('http://localhost', {
         method: 'POST',
@@ -184,10 +184,22 @@ describe('Delivery Marketplace (Phase 3)', () => {
       await expect(requireCourier('food')(req)).rejects.toMatchObject({ status: 403 });
     });
 
+    it('rejects when courier is unverified (403, C7-2)', async () => {
+      mockSupabaseAdmin.from = mockChainForTable({
+        users: { id: 'db-user-1', role: 'rider' },
+        couriers: { id: 'c1', courier_type: 'food', status: 'active', verification_status: 'pending' },
+      });
+      const req = new Request('http://localhost', {
+        method: 'POST',
+        headers: { authorization: 'Bearer test-token' },
+      });
+      await expect(requireCourier('food')(req)).rejects.toMatchObject({ status: 403, message: 'courier_required' });
+    });
+
     it('rejects parcel courier without active drivers row (403)', async () => {
       mockSupabaseAdmin.from = mockChainForTable({
         users: { id: 'db-user-1', role: 'driver' },
-        couriers: { id: 'c1', courier_type: 'parcel', status: 'active' },
+        couriers: { id: 'c1', courier_type: 'parcel', status: 'active', verification_status: 'active' },
         drivers: null,
       });
       const req = new Request('http://localhost', {
@@ -200,7 +212,7 @@ describe('Delivery Marketplace (Phase 3)', () => {
     it('passes for food hero on rider account (no vehicle check)', async () => {
       mockSupabaseAdmin.from = mockChainForTable({
         users: { id: 'db-user-1', role: 'rider' },
-        couriers: { id: 'c1', courier_type: 'food', status: 'active' },
+        couriers: { id: 'c1', courier_type: 'food', status: 'active', verification_status: 'active' },
       });
       const req = new Request('http://localhost', {
         method: 'POST',
@@ -214,7 +226,7 @@ describe('Delivery Marketplace (Phase 3)', () => {
     it('passes for parcel courier with active drivers row', async () => {
       mockSupabaseAdmin.from = mockChainForTable({
         users: { id: 'db-user-1', role: 'driver' },
-        couriers: { id: 'c1', courier_type: 'parcel', status: 'active' },
+        couriers: { id: 'c1', courier_type: 'parcel', status: 'active', verification_status: 'active' },
         drivers: { id: 'd1', vehicle_type: 'bike_standard', status: 'active' },
       });
       const req = new Request('http://localhost', {
@@ -374,18 +386,13 @@ describe('Delivery Marketplace (Phase 3)', () => {
       expect(typeof count).toBe('number');
     });
 
-    it('getConnectedCourierCount starts at 0', () => {
-      expect(getConnectedCourierCount()).toBe(0);
-    });
-
     it('handleHeartbeat is a function (presence throttle entry point)', () => {
       expect(typeof handleHeartbeat).toBe('function');
     });
 
-    it('registerCourier/unregisterCourier are functions', () => {
-      expect(typeof registerCourier).toBe('function');
-      expect(typeof unregisterCourier).toBe('function');
-    });
+    // B5-1 (plan 27 §6.1): the WS lane is deleted — registerCourier /
+    // unregisterCourier / getConnectedCourierCount no longer exist.
+    // Presence (heartbeat + sweep) is the whole module now.
   });
 
   // ── Scheduler job numbers ──

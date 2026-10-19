@@ -156,8 +156,26 @@ const DRIVER_NOTIFICATION_ROUTES: Record<string, NotificationHandler> = {
     router.push("/(main)/(delivery)" as never);
     return true;
   },
-  "delivery:status": () => {
+  // P2P parcel legs (order_id linkage): a sender tapping their parcel push
+  // lands on the parcel tracking screen, not the courier inbox.
+  "delivery:status": (data) => {
+    if (data.leg_id && isValidUUID(data.leg_id)) {
+      router.push(`/(main)/(customer)/(delivery)/request-detail?id=${data.leg_id}` as never);
+      return true;
+    }
     router.push("/(main)/(delivery)" as never);
+    return true;
+  },
+  // Staff lane (Flow 15): the invitee lands on the shop surface —
+  // /api/shop/mine scopes it orders-only server-side.
+  "shop:staff_invite": () => {
+    router.push("/(main)/(shop-owner)" as never);
+    return true;
+  },
+  // Extra-charge resolution → the proposing driver (mirrors the C4-3
+  // propose→rider fan-out; PATCH sends this after the commit).
+  "ride:extra_charge_resolved": () => {
+    router.push("/(main)/(rider)/d" as never);
     return true;
   },
 };
@@ -191,6 +209,16 @@ const RIDER_NOTIFICATION_ROUTES: Record<string, NotificationHandler> = {
   // Phase G: post-cancellation survey invite on driver-cancelled rides —
   // deep-links to the ride screen where the survey prompt is shown.
   "ride:cancel_survey": (data) => {
+    if (data.ride_id && isValidUUID(data.ride_id)) {
+      router.push(`/(main)/(customer)/ride-tracking/${data.ride_id}` as never);
+      return true;
+    }
+    router.push("/(main)/(customer)/(tabs)/home" as never);
+    return true;
+  },
+  // C4-3: driver-proposed toll/parking charge — deep-links to the active
+  // ride, where ExtraChargeApproval renders the approve/dispute card.
+  "ride:extra_charge_proposed": (data) => {
     if (data.ride_id && isValidUUID(data.ride_id)) {
       router.push(`/(main)/(customer)/ride-tracking/${data.ride_id}` as never);
       return true;
@@ -237,8 +265,20 @@ const RIDER_NOTIFICATION_ROUTES: Record<string, NotificationHandler> = {
     router.push("/(main)/(delivery)" as never);
     return true;
   },
-  "delivery:status": () => {
-    router.push("/(main)/(delivery)" as never);
+  // P2P parcel legs (order_id linkage): the sender's parcel pushes carry
+  // leg_id — deep-link to the tracking screen; anything else falls back to
+  // the sender's parcel list (riders cannot open the courier inbox).
+  "delivery:status": (data) => {
+    if (data.leg_id && isValidUUID(data.leg_id)) {
+      router.push(`/(main)/(customer)/(delivery)/request-detail?id=${data.leg_id}` as never);
+      return true;
+    }
+    router.push("/(main)/(customer)/(delivery)" as never);
+    return true;
+  },
+  // Staff lane (Flow 15): the invitee lands on the shop surface.
+  "shop:staff_invite": () => {
+    router.push("/(main)/(shop-owner)" as never);
     return true;
   },
 };

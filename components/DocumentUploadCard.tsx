@@ -5,6 +5,7 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import { uploadImageToR2 } from "@/lib/imageToURL";
 import { DEFAULT_STORAGE_FOLDER, type DocumentFolder } from "@/lib/storageFolders";
 import { logger } from "@/lib/logger";
+import { useTranslation } from "react-i18next";
 import { colors, spacing, radii } from "@/theme/goRide";
 import { useIsDark } from "@/lib/useAppearance";
 
@@ -26,6 +27,7 @@ interface DocumentUploadCardProps {
 }
 
 export default function DocumentUploadCard({ docType, label, folder, onUploadComplete, testID }: DocumentUploadCardProps) {
+  const { t } = useTranslation();
   const [uploading, setUploading] = useState(false);
   const [previewUri, setPreviewUri] = useState<string | null>(null);
   // H3: surface upload failures instead of silently logging them.
@@ -106,12 +108,12 @@ export default function DocumentUploadCard({ docType, label, folder, onUploadCom
             }}
           >
             {uploading
-              ? "Uploading..."
+              ? t("document_upload.uploading")
               : uploadError
                 ? uploadError
                 : previewUri
-                  ? "Tap to replace document"
-                  : "Tap to upload document"}
+                  ? t("document_upload.tap_replace")
+                  : t("document_upload.tap_upload")}
           </Text>
         </View>
         {uploading ? (

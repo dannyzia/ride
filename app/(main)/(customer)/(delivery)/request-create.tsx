@@ -1,5 +1,10 @@
 /**
- * Create a new delivery request — pickup/dropoff, package details, vehicle type.
+ * P2P parcel origination (plan 27 §6.1) — sender enters pickup, dropoff,
+ * item note + receiver phone. POSTs /api/delivery/parcels (the retired
+ * courier-bidding POST /api/delivery/requests is a 410 stub — this screen
+ * no longer touches it). No vehicle/weight/bidding selection: ranking is
+ * nearest-first across delivery men + toggle-ON drivers, one fee tier by
+ * distance, cash collected from the receiver on delivery.
  */
 import React, { useState } from 'react';
 import {
@@ -20,23 +25,14 @@ import { supabase } from '@/lib/supabase';
 import { logger } from '@/lib/logger';
 import { useTranslation } from 'react-i18next';
 
-const VEHICLE_TYPES = [
-  { value: 'bike', label: 'Bike', icon: 'bicycle' as const },
-  { value: 'cng', label: 'CNG', icon: 'car' as const },
-  { value: 'car', label: 'Car', icon: 'car-sport' as const },
-  { value: 'van', label: 'Van', icon: 'bus' as const },
-  { value: 'truck', label: 'Truck', icon: 'car' as const },
-] as const;
-
 export default function RequestCreateScreen() {
   const { t } = useTranslation();
   const router = useRouter();
   const isDark = useIsDark();
   const [pickupAddress, setPickupAddress] = useState('');
   const [dropoffAddress, setDropoffAddress] = useState('');
-  const [packageDesc, setPackageDesc] = useState('');
-  const [weight, setWeight] = useState('');
-  const [vehicleType, setVehicleType] = useState<string | null>(null);
+  const [itemNote, setItemNote] = useState('');
+  const [receiverPhone, setReceiverPhone] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
   const surfaceBg = isDark ? colors.surfaceElevatedDark : colors.surfaceLight;
@@ -45,8 +41,8 @@ export default function RequestCreateScreen() {
   const borderColor = isDark ? colors.borderDark : colors.borderLight;
 
   const handleSubmit = async () => {
-    if (!pickupAddress.trim() || !dropoffAddress.trim()) {
-      Alert.alert(t("common.error"), t("delivery_create.err_missing_addresses"));
+    if (!pickupAddress.trim() || !dropoffAddress.trim() || !itemNote.trim() || !receiverPhone.trim()) {
+      Alert.alert(t("common.error"), t("delivery_create.err_missing_fields"));
       return;
     }
 
@@ -59,7 +55,7 @@ export default function RequestCreateScreen() {
       }
 
       // Use Dhaka default coordinates (to be replaced with map picker)
-      const res = await fetch(`${process.env.EXPO_PUBLIC_SERVER_URL}/api/delivery/requests`, {
+      const res = await fetch(`${process.env.EXPO_PUBLIC_SERVER_URL}/api/delivery/parcels`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -72,22 +68,20 @@ export default function RequestCreateScreen() {
           dropoff_address: dropoffAddress,
           dropoff_lat: 23.8103,
           dropoff_lng: 90.4125,
-          package_description: packageDesc || undefined,
-          package_weight_kg: weight ? parseInt(weight, 10) : undefined,
-          required_vehicle_type: vehicleType,
-          bidding_window_seconds: 600,
+          item_note: itemNote,
+          receiver_phone: receiverPhone,
         }),
       });
 
       if (res.ok) {
         const data = await res.json();
-        router.replace(`/(main)/(customer)/(delivery)/request-detail?id=${data.delivery.id}`);
+        router.replace(`/(main)/(customer)/(delivery)/request-detail?id=${data.leg_id}`);
       } else {
         const err = await res.json();
         Alert.alert(t("common.error"), err.message || t("delivery_create.err_create_failed"));
       }
     } catch (err) {
-      logger.error('Delivery request creation failed', err);
+      logger.error('Parcel creation failed', err);
       Alert.alert(t("common.error"), t("common.something_went_wrong"));
     } finally {
       setSubmitting(false);
@@ -143,9 +137,9 @@ export default function RequestCreateScreen() {
           onChangeText={setDropoffAddress}
          testID="customer.delivery.request-create.set-dropoff-address"/>
 
-        {/* Package Description */}
+        {/* Item note (required — the courier reads this at pickup) */}
         <Text className="text-sm font-JakartaBold mb-2 mt-4" style={{ color: textSecondary }}>
-          {t("delivery_create.package_optional")}
+          {t("delivery_create.item_note")}
         </Text>
         <TextInput
           className="rounded-xl px-4 py-3 text-base font-Jakarta"
@@ -157,13 +151,13 @@ export default function RequestCreateScreen() {
           }}
           placeholder={t("delivery_create.package_placeholder")}
           placeholderTextColor={textSecondary}
-          value={packageDesc}
-          onChangeText={setPackageDesc}
-         testID="customer.delivery.request-create.set-package-desc"/>
+          value={itemNote}
+          onChangeText={setItemNote}
+         testID="customer.delivery.request-create.set-item-note"/>
 
-        {/* Weight */}
+        {/* Receiver phone (handover contact — pays cash on delivery) */}
         <Text className="text-sm font-JakartaBold mb-2 mt-4" style={{ color: textSecondary }}>
-          {t("delivery_create.weight_optional")}
+          {t("delivery_create.receiver_phone")}
         </Text>
         <TextInput
           className="rounded-xl px-4 py-3 text-base font-Jakarta"
@@ -173,39 +167,12 @@ export default function RequestCreateScreen() {
             borderColor,
             color: textPrimary,
           }}
-          placeholder={t("delivery_create.weight_placeholder")}
+          placeholder={t("delivery_create.receiver_phone_placeholder")}
           placeholderTextColor={textSecondary}
-          keyboardType="numeric"
-          value={weight}
-          onChangeText={setWeight}
-         testID="customer.delivery.request-create.set-weight"/>
-
-        {/* Vehicle Type */}
-        <Text className="text-sm font-JakartaBold mb-2 mt-4" style={{ color: textSecondary }}>
-          {t("delivery_create.vehicle_type_optional")}
-        </Text>
-        <View className="flex-row flex-wrap gap-2">
-          {VEHICLE_TYPES.map((vt) => (
-            <TouchableOpacity
-              key={vt.value}
-              className="flex-row items-center px-4 py-2 rounded-xl"
-              style={{
-                backgroundColor: vehicleType === vt.value ? colors.primary + '20' : surfaceBg,
-                borderWidth: 1,
-                borderColor: vehicleType === vt.value ? colors.primary : borderColor,
-              }}
-              onPress={() => setVehicleType(vehicleType === vt.value ? null : vt.value)}
-             testID="customer.delivery.request-create.set-vehicle-type">
-              <Ionicons name={vt.icon} size={18} color={vehicleType === vt.value ? colors.primary : textSecondary} />
-              <Text
-                className="text-sm font-JakartaMedium ml-2"
-                style={{ color: vehicleType === vt.value ? colors.primary : textSecondary }}
-              >
-                {vt.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
+          keyboardType="phone-pad"
+          value={receiverPhone}
+          onChangeText={setReceiverPhone}
+         testID="customer.delivery.request-create.set-receiver-phone"/>
 
         {/* Submit */}
         <TouchableOpacity
@@ -220,7 +187,7 @@ export default function RequestCreateScreen() {
             <ActivityIndicator color="white" />
           ) : (
             <Text className="text-white font-JakartaBold text-base">
-              {t("delivery_create.find_couriers")}
+              {t("delivery_create.submit_parcel")}
             </Text>
           )}
         </TouchableOpacity>

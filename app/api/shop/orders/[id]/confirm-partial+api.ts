@@ -8,7 +8,7 @@
  */
 import { db } from "@/src/db";
 import { shopOrders } from "@/src/db/schema";
-import { requireAnyRole } from "@/lib/auth";
+import { requireMemberRoles } from "@/lib/auth";
 import { logger } from "@/lib/logger";
 import * as errors from "@/lib/errors";
 import { eq } from "drizzle-orm";
@@ -20,7 +20,7 @@ export async function POST(request: Request, { id }: { id: string }) {
       return Response.json({ error: "invalid_uuid", message: "Invalid order id" }, { status: 400 });
     }
 
-    const { dbUser } = await requireAnyRole(["rider", "driver"])(request);
+    const { dbUser } = await requireMemberRoles(["rider", "driver"])(request);
 
     let guard: Response | null = null;
 

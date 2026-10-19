@@ -104,6 +104,12 @@ jest.mock("@/lib/logger", () => ({
 jest.mock("@/lib/portpos", () => ({
   isConfigured: jest.fn(() => true),
 }));
+// D9-2: the real topup handler gates on the payments master switch — ON
+// here so AC-5 exercises the idempotency barrier, not the payments gate
+// (the gate itself is pinned in tests/api/rider/wallet.test.ts).
+jest.mock("@/lib/platformConfig", () => ({
+  getPlan05Bool: jest.fn(async () => true),
+}));
 jest.mock("@/lib/paymentEvents", () => ({
   initiatePortposPayment: jest.fn(async (params: Record<string, unknown>) => {
     const { db } = require("@/src/db");

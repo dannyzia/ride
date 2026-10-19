@@ -33,6 +33,9 @@ export const STORAGE_KEYS = {
 
   /** Notification preferences (JSON object). */
   NOTIFICATION_PREFS: 'ride:driver:notification_prefs' as const,
+
+  /** C1-5: last-used login-as role, preselected on the next chooser visit. */
+  LAST_USED_ROLE: 'ride:auth:last_used_role' as const,
 } as const;
 
 export type StorageKey =

@@ -42,6 +42,7 @@ import { expireCredits, expireRiderFeeDeductions } from "../lib/walletCashback";
 import { runFraudDetection } from "../lib/fraudDetection";
 import { expireCancellationCredits } from "../lib/cancellationCompensation";
 import { sendNotification } from "../lib/notify";
+import { driverErrorCode } from "../lib/idempotency";
 import { getPlan05Int, getConfigValue } from "@/lib/platformConfig";
 import { upsertDemandForecasts } from "@/lib/forecast";
 import {
@@ -70,13 +71,25 @@ import type { PgTx } from "./tx";
 
 type JobTx = PgTx;
 
-/** PG 57014 query_canceled — statement_timeout fired (server-side cancel). */
+/**
+ * PG 57014 query_canceled — statement_timeout fired (server-side cancel).
+ * D8-1: unwraps drizzle's cause chain via driverErrorCode (the leadBilling
+ * S4 reuse) — production throws DrizzleQueryError, whose postgres.js
+ * `{ code }` lives at `.cause`, so the old bare `e.code` check never
+ * matched and every timeout misclassified as a plain error.
+ */
 export function isQueryCanceled(e: unknown): boolean {
-  return (
-    typeof e === "object" &&
-    e !== null &&
-    (e as { code?: unknown }).code === "57014"
-  );
+  return driverErrorCode(e) === "57014";
+}
+
+/**
+ * D8-1: retryable transaction conflicts (serialization / deadlock), same
+ * cause-chain unwrap. Extracted so the phase0 suite pins the branch for
+ * both the bare shape (mocks) and the wrapped shape production throws.
+ */
+export function isTxConflictRetryable(e: unknown): boolean {
+  const code = driverErrorCode(e);
+  return code === "40001" || code === "4P000";
 }
 
 // PROVISIONAL budget derivation (Phase 0 record):
@@ -1509,15 +1522,15 @@ export function startScheduler(deps: SchedulerDeps = {}): void {
                   rewardCalls: incentive.reward_calls,
                 });
               })
-              .catch((txErr: any) => {
+              .catch((txErr: unknown) => {
                 // If the tx was rolled back (e.g. serialization failure),
                 // log and skip — the next tick will retry
-                if (txErr?.code === "40001" || txErr?.code === "4P000") {
+                if (isTxConflictRetryable(txErr)) {
                   logger.warn(
                     "[scheduler] incentive completion tx conflict, will retry",
                     {
                       driverIncentiveId: row.id,
-                      error: txErr.message,
+                      error: txErr instanceof Error ? txErr.message : String(txErr),
                     },
                   );
                 } else {
@@ -1598,7 +1611,7 @@ export function startScheduler(deps: SchedulerDeps = {}): void {
     }
   }, 10_000);
 
-  // ── (20) Document Expiry Alerts — every 6 hours ────────────────────
+  // ── (21) Document Expiry Alerts — every 6 hours ────────────────────
   registerJob(async () => {
     try {
       const now = new Date();
@@ -2654,29 +2667,10 @@ export function startScheduler(deps: SchedulerDeps = {}): void {
     }
   }, 4_000); // 4-second interval for fast activation
 
-  // Job 55 — Delivery activation: broadcast new pending requests to eligible couriers
-  let deliveryActivationRunning = false;
-  registerJob(async () => {
-    if (deliveryActivationRunning) return;
-    try {
-      deliveryActivationRunning = true;
-      const { activateDeliveryRequests, dispatchNotifyQueue } = await import('../utils-server/activationJobs');
-      const { count, notifyQueue } =
-        (await withJobBudget(55, MARKETPLACE_TICK_BUDGET_MS, (tx) => activateDeliveryRequests(tx))) ?? {
-          count: 0,
-          notifyQueue: [],
-        };
-      if (count > 0) {
-        logger.info('[scheduler] job 55 delivery activation', { broadcasts: count });
-      }
-      // Audit-fix M4: customer push dispatches AFTER the budget tx.
-      await dispatchNotifyQueue(notifyQueue);
-    } catch (e) {
-      logger.error('[scheduler] job 55 delivery activation error', e);
-    } finally {
-      deliveryActivationRunning = false;
-    }
-  }, 4_000); // 4-second interval for fast activation
+  // Job 55 — RETIRED 2026-10-16 (B5-1, plan 27 §6.1): delivery activation
+  // (pending delivery_requests → delivery:bid_request courier broadcast +
+  // shop:delivery_created) is gone with the courier-bidding marketplace.
+  // The number is NOT reused — do not renumber other jobs.
 
   // ════════════════════════════════════════════════════════════════
   // MARKETPLACE — PHASE 6: AMBULANCE (jobs 53, 56)
@@ -2836,6 +2830,28 @@ export function startScheduler(deps: SchedulerDeps = {}): void {
       codReminderRunning = false;
     }
   }, 86_400_000); // daily (fires 24h after start; overdue threshold is config-days)
+
+  // Job 60 — R2 oversized-object reconciler (daily). C8-FIX D5-2: defense in
+  // depth behind the presign content-length binding. Lists recent keys per
+  // storage prefix, deletes anything over MAX_UPLOAD_BYTES, flags uploaders
+  // via structured warn logs (fraud_flags is driver-scoped with a fixed
+  // enum — no upload-abuse type — so the log is the flag surface).
+  let storageReconcileRunning = false;
+  registerJob(async () => {
+    if (storageReconcileRunning) return;
+    storageReconcileRunning = true;
+    try {
+      const { reconcileOversizedUploads } = await import('../lib/storageReconcile');
+      const { checked, deleted } = await reconcileOversizedUploads();
+      if (deleted.length > 0) {
+        logger.info('[scheduler] job 60 storage reconcile', { checked, deleted: deleted.length });
+      }
+    } catch (e) {
+      logger.error('[scheduler] job 60 storage reconcile error', e);
+    } finally {
+      storageReconcileRunning = false;
+    }
+  }, 86_400_000); // daily
 
   logger.info(`[scheduler] started (${registeredJobs} jobs)`);
 }

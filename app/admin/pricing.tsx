@@ -3,9 +3,16 @@
 // integer paisa in the DB and API; this screen displays them in taka and
 // multiplies ×100 on save.
 //
-// API contract notes:
+// API contract notes (D1-1 rate-basis pin — pricing is APPEND-VERSIONED):
 //  - Only GET and PATCH are implemented on /api/admin/pricing.
 //  - PATCH body carries `id` plus any subset of the updatable fields.
+//  - An edit never mutates: it mints a successor row (supersedes_id set,
+//    old row deactivated) and moves the is_active pointer. ride.pricing_id
+//    pins the immutable row, so live rides keep their rate basis.
+//  - Saving with no rate changes 400s (no_changes); flipping is_active
+//    outside versioning 400s; editing a superseded row 400s.
+//  - Rollback: PATCH { id, rollback: true } on a superseded row moves the
+//    pointer back (R-A9 reversible). Available per-row below for inactive rows.
 //  - vehicle_type and zone_id are NOT in the PATCH schema, so they are
 //    shown read-only in the modal.
 //  - `floor_min` is MINUTES (not paisa). `floor_length_km` is decimal km.
@@ -44,6 +51,7 @@ interface PricingRow {
   platform_commission_percent: string | number | null; // 0–100
   brta_fare_ceiling_bdt: number | null; // paisa, nullable
   is_active: boolean;
+  supersedes_id: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -54,6 +62,8 @@ interface PricingResponse {
 
 interface PricingPatchResponse {
   pricing: PricingRow;
+  superseded_id?: string | null;
+  rolled_back_from?: string | null;
 }
 
 interface Zone {
@@ -136,8 +146,26 @@ export default function PricingScreen() {
         row.brta_fare_ceiling_bdt === null
           ? 0
           : toNumber(row.brta_fare_ceiling_bdt) / 100,
-      is_active: row.is_active,
     });
+  };
+
+  const handleRollback = async (row: PricingRow) => {
+    if (submitting) return;
+    setSubmitting(true);
+    try {
+      const { data, error } = await adminFetch<PricingPatchResponse>(
+        "/api/admin/pricing",
+        { method: "PATCH", body: JSON.stringify({ id: row.id, rollback: true }) },
+      );
+      if (error || !data) {
+        toast.show(`Rollback failed: ${error ?? "unknown"}`, "error");
+        return;
+      }
+      toast.show("Rate basis rolled back", "success");
+      await fetchList();
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const closeModal = () => {
@@ -188,6 +216,8 @@ export default function PricingScreen() {
       return;
     }
 
+    // D1-1: no is_active in the payload — the pointer moves only via
+    // versioning (this save) or rollback. Saving unchanged rates 400s.
     const payload: Record<string, unknown> = {
       id: editing.id,
       base_fare_bdt: Math.round(base_fare_taka * 100),
@@ -196,7 +226,6 @@ export default function PricingScreen() {
       floor_length_km,
       floor_min: Math.floor(floor_min),
       platform_commission_percent: commission,
-      is_active: Boolean(form.is_active),
     };
     // Send ceiling as null when admin clears it (0 in taka → null).
     payload.brta_fare_ceiling_bdt = clearingCeiling
@@ -213,7 +242,7 @@ export default function PricingScreen() {
         toast.show(`Update failed: ${error ?? "unknown"}`, "error");
         return;
       }
-      toast.show("Pricing updated", "success");
+      toast.show("New rate version minted", "success");
       setEditing(null);
       await fetchList();
     } finally {
@@ -273,7 +302,6 @@ export default function PricingScreen() {
         step: 1,
         helpText: "Optional hard cap. Enter 0 to remove an existing ceiling.",
       },
-      { name: "is_active", label: "Active", type: "boolean" },
     ],
     [],
   );
@@ -360,16 +388,36 @@ export default function PricingScreen() {
       ),
     },
     {
+      key: "is_active",
+      header: "Status",
+      width: 110,
+      render: (r) => (
+        <Text style={styles.cellText}>
+          {r.is_active ? "Active" : "Superseded"}
+        </Text>
+      ),
+    },
+    {
       key: "actions",
       header: "Actions",
-      width: 100,
+      width: 170,
       render: (r) => (
-        <Pressable
-          style={[styles.miniBtn, { backgroundColor: colors.adminAccent }]}
-          onPress={() => openEdit(r)}
-         testID="admin.pricing.open-edit">
-          <Text style={styles.miniBtnText}>Edit</Text>
-        </Pressable>
+        <View style={{ flexDirection: "row", gap: 8 }}>
+          <Pressable
+            style={[styles.miniBtn, { backgroundColor: colors.adminAccent }]}
+            onPress={() => openEdit(r)}
+           testID="admin.pricing.open-edit">
+            <Text style={styles.miniBtnText}>Edit</Text>
+          </Pressable>
+          {!r.is_active ? (
+            <Pressable
+              style={[styles.miniBtn, { backgroundColor: colors.darkSecondary }]}
+              onPress={() => handleRollback(r)}
+             testID="admin.pricing.handle-rollback">
+              <Text style={styles.miniBtnText}>Rollback</Text>
+            </Pressable>
+          ) : null}
+        </View>
       ),
     },
   ];
@@ -444,6 +492,10 @@ export default function PricingScreen() {
             <Text style={styles.helpText}>
               Vehicle type and zone are not editable — create a new pricing row
               via the zones screen to change them.
+            </Text>
+            <Text style={styles.helpText}>
+              Saving mints a NEW rate version (the live row is never edited;
+              in-progress rides keep their pinned basis).
             </Text>
             <AdminForm fields={fields} values={form} onChange={setForm} />
           </View>

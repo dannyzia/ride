@@ -8,7 +8,7 @@
  */
 import { db } from "@/src/db";
 import { rentalRequests, awardedBidAssignments, rentalRequestEvents } from "@/src/db/schema";
-import { requireAnyRole } from "@/lib/auth";
+import { requireMemberRoles } from "@/lib/auth";
 import { logger } from "@/lib/logger";
 import { notifyWs } from "@/lib/wsNotify";
 import * as errors from "@/lib/errors";
@@ -21,7 +21,7 @@ export async function POST(request: Request, { id }: { id: string }) {
       return Response.json({ error: "invalid_uuid", message: "Invalid request id" }, { status: 400 });
     }
 
-    const { dbUser } = await requireAnyRole(["rider", "driver"])(
+    const { dbUser } = await requireMemberRoles(["rider", "driver"])(
       request,
     );
 

@@ -16,6 +16,8 @@ const WINDOW_MS = 5 * 60_000;
 export const OTP_PHONE_MAX = 5; // OTP texts per phone per window
 export const OTP_IP_MAX = 20; // OTP texts per IP per window
 export const OTP_VERIFY_MAX = 5; // verify attempts per session per window
+export const CHECK_USER_PHONE_MAX = 30; // check-user lookups per phone per window
+export const CHECK_USER_IP_MAX = 120; // check-user lookups per IP per window
 
 export async function rateLimitCount(key: string): Promise<number> {
   const windowStart = new Date(

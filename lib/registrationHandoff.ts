@@ -18,6 +18,8 @@ export interface RegistrationHandoff {
   phone: string;
   name: string;
   password: string;
+  // C1-1: T&C + Privacy consent carried from the phone-entry checkbox gate.
+  terms_accepted: true;
 }
 
 let handoff: RegistrationHandoff | null = null;

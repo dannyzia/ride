@@ -11,10 +11,13 @@
  */
 import { logger } from "@/lib/logger";
 
+// B5-1 (2026-10-16, plan 27 §6.1): the { kind: "couriers" } variant is
+// retired with the WS delivery lane (courierSockets registry deleted) —
+// no producer ever sent it, and courier fan-out travels via push + the
+// dispatched-offers inbox. Removed (not left as dead contract).
 export type WsNotifyTarget =
   | { kind: "user"; user_id: string }
   | { kind: "fleet"; fleet_id: string }
-  | { kind: "couriers" }
   | { kind: "shop_staff"; shop_id: string };
 
 export interface WsNotifyEvent {

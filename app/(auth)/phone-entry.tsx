@@ -17,6 +17,9 @@ export default function PhoneEntryScreen() {
   const [phone, setPhone] = useState("");
   // §0 #8: the register screen shows ALL five public roles as visible buttons.
   const [role, setRole] = useState<"rider" | "driver" | "shop_owner" | "fleet_owner" | "delivery_man">("rider");
+  // C1-1 (STAGE C1-FIX): T&C + Privacy consent gate — one checkbox between
+  // role choice and phone/OTP, covering all five paths (F-01 REG node).
+  const [termsAccepted, setTermsAccepted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -25,6 +28,11 @@ export default function PhoneEntryScreen() {
   const textSecondary = isDark ? colors.textSecondaryDark : colors.textSecondaryLight;
   const surfaceBg = isDark ? colors.surfaceElevatedDark : colors.surfaceLight;
   const borderColor = isDark ? colors.borderDark : colors.borderLight;
+
+  // C7 (REPAIR-1): noun-named on purpose — the testID codemod derives
+  // phone-entry.terms-checkbox from this identifier (an inline arrow derives
+  // set-terms-accepted, which does not round-trip against the recorded id).
+  const termsCheckbox = () => setTermsAccepted((v) => !v);
 
   const handleLogin = async () => {
     const fullPhone = `+880${phone}`;
@@ -74,6 +82,12 @@ export default function PhoneEntryScreen() {
       return;
     }
 
+    // C1-1: registration requires explicit T&C + Privacy consent first.
+    if (!termsAccepted) {
+      setError(t("auth.terms.required"));
+      return;
+    }
+
     setLoading(true);
     setError("");
 
@@ -103,12 +117,12 @@ export default function PhoneEntryScreen() {
         // keepers get the unchanged login hint.
         const held = Array.isArray(checkData.roles) ? checkData.roles : [];
         if (held.length > 1) {
-          router.push(`/(auth)/otp-verify?phone=${encodeURIComponent(fullPhone)}&role=${role}`);
+          router.push(`/(auth)/otp-verify?phone=${encodeURIComponent(fullPhone)}&role=${role}&terms=1`);
           return;
         }
         setError("An account with this phone already exists. Please login.");
       } else {
-        router.push(`/(auth)/otp-verify?phone=${encodeURIComponent(fullPhone)}&role=${role}`);
+        router.push(`/(auth)/otp-verify?phone=${encodeURIComponent(fullPhone)}&role=${role}&terms=1`);
       }
     } catch (e) {
       setError("Network error. Please try again.");
@@ -272,6 +286,33 @@ export default function PhoneEntryScreen() {
           </Text>
         </TouchableOpacity>
       </View>
+
+      {/* C1-1: T&C + Privacy consent gate — links render LegalDocumentScreen
+          (lib/legalContent.ts copy, no new copy per Copy Truth). */}
+      <TouchableOpacity
+        onPress={termsCheckbox}
+        className="flex-row items-start mb-4"
+        testID="phone-entry.terms-checkbox">
+        <View
+          className="w-6 h-6 rounded-md border items-center justify-center mr-3 mt-[2px]"
+          style={{
+            backgroundColor: termsAccepted ? colors.primary : surfaceBg,
+            borderColor: termsAccepted ? colors.primary : borderColor,
+          }}>
+          {termsAccepted ? (
+            <Text style={{ color: colors.white, fontSize: 16, fontWeight: "bold" }}>✓</Text>
+          ) : null}
+        </View>
+        <Text className="flex-1 text-[13px] font-JakartaBold leading-[18px]" style={{ color: textSecondary }}>
+          {t("auth.terms.agree_prefix")}{" "}
+          <Text style={{ color: colors.primary }} onPress={() => router.push("/(auth)/terms")}>
+            {t("auth.terms.terms_link")}
+          </Text>{" "}{t("auth.terms.and")}{" "}
+          <Text style={{ color: colors.primary }} onPress={() => router.push("/(auth)/privacy")}>
+            {t("auth.terms.privacy_link")}
+          </Text>
+        </Text>
+      </TouchableOpacity>
 
       {error ? (
         <Text className="text-[14px] font-JakartaBold text-center mb-3" style={{ color: colors.danger }}>

@@ -15,6 +15,7 @@ import {
   ALLOWED_MEDIA_TYPES,
   CACHE_CONTROL,
   DEFAULT_STORAGE_FOLDER,
+  MAX_UPLOAD_BYTES,
   STORAGE_FOLDERS,
   folderPrefix,
   sanitizeFilenameBase,
@@ -28,11 +29,20 @@ const uploadUrlSchema = z.object({
   filename: z.string().max(200),
   folder: z.enum(STORAGE_FOLDERS).default(DEFAULT_STORAGE_FOLDER),
   contentType: z.enum(ALLOWED_MEDIA_TYPES).default('image/jpeg'),
+  // D5-2: the EXACT byte size the client will PUT (its post-compression
+  // size). Required — the route refuses to sign a size it was not told, and
+  // refuses any size over MAX_UPLOAD_BYTES, so an oversized object cannot be
+  // written through a signed URL even if the client compressor is bypassed.
+  contentLength: z.number().int().positive().max(MAX_UPLOAD_BYTES),
 });
 // Headers to bind into the signature. Without this the presigner signs only
 // `host`, leaving ContentType/CacheControl advisory — a caller could PUT any
-// content type and omit the immutable Cache-Control.
-const SIGNED_PUT_HEADERS = new Set(['content-type', 'cache-control']);
+// content type and omit the immutable Cache-Control. content-length joins the
+// set under D5-2: the signed PUT then carries the declared size, and R2
+// rejects a body whose length differs (403 SignatureDoesNotMatch) — provided
+// R2 enforces the binding, which is a device-day verification (see the
+// fallback plan-note below).
+const SIGNED_PUT_HEADERS = new Set(['content-type', 'cache-control', 'content-length']);
 
 function missingR2Env(): string | null {
   const required = [
@@ -63,7 +73,7 @@ export async function POST(request: Request) {
 
   const parsed = await parseJsonBody(request, uploadUrlSchema);
   if (!parsed.ok) return parsed.response;
-  const { filename, contentType } = parsed.data;
+  const { filename, contentType, contentLength } = parsed.data;
   // Zod's .default() fills this at runtime; parseJsonBody types the body via
   // z.ZodType<T>, so a defaulted field still reads as optional here.
   const folder = parsed.data.folder ?? DEFAULT_STORAGE_FOLDER;
@@ -107,11 +117,16 @@ export async function POST(request: Request) {
     },
   });
 
+  // D5-2 device-day fallback plan-note: if R2 does NOT enforce the signed
+  // content-length binding (PUT of a different-sized body still succeeds),
+  // fall to presigned POST with a content-length-range condition (option 2)
+  // instead of presigned PUT. Do not silently drop the binding — replace it.
   const command = new PutObjectCommand({
     Bucket: process.env.R2_BUCKET_NAME,
     Key: key,
     ContentType: contentType,
     CacheControl: CACHE_CONTROL,
+    ContentLength: contentLength,
   });
 
   const uploadUrl = await getSignedUrl(s3, command, {

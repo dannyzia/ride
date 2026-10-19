@@ -1,8 +1,8 @@
 {
-  "scannedAt": "2026-09-27T15:51:36.808Z",
-  "routeFiles": 254,
-  "interactiveComponents": 1083,
-  "handlerAnchors": 1309,
+  "scannedAt": "2026-10-15T18:49:22.684Z",
+  "routeFiles": 270,
+  "interactiveComponents": 1192,
+  "handlerAnchors": 1432,
   "screens": [
     {
       "file": "app/(auth)/_layout.tsx",
@@ -223,56 +223,56 @@
       "defaultExport": true,
       "elements": [
         {
-          "line": 186,
+          "line": 188,
           "type": "TextInput",
           "testID": null,
           "a11y": null,
           "text": null
         },
         {
-          "line": 198,
+          "line": 200,
           "type": "TouchableOpacity",
           "testID": null,
           "a11y": null,
           "text": null
         },
         {
-          "line": 221,
+          "line": 223,
           "type": "TextInput",
           "testID": null,
           "a11y": null,
           "text": null
         },
         {
-          "line": 233,
+          "line": 235,
           "type": "TouchableOpacity",
           "testID": null,
           "a11y": null,
           "text": null
         },
         {
-          "line": 248,
+          "line": 250,
           "type": "TouchableOpacity",
           "testID": "forgot-password.set-step",
           "a11y": null,
           "text": null
         },
         {
-          "line": 262,
+          "line": 264,
           "type": "TextInput",
           "testID": null,
           "a11y": null,
           "text": null
         },
         {
-          "line": 277,
+          "line": 279,
           "type": "TextInput",
           "testID": null,
           "a11y": null,
           "text": null
         },
         {
-          "line": 288,
+          "line": 290,
           "type": "TouchableOpacity",
           "testID": null,
           "a11y": null,
@@ -281,7 +281,7 @@
       ],
       "handlers": [
         {
-          "line": 193,
+          "line": 195,
           "kinds": [
             "input"
           ],
@@ -289,7 +289,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 201,
+          "line": 203,
           "kinds": [
             "onPress"
           ],
@@ -297,7 +297,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 228,
+          "line": 230,
           "kinds": [
             "input"
           ],
@@ -305,7 +305,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 236,
+          "line": 238,
           "kinds": [
             "onPress"
           ],
@@ -313,7 +313,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 248,
+          "line": 250,
           "kinds": [
             "onPress"
           ],
@@ -321,7 +321,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 269,
+          "line": 271,
           "kinds": [
             "input"
           ],
@@ -329,7 +329,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 284,
+          "line": 286,
           "kinds": [
             "input"
           ],
@@ -337,7 +337,45 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 291,
+          "line": 293,
+          "kinds": [
+            "onPress"
+          ],
+          "kind": "generic",
+          "class": "AUTOMATABLE"
+        }
+      ]
+    },
+    {
+      "file": "app/(auth)/login-as.tsx",
+      "defaultExport": true,
+      "elements": [
+        {
+          "line": 141,
+          "type": "TouchableOpacity",
+          "testID": null,
+          "a11y": null,
+          "text": null
+        },
+        {
+          "line": 164,
+          "type": "TouchableOpacity",
+          "testID": null,
+          "a11y": null,
+          "text": null
+        }
+      ],
+      "handlers": [
+        {
+          "line": 142,
+          "kinds": [
+            "onPress"
+          ],
+          "kind": "generic",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 165,
           "kinds": [
             "onPress"
           ],
@@ -351,21 +389,21 @@
       "defaultExport": true,
       "elements": [
         {
-          "line": 95,
+          "line": 97,
           "type": "TextInput",
           "testID": null,
           "a11y": null,
           "text": null
         },
         {
-          "line": 115,
+          "line": 117,
           "type": "TextInput",
           "testID": null,
           "a11y": null,
           "text": null
         },
         {
-          "line": 143,
+          "line": 145,
           "type": "TouchableOpacity",
           "testID": null,
           "a11y": null,
@@ -374,7 +412,7 @@
       ],
       "handlers": [
         {
-          "line": 102,
+          "line": 104,
           "kinds": [
             "input"
           ],
@@ -382,7 +420,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 124,
+          "line": 126,
           "kinds": [
             "input"
           ],
@@ -390,7 +428,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 139,
+          "line": 141,
           "kinds": [
             "onPress"
           ],
@@ -398,7 +436,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 144,
+          "line": 146,
           "kinds": [
             "onPress"
           ],
@@ -451,14 +489,14 @@
       "defaultExport": true,
       "elements": [
         {
-          "line": 125,
+          "line": 149,
           "type": "TextInput",
           "testID": null,
           "a11y": null,
           "text": null
         },
         {
-          "line": 155,
+          "line": 179,
           "type": "TouchableOpacity",
           "testID": null,
           "a11y": null,
@@ -467,7 +505,7 @@
       ],
       "handlers": [
         {
-          "line": 132,
+          "line": 156,
           "kinds": [
             "input"
           ],
@@ -475,7 +513,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 151,
+          "line": 175,
           "kinds": [
             "onPress"
           ],
@@ -483,7 +521,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 156,
+          "line": 180,
           "kinds": [
             "onPress"
           ],
@@ -497,15 +535,8 @@
       "defaultExport": true,
       "elements": [
         {
-          "line": 155,
+          "line": 168,
           "type": "TextInput",
-          "testID": null,
-          "a11y": null,
-          "text": null
-        },
-        {
-          "line": 175,
-          "type": "TouchableOpacity",
           "testID": null,
           "a11y": null,
           "text": null
@@ -516,11 +547,39 @@
           "testID": null,
           "a11y": null,
           "text": null
+        },
+        {
+          "line": 206,
+          "type": "TouchableOpacity",
+          "testID": null,
+          "a11y": null,
+          "text": null
+        },
+        {
+          "line": 223,
+          "type": "TouchableOpacity",
+          "testID": null,
+          "a11y": null,
+          "text": null
+        },
+        {
+          "line": 240,
+          "type": "TouchableOpacity",
+          "testID": null,
+          "a11y": null,
+          "text": null
+        },
+        {
+          "line": 257,
+          "type": "TouchableOpacity",
+          "testID": null,
+          "a11y": null,
+          "text": null
         }
       ],
       "handlers": [
         {
-          "line": 162,
+          "line": 175,
           "kinds": [
             "input"
           ],
@@ -528,15 +587,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 180,
-          "kinds": [
-            "onPress"
-          ],
-          "kind": "generic",
-          "class": "AUTOMATABLE"
-        },
-        {
-          "line": 194,
+          "line": 197,
           "kinds": [
             "onPress"
           ],
@@ -552,7 +603,185 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 220,
+          "line": 231,
+          "kinds": [
+            "onPress"
+          ],
+          "kind": "generic",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 248,
+          "kinds": [
+            "onPress"
+          ],
+          "kind": "generic",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 265,
+          "kinds": [
+            "onPress"
+          ],
+          "kind": "generic",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 285,
+          "kinds": [
+            "onPress"
+          ],
+          "kind": "generic",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 291,
+          "kinds": [
+            "onPress"
+          ],
+          "kind": "generic",
+          "class": "AUTOMATABLE"
+        }
+      ]
+    },
+    {
+      "file": "app/(auth)/register-delivery-man.tsx",
+      "defaultExport": true,
+      "elements": [
+        {
+          "line": 185,
+          "type": "TextInput",
+          "testID": null,
+          "a11y": null,
+          "text": null
+        }
+      ],
+      "handlers": [
+        {
+          "line": 187,
+          "kinds": [
+            "input"
+          ],
+          "kind": "input-or-toggle",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 206,
+          "kinds": [
+            "onPress"
+          ],
+          "kind": "generic",
+          "class": "AUTOMATABLE"
+        }
+      ]
+    },
+    {
+      "file": "app/(auth)/register-fleet-owner.tsx",
+      "defaultExport": true,
+      "elements": [
+        {
+          "line": 174,
+          "type": "TextInput",
+          "testID": null,
+          "a11y": null,
+          "text": null
+        },
+        {
+          "line": 183,
+          "type": "TextInput",
+          "testID": null,
+          "a11y": null,
+          "text": null
+        },
+        {
+          "line": 192,
+          "type": "TextInput",
+          "testID": null,
+          "a11y": null,
+          "text": null
+        }
+      ],
+      "handlers": [
+        {
+          "line": 176,
+          "kinds": [
+            "input"
+          ],
+          "kind": "input-or-toggle",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 185,
+          "kinds": [
+            "input"
+          ],
+          "kind": "input-or-toggle",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 194,
+          "kinds": [
+            "input"
+          ],
+          "kind": "input-or-toggle",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 221,
+          "kinds": [
+            "onPress"
+          ],
+          "kind": "generic",
+          "class": "AUTOMATABLE"
+        }
+      ]
+    },
+    {
+      "file": "app/(auth)/register-shop-owner.tsx",
+      "defaultExport": true,
+      "elements": [
+        {
+          "line": 215,
+          "type": "TextInput",
+          "testID": null,
+          "a11y": null,
+          "text": null
+        },
+        {
+          "line": 224,
+          "type": "TextInput",
+          "testID": null,
+          "a11y": null,
+          "text": null
+        }
+      ],
+      "handlers": [
+        {
+          "line": 217,
+          "kinds": [
+            "input"
+          ],
+          "kind": "input-or-toggle",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 226,
+          "kinds": [
+            "input"
+          ],
+          "kind": "input-or-toggle",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 240,
+          "kinds": [
+            "onPress"
+          ],
+          "kind": "generic",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 281,
           "kinds": [
             "onPress"
           ],
@@ -566,21 +795,21 @@
       "defaultExport": true,
       "elements": [
         {
-          "line": 113,
+          "line": 136,
           "type": "TextInput",
           "testID": null,
           "a11y": null,
           "text": null
         },
         {
-          "line": 128,
+          "line": 151,
           "type": "TextInput",
           "testID": null,
           "a11y": null,
           "text": null
         },
         {
-          "line": 144,
+          "line": 167,
           "type": "TextInput",
           "testID": null,
           "a11y": null,
@@ -589,7 +818,7 @@
       ],
       "handlers": [
         {
-          "line": 119,
+          "line": 142,
           "kinds": [
             "input"
           ],
@@ -597,7 +826,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 135,
+          "line": 158,
           "kinds": [
             "input"
           ],
@@ -605,7 +834,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 151,
+          "line": 174,
           "kinds": [
             "input"
           ],
@@ -613,7 +842,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 166,
+          "line": 189,
           "kinds": [
             "onPress"
           ],
@@ -628,7 +857,7 @@
       "elements": [],
       "handlers": [
         {
-          "line": 70,
+          "line": 72,
           "kinds": [
             "onPress"
           ],
@@ -636,7 +865,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 76,
+          "line": 78,
           "kinds": [
             "onPress"
           ],
@@ -689,7 +918,7 @@
       "elements": [],
       "handlers": [
         {
-          "line": 66,
+          "line": 68,
           "kinds": [
             "onPress"
           ],
@@ -697,7 +926,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 71,
+          "line": 73,
           "kinds": [
             "onPress"
           ],
@@ -934,56 +1163,56 @@
       "defaultExport": true,
       "elements": [
         {
-          "line": 173,
+          "line": 177,
           "type": "TouchableOpacity",
           "testID": "customer.ambulance.emergency.el-1",
-          "a11y": "Back",
+          "a11y": null,
           "text": null
         },
         {
-          "line": 223,
+          "line": 227,
           "type": "TouchableOpacity",
           "testID": null,
           "a11y": null,
           "text": null
         },
         {
-          "line": 248,
+          "line": 252,
           "type": "TouchableOpacity",
           "testID": null,
           "a11y": null,
           "text": null
         },
         {
-          "line": 276,
+          "line": 280,
           "type": "TouchableOpacity",
           "testID": null,
           "a11y": null,
           "text": null
         },
         {
-          "line": 306,
+          "line": 310,
           "type": "TextInput",
           "testID": null,
           "a11y": null,
           "text": null
         },
         {
-          "line": 331,
+          "line": 335,
           "type": "TextInput",
           "testID": null,
           "a11y": null,
           "text": null
         },
         {
-          "line": 344,
+          "line": 348,
           "type": "TextInput",
           "testID": null,
           "a11y": null,
           "text": null
         },
         {
-          "line": 353,
+          "line": 357,
           "type": "TouchableOpacity",
           "testID": null,
           "a11y": null,
@@ -992,7 +1221,7 @@
       ],
       "handlers": [
         {
-          "line": 173,
+          "line": 177,
           "kinds": [
             "onPress"
           ],
@@ -1000,7 +1229,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 224,
+          "line": 228,
           "kinds": [
             "onPress"
           ],
@@ -1008,7 +1237,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 250,
+          "line": 254,
           "kinds": [
             "onPress"
           ],
@@ -1016,7 +1245,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 277,
+          "line": 281,
           "kinds": [
             "onPress"
           ],
@@ -1024,7 +1253,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 322,
+          "line": 326,
           "kinds": [
             "input"
           ],
@@ -1032,7 +1261,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 336,
+          "line": 340,
           "kinds": [
             "input"
           ],
@@ -1040,7 +1269,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 349,
+          "line": 353,
           "kinds": [
             "input"
           ],
@@ -1048,7 +1277,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 354,
+          "line": 358,
           "kinds": [
             "onPress"
           ],
@@ -1068,28 +1297,28 @@
       "defaultExport": true,
       "elements": [
         {
-          "line": 83,
+          "line": 85,
           "type": "TouchableOpacity",
           "testID": null,
           "a11y": null,
           "text": null
         },
         {
-          "line": 117,
+          "line": 119,
           "type": "TouchableOpacity",
           "testID": "customer.delivery.el-1",
           "a11y": null,
           "text": null
         },
         {
-          "line": 123,
+          "line": 125,
           "type": "TouchableOpacity",
-          "testID": "customer.delivery.push-main-2",
+          "testID": "customer.delivery.push-request-create",
           "a11y": null,
           "text": null
         },
         {
-          "line": 141,
+          "line": 143,
           "type": "TouchableOpacity",
           "testID": null,
           "a11y": null,
@@ -1098,7 +1327,7 @@
       ],
       "handlers": [
         {
-          "line": 62,
+          "line": 64,
           "kinds": [
             "refresh"
           ],
@@ -1106,7 +1335,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 86,
+          "line": 88,
           "kinds": [
             "onPress"
           ],
@@ -1114,7 +1343,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 117,
+          "line": 119,
           "kinds": [
             "onPress"
           ],
@@ -1122,7 +1351,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 123,
+          "line": 125,
           "kinds": [
             "onPress"
           ],
@@ -1130,7 +1359,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 144,
+          "line": 146,
           "kinds": [
             "onPress"
           ],
@@ -1138,7 +1367,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 155,
+          "line": 157,
           "kinds": [
             "refresh"
           ],
@@ -1152,49 +1381,49 @@
       "defaultExport": true,
       "elements": [
         {
-          "line": 99,
+          "line": 101,
           "type": "TouchableOpacity",
           "testID": "customer.delivery.request-create.el-1",
           "a11y": null,
           "text": null
         },
         {
-          "line": 112,
+          "line": 114,
           "type": "TextInput",
           "testID": null,
           "a11y": null,
           "text": null
         },
         {
-          "line": 130,
+          "line": 132,
           "type": "TextInput",
           "testID": null,
           "a11y": null,
           "text": null
         },
         {
-          "line": 148,
+          "line": 150,
           "type": "TextInput",
           "testID": null,
           "a11y": null,
           "text": null
         },
         {
-          "line": 166,
+          "line": 168,
           "type": "TextInput",
           "testID": null,
           "a11y": null,
           "text": null
         },
         {
-          "line": 187,
+          "line": 189,
           "type": "TouchableOpacity",
           "testID": null,
           "a11y": null,
           "text": null
         },
         {
-          "line": 209,
+          "line": 211,
           "type": "TouchableOpacity",
           "testID": null,
           "a11y": null,
@@ -1203,7 +1432,7 @@
       ],
       "handlers": [
         {
-          "line": 99,
+          "line": 101,
           "kinds": [
             "onPress"
           ],
@@ -1211,7 +1440,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 123,
+          "line": 125,
           "kinds": [
             "input"
           ],
@@ -1219,7 +1448,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 141,
+          "line": 143,
           "kinds": [
             "input"
           ],
@@ -1227,7 +1456,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 159,
+          "line": 161,
           "kinds": [
             "input"
           ],
@@ -1235,7 +1464,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 178,
+          "line": 180,
           "kinds": [
             "input"
           ],
@@ -1243,7 +1472,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 195,
+          "line": 197,
           "kinds": [
             "onPress"
           ],
@@ -1251,7 +1480,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 214,
+          "line": 216,
           "kinds": [
             "onPress"
           ],
@@ -1265,14 +1494,14 @@
       "defaultExport": true,
       "elements": [
         {
-          "line": 127,
+          "line": 129,
           "type": "TouchableOpacity",
           "testID": null,
           "a11y": null,
           "text": null
         },
         {
-          "line": 177,
+          "line": 179,
           "type": "TouchableOpacity",
           "testID": "customer.delivery.request-detail.el-1",
           "a11y": null,
@@ -1281,7 +1510,7 @@
       ],
       "handlers": [
         {
-          "line": 130,
+          "line": 132,
           "kinds": [
             "onPress"
           ],
@@ -1289,7 +1518,7 @@
           "class": "COUNTERPART-API"
         },
         {
-          "line": 177,
+          "line": 179,
           "kinds": [
             "onPress"
           ],
@@ -1303,35 +1532,35 @@
       "defaultExport": true,
       "elements": [
         {
-          "line": 228,
+          "line": 230,
           "type": "TouchableOpacity",
           "testID": "customer.rental-bidder.id.el-1",
           "a11y": null,
           "text": null
         },
         {
-          "line": 302,
+          "line": 303,
           "type": "TouchableOpacity",
           "testID": null,
           "a11y": null,
           "text": null
         },
         {
-          "line": 350,
+          "line": 355,
           "type": "TouchableOpacity",
           "testID": null,
           "a11y": null,
           "text": null
         },
         {
-          "line": 388,
+          "line": 393,
           "type": "TouchableOpacity",
           "testID": null,
           "a11y": null,
           "text": null
         },
         {
-          "line": 411,
+          "line": 416,
           "type": "TouchableOpacity",
           "testID": null,
           "a11y": null,
@@ -1340,7 +1569,7 @@
       ],
       "handlers": [
         {
-          "line": 161,
+          "line": 163,
           "kinds": [
             "onPress"
           ],
@@ -1348,7 +1577,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 178,
+          "line": 180,
           "kinds": [
             "onPress"
           ],
@@ -1356,7 +1585,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 202,
+          "line": 204,
           "kinds": [
             "onPress"
           ],
@@ -1364,7 +1593,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 228,
+          "line": 230,
           "kinds": [
             "onPress"
           ],
@@ -1372,7 +1601,7 @@
           "class": "COUNTERPART-API"
         },
         {
-          "line": 304,
+          "line": 305,
           "kinds": [
             "onPress"
           ],
@@ -1380,7 +1609,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 352,
+          "line": 357,
           "kinds": [
             "onPress"
           ],
@@ -1388,7 +1617,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 389,
+          "line": 394,
           "kinds": [
             "onPress"
           ],
@@ -1396,7 +1625,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 412,
+          "line": 417,
           "kinds": [
             "onPress"
           ],
@@ -1416,42 +1645,42 @@
       "defaultExport": true,
       "elements": [
         {
-          "line": 206,
+          "line": 208,
           "type": "TouchableOpacity",
           "testID": "customer.rental-bidder.bid-submit.el-1",
           "a11y": null,
           "text": null
         },
         {
-          "line": 287,
+          "line": 289,
           "type": "TouchableOpacity",
           "testID": null,
           "a11y": null,
           "text": null
         },
         {
-          "line": 322,
+          "line": 324,
           "type": "TextInput",
           "testID": null,
           "a11y": null,
           "text": null
         },
         {
-          "line": 354,
+          "line": 356,
           "type": "TextInput",
           "testID": null,
           "a11y": null,
           "text": null
         },
         {
-          "line": 377,
+          "line": 379,
           "type": "TextInput",
           "testID": null,
           "a11y": null,
           "text": null
         },
         {
-          "line": 400,
+          "line": 402,
           "type": "TouchableOpacity",
           "testID": null,
           "a11y": null,
@@ -1460,7 +1689,7 @@
       ],
       "handlers": [
         {
-          "line": 182,
+          "line": 184,
           "kinds": [
             "onPress"
           ],
@@ -1468,7 +1697,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 206,
+          "line": 208,
           "kinds": [
             "onPress"
           ],
@@ -1476,7 +1705,7 @@
           "class": "COUNTERPART-API"
         },
         {
-          "line": 289,
+          "line": 291,
           "kinds": [
             "onPress"
           ],
@@ -1484,7 +1713,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 337,
+          "line": 339,
           "kinds": [
             "input"
           ],
@@ -1492,7 +1721,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 368,
+          "line": 370,
           "kinds": [
             "input"
           ],
@@ -1500,7 +1729,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 393,
+          "line": 395,
           "kinds": [
             "input"
           ],
@@ -1508,7 +1737,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 401,
+          "line": 403,
           "kinds": [
             "onPress"
           ],
@@ -1522,7 +1751,7 @@
       "defaultExport": true,
       "elements": [
         {
-          "line": 102,
+          "line": 104,
           "type": "TouchableOpacity",
           "testID": "customer.rental-bidder.history.el-1",
           "a11y": null,
@@ -1531,7 +1760,7 @@
       ],
       "handlers": [
         {
-          "line": 102,
+          "line": 104,
           "kinds": [
             "onPress"
           ],
@@ -1539,7 +1768,7 @@
           "class": "COUNTERPART-API"
         },
         {
-          "line": 112,
+          "line": 114,
           "kinds": [
             "refresh"
           ],
@@ -1553,42 +1782,42 @@
       "defaultExport": true,
       "elements": [
         {
-          "line": 177,
+          "line": 185,
           "type": "TouchableOpacity",
           "testID": "customer.rental-bidder.el-1",
           "a11y": null,
           "text": null
         },
         {
-          "line": 241,
+          "line": 255,
           "type": "TouchableOpacity",
           "testID": null,
           "a11y": null,
           "text": null
         },
         {
-          "line": 329,
+          "line": 347,
           "type": "TouchableOpacity",
           "testID": null,
           "a11y": null,
           "text": null
         },
         {
-          "line": 351,
+          "line": 369,
           "type": "TouchableOpacity",
           "testID": null,
           "a11y": null,
           "text": null
         },
         {
-          "line": 378,
+          "line": 396,
           "type": "TouchableOpacity",
           "testID": null,
           "a11y": null,
           "text": null
         },
         {
-          "line": 409,
+          "line": 428,
           "type": "TouchableOpacity",
           "testID": null,
           "a11y": null,
@@ -1597,7 +1826,7 @@
       ],
       "handlers": [
         {
-          "line": 177,
+          "line": 185,
           "kinds": [
             "onPress"
           ],
@@ -1605,7 +1834,7 @@
           "class": "COUNTERPART-API"
         },
         {
-          "line": 199,
+          "line": 207,
           "kinds": [
             "onPress"
           ],
@@ -1613,7 +1842,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 209,
+          "line": 223,
           "kinds": [
             "onPress"
           ],
@@ -1621,7 +1850,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 219,
+          "line": 233,
           "kinds": [
             "refresh"
           ],
@@ -1629,7 +1858,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 243,
+          "line": 257,
           "kinds": [
             "onPress"
           ],
@@ -1637,7 +1866,7 @@
           "class": "COUNTERPART-API"
         },
         {
-          "line": 330,
+          "line": 348,
           "kinds": [
             "onPress"
           ],
@@ -1645,7 +1874,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 352,
+          "line": 370,
           "kinds": [
             "onPress"
           ],
@@ -1653,7 +1882,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 379,
+          "line": 397,
           "kinds": [
             "onPress"
           ],
@@ -1661,7 +1890,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 396,
+          "line": 414,
           "kinds": [
             "onPress"
           ],
@@ -1669,7 +1898,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 403,
+          "line": 421,
           "kinds": [
             "onPress"
           ],
@@ -1677,7 +1906,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 410,
+          "line": 429,
           "kinds": [
             "onPress"
           ],
@@ -1741,21 +1970,21 @@
       "defaultExport": true,
       "elements": [
         {
-          "line": 134,
+          "line": 136,
           "type": "TouchableOpacity",
           "testID": "customer.rental-marketplace.bidding.el-1",
           "a11y": null,
           "text": null
         },
         {
-          "line": 199,
+          "line": 201,
           "type": "TouchableOpacity",
           "testID": null,
           "a11y": null,
           "text": null
         },
         {
-          "line": 272,
+          "line": 277,
           "type": "TouchableOpacity",
           "testID": null,
           "a11y": null,
@@ -1764,7 +1993,7 @@
       ],
       "handlers": [
         {
-          "line": 134,
+          "line": 136,
           "kinds": [
             "onPress"
           ],
@@ -1772,7 +2001,7 @@
           "class": "COUNTERPART-API"
         },
         {
-          "line": 185,
+          "line": 187,
           "kinds": [
             "refresh"
           ],
@@ -1780,7 +2009,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 201,
+          "line": 203,
           "kinds": [
             "onPress"
           ],
@@ -1788,7 +2017,7 @@
           "class": "COUNTERPART-API"
         },
         {
-          "line": 273,
+          "line": 278,
           "kinds": [
             "onPress"
           ],
@@ -1802,14 +2031,14 @@
       "defaultExport": true,
       "elements": [
         {
-          "line": 119,
+          "line": 120,
           "type": "TouchableOpacity",
           "testID": null,
           "a11y": null,
           "text": null
         },
         {
-          "line": 135,
+          "line": 136,
           "type": "TouchableOpacity",
           "testID": null,
           "a11y": null,
@@ -1818,7 +2047,7 @@
       ],
       "handlers": [
         {
-          "line": 120,
+          "line": 121,
           "kinds": [
             "onPress"
           ],
@@ -1826,7 +2055,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 136,
+          "line": 137,
           "kinds": [
             "onPress"
           ],
@@ -1840,140 +2069,140 @@
       "defaultExport": true,
       "elements": [
         {
-          "line": 62,
+          "line": 63,
           "type": "TouchableOpacity",
           "testID": null,
           "a11y": null,
           "text": null
         },
         {
-          "line": 306,
+          "line": 308,
           "type": "Chip",
           "testID": null,
           "a11y": null,
           "text": null
         },
         {
-          "line": 325,
+          "line": 327,
           "type": "Chip",
           "testID": null,
           "a11y": null,
           "text": null
         },
         {
-          "line": 344,
+          "line": 346,
           "type": "TextInput",
           "testID": null,
           "a11y": null,
           "text": null
         },
         {
-          "line": 366,
+          "line": 368,
           "type": "TextInput",
           "testID": null,
           "a11y": null,
           "text": null
         },
         {
-          "line": 390,
+          "line": 392,
           "type": "TextInput",
           "testID": null,
           "a11y": null,
           "text": null
         },
         {
-          "line": 424,
+          "line": 426,
           "type": "TouchableOpacity",
           "testID": null,
           "a11y": null,
           "text": null
         },
         {
-          "line": 449,
+          "line": 451,
           "type": "TouchableOpacity",
           "testID": null,
           "a11y": null,
           "text": null
         },
         {
-          "line": 479,
+          "line": 481,
           "type": "TextInput",
           "testID": null,
           "a11y": null,
           "text": null
         },
         {
-          "line": 510,
+          "line": 512,
           "type": "TouchableOpacity",
           "testID": null,
           "a11y": null,
           "text": null
         },
         {
-          "line": 575,
+          "line": 579,
           "type": "Chip",
           "testID": null,
           "a11y": null,
           "text": null
         },
         {
-          "line": 593,
+          "line": 597,
           "type": "TouchableOpacity",
           "testID": "customer.rental-marketplace.el-1",
           "a11y": null,
           "text": null
         },
         {
-          "line": 652,
+          "line": 656,
           "type": "TouchableOpacity",
           "testID": null,
           "a11y": null,
           "text": null
         },
         {
-          "line": 697,
+          "line": 701,
           "type": "TouchableOpacity",
           "testID": null,
           "a11y": null,
           "text": null
         },
         {
-          "line": 749,
+          "line": 757,
           "type": "TouchableOpacity",
           "testID": null,
           "a11y": null,
           "text": null
         },
         {
-          "line": 780,
+          "line": 795,
           "type": "Chip",
           "testID": null,
           "a11y": null,
           "text": null
         },
         {
-          "line": 807,
+          "line": 822,
           "type": "TextInput",
           "testID": null,
           "a11y": null,
           "text": null
         },
         {
-          "line": 828,
+          "line": 843,
           "type": "TextInput",
           "testID": null,
           "a11y": null,
           "text": null
         },
         {
-          "line": 846,
+          "line": 861,
           "type": "TouchableOpacity",
           "testID": null,
           "a11y": null,
           "text": null
         },
         {
-          "line": 875,
+          "line": 890,
           "type": "TouchableOpacity",
           "testID": null,
           "a11y": null,
@@ -1982,7 +2211,7 @@
       ],
       "handlers": [
         {
-          "line": 53,
+          "line": 54,
           "kinds": [
             "onPress"
           ],
@@ -1990,7 +2219,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 60,
+          "line": 61,
           "kinds": [
             "onPress"
           ],
@@ -1998,7 +2227,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 63,
+          "line": 64,
           "kinds": [
             "onPress"
           ],
@@ -2006,7 +2235,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 310,
+          "line": 312,
           "kinds": [
             "onPress"
           ],
@@ -2014,7 +2243,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 329,
+          "line": 331,
           "kinds": [
             "onPress"
           ],
@@ -2022,7 +2251,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 357,
+          "line": 359,
           "kinds": [
             "input"
           ],
@@ -2030,7 +2259,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 379,
+          "line": 381,
           "kinds": [
             "input"
           ],
@@ -2038,7 +2267,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 405,
+          "line": 407,
           "kinds": [
             "input"
           ],
@@ -2046,7 +2275,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 426,
+          "line": 428,
           "kinds": [
             "onPress"
           ],
@@ -2054,7 +2283,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 450,
+          "line": 452,
           "kinds": [
             "onPress"
           ],
@@ -2062,7 +2291,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 494,
+          "line": 496,
           "kinds": [
             "input"
           ],
@@ -2070,7 +2299,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 512,
+          "line": 514,
           "kinds": [
             "onPress"
           ],
@@ -2078,7 +2307,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 579,
+          "line": 583,
           "kinds": [
             "onPress"
           ],
@@ -2086,7 +2315,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 593,
+          "line": 597,
           "kinds": [
             "onPress"
           ],
@@ -2094,7 +2323,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 653,
+          "line": 657,
           "kinds": [
             "onPress"
           ],
@@ -2102,7 +2331,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 699,
+          "line": 703,
           "kinds": [
             "onPress"
           ],
@@ -2110,7 +2339,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 751,
+          "line": 759,
           "kinds": [
             "onPress"
           ],
@@ -2118,7 +2347,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 784,
+          "line": 799,
           "kinds": [
             "onPress"
           ],
@@ -2126,7 +2355,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 821,
+          "line": 836,
           "kinds": [
             "input"
           ],
@@ -2134,7 +2363,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 842,
+          "line": 857,
           "kinds": [
             "input"
           ],
@@ -2142,7 +2371,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 847,
+          "line": 862,
           "kinds": [
             "onPress"
           ],
@@ -2150,7 +2379,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 876,
+          "line": 891,
           "kinds": [
             "onPress"
           ],
@@ -2164,21 +2393,21 @@
       "defaultExport": true,
       "elements": [
         {
-          "line": 186,
+          "line": 189,
           "type": "TouchableOpacity",
           "testID": "customer.rental-marketplace.request-detail.el-1",
           "a11y": null,
           "text": null
         },
         {
-          "line": 316,
+          "line": 321,
           "type": "TouchableOpacity",
           "testID": null,
           "a11y": null,
           "text": null
         },
         {
-          "line": 375,
+          "line": 387,
           "type": "TouchableOpacity",
           "testID": null,
           "a11y": null,
@@ -2187,7 +2416,7 @@
       ],
       "handlers": [
         {
-          "line": 186,
+          "line": 189,
           "kinds": [
             "onPress"
           ],
@@ -2195,7 +2424,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 203,
+          "line": 206,
           "kinds": [
             "refresh"
           ],
@@ -2203,7 +2432,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 318,
+          "line": 323,
           "kinds": [
             "onPress"
           ],
@@ -2211,7 +2440,7 @@
           "class": "COUNTERPART-API"
         },
         {
-          "line": 376,
+          "line": 388,
           "kinds": [
             "onPress"
           ],
@@ -2225,14 +2454,14 @@
       "defaultExport": true,
       "elements": [
         {
-          "line": 107,
+          "line": 110,
           "type": "TouchableOpacity",
           "testID": "customer.rental-marketplace.request-history.el-1",
           "a11y": null,
           "text": null
         },
         {
-          "line": 130,
+          "line": 133,
           "type": "TouchableOpacity",
           "testID": null,
           "a11y": null,
@@ -2241,7 +2470,7 @@
       ],
       "handlers": [
         {
-          "line": 107,
+          "line": 110,
           "kinds": [
             "onPress"
           ],
@@ -2249,7 +2478,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 117,
+          "line": 120,
           "kinds": [
             "refresh"
           ],
@@ -2257,7 +2486,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 132,
+          "line": 135,
           "kinds": [
             "onPress"
           ],
@@ -2277,21 +2506,28 @@
       "defaultExport": true,
       "elements": [
         {
-          "line": 93,
+          "line": 102,
           "type": "TouchableOpacity",
           "testID": "customer.shops.el-1",
           "a11y": null,
           "text": null
         },
         {
-          "line": 118,
+          "line": 119,
+          "type": "TouchableOpacity",
+          "testID": null,
+          "a11y": null,
+          "text": null
+        },
+        {
+          "line": 146,
           "type": "TextInput",
           "testID": null,
           "a11y": null,
           "text": null
         },
         {
-          "line": 144,
+          "line": 172,
           "type": "TouchableOpacity",
           "testID": null,
           "a11y": null,
@@ -2300,7 +2536,7 @@
       ],
       "handlers": [
         {
-          "line": 93,
+          "line": 102,
           "kinds": [
             "onPress"
           ],
@@ -2308,7 +2544,15 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 123,
+          "line": 120,
+          "kinds": [
+            "onPress"
+          ],
+          "kind": "navigation",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 151,
           "kinds": [
             "input"
           ],
@@ -2316,7 +2560,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 124,
+          "line": 152,
           "kinds": [
             "input"
           ],
@@ -2324,7 +2568,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 134,
+          "line": 162,
           "kinds": [
             "refresh"
           ],
@@ -2332,7 +2576,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 146,
+          "line": 174,
           "kinds": [
             "onPress"
           ],
@@ -2346,35 +2590,35 @@
       "defaultExport": true,
       "elements": [
         {
-          "line": 96,
+          "line": 142,
           "type": "TouchableOpacity",
           "testID": "customer.shops.order-create.id.el-1",
           "a11y": null,
           "text": null
         },
         {
-          "line": 111,
+          "line": 157,
           "type": "TouchableOpacity",
           "testID": null,
           "a11y": null,
           "text": null
         },
         {
-          "line": 144,
+          "line": 190,
           "type": "TextInput",
           "testID": null,
           "a11y": null,
           "text": null
         },
         {
-          "line": 192,
+          "line": 241,
           "type": "TextInput",
           "testID": null,
           "a11y": null,
           "text": null
         },
         {
-          "line": 244,
+          "line": 298,
           "type": "TouchableOpacity",
           "testID": null,
           "a11y": null,
@@ -2383,23 +2627,7 @@
       ],
       "handlers": [
         {
-          "line": 83,
-          "kinds": [
-            "onPress"
-          ],
-          "kind": "dialog-toast",
-          "class": "AUTOMATABLE"
-        },
-        {
-          "line": 96,
-          "kinds": [
-            "onPress"
-          ],
-          "kind": "navigation",
-          "class": "AUTOMATABLE"
-        },
-        {
-          "line": 113,
+          "line": 125,
           "kinds": [
             "onPress"
           ],
@@ -2407,7 +2635,23 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 158,
+          "line": 142,
+          "kinds": [
+            "onPress"
+          ],
+          "kind": "navigation",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 159,
+          "kinds": [
+            "onPress"
+          ],
+          "kind": "generic",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 204,
           "kinds": [
             "input"
           ],
@@ -2415,7 +2659,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 206,
+          "line": 255,
           "kinds": [
             "input"
           ],
@@ -2423,7 +2667,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 245,
+          "line": 299,
           "kinds": [
             "onPress"
           ],
@@ -2433,39 +2677,132 @@
       ]
     },
     {
-      "file": "app/(main)/(customer)/(shops)/shop-detail/[id].tsx",
+      "file": "app/(main)/(customer)/(shops)/orders/[id].tsx",
       "defaultExport": true,
       "elements": [
         {
-          "line": 77,
-          "type": "TouchableOpacity",
-          "testID": "customer.shops.shop-detail.id.el-1",
-          "a11y": null,
-          "text": null
-        },
-        {
-          "line": 129,
+          "line": 283,
           "type": "TouchableOpacity",
           "testID": null,
           "a11y": null,
           "text": null
         },
         {
-          "line": 138,
+          "line": 388,
           "type": "TouchableOpacity",
           "testID": null,
           "a11y": null,
           "text": null
         },
         {
-          "line": 146,
+          "line": 582,
           "type": "TouchableOpacity",
           "testID": null,
           "a11y": null,
           "text": null
         },
         {
-          "line": 181,
+          "line": 609,
+          "type": "TouchableOpacity",
+          "testID": null,
+          "a11y": null,
+          "text": null
+        },
+        {
+          "line": 646,
+          "type": "TouchableOpacity",
+          "testID": "customer.shops.orders.id.on-back",
+          "a11y": null,
+          "text": null
+        }
+      ],
+      "handlers": [
+        {
+          "line": 150,
+          "kinds": [
+            "refresh"
+          ],
+          "kind": "input-or-toggle",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 213,
+          "kinds": [
+            "onPress"
+          ],
+          "kind": "generic",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 284,
+          "kinds": [
+            "onPress"
+          ],
+          "kind": "generic",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 332,
+          "kinds": [
+            "refresh"
+          ],
+          "kind": "input-or-toggle",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 389,
+          "kinds": [
+            "onPress"
+          ],
+          "kind": "generic",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 583,
+          "kinds": [
+            "onPress"
+          ],
+          "kind": "navigation",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 610,
+          "kinds": [
+            "onPress"
+          ],
+          "kind": "generic",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 646,
+          "kinds": [
+            "onPress"
+          ],
+          "kind": "generic",
+          "class": "AUTOMATABLE"
+        }
+      ]
+    },
+    {
+      "file": "app/(main)/(customer)/(shops)/orders/index.tsx",
+      "defaultExport": true,
+      "elements": [
+        {
+          "line": 97,
+          "type": "TouchableOpacity",
+          "testID": "customer.shops.orders.el-1",
+          "a11y": null,
+          "text": null
+        },
+        {
+          "line": 114,
+          "type": "TouchableOpacity",
+          "testID": null,
+          "a11y": null,
+          "text": null
+        },
+        {
+          "line": 140,
           "type": "TouchableOpacity",
           "testID": null,
           "a11y": null,
@@ -2474,7 +2811,15 @@
       ],
       "handlers": [
         {
-          "line": 77,
+          "line": 84,
+          "kinds": [
+            "refresh"
+          ],
+          "kind": "input-or-toggle",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 97,
           "kinds": [
             "onPress"
           ],
@@ -2482,7 +2827,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 130,
+          "line": 115,
           "kinds": [
             "onPress"
           ],
@@ -2490,7 +2835,130 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 139,
+          "line": 134,
+          "kinds": [
+            "refresh"
+          ],
+          "kind": "input-or-toggle",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 142,
+          "kinds": [
+            "onPress"
+          ],
+          "kind": "navigation",
+          "class": "AUTOMATABLE"
+        }
+      ]
+    },
+    {
+      "file": "app/(main)/(customer)/(shops)/shop-detail/[id].tsx",
+      "defaultExport": true,
+      "elements": [
+        {
+          "line": 213,
+          "type": "TouchableOpacity",
+          "testID": "customer.shops.shop-detail.id.el-1",
+          "a11y": null,
+          "text": null
+        },
+        {
+          "line": 228,
+          "type": "TouchableOpacity",
+          "testID": null,
+          "a11y": null,
+          "text": null
+        },
+        {
+          "line": 296,
+          "type": "TouchableOpacity",
+          "testID": null,
+          "a11y": null,
+          "text": null
+        },
+        {
+          "line": 305,
+          "type": "TouchableOpacity",
+          "testID": null,
+          "a11y": null,
+          "text": null
+        },
+        {
+          "line": 313,
+          "type": "TouchableOpacity",
+          "testID": null,
+          "a11y": null,
+          "text": null
+        },
+        {
+          "line": 357,
+          "type": "TouchableOpacity",
+          "testID": null,
+          "a11y": null,
+          "text": null
+        },
+        {
+          "line": 392,
+          "type": "TextInput",
+          "testID": null,
+          "a11y": null,
+          "text": null
+        },
+        {
+          "line": 403,
+          "type": "TextInput",
+          "testID": null,
+          "a11y": null,
+          "text": null
+        },
+        {
+          "line": 417,
+          "type": "TextInput",
+          "testID": null,
+          "a11y": null,
+          "text": null
+        },
+        {
+          "line": 430,
+          "type": "TextInput",
+          "testID": null,
+          "a11y": null,
+          "text": null
+        },
+        {
+          "line": 441,
+          "type": "TextInput",
+          "testID": null,
+          "a11y": null,
+          "text": null
+        },
+        {
+          "line": 454,
+          "type": "TouchableOpacity",
+          "testID": null,
+          "a11y": null,
+          "text": null
+        },
+        {
+          "line": 541,
+          "type": "TouchableOpacity",
+          "testID": null,
+          "a11y": null,
+          "text": null
+        }
+      ],
+      "handlers": [
+        {
+          "line": 213,
+          "kinds": [
+            "onPress"
+          ],
+          "kind": "navigation",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 230,
           "kinds": [
             "onPress"
           ],
@@ -2498,7 +2966,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 147,
+          "line": 297,
           "kinds": [
             "onPress"
           ],
@@ -2506,7 +2974,79 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 182,
+          "line": 306,
+          "kinds": [
+            "onPress"
+          ],
+          "kind": "generic",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 314,
+          "kinds": [
+            "onPress"
+          ],
+          "kind": "generic",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 358,
+          "kinds": [
+            "onPress"
+          ],
+          "kind": "generic",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 397,
+          "kinds": [
+            "input"
+          ],
+          "kind": "input-or-toggle",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 408,
+          "kinds": [
+            "input"
+          ],
+          "kind": "input-or-toggle",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 422,
+          "kinds": [
+            "input"
+          ],
+          "kind": "input-or-toggle",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 435,
+          "kinds": [
+            "input"
+          ],
+          "kind": "input-or-toggle",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 446,
+          "kinds": [
+            "input"
+          ],
+          "kind": "input-or-toggle",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 455,
+          "kinds": [
+            "onPress"
+          ],
+          "kind": "generic",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 542,
           "kinds": [
             "onPress"
           ],
@@ -2614,7 +3154,7 @@
         {
           "line": 59,
           "type": "TouchableOpacity",
-          "testID": "customer.activity-completed.replace-main",
+          "testID": "customer.activity-completed.replace-home",
           "a11y": null,
           "text": null
         },
@@ -2682,7 +3222,7 @@
         {
           "line": 58,
           "type": "TouchableOpacity",
-          "testID": "customer.activity-scheduled.replace-main",
+          "testID": "customer.activity-scheduled.replace-home",
           "a11y": null,
           "text": null
         },
@@ -2750,7 +3290,7 @@
         {
           "line": 58,
           "type": "TouchableOpacity",
-          "testID": "customer.activity.replace-main",
+          "testID": "customer.activity.replace-home",
           "a11y": null,
           "text": null
         },
@@ -2818,7 +3358,7 @@
         {
           "line": 27,
           "type": "TouchableOpacity",
-          "testID": "customer.activity.share-receipt.replace-main",
+          "testID": "customer.activity.share-receipt.replace-activity",
           "a11y": null,
           "text": null
         },
@@ -2860,112 +3400,6 @@
           ],
           "kind": "generic",
           "class": "AUTOMATABLE"
-        }
-      ]
-    },
-    {
-      "file": "app/(main)/(customer)/(tabs)/activity/top-up-details/index.tsx",
-      "defaultExport": true,
-      "elements": [
-        {
-          "line": 23,
-          "type": "TouchableOpacity",
-          "testID": "customer.activity.top-up-details.replace-main",
-          "a11y": null,
-          "text": null
-        },
-        {
-          "line": 38,
-          "type": "TouchableOpacity",
-          "testID": null,
-          "a11y": null,
-          "text": null
-        },
-        {
-          "line": 46,
-          "type": "TouchableOpacity",
-          "testID": null,
-          "a11y": null,
-          "text": null
-        }
-      ],
-      "handlers": [
-        {
-          "line": 23,
-          "kinds": [
-            "onPress"
-          ],
-          "kind": "navigation",
-          "class": "BLOCKED"
-        },
-        {
-          "line": 41,
-          "kinds": [
-            "onPress"
-          ],
-          "kind": "generic",
-          "class": "BLOCKED"
-        },
-        {
-          "line": 47,
-          "kinds": [
-            "onPress"
-          ],
-          "kind": "generic",
-          "class": "BLOCKED"
-        }
-      ]
-    },
-    {
-      "file": "app/(main)/(customer)/(tabs)/activity/top-up/index.tsx",
-      "defaultExport": true,
-      "elements": [
-        {
-          "line": 72,
-          "type": "TouchableOpacity",
-          "testID": "customer.activity.top-up.replace-main",
-          "a11y": null,
-          "text": null
-        },
-        {
-          "line": 112,
-          "type": "TouchableOpacity",
-          "testID": null,
-          "a11y": null,
-          "text": null
-        },
-        {
-          "line": 120,
-          "type": "TouchableOpacity",
-          "testID": null,
-          "a11y": null,
-          "text": null
-        }
-      ],
-      "handlers": [
-        {
-          "line": 72,
-          "kinds": [
-            "onPress"
-          ],
-          "kind": "navigation",
-          "class": "BLOCKED"
-        },
-        {
-          "line": 115,
-          "kinds": [
-            "onPress"
-          ],
-          "kind": "navigation",
-          "class": "BLOCKED"
-        },
-        {
-          "line": 121,
-          "kinds": [
-            "onPress"
-          ],
-          "kind": "generic",
-          "class": "BLOCKED"
         }
       ]
     },
@@ -3261,21 +3695,14 @@
           "text": null
         },
         {
-          "line": 1276,
+          "line": 1278,
           "type": "TouchableOpacity",
           "testID": null,
           "a11y": null,
           "text": null
         },
         {
-          "line": 1332,
-          "type": "TouchableOpacity",
-          "testID": null,
-          "a11y": null,
-          "text": null
-        },
-        {
-          "line": 1339,
+          "line": 1291,
           "type": "TouchableOpacity",
           "testID": null,
           "a11y": null,
@@ -3289,35 +3716,49 @@
           "text": null
         },
         {
-          "line": 1358,
+          "line": 1354,
           "type": "TouchableOpacity",
           "testID": null,
           "a11y": null,
           "text": null
         },
         {
-          "line": 1431,
+          "line": 1362,
           "type": "TouchableOpacity",
           "testID": null,
           "a11y": null,
           "text": null
         },
         {
-          "line": 1469,
+          "line": 1373,
+          "type": "TouchableOpacity",
+          "testID": null,
+          "a11y": null,
+          "text": null
+        },
+        {
+          "line": 1446,
+          "type": "TouchableOpacity",
+          "testID": null,
+          "a11y": null,
+          "text": null
+        },
+        {
+          "line": 1484,
           "type": "TextInput",
           "testID": null,
           "a11y": null,
           "text": null
         },
         {
-          "line": 1491,
+          "line": 1506,
           "type": "TouchableOpacity",
           "testID": null,
           "a11y": null,
           "text": null
         },
         {
-          "line": 1500,
+          "line": 1515,
           "type": "TouchableOpacity",
           "testID": null,
           "a11y": null,
@@ -3446,7 +3887,15 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 1286,
+          "line": 1280,
+          "kinds": [
+            "onPress"
+          ],
+          "kind": "navigation",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 1301,
           "kinds": [
             "onPress"
           ],
@@ -3454,7 +3903,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 1334,
+          "line": 1349,
           "kinds": [
             "onPress"
           ],
@@ -3462,15 +3911,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 1341,
-          "kinds": [
-            "onPress"
-          ],
-          "kind": "generic",
-          "class": "AUTOMATABLE"
-        },
-        {
-          "line": 1348,
+          "line": 1356,
           "kinds": [
             "onPress"
           ],
@@ -3486,15 +3927,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 1377,
-          "kinds": [
-            "input"
-          ],
-          "kind": "input-or-toggle",
-          "class": "AUTOMATABLE"
-        },
-        {
-          "line": 1441,
+          "line": 1378,
           "kinds": [
             "onPress"
           ],
@@ -3502,7 +3935,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 1479,
+          "line": 1392,
           "kinds": [
             "input"
           ],
@@ -3510,7 +3943,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 1493,
+          "line": 1456,
           "kinds": [
             "onPress"
           ],
@@ -3518,7 +3951,23 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 1502,
+          "line": 1494,
+          "kinds": [
+            "input"
+          ],
+          "kind": "input-or-toggle",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 1508,
+          "kinds": [
+            "onPress"
+          ],
+          "kind": "generic",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 1517,
           "kinds": [
             "onPress"
           ],
@@ -3579,28 +4028,28 @@
       "defaultExport": true,
       "elements": [
         {
-          "line": 193,
+          "line": 199,
           "type": "TouchableOpacity",
           "testID": null,
           "a11y": null,
           "text": null
         },
         {
-          "line": 214,
+          "line": 220,
           "type": "TouchableOpacity",
           "testID": null,
           "a11y": null,
           "text": null
         },
         {
-          "line": 316,
+          "line": 342,
           "type": "TouchableOpacity",
           "testID": null,
           "a11y": null,
           "text": null
         },
         {
-          "line": 324,
+          "line": 350,
           "type": "TouchableOpacity",
           "testID": null,
           "a11y": null,
@@ -3609,7 +4058,7 @@
       ],
       "handlers": [
         {
-          "line": 104,
+          "line": 110,
           "kinds": [
             "refresh"
           ],
@@ -3617,7 +4066,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 122,
+          "line": 128,
           "kinds": [
             "onPress"
           ],
@@ -3625,7 +4074,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 185,
+          "line": 191,
           "kinds": [
             "refresh"
           ],
@@ -3633,7 +4082,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 196,
+          "line": 202,
           "kinds": [
             "onPress"
           ],
@@ -3641,15 +4090,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 217,
-          "kinds": [
-            "onPress"
-          ],
-          "kind": "navigation",
-          "class": "AUTOMATABLE"
-        },
-        {
-          "line": 248,
+          "line": 223,
           "kinds": [
             "onPress"
           ],
@@ -3661,75 +4102,11 @@
           "kinds": [
             "onPress"
           ],
-          "kind": "generic",
-          "class": "AUTOMATABLE"
-        },
-        {
-          "line": 264,
-          "kinds": [
-            "onPress"
-          ],
           "kind": "navigation",
           "class": "AUTOMATABLE"
         },
         {
-          "line": 276,
-          "kinds": [
-            "onPress"
-          ],
-          "kind": "navigation",
-          "class": "AUTOMATABLE"
-        },
-        {
-          "line": 281,
-          "kinds": [
-            "onPress"
-          ],
-          "kind": "navigation",
-          "class": "AUTOMATABLE"
-        },
-        {
-          "line": 286,
-          "kinds": [
-            "onPress"
-          ],
-          "kind": "navigation",
-          "class": "AUTOMATABLE"
-        },
-        {
-          "line": 291,
-          "kinds": [
-            "onPress"
-          ],
-          "kind": "navigation",
-          "class": "AUTOMATABLE"
-        },
-        {
-          "line": 300,
-          "kinds": [
-            "onPress"
-          ],
-          "kind": "navigation",
-          "class": "AUTOMATABLE"
-        },
-        {
-          "line": 304,
-          "kinds": [
-            "onPress"
-          ],
-          "kind": "navigation",
-          "class": "AUTOMATABLE"
-        },
-        {
-          "line": 310,
-          "kinds": [
-            "onPress"
-          ],
-          "kind": "navigation",
-          "class": "AUTOMATABLE"
-        },
-        {
-          "line": 319,
+          "line": 261,
           "kinds": [
             "onPress"
           ],
@@ -3737,7 +4114,95 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 327,
+          "line": 271,
+          "kinds": [
+            "onPress"
+          ],
+          "kind": "navigation",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 284,
+          "kinds": [
+            "onPress"
+          ],
+          "kind": "navigation",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 290,
+          "kinds": [
+            "onPress"
+          ],
+          "kind": "navigation",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 296,
+          "kinds": [
+            "onPress"
+          ],
+          "kind": "navigation",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 302,
+          "kinds": [
+            "onPress"
+          ],
+          "kind": "navigation",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 308,
+          "kinds": [
+            "onPress"
+          ],
+          "kind": "navigation",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 314,
+          "kinds": [
+            "onPress"
+          ],
+          "kind": "navigation",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 324,
+          "kinds": [
+            "onPress"
+          ],
+          "kind": "navigation",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 328,
+          "kinds": [
+            "onPress"
+          ],
+          "kind": "navigation",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 335,
+          "kinds": [
+            "onPress"
+          ],
+          "kind": "navigation",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 345,
+          "kinds": [
+            "onPress"
+          ],
+          "kind": "generic",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 353,
           "kinds": [
             "onPress"
           ],
@@ -4058,44 +4523,6 @@
       ]
     },
     {
-      "file": "app/(main)/(customer)/(tabs)/settings/add-payment/index.tsx",
-      "defaultExport": true,
-      "elements": [
-        {
-          "line": 23,
-          "type": "TouchableOpacity",
-          "testID": "customer.settings.add-payment.el-1",
-          "a11y": null,
-          "text": null
-        },
-        {
-          "line": 41,
-          "type": "TouchableOpacity",
-          "testID": null,
-          "a11y": null,
-          "text": null
-        }
-      ],
-      "handlers": [
-        {
-          "line": 23,
-          "kinds": [
-            "onPress"
-          ],
-          "kind": "navigation",
-          "class": "BLOCKED"
-        },
-        {
-          "line": 42,
-          "kinds": [
-            "onPress"
-          ],
-          "kind": "generic",
-          "class": "BLOCKED"
-        }
-      ]
-    },
-    {
       "file": "app/(main)/(customer)/(tabs)/settings/app-appearance/index.tsx",
       "defaultExport": true,
       "elements": [
@@ -4132,7 +4559,23 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 95,
+          "line": 100,
+          "kinds": [
+            "onPress"
+          ],
+          "kind": "generic",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 108,
+          "kinds": [
+            "onPress"
+          ],
+          "kind": "generic",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 116,
           "kinds": [
             "onPress"
           ],
@@ -4301,7 +4744,7 @@
         {
           "line": 87,
           "type": "TouchableOpacity",
-          "testID": "customer.settings.data-analytics.replace-main",
+          "testID": "customer.settings.data-analytics.replace-settings",
           "a11y": null,
           "text": null
         },
@@ -4322,14 +4765,14 @@
         {
           "line": 106,
           "type": "TouchableOpacity",
-          "testID": "customer.settings.data-analytics.push-main",
+          "testID": "customer.settings.data-analytics.push-request-data",
           "a11y": null,
           "text": null
         },
         {
           "line": 109,
           "type": "TouchableOpacity",
-          "testID": "customer.settings.data-analytics.push-main-2",
+          "testID": "customer.settings.data-analytics.push-delete-data",
           "a11y": null,
           "text": null
         },
@@ -4869,21 +5312,21 @@
         {
           "line": 25,
           "type": "TouchableOpacity",
-          "testID": "customer.settings.help-support.replace-main",
+          "testID": "customer.settings.help-support.replace-settings",
           "a11y": null,
           "text": null
         },
         {
           "line": 34,
           "type": "TouchableOpacity",
-          "testID": "customer.settings.help-support.push-main",
+          "testID": "customer.settings.help-support.push-faq",
           "a11y": null,
           "text": null
         },
         {
           "line": 39,
           "type": "TouchableOpacity",
-          "testID": "customer.settings.help-support.push-main-2",
+          "testID": "customer.settings.help-support.push-contact-support",
           "a11y": null,
           "text": null
         },
@@ -4897,21 +5340,21 @@
         {
           "line": 52,
           "type": "TouchableOpacity",
-          "testID": "customer.settings.help-support.push-main-3",
+          "testID": "customer.settings.help-support.push-emergency-contacts",
           "a11y": null,
           "text": null
         },
         {
           "line": 60,
           "type": "TouchableOpacity",
-          "testID": "customer.settings.help-support.push-main-4",
+          "testID": "customer.settings.help-support.push-privacy-policy",
           "a11y": null,
           "text": null
         },
         {
           "line": 65,
           "type": "TouchableOpacity",
-          "testID": "customer.settings.help-support.push-main-5",
+          "testID": "customer.settings.help-support.push-terms-of-service",
           "a11y": null,
           "text": null
         },
@@ -5020,7 +5463,7 @@
         {
           "line": 60,
           "type": "TouchableOpacity",
-          "testID": "customer.settings.linked-accounts.replace-main",
+          "testID": "customer.settings.linked-accounts.replace-settings",
           "a11y": null,
           "text": null
         },
@@ -6236,6 +6679,29 @@
       ]
     },
     {
+      "file": "app/(main)/(customer)/add-role/index.tsx",
+      "defaultExport": true,
+      "elements": [
+        {
+          "line": 157,
+          "type": "TouchableOpacity",
+          "testID": null,
+          "a11y": null,
+          "text": null
+        }
+      ],
+      "handlers": [
+        {
+          "line": 160,
+          "kinds": [
+            "onPress"
+          ],
+          "kind": "generic",
+          "class": "AUTOMATABLE"
+        }
+      ]
+    },
+    {
       "file": "app/(main)/(customer)/add-tip/index.tsx",
       "defaultExport": true,
       "elements": [
@@ -6310,89 +6776,6 @@
         },
         {
           "line": 144,
-          "kinds": [
-            "onPress"
-          ],
-          "kind": "generic",
-          "class": "AUTOMATABLE"
-        }
-      ]
-    },
-    {
-      "file": "app/(main)/(customer)/apply-promos/index.tsx",
-      "defaultExport": true,
-      "elements": [
-        {
-          "line": 131,
-          "type": "TouchableOpacity",
-          "testID": "customer.apply-promos.el-1",
-          "a11y": null,
-          "text": null
-        },
-        {
-          "line": 142,
-          "type": "TextInput",
-          "testID": null,
-          "a11y": null,
-          "text": null
-        },
-        {
-          "line": 164,
-          "type": "TouchableOpacity",
-          "testID": null,
-          "a11y": null,
-          "text": null
-        },
-        {
-          "line": 188,
-          "type": "TouchableOpacity",
-          "testID": null,
-          "a11y": null,
-          "text": null
-        },
-        {
-          "line": 210,
-          "type": "TouchableOpacity",
-          "testID": null,
-          "a11y": null,
-          "text": null
-        }
-      ],
-      "handlers": [
-        {
-          "line": 131,
-          "kinds": [
-            "onPress"
-          ],
-          "kind": "navigation",
-          "class": "AUTOMATABLE"
-        },
-        {
-          "line": 148,
-          "kinds": [
-            "input"
-          ],
-          "kind": "input-or-toggle",
-          "class": "AUTOMATABLE"
-        },
-        {
-          "line": 167,
-          "kinds": [
-            "onPress"
-          ],
-          "kind": "generic",
-          "class": "AUTOMATABLE"
-        },
-        {
-          "line": 192,
-          "kinds": [
-            "onPress"
-          ],
-          "kind": "generic",
-          "class": "AUTOMATABLE"
-        },
-        {
-          "line": 211,
           "kinds": [
             "onPress"
           ],
@@ -6752,195 +7135,6 @@
       "handlers": [
         {
           "line": 96,
-          "kinds": [
-            "onPress"
-          ],
-          "kind": "generic",
-          "class": "AUTOMATABLE"
-        }
-      ]
-    },
-    {
-      "file": "app/(main)/(customer)/confirm-ride/index.tsx",
-      "defaultExport": true,
-      "elements": [
-        {
-          "line": 462,
-          "type": "TouchableOpacity",
-          "testID": null,
-          "a11y": null,
-          "text": null
-        },
-        {
-          "line": 600,
-          "type": "TouchableOpacity",
-          "testID": null,
-          "a11y": null,
-          "text": null
-        },
-        {
-          "line": 611,
-          "type": "TextInput",
-          "testID": null,
-          "a11y": null,
-          "text": null
-        },
-        {
-          "line": 613,
-          "type": "TextInput",
-          "testID": null,
-          "a11y": null,
-          "text": null
-        },
-        {
-          "line": 615,
-          "type": "TouchableOpacity",
-          "testID": null,
-          "a11y": null,
-          "text": null
-        },
-        {
-          "line": 635,
-          "type": "TouchableOpacity",
-          "testID": "customer.confirm-ride.set-prefer-female",
-          "a11y": null,
-          "text": null
-        },
-        {
-          "line": 643,
-          "type": "TouchableOpacity",
-          "testID": null,
-          "a11y": null,
-          "text": null
-        },
-        {
-          "line": 697,
-          "type": "TouchableOpacity",
-          "testID": "customer.confirm-ride.set-show-stop-modal",
-          "a11y": null,
-          "text": null
-        },
-        {
-          "line": 705,
-          "type": "TouchableOpacity",
-          "testID": "customer.confirm-ride.set-stops",
-          "a11y": null,
-          "text": null
-        },
-        {
-          "line": 720,
-          "type": "TouchableOpacity",
-          "testID": "customer.confirm-ride.set-show-stop-modal-2",
-          "a11y": null,
-          "text": null
-        },
-        {
-          "line": 737,
-          "type": "TouchableOpacity",
-          "testID": null,
-          "a11y": null,
-          "text": null
-        }
-      ],
-      "handlers": [
-        {
-          "line": 464,
-          "kinds": [
-            "onPress"
-          ],
-          "kind": "generic",
-          "class": "AUTOMATABLE"
-        },
-        {
-          "line": 601,
-          "kinds": [
-            "onPress"
-          ],
-          "kind": "generic",
-          "class": "AUTOMATABLE"
-        },
-        {
-          "line": 612,
-          "kinds": [
-            "input"
-          ],
-          "kind": "input-or-toggle",
-          "class": "AUTOMATABLE"
-        },
-        {
-          "line": 614,
-          "kinds": [
-            "input"
-          ],
-          "kind": "input-or-toggle",
-          "class": "AUTOMATABLE"
-        },
-        {
-          "line": 616,
-          "kinds": [
-            "onPress"
-          ],
-          "kind": "generic",
-          "class": "AUTOMATABLE"
-        },
-        {
-          "line": 632,
-          "kinds": [
-            "input"
-          ],
-          "kind": "input-or-toggle",
-          "class": "AUTOMATABLE"
-        },
-        {
-          "line": 635,
-          "kinds": [
-            "onPress"
-          ],
-          "kind": "generic",
-          "class": "AUTOMATABLE"
-        },
-        {
-          "line": 644,
-          "kinds": [
-            "onPress"
-          ],
-          "kind": "generic",
-          "class": "AUTOMATABLE"
-        },
-        {
-          "line": 697,
-          "kinds": [
-            "onPress"
-          ],
-          "kind": "generic",
-          "class": "AUTOMATABLE"
-        },
-        {
-          "line": 705,
-          "kinds": [
-            "onPress"
-          ],
-          "kind": "generic",
-          "class": "AUTOMATABLE"
-        },
-        {
-          "line": 711,
-          "kinds": [
-            "onPress"
-          ],
-          "kind": "generic",
-          "class": "AUTOMATABLE"
-        },
-        {
-          "line": 720,
-          "kinds": [
-            "onPress"
-          ],
-          "kind": "generic",
-          "class": "AUTOMATABLE"
-        },
-        {
-          "line": 738,
           "kinds": [
             "onPress"
           ],
@@ -7335,146 +7529,32 @@
       ]
     },
     {
-      "file": "app/(main)/(customer)/find-ride/index.tsx",
-      "defaultExport": true,
-      "elements": [
-        {
-          "line": 297,
-          "type": "TouchableOpacity",
-          "testID": null,
-          "a11y": null,
-          "text": null
-        },
-        {
-          "line": 349,
-          "type": "TouchableOpacity",
-          "testID": null,
-          "a11y": null,
-          "text": null
-        },
-        {
-          "line": 382,
-          "type": "TouchableOpacity",
-          "testID": null,
-          "a11y": null,
-          "text": null
-        },
-        {
-          "line": 399,
-          "type": "TouchableOpacity",
-          "testID": "customer.find-ride.add-stop",
-          "a11y": null,
-          "text": null
-        },
-        {
-          "line": 456,
-          "type": "TouchableOpacity",
-          "testID": null,
-          "a11y": null,
-          "text": null
-        },
-        {
-          "line": 536,
-          "type": "TouchableOpacity",
-          "testID": null,
-          "a11y": null,
-          "text": null
-        }
-      ],
-      "handlers": [
-        {
-          "line": 299,
-          "kinds": [
-            "onPress"
-          ],
-          "kind": "generic",
-          "class": "AUTOMATABLE"
-        },
-        {
-          "line": 350,
-          "kinds": [
-            "onPress"
-          ],
-          "kind": "generic",
-          "class": "AUTOMATABLE"
-        },
-        {
-          "line": 383,
-          "kinds": [
-            "onPress"
-          ],
-          "kind": "generic",
-          "class": "AUTOMATABLE"
-        },
-        {
-          "line": 399,
-          "kinds": [
-            "onPress"
-          ],
-          "kind": "generic",
-          "class": "AUTOMATABLE"
-        },
-        {
-          "line": 434,
-          "kinds": [
-            "onPress"
-          ],
-          "kind": "generic",
-          "class": "AUTOMATABLE"
-        },
-        {
-          "line": 458,
-          "kinds": [
-            "onPress"
-          ],
-          "kind": "generic",
-          "class": "AUTOMATABLE"
-        },
-        {
-          "line": 529,
-          "kinds": [
-            "onPress"
-          ],
-          "kind": "generic",
-          "class": "AUTOMATABLE"
-        },
-        {
-          "line": 537,
-          "kinds": [
-            "onPress"
-          ],
-          "kind": "generic",
-          "class": "AUTOMATABLE"
-        }
-      ]
-    },
-    {
       "file": "app/(main)/(customer)/finding-driver/index.tsx",
       "defaultExport": true,
       "elements": [
         {
-          "line": 329,
+          "line": 332,
           "type": "TouchableOpacity",
           "testID": null,
           "a11y": null,
           "text": null
         },
         {
-          "line": 423,
+          "line": 426,
           "type": "TouchableOpacity",
           "testID": null,
           "a11y": null,
           "text": null
         },
         {
-          "line": 451,
+          "line": 454,
           "type": "TouchableOpacity",
           "testID": null,
           "a11y": null,
           "text": null
         },
         {
-          "line": 467,
+          "line": 470,
           "type": "TouchableOpacity",
           "testID": null,
           "a11y": null,
@@ -7483,7 +7563,7 @@
       ],
       "handlers": [
         {
-          "line": 331,
+          "line": 334,
           "kinds": [
             "onPress"
           ],
@@ -7491,7 +7571,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 426,
+          "line": 429,
           "kinds": [
             "onPress"
           ],
@@ -7499,7 +7579,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 454,
+          "line": 457,
           "kinds": [
             "onPress"
           ],
@@ -7507,7 +7587,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 470,
+          "line": 473,
           "kinds": [
             "onPress"
           ],
@@ -7845,49 +7925,49 @@
       "defaultExport": true,
       "elements": [
         {
-          "line": 108,
+          "line": 113,
           "type": "TouchableOpacity",
           "testID": null,
           "a11y": null,
           "text": null
         },
         {
-          "line": 123,
+          "line": 128,
           "type": "TouchableOpacity",
           "testID": null,
           "a11y": null,
           "text": null
         },
         {
-          "line": 152,
+          "line": 157,
           "type": "TouchableOpacity",
           "testID": null,
           "a11y": null,
           "text": null
         },
         {
-          "line": 181,
+          "line": 186,
           "type": "TextInput",
           "testID": null,
           "a11y": null,
           "text": null
         },
         {
-          "line": 209,
+          "line": 214,
           "type": "TouchableOpacity",
           "testID": null,
           "a11y": null,
           "text": null
         },
         {
-          "line": 221,
+          "line": 226,
           "type": "TouchableOpacity",
           "testID": null,
           "a11y": null,
           "text": null
         },
         {
-          "line": 254,
+          "line": 259,
           "type": "TouchableOpacity",
           "testID": null,
           "a11y": null,
@@ -7896,7 +7976,7 @@
       ],
       "handlers": [
         {
-          "line": 111,
+          "line": 116,
           "kinds": [
             "onPress"
           ],
@@ -7904,7 +7984,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 126,
+          "line": 131,
           "kinds": [
             "onPress"
           ],
@@ -7912,7 +7992,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 164,
+          "line": 169,
           "kinds": [
             "onPress"
           ],
@@ -7920,7 +8000,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 189,
+          "line": 194,
           "kinds": [
             "input"
           ],
@@ -7928,7 +8008,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 213,
+          "line": 218,
           "kinds": [
             "onPress"
           ],
@@ -7936,7 +8016,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 229,
+          "line": 234,
           "kinds": [
             "onPress"
           ],
@@ -7944,7 +8024,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 258,
+          "line": 263,
           "kinds": [
             "onPress"
           ],
@@ -8229,7 +8309,7 @@
         {
           "line": 561,
           "type": "TouchableOpacity",
-          "testID": "customer.ride-tracking.ride_id.push-main",
+          "testID": "customer.ride-tracking.ride_id.push-chat",
           "a11y": null,
           "text": null
         },
@@ -8257,7 +8337,7 @@
         {
           "line": 634,
           "type": "TouchableOpacity",
-          "testID": "customer.ride-tracking.ride_id.push-main-2",
+          "testID": "customer.ride-tracking.ride_id.push-chat-2",
           "a11y": null,
           "text": null
         },
@@ -8464,42 +8544,49 @@
       "defaultExport": true,
       "elements": [
         {
-          "line": 73,
+          "line": 108,
           "type": "TouchableOpacity",
           "testID": null,
           "a11y": null,
           "text": null
         },
         {
-          "line": 107,
+          "line": 142,
           "type": "TouchableOpacity",
           "testID": null,
           "a11y": null,
           "text": null
         },
         {
-          "line": 154,
+          "line": 189,
           "type": "TouchableOpacity",
           "testID": null,
           "a11y": null,
           "text": null
         },
         {
-          "line": 185,
+          "line": 220,
           "type": "TouchableOpacity",
           "testID": null,
           "a11y": null,
           "text": null
         },
         {
-          "line": 219,
+          "line": 268,
           "type": "TouchableOpacity",
           "testID": null,
           "a11y": null,
           "text": null
         },
         {
-          "line": 251,
+          "line": 304,
+          "type": "TouchableOpacity",
+          "testID": null,
+          "a11y": null,
+          "text": null
+        },
+        {
+          "line": 336,
           "type": "TouchableOpacity",
           "testID": null,
           "a11y": null,
@@ -8508,7 +8595,7 @@
       ],
       "handlers": [
         {
-          "line": 74,
+          "line": 109,
           "kinds": [
             "onPress"
           ],
@@ -8516,7 +8603,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 116,
+          "line": 151,
           "kinds": [
             "onPress"
           ],
@@ -8524,7 +8611,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 162,
+          "line": 197,
           "kinds": [
             "onPress"
           ],
@@ -8532,7 +8619,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 193,
+          "line": 228,
           "kinds": [
             "onPress"
           ],
@@ -8540,7 +8627,15 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 227,
+          "line": 277,
+          "kinds": [
+            "onPress"
+          ],
+          "kind": "generic",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 312,
           "kinds": [
             "onPress"
           ],
@@ -8548,7 +8643,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 259,
+          "line": 344,
           "kinds": [
             "onPress"
           ],
@@ -8607,6 +8702,353 @@
           ],
           "kind": "navigation",
           "class": "AUTOMATABLE"
+        }
+      ]
+    },
+    {
+      "file": "app/(main)/(customer)/verification-status.tsx",
+      "defaultExport": true,
+      "elements": [
+        {
+          "line": 183,
+          "type": "TouchableOpacity",
+          "testID": "customer.verification-status.el-1",
+          "a11y": null,
+          "text": null
+        }
+      ],
+      "handlers": [
+        {
+          "line": 167,
+          "kinds": [
+            "onPress"
+          ],
+          "kind": "generic",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 183,
+          "kinds": [
+            "onPress"
+          ],
+          "kind": "navigation",
+          "class": "AUTOMATABLE"
+        }
+      ]
+    },
+    {
+      "file": "app/(main)/(delivery)/_layout.tsx",
+      "defaultExport": true,
+      "elements": [],
+      "handlers": []
+    },
+    {
+      "file": "app/(main)/(delivery)/active/[id].tsx",
+      "defaultExport": true,
+      "elements": [
+        {
+          "line": 266,
+          "type": "TouchableOpacity",
+          "testID": null,
+          "a11y": null,
+          "text": null
+        },
+        {
+          "line": 337,
+          "type": "TouchableOpacity",
+          "testID": null,
+          "a11y": null,
+          "text": null
+        },
+        {
+          "line": 355,
+          "type": "TouchableOpacity",
+          "testID": null,
+          "a11y": null,
+          "text": null
+        },
+        {
+          "line": 370,
+          "type": "TextInput",
+          "testID": null,
+          "a11y": null,
+          "text": null
+        },
+        {
+          "line": 381,
+          "type": "TouchableOpacity",
+          "testID": null,
+          "a11y": null,
+          "text": null
+        },
+        {
+          "line": 404,
+          "type": "TextInput",
+          "testID": null,
+          "a11y": null,
+          "text": null
+        },
+        {
+          "line": 415,
+          "type": "TouchableOpacity",
+          "testID": null,
+          "a11y": null,
+          "text": null
+        },
+        {
+          "line": 446,
+          "type": "TextInput",
+          "testID": null,
+          "a11y": null,
+          "text": null
+        },
+        {
+          "line": 464,
+          "type": "TouchableOpacity",
+          "testID": null,
+          "a11y": null,
+          "text": null
+        },
+        {
+          "line": 482,
+          "type": "TouchableOpacity",
+          "testID": null,
+          "a11y": null,
+          "text": null
+        },
+        {
+          "line": 493,
+          "type": "TextInput",
+          "testID": null,
+          "a11y": null,
+          "text": null
+        },
+        {
+          "line": 504,
+          "type": "TouchableOpacity",
+          "testID": null,
+          "a11y": null,
+          "text": null
+        }
+      ],
+      "handlers": [
+        {
+          "line": 239,
+          "kinds": [
+            "onPress"
+          ],
+          "kind": "dialog-toast",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 267,
+          "kinds": [
+            "onPress"
+          ],
+          "kind": "navigation",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 340,
+          "kinds": [
+            "onPress"
+          ],
+          "kind": "generic",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 359,
+          "kinds": [
+            "onPress"
+          ],
+          "kind": "generic",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 376,
+          "kinds": [
+            "input"
+          ],
+          "kind": "input-or-toggle",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 385,
+          "kinds": [
+            "onPress"
+          ],
+          "kind": "generic",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 410,
+          "kinds": [
+            "input"
+          ],
+          "kind": "input-or-toggle",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 419,
+          "kinds": [
+            "onPress"
+          ],
+          "kind": "generic",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 452,
+          "kinds": [
+            "input"
+          ],
+          "kind": "input-or-toggle",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 468,
+          "kinds": [
+            "onPress"
+          ],
+          "kind": "generic",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 484,
+          "kinds": [
+            "onPress"
+          ],
+          "kind": "generic",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 499,
+          "kinds": [
+            "input"
+          ],
+          "kind": "input-or-toggle",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 508,
+          "kinds": [
+            "onPress"
+          ],
+          "kind": "generic",
+          "class": "AUTOMATABLE"
+        }
+      ]
+    },
+    {
+      "file": "app/(main)/(delivery)/earnings.tsx",
+      "defaultExport": true,
+      "elements": [
+        {
+          "line": 141,
+          "type": "TouchableOpacity",
+          "testID": null,
+          "a11y": null,
+          "text": null
+        },
+        {
+          "line": 259,
+          "type": "TouchableOpacity",
+          "testID": null,
+          "a11y": null,
+          "text": null
+        }
+      ],
+      "handlers": [
+        {
+          "line": 142,
+          "kinds": [
+            "onPress"
+          ],
+          "kind": "navigation",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 263,
+          "kinds": [
+            "onPress"
+          ],
+          "kind": "generic",
+          "class": "AUTOMATABLE"
+        }
+      ]
+    },
+    {
+      "file": "app/(main)/(delivery)/index.tsx",
+      "defaultExport": true,
+      "elements": [
+        {
+          "line": 181,
+          "type": "TouchableOpacity",
+          "testID": null,
+          "a11y": null,
+          "text": null
+        },
+        {
+          "line": 241,
+          "type": "TouchableOpacity",
+          "testID": null,
+          "a11y": null,
+          "text": null
+        },
+        {
+          "line": 331,
+          "type": "TouchableOpacity",
+          "testID": null,
+          "a11y": null,
+          "text": null
+        },
+        {
+          "line": 342,
+          "type": "TouchableOpacity",
+          "testID": null,
+          "a11y": null,
+          "text": null
+        }
+      ],
+      "handlers": [
+        {
+          "line": 182,
+          "kinds": [
+            "onPress"
+          ],
+          "kind": "navigation",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 205,
+          "kinds": [
+            "refresh"
+          ],
+          "kind": "input-or-toggle",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 244,
+          "kinds": [
+            "onPress"
+          ],
+          "kind": "navigation",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 335,
+          "kinds": [
+            "onPress"
+          ],
+          "kind": "generic",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 346,
+          "kinds": [
+            "onPress"
+          ],
+          "kind": "generic",
+          "class": "COUNTERPART-API"
         }
       ]
     },
@@ -8891,11 +9333,19 @@
           "kinds": [
             "onPress"
           ],
+          "kind": "navigation",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 58,
+          "kinds": [
+            "onPress"
+          ],
           "kind": "generic",
           "class": "AUTOMATABLE"
         },
         {
-          "line": 60,
+          "line": 61,
           "kinds": [
             "onPress"
           ],
@@ -8903,7 +9353,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 61,
+          "line": 62,
           "kinds": [
             "onPress"
           ],
@@ -10851,70 +11301,77 @@
           "text": null
         },
         {
-          "line": 1142,
+          "line": 1136,
           "type": "TouchableOpacity",
           "testID": null,
           "a11y": null,
           "text": null
         },
         {
-          "line": 1154,
+          "line": 1160,
           "type": "TouchableOpacity",
           "testID": null,
           "a11y": null,
           "text": null
         },
         {
-          "line": 1168,
+          "line": 1172,
           "type": "TouchableOpacity",
           "testID": null,
           "a11y": null,
           "text": null
         },
         {
-          "line": 1218,
+          "line": 1186,
           "type": "TouchableOpacity",
           "testID": null,
           "a11y": null,
           "text": null
         },
         {
-          "line": 1298,
+          "line": 1236,
           "type": "TouchableOpacity",
           "testID": null,
           "a11y": null,
           "text": null
         },
         {
-          "line": 1319,
+          "line": 1316,
           "type": "TouchableOpacity",
           "testID": null,
           "a11y": null,
           "text": null
         },
         {
-          "line": 1403,
+          "line": 1337,
           "type": "TouchableOpacity",
           "testID": null,
           "a11y": null,
           "text": null
         },
         {
-          "line": 1479,
+          "line": 1421,
           "type": "TouchableOpacity",
           "testID": null,
           "a11y": null,
           "text": null
         },
         {
-          "line": 1489,
+          "line": 1497,
           "type": "TouchableOpacity",
           "testID": null,
           "a11y": null,
           "text": null
         },
         {
-          "line": 1528,
+          "line": 1507,
+          "type": "TouchableOpacity",
+          "testID": null,
+          "a11y": null,
+          "text": null
+        },
+        {
+          "line": 1546,
           "type": "TouchableOpacity",
           "testID": "rider.d.recover-session",
           "a11y": null,
@@ -10935,19 +11392,11 @@
           "kinds": [
             "onPress"
           ],
-          "kind": "generic",
-          "class": "AUTOMATABLE"
-        },
-        {
-          "line": 1143,
-          "kinds": [
-            "onPress"
-          ],
           "kind": "navigation",
           "class": "AUTOMATABLE"
         },
         {
-          "line": 1155,
+          "line": 1137,
           "kinds": [
             "onPress"
           ],
@@ -10955,7 +11404,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 1169,
+          "line": 1161,
           "kinds": [
             "onPress"
           ],
@@ -10963,7 +11412,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 1219,
+          "line": 1173,
           "kinds": [
             "onPress"
           ],
@@ -10971,7 +11420,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 1299,
+          "line": 1187,
           "kinds": [
             "onPress"
           ],
@@ -10979,7 +11428,15 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 1320,
+          "line": 1237,
+          "kinds": [
+            "onPress"
+          ],
+          "kind": "generic",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 1317,
           "kinds": [
             "onPress"
           ],
@@ -10987,7 +11444,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 1395,
+          "line": 1338,
           "kinds": [
             "onPress"
           ],
@@ -10995,7 +11452,15 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 1404,
+          "line": 1413,
+          "kinds": [
+            "onPress"
+          ],
+          "kind": "navigation",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 1422,
           "kinds": [
             "onPress"
           ],
@@ -11003,7 +11468,7 @@
           "class": "COUNTERPART-API"
         },
         {
-          "line": 1480,
+          "line": 1498,
           "kinds": [
             "onPress"
           ],
@@ -11011,7 +11476,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 1490,
+          "line": 1508,
           "kinds": [
             "onPress"
           ],
@@ -11019,7 +11484,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 1528,
+          "line": 1546,
           "kinds": [
             "onPress"
           ],
@@ -11786,7 +12251,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 202,
+          "line": 203,
           "kinds": [
             "onPress"
           ],
@@ -12408,224 +12873,224 @@
       "defaultExport": true,
       "elements": [
         {
-          "line": 196,
+          "line": 201,
           "type": "TouchableOpacity",
           "testID": null,
           "a11y": null,
           "text": null
         },
         {
-          "line": 229,
+          "line": 234,
           "type": "TouchableOpacity",
           "testID": null,
           "a11y": null,
           "text": null
         },
         {
-          "line": 243,
+          "line": 248,
           "type": "TouchableOpacity",
           "testID": null,
           "a11y": null,
           "text": null
         },
         {
-          "line": 308,
+          "line": 315,
           "type": "TouchableOpacity",
           "testID": "rider.onboarding.on-close-3",
           "a11y": "Close",
           "text": null
         },
         {
-          "line": 323,
+          "line": 330,
           "type": "TouchableOpacity",
           "testID": "rider.onboarding.on-close-4",
           "a11y": "Close",
           "text": null
         },
         {
-          "line": 338,
+          "line": 347,
           "type": "TouchableOpacity",
           "testID": null,
           "a11y": null,
           "text": null
         },
         {
-          "line": 471,
+          "line": 482,
           "type": "TouchableOpacity",
           "testID": null,
           "a11y": null,
           "text": null
         },
         {
-          "line": 522,
+          "line": 533,
           "type": "TouchableOpacity",
           "testID": null,
           "a11y": null,
           "text": null
         },
         {
-          "line": 562,
+          "line": 573,
           "type": "TouchableOpacity",
           "testID": null,
           "a11y": "Back to Form",
           "text": null
         },
         {
-          "line": 566,
+          "line": 577,
           "type": "TouchableOpacity",
           "testID": null,
           "a11y": "Retry",
           "text": null
         },
         {
-          "line": 1056,
+          "line": 1067,
           "type": "TouchableOpacity",
           "testID": null,
           "a11y": null,
           "text": null
         },
         {
-          "line": 1075,
+          "line": 1086,
           "type": "TouchableOpacity",
           "testID": null,
           "a11y": null,
           "text": null
         },
         {
-          "line": 1106,
+          "line": 1117,
           "type": "TextInput",
           "testID": null,
           "a11y": null,
           "text": null
         },
         {
-          "line": 1116,
+          "line": 1127,
           "type": "TouchableOpacity",
           "testID": null,
           "a11y": null,
           "text": null
         },
         {
-          "line": 1128,
+          "line": 1139,
           "type": "TouchableOpacity",
           "testID": "rider.onboarding.pick-profile-photo-2",
           "a11y": "Pick profile photo from gallery",
           "text": null
         },
         {
-          "line": 1140,
+          "line": 1151,
           "type": "TouchableOpacity",
           "testID": null,
           "a11y": null,
           "text": null
         },
         {
-          "line": 1158,
+          "line": 1169,
           "type": "TextInput",
           "testID": "rider.onboarding.set-brand-text",
           "a11y": "Vehicle brand",
           "text": "Enter brand (e.g. Toyota)"
         },
         {
-          "line": 1159,
+          "line": 1170,
           "type": "TouchableOpacity",
           "testID": "rider.onboarding.set-brand",
           "a11y": "Choose brand from list instead",
           "text": null
         },
         {
-          "line": 1164,
+          "line": 1175,
           "type": "TouchableOpacity",
           "testID": "rider.onboarding.set-picker-modal",
           "a11y": "Select vehicle brand",
           "text": null
         },
         {
-          "line": 1174,
+          "line": 1185,
           "type": "TextInput",
           "testID": "rider.onboarding.set-model-text",
           "a11y": "Vehicle model",
           "text": "Enter model (e.g. Premio)"
         },
         {
-          "line": 1176,
+          "line": 1187,
           "type": "TouchableOpacity",
           "testID": "rider.onboarding.set-model",
           "a11y": "Choose model from list instead",
           "text": null
         },
         {
-          "line": 1182,
+          "line": 1193,
           "type": "TouchableOpacity",
           "testID": "rider.onboarding.set-picker-modal-2",
           "a11y": "Select vehicle model",
           "text": null
         },
         {
-          "line": 1196,
+          "line": 1207,
           "type": "TouchableOpacity",
           "testID": "rider.onboarding.set-picker-modal-3",
           "a11y": "Select BRTA registration year",
           "text": null
         },
         {
-          "line": 1212,
+          "line": 1223,
           "type": "TextInput",
           "testID": null,
           "a11y": null,
           "text": null
         },
         {
-          "line": 1232,
+          "line": 1243,
           "type": "TextInput",
           "testID": null,
           "a11y": null,
           "text": null
         },
         {
-          "line": 1254,
+          "line": 1265,
           "type": "TextInput",
           "testID": null,
           "a11y": null,
           "text": null
         },
         {
-          "line": 1290,
+          "line": 1301,
           "type": "TouchableOpacity",
           "testID": null,
           "a11y": null,
           "text": null
         },
         {
-          "line": 1337,
+          "line": 1361,
           "type": "TouchableOpacity",
           "testID": "rider.onboarding.set-legacy-answer",
           "a11y": null,
           "text": null
         },
         {
-          "line": 1358,
+          "line": 1382,
           "type": "TextInput",
           "testID": null,
           "a11y": null,
           "text": null
         },
         {
-          "line": 1393,
+          "line": 1417,
           "type": "TouchableOpacity",
           "testID": null,
           "a11y": null,
           "text": null
         },
         {
-          "line": 1415,
+          "line": 1439,
           "type": "TouchableOpacity",
           "testID": "rider.onboarding.go-back-2",
           "a11y": "Previous step",
           "text": null
         },
         {
-          "line": 1419,
+          "line": 1443,
           "type": "TouchableOpacity",
           "testID": null,
           "a11y": null,
@@ -12634,7 +13099,7 @@
       ],
       "handlers": [
         {
-          "line": 200,
+          "line": 205,
           "kinds": [
             "onPress"
           ],
@@ -12642,7 +13107,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 232,
+          "line": 237,
           "kinds": [
             "onPress"
           ],
@@ -12650,7 +13115,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 255,
+          "line": 260,
           "kinds": [
             "onPress"
           ],
@@ -12658,7 +13123,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 308,
+          "line": 315,
           "kinds": [
             "onPress"
           ],
@@ -12666,7 +13131,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 323,
+          "line": 330,
           "kinds": [
             "onPress"
           ],
@@ -12674,7 +13139,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 343,
+          "line": 352,
           "kinds": [
             "onPress"
           ],
@@ -12682,7 +13147,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 474,
+          "line": 485,
           "kinds": [
             "onPress"
           ],
@@ -12690,7 +13155,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 525,
+          "line": 536,
           "kinds": [
             "onPress"
           ],
@@ -12698,7 +13163,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 562,
+          "line": 573,
           "kinds": [
             "onPress"
           ],
@@ -12706,7 +13171,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 566,
+          "line": 577,
           "kinds": [
             "onPress"
           ],
@@ -12714,7 +13179,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 1059,
+          "line": 1070,
           "kinds": [
             "onPress"
           ],
@@ -12722,7 +13187,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 1078,
+          "line": 1089,
           "kinds": [
             "onPress"
           ],
@@ -12730,7 +13195,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 1112,
+          "line": 1123,
           "kinds": [
             "input"
           ],
@@ -12738,7 +13203,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 1119,
+          "line": 1130,
           "kinds": [
             "onPress"
           ],
@@ -12746,7 +13211,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 1128,
+          "line": 1139,
           "kinds": [
             "onPress"
           ],
@@ -12754,7 +13219,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 1144,
+          "line": 1155,
           "kinds": [
             "onPress"
           ],
@@ -12762,7 +13227,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 1158,
+          "line": 1169,
           "kinds": [
             "input"
           ],
@@ -12770,7 +13235,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 1159,
+          "line": 1170,
           "kinds": [
             "onPress"
           ],
@@ -12778,7 +13243,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 1164,
+          "line": 1175,
           "kinds": [
             "onPress"
           ],
@@ -12786,7 +13251,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 1174,
+          "line": 1185,
           "kinds": [
             "input"
           ],
@@ -12794,7 +13259,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 1176,
+          "line": 1187,
           "kinds": [
             "onPress"
           ],
@@ -12802,7 +13267,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 1182,
+          "line": 1193,
           "kinds": [
             "onPress"
           ],
@@ -12810,7 +13275,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 1196,
+          "line": 1207,
           "kinds": [
             "onPress"
           ],
@@ -12818,7 +13283,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 1220,
+          "line": 1231,
           "kinds": [
             "input"
           ],
@@ -12826,7 +13291,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 1240,
+          "line": 1251,
           "kinds": [
             "input"
           ],
@@ -12834,7 +13299,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 1261,
+          "line": 1272,
           "kinds": [
             "input"
           ],
@@ -12842,7 +13307,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 1293,
+          "line": 1304,
           "kinds": [
             "onPress"
           ],
@@ -12850,7 +13315,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 1337,
+          "line": 1361,
           "kinds": [
             "onPress"
           ],
@@ -12858,31 +13323,31 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 1366,
+          "line": 1390,
           "kinds": [
             "input"
           ],
           "kind": "input-or-toggle",
-          "class": "AUTOMATABLE"
-        },
-        {
-          "line": 1398,
-          "kinds": [
-            "onPress"
-          ],
-          "kind": "generic",
-          "class": "AUTOMATABLE"
-        },
-        {
-          "line": 1415,
-          "kinds": [
-            "onPress"
-          ],
-          "kind": "generic",
           "class": "AUTOMATABLE"
         },
         {
           "line": 1422,
+          "kinds": [
+            "onPress"
+          ],
+          "kind": "generic",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 1439,
+          "kinds": [
+            "onPress"
+          ],
+          "kind": "generic",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 1446,
           "kinds": [
             "onPress"
           ],
@@ -14523,18 +14988,25 @@
       ]
     },
     {
-      "file": "app/(main)/(rider)/settings/index.tsx",
+      "file": "app/(main)/(rider)/settings/deliveries.tsx",
       "defaultExport": true,
       "elements": [
         {
-          "line": 64,
+          "line": 115,
           "type": "TouchableOpacity",
           "testID": null,
           "a11y": null,
           "text": null
         },
         {
-          "line": 99,
+          "line": 148,
+          "type": "Switch",
+          "testID": null,
+          "a11y": null,
+          "text": null
+        },
+        {
+          "line": 181,
           "type": "TouchableOpacity",
           "testID": null,
           "a11y": null,
@@ -14543,7 +15015,7 @@
       ],
       "handlers": [
         {
-          "line": 65,
+          "line": 116,
           "kinds": [
             "onPress"
           ],
@@ -14551,7 +15023,53 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 107,
+          "line": 151,
+          "kinds": [
+            "input"
+          ],
+          "kind": "input-or-toggle",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 184,
+          "kinds": [
+            "onPress"
+          ],
+          "kind": "navigation",
+          "class": "AUTOMATABLE"
+        }
+      ]
+    },
+    {
+      "file": "app/(main)/(rider)/settings/index.tsx",
+      "defaultExport": true,
+      "elements": [
+        {
+          "line": 65,
+          "type": "TouchableOpacity",
+          "testID": null,
+          "a11y": null,
+          "text": null
+        },
+        {
+          "line": 100,
+          "type": "TouchableOpacity",
+          "testID": null,
+          "a11y": null,
+          "text": null
+        }
+      ],
+      "handlers": [
+        {
+          "line": 66,
+          "kinds": [
+            "onPress"
+          ],
+          "kind": "navigation",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 108,
           "kinds": [
             "onPress"
           ],
@@ -15418,6 +15936,847 @@
         },
         {
           "line": 598,
+          "kinds": [
+            "onPress"
+          ],
+          "kind": "generic",
+          "class": "AUTOMATABLE"
+        }
+      ]
+    },
+    {
+      "file": "app/(main)/(shop-owner)/_layout.tsx",
+      "defaultExport": true,
+      "elements": [],
+      "handlers": []
+    },
+    {
+      "file": "app/(main)/(shop-owner)/catalog.tsx",
+      "defaultExport": true,
+      "elements": [
+        {
+          "line": 207,
+          "type": "TouchableOpacity",
+          "testID": "shop-owner.catalog.el-1",
+          "a11y": null,
+          "text": null
+        },
+        {
+          "line": 249,
+          "type": "Switch",
+          "testID": null,
+          "a11y": null,
+          "text": null
+        },
+        {
+          "line": 257,
+          "type": "TouchableOpacity",
+          "testID": null,
+          "a11y": null,
+          "text": null
+        },
+        {
+          "line": 275,
+          "type": "TouchableOpacity",
+          "testID": null,
+          "a11y": null,
+          "text": null
+        },
+        {
+          "line": 292,
+          "type": "TextInput",
+          "testID": null,
+          "a11y": null,
+          "text": null
+        },
+        {
+          "line": 301,
+          "type": "TextInput",
+          "testID": null,
+          "a11y": null,
+          "text": null
+        },
+        {
+          "line": 312,
+          "type": "TextInput",
+          "testID": null,
+          "a11y": null,
+          "text": null
+        },
+        {
+          "line": 322,
+          "type": "TextInput",
+          "testID": null,
+          "a11y": null,
+          "text": null
+        },
+        {
+          "line": 333,
+          "type": "TextInput",
+          "testID": null,
+          "a11y": null,
+          "text": null
+        },
+        {
+          "line": 346,
+          "type": "Switch",
+          "testID": null,
+          "a11y": null,
+          "text": null
+        },
+        {
+          "line": 356,
+          "type": "Switch",
+          "testID": null,
+          "a11y": null,
+          "text": null
+        },
+        {
+          "line": 363,
+          "type": "TouchableOpacity",
+          "testID": null,
+          "a11y": null,
+          "text": null
+        },
+        {
+          "line": 371,
+          "type": "TouchableOpacity",
+          "testID": null,
+          "a11y": null,
+          "text": null
+        }
+      ],
+      "handlers": [
+        {
+          "line": 207,
+          "kinds": [
+            "onPress"
+          ],
+          "kind": "navigation",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 251,
+          "kinds": [
+            "input"
+          ],
+          "kind": "input-or-toggle",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 260,
+          "kinds": [
+            "onPress"
+          ],
+          "kind": "generic",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 278,
+          "kinds": [
+            "onPress"
+          ],
+          "kind": "generic",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 294,
+          "kinds": [
+            "input"
+          ],
+          "kind": "input-or-toggle",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 303,
+          "kinds": [
+            "input"
+          ],
+          "kind": "input-or-toggle",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 314,
+          "kinds": [
+            "input"
+          ],
+          "kind": "input-or-toggle",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 324,
+          "kinds": [
+            "input"
+          ],
+          "kind": "input-or-toggle",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 335,
+          "kinds": [
+            "input"
+          ],
+          "kind": "input-or-toggle",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 348,
+          "kinds": [
+            "input"
+          ],
+          "kind": "input-or-toggle",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 358,
+          "kinds": [
+            "input"
+          ],
+          "kind": "input-or-toggle",
+          "class": "COUNTERPART-API"
+        },
+        {
+          "line": 366,
+          "kinds": [
+            "onPress"
+          ],
+          "kind": "generic",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 375,
+          "kinds": [
+            "onPress"
+          ],
+          "kind": "generic",
+          "class": "AUTOMATABLE"
+        }
+      ]
+    },
+    {
+      "file": "app/(main)/(shop-owner)/index.tsx",
+      "defaultExport": true,
+      "elements": [
+        {
+          "line": 325,
+          "type": "TouchableOpacity",
+          "testID": null,
+          "a11y": null,
+          "text": null
+        },
+        {
+          "line": 331,
+          "type": "TouchableOpacity",
+          "testID": null,
+          "a11y": null,
+          "text": null
+        },
+        {
+          "line": 337,
+          "type": "TouchableOpacity",
+          "testID": null,
+          "a11y": null,
+          "text": null
+        },
+        {
+          "line": 343,
+          "type": "TouchableOpacity",
+          "testID": null,
+          "a11y": null,
+          "text": null
+        },
+        {
+          "line": 349,
+          "type": "TouchableOpacity",
+          "testID": null,
+          "a11y": null,
+          "text": null
+        },
+        {
+          "line": 370,
+          "type": "Switch",
+          "testID": null,
+          "a11y": null,
+          "text": null
+        },
+        {
+          "line": 383,
+          "type": "Switch",
+          "testID": null,
+          "a11y": null,
+          "text": null
+        },
+        {
+          "line": 425,
+          "type": "TouchableOpacity",
+          "testID": null,
+          "a11y": null,
+          "text": null
+        },
+        {
+          "line": 439,
+          "type": "TouchableOpacity",
+          "testID": null,
+          "a11y": null,
+          "text": null
+        },
+        {
+          "line": 495,
+          "type": "TouchableOpacity",
+          "testID": null,
+          "a11y": null,
+          "text": null
+        },
+        {
+          "line": 515,
+          "type": "TouchableOpacity",
+          "testID": null,
+          "a11y": null,
+          "text": null
+        },
+        {
+          "line": 567,
+          "type": "TouchableOpacity",
+          "testID": null,
+          "a11y": null,
+          "text": null
+        },
+        {
+          "line": 578,
+          "type": "TouchableOpacity",
+          "testID": null,
+          "a11y": null,
+          "text": null
+        },
+        {
+          "line": 596,
+          "type": "TouchableOpacity",
+          "testID": null,
+          "a11y": null,
+          "text": null
+        },
+        {
+          "line": 610,
+          "type": "TouchableOpacity",
+          "testID": null,
+          "a11y": null,
+          "text": null
+        },
+        {
+          "line": 624,
+          "type": "TouchableOpacity",
+          "testID": null,
+          "a11y": null,
+          "text": null
+        },
+        {
+          "line": 655,
+          "type": "TouchableOpacity",
+          "testID": null,
+          "a11y": null,
+          "text": null
+        },
+        {
+          "line": 688,
+          "type": "TextInput",
+          "testID": null,
+          "a11y": null,
+          "text": null
+        },
+        {
+          "line": 699,
+          "type": "TouchableOpacity",
+          "testID": null,
+          "a11y": null,
+          "text": null
+        },
+        {
+          "line": 707,
+          "type": "TouchableOpacity",
+          "testID": null,
+          "a11y": null,
+          "text": null
+        }
+      ],
+      "handlers": [
+        {
+          "line": 326,
+          "kinds": [
+            "onPress"
+          ],
+          "kind": "navigation",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 332,
+          "kinds": [
+            "onPress"
+          ],
+          "kind": "navigation",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 338,
+          "kinds": [
+            "onPress"
+          ],
+          "kind": "navigation",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 344,
+          "kinds": [
+            "onPress"
+          ],
+          "kind": "navigation",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 350,
+          "kinds": [
+            "onPress"
+          ],
+          "kind": "navigation",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 372,
+          "kinds": [
+            "input"
+          ],
+          "kind": "input-or-toggle",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 385,
+          "kinds": [
+            "input"
+          ],
+          "kind": "input-or-toggle",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 428,
+          "kinds": [
+            "onPress"
+          ],
+          "kind": "navigation",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 449,
+          "kinds": [
+            "onPress"
+          ],
+          "kind": "navigation",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 498,
+          "kinds": [
+            "onPress"
+          ],
+          "kind": "generic",
+          "class": "BLOCKED"
+        },
+        {
+          "line": 517,
+          "kinds": [
+            "onPress"
+          ],
+          "kind": "generic",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 571,
+          "kinds": [
+            "onPress"
+          ],
+          "kind": "generic",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 582,
+          "kinds": [
+            "onPress"
+          ],
+          "kind": "generic",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 600,
+          "kinds": [
+            "onPress"
+          ],
+          "kind": "generic",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 614,
+          "kinds": [
+            "onPress"
+          ],
+          "kind": "generic",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 628,
+          "kinds": [
+            "onPress"
+          ],
+          "kind": "generic",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 659,
+          "kinds": [
+            "onPress"
+          ],
+          "kind": "generic",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 690,
+          "kinds": [
+            "input"
+          ],
+          "kind": "input-or-toggle",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 702,
+          "kinds": [
+            "onPress"
+          ],
+          "kind": "generic",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 710,
+          "kinds": [
+            "onPress"
+          ],
+          "kind": "generic",
+          "class": "AUTOMATABLE"
+        }
+      ]
+    },
+    {
+      "file": "app/(main)/(shop-owner)/settlement.tsx",
+      "defaultExport": true,
+      "elements": [
+        {
+          "line": 85,
+          "type": "TouchableOpacity",
+          "testID": "shop-owner.settlement.el-1",
+          "a11y": null,
+          "text": null
+        }
+      ],
+      "handlers": [
+        {
+          "line": 85,
+          "kinds": [
+            "onPress"
+          ],
+          "kind": "navigation",
+          "class": "AUTOMATABLE"
+        }
+      ]
+    },
+    {
+      "file": "app/(main)/(shop-owner)/staff.tsx",
+      "defaultExport": true,
+      "elements": [
+        {
+          "line": 141,
+          "type": "TouchableOpacity",
+          "testID": "shop-owner.staff.el-1",
+          "a11y": null,
+          "text": null
+        },
+        {
+          "line": 175,
+          "type": "TouchableOpacity",
+          "testID": null,
+          "a11y": null,
+          "text": null
+        },
+        {
+          "line": 197,
+          "type": "TextInput",
+          "testID": null,
+          "a11y": null,
+          "text": null
+        },
+        {
+          "line": 209,
+          "type": "TouchableOpacity",
+          "testID": null,
+          "a11y": null,
+          "text": null
+        },
+        {
+          "line": 229,
+          "type": "TouchableOpacity",
+          "testID": null,
+          "a11y": null,
+          "text": null
+        }
+      ],
+      "handlers": [
+        {
+          "line": 141,
+          "kinds": [
+            "onPress"
+          ],
+          "kind": "navigation",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 176,
+          "kinds": [
+            "onPress"
+          ],
+          "kind": "generic",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 199,
+          "kinds": [
+            "input"
+          ],
+          "kind": "input-or-toggle",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 211,
+          "kinds": [
+            "onPress"
+          ],
+          "kind": "generic",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 233,
+          "kinds": [
+            "onPress"
+          ],
+          "kind": "generic",
+          "class": "AUTOMATABLE"
+        }
+      ]
+    },
+    {
+      "file": "app/(main)/(shop-owner)/workshop.tsx",
+      "defaultExport": true,
+      "elements": [
+        {
+          "line": 204,
+          "type": "TouchableOpacity",
+          "testID": "shop-owner.workshop.el-1",
+          "a11y": null,
+          "text": null
+        },
+        {
+          "line": 214,
+          "type": "TouchableOpacity",
+          "testID": null,
+          "a11y": null,
+          "text": null
+        },
+        {
+          "line": 291,
+          "type": "TouchableOpacity",
+          "testID": null,
+          "a11y": null,
+          "text": null
+        },
+        {
+          "line": 304,
+          "type": "TouchableOpacity",
+          "testID": null,
+          "a11y": null,
+          "text": null
+        },
+        {
+          "line": 317,
+          "type": "TouchableOpacity",
+          "testID": null,
+          "a11y": null,
+          "text": null
+        },
+        {
+          "line": 363,
+          "type": "TouchableOpacity",
+          "testID": null,
+          "a11y": null,
+          "text": null
+        },
+        {
+          "line": 382,
+          "type": "TouchableOpacity",
+          "testID": null,
+          "a11y": null,
+          "text": null
+        },
+        {
+          "line": 397,
+          "type": "TouchableOpacity",
+          "testID": null,
+          "a11y": null,
+          "text": null
+        },
+        {
+          "line": 421,
+          "type": "TextInput",
+          "testID": null,
+          "a11y": null,
+          "text": null
+        },
+        {
+          "line": 430,
+          "type": "TextInput",
+          "testID": null,
+          "a11y": null,
+          "text": null
+        },
+        {
+          "line": 441,
+          "type": "TextInput",
+          "testID": null,
+          "a11y": null,
+          "text": null
+        },
+        {
+          "line": 451,
+          "type": "TextInput",
+          "testID": null,
+          "a11y": null,
+          "text": null
+        },
+        {
+          "line": 463,
+          "type": "TouchableOpacity",
+          "testID": null,
+          "a11y": null,
+          "text": null
+        },
+        {
+          "line": 471,
+          "type": "TouchableOpacity",
+          "testID": null,
+          "a11y": null,
+          "text": null
+        }
+      ],
+      "handlers": [
+        {
+          "line": 204,
+          "kinds": [
+            "onPress"
+          ],
+          "kind": "navigation",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 216,
+          "kinds": [
+            "onPress"
+          ],
+          "kind": "generic",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 295,
+          "kinds": [
+            "onPress"
+          ],
+          "kind": "generic",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 308,
+          "kinds": [
+            "onPress"
+          ],
+          "kind": "generic",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 321,
+          "kinds": [
+            "onPress"
+          ],
+          "kind": "generic",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 364,
+          "kinds": [
+            "onPress"
+          ],
+          "kind": "generic",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 383,
+          "kinds": [
+            "onPress"
+          ],
+          "kind": "generic",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 400,
+          "kinds": [
+            "onPress"
+          ],
+          "kind": "generic",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 423,
+          "kinds": [
+            "input"
+          ],
+          "kind": "input-or-toggle",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 432,
+          "kinds": [
+            "input"
+          ],
+          "kind": "input-or-toggle",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 443,
+          "kinds": [
+            "input"
+          ],
+          "kind": "input-or-toggle",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 453,
+          "kinds": [
+            "input"
+          ],
+          "kind": "input-or-toggle",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 466,
+          "kinds": [
+            "onPress"
+          ],
+          "kind": "generic",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 475,
           "kinds": [
             "onPress"
           ],
@@ -16927,6 +18286,149 @@
       "handlers": []
     },
     {
+      "file": "app/admin/marketplace/orders.tsx",
+      "defaultExport": true,
+      "elements": [
+        {
+          "line": 232,
+          "type": "Pressable",
+          "testID": null,
+          "a11y": null,
+          "text": null
+        },
+        {
+          "line": 251,
+          "type": "Pressable",
+          "testID": null,
+          "a11y": null,
+          "text": null
+        },
+        {
+          "line": 264,
+          "type": "TextInput",
+          "testID": null,
+          "a11y": null,
+          "text": null
+        },
+        {
+          "line": 273,
+          "type": "TextInput",
+          "testID": null,
+          "a11y": null,
+          "text": null
+        },
+        {
+          "line": 299,
+          "type": "Pressable",
+          "testID": "admin.marketplace.orders.close-modal",
+          "a11y": null,
+          "text": null
+        },
+        {
+          "line": 302,
+          "type": "Pressable",
+          "testID": "admin.marketplace.orders.submit-force-cancel",
+          "a11y": null,
+          "text": null
+        },
+        {
+          "line": 315,
+          "type": "Pressable",
+          "testID": null,
+          "a11y": null,
+          "text": null
+        },
+        {
+          "line": 328,
+          "type": "TextInput",
+          "testID": null,
+          "a11y": null,
+          "text": null
+        },
+        {
+          "line": 337,
+          "type": "TextInput",
+          "testID": null,
+          "a11y": null,
+          "text": null
+        }
+      ],
+      "handlers": [
+        {
+          "line": 234,
+          "kinds": [
+            "onPress"
+          ],
+          "kind": "generic",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 253,
+          "kinds": [
+            "onPress"
+          ],
+          "kind": "generic",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 266,
+          "kinds": [
+            "input"
+          ],
+          "kind": "input-or-toggle",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 275,
+          "kinds": [
+            "input"
+          ],
+          "kind": "input-or-toggle",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 299,
+          "kinds": [
+            "onPress"
+          ],
+          "kind": "generic",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 302,
+          "kinds": [
+            "onPress"
+          ],
+          "kind": "generic",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 317,
+          "kinds": [
+            "onPress"
+          ],
+          "kind": "generic",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 330,
+          "kinds": [
+            "input"
+          ],
+          "kind": "input-or-toggle",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 339,
+          "kinds": [
+            "input"
+          ],
+          "kind": "input-or-toggle",
+          "class": "AUTOMATABLE"
+        }
+      ]
+    },
+    {
       "file": "app/admin/marketplace/overview.tsx",
       "defaultExport": true,
       "elements": [],
@@ -17091,42 +18593,56 @@
       "defaultExport": true,
       "elements": [
         {
-          "line": 455,
+          "line": 493,
           "type": "Pressable",
           "testID": "admin.monitoring.fetch-econ",
           "a11y": null,
           "text": null
         },
         {
-          "line": 465,
+          "line": 497,
+          "type": "Pressable",
+          "testID": "admin.monitoring.fetch-ops",
+          "a11y": null,
+          "text": null
+        },
+        {
+          "line": 507,
           "type": "Pressable",
           "testID": null,
           "a11y": null,
           "text": null
         },
         {
-          "line": 483,
-          "type": "TextInput",
-          "testID": null,
-          "a11y": null,
-          "text": null
-        },
-        {
-          "line": 492,
+          "line": 534,
           "type": "Pressable",
           "testID": null,
           "a11y": null,
           "text": null
         },
         {
-          "line": 557,
+          "line": 551,
           "type": "TextInput",
           "testID": null,
           "a11y": null,
           "text": null
         },
         {
-          "line": 566,
+          "line": 560,
+          "type": "Pressable",
+          "testID": null,
+          "a11y": null,
+          "text": null
+        },
+        {
+          "line": 625,
+          "type": "TextInput",
+          "testID": null,
+          "a11y": null,
+          "text": null
+        },
+        {
+          "line": 634,
           "type": "Pressable",
           "testID": null,
           "a11y": null,
@@ -17135,7 +18651,7 @@
       ],
       "handlers": [
         {
-          "line": 455,
+          "line": 493,
           "kinds": [
             "onPress"
           ],
@@ -17143,7 +18659,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 467,
+          "line": 497,
           "kinds": [
             "onPress"
           ],
@@ -17151,7 +18667,23 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 485,
+          "line": 509,
+          "kinds": [
+            "onPress"
+          ],
+          "kind": "generic",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 537,
+          "kinds": [
+            "onPress"
+          ],
+          "kind": "navigation",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 553,
           "kinds": [
             "input"
           ],
@@ -17159,7 +18691,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 494,
+          "line": 562,
           "kinds": [
             "onPress"
           ],
@@ -17167,7 +18699,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 559,
+          "line": 627,
           "kinds": [
             "input"
           ],
@@ -17175,7 +18707,7 @@
           "class": "AUTOMATABLE"
         },
         {
-          "line": 568,
+          "line": 636,
           "kinds": [
             "onPress"
           ],
@@ -19125,7 +20657,7 @@
       "elements": [],
       "handlers": [
         {
-          "line": 42,
+          "line": 44,
           "kinds": [
             "input"
           ],
@@ -19135,7 +20667,7 @@
       ]
     },
     {
-      "file": "admin/sample-media.tsx"
+      "file": "app/admin/sample-media.tsx",
       "defaultExport": true,
       "elements": [
         {
@@ -19748,6 +21280,345 @@
       ]
     },
     {
+      "file": "app/admin/vehicle-type-changes.tsx",
+      "defaultExport": true,
+      "elements": [
+        {
+          "line": 219,
+          "type": "Pressable",
+          "testID": null,
+          "a11y": null,
+          "text": null
+        },
+        {
+          "line": 246,
+          "type": "Pressable",
+          "testID": "admin.vehicle-type-changes.reset-reject-form",
+          "a11y": null,
+          "text": null
+        },
+        {
+          "line": 249,
+          "type": "Pressable",
+          "testID": "admin.vehicle-type-changes.submit-reject",
+          "a11y": null,
+          "text": null
+        },
+        {
+          "line": 262,
+          "type": "Pressable",
+          "testID": null,
+          "a11y": null,
+          "text": null
+        },
+        {
+          "line": 275,
+          "type": "TextInput",
+          "testID": null,
+          "a11y": null,
+          "text": null
+        },
+        {
+          "line": 285,
+          "type": "TextInput",
+          "testID": null,
+          "a11y": null,
+          "text": null
+        },
+        {
+          "line": 294,
+          "type": "TextInput",
+          "testID": null,
+          "a11y": null,
+          "text": null
+        },
+        {
+          "line": 304,
+          "type": "TextInput",
+          "testID": null,
+          "a11y": null,
+          "text": null
+        },
+        {
+          "line": 334,
+          "type": "Pressable",
+          "testID": null,
+          "a11y": null,
+          "text": null
+        },
+        {
+          "line": 341,
+          "type": "Pressable",
+          "testID": null,
+          "a11y": null,
+          "text": null
+        }
+      ],
+      "handlers": [
+        {
+          "line": 221,
+          "kinds": [
+            "onPress"
+          ],
+          "kind": "generic",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 246,
+          "kinds": [
+            "onPress"
+          ],
+          "kind": "generic",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 249,
+          "kinds": [
+            "onPress"
+          ],
+          "kind": "generic",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 264,
+          "kinds": [
+            "onPress"
+          ],
+          "kind": "generic",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 277,
+          "kinds": [
+            "input"
+          ],
+          "kind": "input-or-toggle",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 287,
+          "kinds": [
+            "input"
+          ],
+          "kind": "input-or-toggle",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 296,
+          "kinds": [
+            "input"
+          ],
+          "kind": "input-or-toggle",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 306,
+          "kinds": [
+            "input"
+          ],
+          "kind": "input-or-toggle",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 336,
+          "kinds": [
+            "onPress"
+          ],
+          "kind": "generic",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 343,
+          "kinds": [
+            "onPress"
+          ],
+          "kind": "generic",
+          "class": "AUTOMATABLE"
+        }
+      ]
+    },
+    {
+      "file": "app/admin/verification.tsx",
+      "defaultExport": true,
+      "elements": [
+        {
+          "line": 146,
+          "type": "Pressable",
+          "testID": null,
+          "a11y": null,
+          "text": null
+        },
+        {
+          "line": 190,
+          "type": "Pressable",
+          "testID": null,
+          "a11y": null,
+          "text": null
+        },
+        {
+          "line": 209,
+          "type": "TextInput",
+          "testID": null,
+          "a11y": null,
+          "text": null
+        },
+        {
+          "line": 227,
+          "type": "Pressable",
+          "testID": null,
+          "a11y": null,
+          "text": null
+        },
+        {
+          "line": 243,
+          "type": "TextInput",
+          "testID": null,
+          "a11y": null,
+          "text": null
+        },
+        {
+          "line": 250,
+          "type": "TextInput",
+          "testID": null,
+          "a11y": null,
+          "text": null
+        },
+        {
+          "line": 258,
+          "type": "TextInput",
+          "testID": null,
+          "a11y": null,
+          "text": null
+        },
+        {
+          "line": 266,
+          "type": "Pressable",
+          "testID": null,
+          "a11y": null,
+          "text": null
+        },
+        {
+          "line": 275,
+          "type": "Pressable",
+          "testID": null,
+          "a11y": null,
+          "text": null
+        },
+        {
+          "line": 286,
+          "type": "Pressable",
+          "testID": null,
+          "a11y": null,
+          "text": null
+        },
+        {
+          "line": 296,
+          "type": "Pressable",
+          "testID": null,
+          "a11y": null,
+          "text": null
+        }
+      ],
+      "handlers": [
+        {
+          "line": 94,
+          "kinds": [
+            "onPress"
+          ],
+          "kind": "generic",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 148,
+          "kinds": [
+            "onPress"
+          ],
+          "kind": "generic",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 194,
+          "kinds": [
+            "onPress"
+          ],
+          "kind": "external",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 211,
+          "kinds": [
+            "input"
+          ],
+          "kind": "input-or-toggle",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 229,
+          "kinds": [
+            "onPress"
+          ],
+          "kind": "generic",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 245,
+          "kinds": [
+            "input"
+          ],
+          "kind": "input-or-toggle",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 252,
+          "kinds": [
+            "input"
+          ],
+          "kind": "input-or-toggle",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 260,
+          "kinds": [
+            "input"
+          ],
+          "kind": "input-or-toggle",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 267,
+          "kinds": [
+            "onPress"
+          ],
+          "kind": "generic",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 276,
+          "kinds": [
+            "onPress"
+          ],
+          "kind": "generic",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 287,
+          "kinds": [
+            "onPress"
+          ],
+          "kind": "generic",
+          "class": "AUTOMATABLE"
+        },
+        {
+          "line": 297,
+          "kinds": [
+            "onPress"
+          ],
+          "kind": "generic",
+          "class": "AUTOMATABLE"
+        }
+      ]
+    },
+    {
       "file": "app/admin/zone-pnl.tsx",
       "defaultExport": true,
       "elements": [
@@ -19934,7 +21805,7 @@
       "defaultExport": true,
       "elements": [
         {
-          "line": 169,
+          "line": 184,
           "type": "Pressable",
           "testID": null,
           "a11y": null,
@@ -19943,7 +21814,7 @@
       ],
       "handlers": [
         {
-          "line": 172,
+          "line": 187,
           "kinds": [
             "onPress"
           ],

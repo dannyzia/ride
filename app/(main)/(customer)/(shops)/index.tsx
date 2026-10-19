@@ -39,7 +39,7 @@ export default function ShopListScreen() {
   const textSecondary = isDark ? colors.textSecondaryDark : colors.textSecondaryLight;
   const borderColor = isDark ? colors.borderDark : colors.borderLight;
 
-  const { shops, shopsLoading, shopsPage, setShops, setShopsLoading, setShopsPage } =
+  const { shops, shopsLoading, shopsPage, setShops, appendShops, setShopsLoading, setShopsPage } =
     useShopStore();
   const [search, setSearch] = useState("");
   const [refreshing, setRefreshing] = useState(false);
@@ -59,7 +59,10 @@ export default function ShopListScreen() {
         if (page === 1) {
           setShops(data.shops);
         } else {
-          setShops([...shops, ...data.shops]);
+          // C5-8: append via the functional store update, never the
+          // captured `shops` closure (a second page resolving late would
+          // otherwise clobber the first one's rows).
+          appendShops(data.shops);
         }
         setHasMore(data.shops.length >= 20);
       } catch (err) {
@@ -68,7 +71,7 @@ export default function ShopListScreen() {
         setShopsLoading(false);
       }
     },
-    [shops, setShops, setShopsLoading, typeSlug],
+    [setShops, appendShops, setShopsLoading, typeSlug],
   );
 
 useEffect(() => {

@@ -52,6 +52,11 @@ export async function uploadImageToR2({
         filename: sanitizeFilenameBase(fileName),
         folder,
         contentType: compressed.contentType,
+        // D5-2: declare the exact post-compression size so the route binds
+        // it into the signature. The PUT below sends these same bytes, and
+        // FileSystem sets Content-Length from the file — the three agree by
+        // construction (same `compressed` descriptor throughout).
+        contentLength: compressed.sizeBytes,
       }),
     },
   );
@@ -86,10 +91,13 @@ export async function uploadImageToR2({
       const put = await FileSystem.uploadAsync(uploadUrl, compressed.uri, {
         httpMethod: 'PUT',
         uploadType: FileSystem.FileSystemUploadType.BINARY_CONTENT,
-        // Both headers are signature-bound by the presign route: sending a
-        // different value is rejected by R2 (403 SignatureDoesNotMatch), so they
-        // must match what it signed — contentType as requested, and the same
-        // immutable CACHE_CONTROL value the route uses.
+        // All three headers are signature-bound by the presign route:
+        // sending a different value is rejected by R2 (403
+        // SignatureDoesNotMatch), so they must match what it signed —
+        // contentType as requested, the same immutable CACHE_CONTROL value
+        // the route uses, and Content-Length, which FileSystem sets from
+        // the file itself (equal to the declared contentLength by
+        // construction — same `compressed` descriptor).
         headers: {
           'Content-Type': compressed.contentType,
           'Cache-Control': CACHE_CONTROL,

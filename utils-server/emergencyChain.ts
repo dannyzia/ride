@@ -296,22 +296,41 @@ export async function cancelEmergencyRequest(
       .where(eq(emergencyRequests.id, requestId))
       .returning();
 
-    if (isAssignee && req.accepted_cert_id) {
-      // Notify the other party
+    // B4-1 (N14 pattern — cf. transitionEmergencyRequest above): capture the
+    // counterparty user_id inside the tx; the emergency:cancel WS relay runs
+    // in the post-commit .then() branch below, the single WS-exit point. An
+    // emit inside the tx callback fires even when the transaction later rolls
+    // back (phantom notification), so the in-tx emit is deleted. Counterparty
+    // = the other party: a caller-cancel notifies the assignee, an
+    // assignee-cancel notifies the caller. (The old in-tx branch could only
+    // address the assignee and skipped it whenever it equaled the canceller,
+    // i.e. it was dead in every reachable case.)
+    let counterpartyUserId: string | null = null;
+    if (req.accepted_cert_id) {
       const [cert] = await tx
         .select({ user_id: ambulanceCertifications.user_id })
         .from(ambulanceCertifications)
         .where(eq(ambulanceCertifications.id, req.accepted_cert_id))
         .limit(1);
-      if (cert && cert.user_id !== userId) {
-        emergencySendToUser(cert.user_id, {
-          type: "emergency:cancel",
-          request_id: requestId,
-          reason: reason ?? null,
-        });
-      }
+      const assigneeUserId = cert?.user_id ?? null;
+      counterpartyUserId =
+        userId === req.caller_user_id ? assigneeUserId : req.caller_user_id;
     }
 
+    return { updatedRow, counterpartyUserId, requestId, reason: reason ?? null } as const;
+  }).then(({ updatedRow, counterpartyUserId, requestId, reason }) => {
+    // Post-commit relay — a relay failure must not fail the committed cancel.
+    if (counterpartyUserId && counterpartyUserId !== userId) {
+      try {
+        emergencySendToUser(counterpartyUserId, {
+          type: "emergency:cancel",
+          request_id: requestId,
+          reason,
+        });
+      } catch (err) {
+        logger.warn("[emergencyChain] cancel relay failed", { request_id: requestId, err });
+      }
+    }
     return updatedRow as Record<string, unknown>;
   });
 }
@@ -407,6 +426,9 @@ export async function escalateUnacknowledgedEmergencies(
       data: { request_id: req.id, type: 'emergency_escalated' },
       priority: 'high',
       idempotencyKey: `emergency_escalated:${req.id}`,
+      // D2-3: locale-resolved twin of the literal above.
+      copyKey: 'emergency_search_widening',
+      copyVars: { pickup_address: String(req.pickup_address ?? '') },
     };
     if (notifyQueue) {
       notifyQueue.push(delayNotice);
@@ -483,6 +505,12 @@ export async function broadcastEmergencyNewRequest(
         title: "🚨 Emergency ambulance call",
         body: `${req.service_level} needed — ${req.pickup_address}`,
         data: { request_id: req.id, type: "emergency_new_request" },
+        // D2-3: locale-resolved twin of the literal above.
+        copyKey: "emergency_ambulance_call",
+        copyVars: {
+          service_level: String(req.service_level ?? ''),
+          pickup_address: String(req.pickup_address ?? ''),
+        },
         // M5: deterministic key — dedup suppresses the restart re-push.
         idempotencyKey: `emergency_activation:${req.id}:${userId}`,
       });
@@ -497,6 +525,12 @@ export async function broadcastEmergencyNewRequest(
             body: `${req.service_level} needed — ${req.pickup_address}`,
             data: { request_id: req.id, type: "emergency_new_request" },
             idempotencyKey: `emergency_activation:${req.id}:${userId}`,
+            // D2-3: locale-resolved twin of the literal above.
+            copyKey: "emergency_ambulance_call",
+            copyVars: {
+              service_level: String(req.service_level ?? ''),
+              pickup_address: String(req.pickup_address ?? ''),
+            },
           },
         ]);
       } catch (err) {

@@ -19,6 +19,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { supabase } from '@/lib/supabase';
 import { colors } from '@/theme/goRide';
 import CustomButton from '@/components/CustomButton';
@@ -35,10 +36,11 @@ interface StatusRole {
   reject: { code: string | null; field: string | null; example: string | null } | null;
 }
 
-const ROLE_LABEL: Record<StatusRole['role'], string> = {
-  shop_owner: 'Shop Owner',
-  fleet_owner: 'Fleet Owner',
-  delivery_man: 'Delivery Man',
+// C1-9: role labels come from the shared bilingual roles table (D3 rider).
+const ROLE_I18N_KEY: Record<StatusRole['role'], string> = {
+  shop_owner: 'auth.roles.shop_owner',
+  fleet_owner: 'auth.roles.fleet_owner',
+  delivery_man: 'auth.roles.delivery_man',
 };
 const RESUBMIT_ROUTE: Record<StatusRole['role'], string> = {
   shop_owner: '/(auth)/register-shop-owner',
@@ -49,6 +51,8 @@ const MAX_RESUBMITS = 3; // F-03: max 3, then admin unblock
 
 export default function VerificationStatusScreen() {
   const router = useRouter();
+  // C1-9: bilingual copy (D3 rider) — no hardcoded screen strings.
+  const { t } = useTranslation();
   const isDark = useIsDark();
   const bg = isDark ? colors.bgDark : colors.bgLight;
   const textPrimary = isDark ? colors.textPrimaryDark : colors.textPrimaryLight;
@@ -57,7 +61,6 @@ export default function VerificationStatusScreen() {
   const borderColor = isDark ? colors.borderDark : colors.borderLight;
   const [roles, setRoles] = useState<StatusRole[]>([]);
   const [loading, setLoading] = useState(true);
-  const [busyRole, setBusyRole] = useState<string | null>(null);
   const [error, setError] = useState('');
 
   const load = useCallback(async () => {
@@ -75,39 +78,24 @@ export default function VerificationStatusScreen() {
         ),
       );
     } catch (e) {
-      setError('Could not load your verification status. Please try again.');
+      setError(t('auth.verification_status.load_failed'));
       logger.error('[verification-status] load failed', e);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     load();
   }, [load]);
 
-  const resubmit = async (kind: StatusRole['role']) => {
-    setBusyRole(kind);
-    setError('');
-    try {
-      const { data: session } = await supabase.auth.getSession();
-      const token = session.session?.access_token;
-      const res = await fetch(`${API_URL}/api/user/roles/resubmit`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token ?? ''}` },
-        body: JSON.stringify({ kind }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || data.error || 'Resubmit failed');
-      // One-tap path continues into the wizard, prefilled with prior answers
-      // (the wizard seeds its fields from GET /api/user/roles on this param).
-      router.push(`${RESUBMIT_ROUTE[kind]}?resubmit=1`);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Resubmit failed');
-      logger.error('[verification-status] resubmit failed', e);
-    } finally {
-      setBusyRole(null);
-    }
+  // C1-2 (STAGE C1-FIX): single-owner resubmit — this screen NAVIGATES ONLY
+  // into the prefilled wizard (?resubmit=1). The old fire-and-forget POST
+  // burned a resubmit count on unchanged documents; the wizard's submit is
+  // now the single resubmit call (count burns exactly once per real
+  // submission). A 409 from this path is impossible — no call is made.
+  const resubmit = (kind: StatusRole['role']) => {
+    router.push(`${RESUBMIT_ROUTE[kind]}?resubmit=1`);
   };
 
   const submitted = (iso: string | null) =>
@@ -117,13 +105,13 @@ export default function VerificationStatusScreen() {
     <SafeAreaView className="flex-1" style={{ backgroundColor: bg }}>
       <ScrollView contentContainerStyle={{ padding: 16, gap: 12 }}>
         <Text className="text-[22px] font-JakartaBold font-bold" style={{ color: textPrimary }}>
-          Verification status
+          {t('auth.verification_status.title')}
         </Text>
 
         {loading ? (
-          <Text style={{ color: textSecondary }}>Loading…</Text>
+          <Text style={{ color: textSecondary }}>{t('auth.verification_status.loading')}</Text>
         ) : roles.length === 0 ? (
-          <Text style={{ color: textSecondary }}>No gated roles yet.</Text>
+          <Text style={{ color: textSecondary }}>{t('auth.verification_status.empty')}</Text>
         ) : (
           roles.map((r) => (
             <View
@@ -132,40 +120,39 @@ export default function VerificationStatusScreen() {
               style={{ backgroundColor: surfaceBg, borderColor, gap: 6 }}
             >
               <Text className="text-[16px] font-JakartaBold font-bold" style={{ color: textPrimary }}>
-                {ROLE_LABEL[r.role]}
+                {t(ROLE_I18N_KEY[r.role])}
               </Text>
-              <Text style={{ color: textSecondary }}>Submitted: {submitted(r.submitted_at)}</Text>
-              <Text style={{ color: textSecondary }}>Documents received ✓</Text>
+              <Text style={{ color: textSecondary }}>{t('auth.verification_status.submitted', { date: submitted(r.submitted_at) })}</Text>
+              <Text style={{ color: textSecondary }}>{t('auth.verification_status.docs_received')}</Text>
 
               {r.status === 'active' ? (
                 <Text className="font-JakartaBold" style={{ color: colors.primary }}>
-                  Active — this role now appears in your Login-as choices.
+                  {t('auth.verification_status.active')}
                 </Text>
               ) : r.status === 'pending' ? (
                 <Text style={{ color: textSecondary }}>
-                  Under review — expected within 24 hours. You will be notified.
+                  {t('auth.verification_status.pending')}
                 </Text>
               ) : (
                 <View style={{ gap: 4 }}>
                   <Text className="font-JakartaBold" style={{ color: colors.danger }}>
-                    Needs fixes{r.reason ? ` — ${r.reason}` : ''}
+                    {t('auth.verification_status.needs_fixes')}{r.reason ? ` — ${r.reason}` : ''}
                   </Text>
                   {r.reject?.field ? (
-                    <Text style={{ color: textSecondary }}>Failed field: {r.reject.field}</Text>
+                    <Text style={{ color: textSecondary }}>{t('auth.verification_status.failed_field', { field: r.reject.field })}</Text>
                   ) : null}
                   {r.reject?.example ? (
-                    <Text style={{ color: textSecondary }}>Example of an acceptable document: {r.reject.example}</Text>
+                    <Text style={{ color: textSecondary }}>{t('auth.verification_status.example', { example: r.reject.example })}</Text>
                   ) : null}
 
                   {r.resubmit_count >= MAX_RESUBMITS ? (
                     <Text style={{ color: colors.danger }}>
-                      Resubmit limit reached ({r.resubmit_count}/{MAX_RESUBMITS}) — please contact support.
+                      {t('auth.verification_status.limit_reached', { count: r.resubmit_count, max: MAX_RESUBMITS })}
                     </Text>
                   ) : (
                     <CustomButton
-                      title={busyRole === r.role ? 'Resubmitting…' : `Fix & resubmit (${r.resubmit_count}/${MAX_RESUBMITS})`}
+                      title={t('auth.verification_status.resubmit', { count: r.resubmit_count, max: MAX_RESUBMITS })}
                       onPress={() => resubmit(r.role)}
-                      disabled={busyRole !== null}
                      testID="customer.verification-status.resubmit"/>
                   )}
                 </View>
@@ -182,7 +169,7 @@ export default function VerificationStatusScreen() {
 
         <TouchableOpacity onPress={() => router.back()} className="items-center py-3" testID="customer.verification-status.el-1">
           <Text className="text-[14px] font-JakartaBold" style={{ color: colors.primary }}>
-            Back
+            {t('auth.verification_status.back')}
           </Text>
         </TouchableOpacity>
       </ScrollView>

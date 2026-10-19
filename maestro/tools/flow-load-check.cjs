@@ -64,7 +64,9 @@
  *
  * ── MEASURED COSTS AND SCOPING ───────────────────────────────────────────────
  * Native checks  A–C are regex/indent based, dependency-free and repo-wide
- * (~0.5s for all 111 flows) — the same choice stage 3 documents for the same
+ * (~0.5s for the whole corpus — 118 flows as of 2026-10-16; the S6 note read 111
+ * before the S7.1 pass added 11 flows and moved four scratch files OUT of the
+ * corpus) — the same choice stage 3 documents for the same
  * reason: the invariant is repo-wide, so a red gate anywhere should block
  * anywhere. The engine step costs ~11s for the whole tree (JVM startup dominates;
  * `maestro check-syntax` is ~8s PER FILE, which is why this gate does not use it

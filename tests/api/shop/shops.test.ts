@@ -181,15 +181,26 @@ describe("Phase 1 — Shops", () => {
       supabaseAdmin.auth.getUser.mockResolvedValue({
         data: { user: { id: "auth-1" } },
       });
-      supabaseAdmin.from.mockReturnValueOnce({
+      // C2-1: verifySupabaseToken now gates on the users row (+ driver status)
+      // BEFORE requireShopMember's own lookup: serve gate-users → gate-drivers
+      // → guard-users in call order. The db.select pins below are unchanged.
+      let usersCalls = 0;
+      supabaseAdmin.from.mockImplementation((table: string) => ({
         select: jest.fn().mockReturnValue({
           eq: jest.fn().mockReturnValue({
             maybeSingle: jest.fn().mockReturnValue(
-              Promise.resolve({ data: { id: "db-user-1", role: "driver" } }),
+              Promise.resolve({
+                data:
+                  table === "drivers"
+                    ? { status: "active" }
+                    : usersCalls++ === 0
+                      ? { id: "db-user-1", role: "driver", account_status: "active", suspension_reason: null, deleted_at: null }
+                      : { id: "db-user-1", role: "driver" },
+              }),
             ),
           }),
         }),
-      });
+      }));
       const guard = requireShopMember("shop-1", roles);
       const result = await guard(makeRequest("GET")).catch((e: unknown) => e);
       return { result, selectCount: (db.select as jest.Mock).mock.calls.length };

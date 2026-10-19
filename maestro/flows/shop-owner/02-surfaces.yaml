@@ -1,0 +1,150 @@
+# shop-owner/02-surfaces — the shop's four secondary surfaces (S7.1).
+#
+# Covers, in one session on the (shop-owner) group:
+#   * app/(main)/(shop-owner)/catalog.tsx — the create-product modal end to end;
+#   * app/(main)/(shop-owner)/workshop.tsx — the Services tab + add-service modal;
+#   * app/(main)/(shop-owner)/staff.tsx — invite-by-phone;
+#   * app/(main)/(shop-owner)/settlement.tsx — the balance view.
+#
+# WHY THE MODAL CLOSES ARE THE SUCCESS SIGNALS: `save()` in catalog.tsx:173 and
+# workshop.tsx:170 call `setModalVisible(false)` / `setServiceModal(false)` ONLY
+# after the API returns ok — on validation failure or a non-2xx they Alert and
+# RETURN with the modal still open (catalog.tsx:152, workshop.tsx:156). So
+# "the modal's own field is gone" is a real accepted-write assertion, not a
+# timeout. The modal is grounded on its field placeholder ("Product name" /
+# "Service name"), which exists nowhere else on those screens.
+#
+# WHY THE INVITE IS ASSERTED WEAKLY, AND SAID SO: shop-owner/staff.tsx:114 is a
+# BLIND success — it clears the phone field and reloads, with no success alert —
+# so the only observable failure signal is the action_failed alert. That is what
+# is asserted; the membership row appearing is left to the reload and is a
+# device-day observation. The invite is OWNER-only (`canInvite`, staff.tsx:131),
+# so SHOP_PHONE must be the OWNER account (a MANAGER sees no invite button and
+# this step fails loudly rather than silently passing).
+#
+# WHAT IS NOT COVERED HERE: the workshop TRANSITION buttons
+# (`shop-owner.workshop.transition*`) act on a customer's service booking, so
+# they need a booking fixture that does not exist yet — an explicit gap, not a
+# silent omission.
+# Fixtures: shop-owner OWNER account. Class: AUTOMATABLE. NOT device-verified —
+# the device day is ENV-blocked.
+appId: com.ride.bd
+name: "S7 Shop Owner - Catalog, workshop, staff and settlement"
+tags: [shop-owner, s7]
+---
+- runFlow:
+    env:
+      PHONE: "${SHOP_PHONE}"
+      PASSWORD: "${SHOP_PASSWORD}"
+    commands:
+      - runFlow: ../shared/auth/_login-shop-owner.yaml
+# ── Catalog: create a product ───────────────────────────────────────────────
+- tapOn:
+    id: "shop-owner.push-catalog"
+- extendedWaitUntil:
+    visible: "Catalog"
+    timeout: 20000
+- tapOn:
+    id: "shop-owner.catalog.open-create"
+# Grounded on the modal's own name field (unique to the modal).
+- extendedWaitUntil:
+    visible: "Product name"
+    timeout: 15000
+- tapOn:
+    id: "shop-owner.catalog.name-input"
+- inputText: ${PRODUCT_NAME}
+- tapOn:
+    id: "shop-owner.catalog.description-input"
+- inputText: ${PRODUCT_DESCRIPTION}
+# price_taka is TAKA; the screen converts to paisa (catalog.tsx:165).
+- tapOn:
+    id: "shop-owner.catalog.price-input"
+- inputText: ${PRODUCT_PRICE_TAKA}
+- tapOn:
+    id: "shop-owner.catalog.stock-input"
+- inputText: ${PRODUCT_STOCK}
+- tapOn:
+    id: "shop-owner.catalog.category-input"
+- inputText: ${PRODUCT_CATEGORY}
+- tapOn:
+    id: "shop-owner.catalog.save"
+# Success = the modal is gone (header note).
+- extendedWaitUntil:
+    notVisible: "Product name"
+    timeout: 20000
+- assertNotVisible: "Action failed"
+- tapOn:
+    id: "shop-owner.catalog.el-1"
+# ── Workshop: Services tab + add a service ──────────────────────────────────
+- extendedWaitUntil:
+    visible:
+      id: "shop-owner.push-workshop"
+    timeout: 15000
+- tapOn:
+    id: "shop-owner.push-workshop"
+- extendedWaitUntil:
+    visible: "Workshop"
+    timeout: 20000
+# The two tabs share one id (`.map`), so the Services tab is picked by its label
+# (shop.workshop.tab_services = "Services").
+- tapOn:
+    text: "Services"
+- tapOn:
+    id: "shop-owner.workshop.set-service-form-2"
+- extendedWaitUntil:
+    visible: "Service name"
+    timeout: 15000
+- tapOn:
+    id: "shop-owner.workshop.set-service-form-3"
+- inputText: ${SERVICE_NAME}
+- tapOn:
+    id: "shop-owner.workshop.set-service-form-4"
+- inputText: ${SERVICE_PRICE_TAKA}
+# duration must be an integer >= 5 (workshop.tsx:158) — see the fixture note.
+- tapOn:
+    id: "shop-owner.workshop.set-service-form-6"
+- inputText: ${SERVICE_MINUTES}
+- tapOn:
+    id: "shop-owner.workshop.save-service"
+- extendedWaitUntil:
+    notVisible: "Service name"
+    timeout: 20000
+- assertNotVisible: "Action failed"
+- tapOn:
+    id: "shop-owner.workshop.el-1"
+# ── Staff: invite by phone ──────────────────────────────────────────────────
+- extendedWaitUntil:
+    visible:
+      id: "shop-owner.push-staff"
+    timeout: 15000
+- tapOn:
+    id: "shop-owner.push-staff"
+- extendedWaitUntil:
+    visible: "Staff"
+    timeout: 20000
+- tapOn:
+    id: "shop-owner.staff.set-invite-phone"
+- inputText: ${STAFF_PHONE}
+- tapOn:
+    id: "shop-owner.staff.invite"
+# Blind success (header note): the only failure signal is the alert.
+- assertNotVisible: "Action failed"
+- tapOn:
+    id: "shop-owner.staff.el-1"
+# ── Settlement: balance view (read-only, §12 writer untouched) ──────────────
+- extendedWaitUntil:
+    visible:
+      id: "shop-owner.push-settlement"
+    timeout: 15000
+- tapOn:
+    id: "shop-owner.push-settlement"
+- extendedWaitUntil:
+    visible: "Settlement"
+    timeout: 20000
+- assertVisible: "Balance"
+- tapOn:
+    id: "shop-owner.settlement.el-1"
+- extendedWaitUntil:
+    visible:
+      id: "shop-owner.push-catalog"
+    timeout: 15000

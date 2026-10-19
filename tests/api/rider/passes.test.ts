@@ -29,10 +29,17 @@ jest.mock("@/lib/paymentEvents", () => ({
   initiatePortposPayment: jest.fn(),
 }));
 
+// D9-2: money-movement master switch — ON here so the pre-existing tests
+// exercise the stacking/gateway branches, not the payments gate.
+jest.mock("@/lib/platformConfig", () => ({
+  getPlan05Bool: jest.fn(async () => true),
+}));
+
 import { db } from "@/src/db";
 import { verifySupabaseToken } from "@/lib/auth";
 import { isConfigured } from "@/lib/portpos";
 import { initiatePortposPayment } from "@/lib/paymentEvents";
+import { getPlan05Bool } from "@/lib/platformConfig";
 import { GET, POST } from "@/app/api/rider/passes+api";
 
 const SUPABASE_UID = "11111111-1111-4111-a111-111111111111";
@@ -78,6 +85,10 @@ function mockSelectQueue(queue: Row[][]): void {
 
 beforeEach(() => {
   jest.clearAllMocks();
+  // Pin the payments master switch ON: tests that need OFF set it
+  // per-test (and restore nothing — this line re-pins every test, so a
+  // non-consuming OFF setup can never poison the next test's gate read).
+  (getPlan05Bool as jest.Mock).mockResolvedValue(true);
   (verifySupabaseToken as jest.Mock).mockResolvedValue({ id: SUPABASE_UID });
   (isConfigured as jest.Mock).mockReturnValue(true);
   (initiatePortposPayment as jest.Mock).mockResolvedValue({
@@ -160,6 +171,27 @@ describe("POST /api/rider/passes", () => {
     (isConfigured as jest.Mock).mockReturnValue(false);
     const res = await POST(jsonRequest(BODY));
     expect(res.status).toBe(503);
+  });
+
+  test("D9-2: payments_enabled=false → 409 payments_not_enabled, no payment initiated", async () => {
+    (getPlan05Bool as jest.Mock).mockResolvedValueOnce(false);
+    mockSelectQueue([[{ id: USER_ID }], [PASS], []]);
+    const res = await POST(jsonRequest(BODY));
+    expect(res.status).toBe(409);
+    expect(await getJson(res)).toMatchObject({ error: "payments_not_enabled" });
+    expect(initiatePortposPayment).not.toHaveBeenCalled();
+  });
+
+  test("D9-2: W-2 stacking still reports before the payments gate", async () => {
+    // OFF — and the gate must never even be consulted: W-2 fires first.
+    // (mockResolvedValue, NOT ...Once: the gate is not reached, so a queued
+    // Once value would leak into the next test's gate read.)
+    (getPlan05Bool as jest.Mock).mockResolvedValue(false);
+    mockSelectQueue([[{ id: USER_ID }], [PASS], [{ id: "sub-live" }]]);
+    const res = await POST(jsonRequest(BODY));
+    expect(res.status).toBe(409);
+    expect((await getJson(res)).error).toBe("active_subscription_exists");
+    expect(getPlan05Bool).not.toHaveBeenCalled();
   });
 
   test("success: payment_events owner called with purpose rider_pass and the pass price", async () => {

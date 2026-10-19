@@ -1,3 +1,4 @@
+// [public]
 import { db } from '@/src/db';
 import { rides, drivers, users } from '@/src/db/schema';
 import { eq } from 'drizzle-orm';
@@ -18,7 +19,7 @@ export async function GET(request: Request, { id }: { id: string }) {
       destination_longitude: rides.destination_longitude,
     }).from(rides).where(eq(rides.id, id)).limit(1);
 
-    if (!ride) return Response.json({ error: 'not_found', message: 'Resource not found' }, { status: 404 });
+    if (!ride) return Response.json({ error: 'ride_not_found', message: 'Ride not found' }, { status: 404 });
 
     let driverName: string | null = null;
     let driverRating: string | null = null;
@@ -45,8 +46,9 @@ export async function GET(request: Request, { id }: { id: string }) {
       "driver_arriving",
       "driver_arrived",
       "in_progress",
-      "scheduled",
     ]);
+    // A scheduled ride is not live yet: degrade it to nulls until dispatch
+    // makes it active. This safe default is reversible by owner ruling.
     const isTerminal = new Set(["completed", "cancelled", "expired", "no_drivers"]).has(ride.status);
     const isActive = ACTIVE_STATUSES.has(ride.status);
 

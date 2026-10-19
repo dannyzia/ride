@@ -132,7 +132,7 @@ describe("testid-flow-currency: live repo selector set (TRAP 1 regression guard)
   });
 
   it("finds the well-known login selector", () => {
-    // The live index currently selects 99 ids; this checks one well-known one.
+    // The live index currently selects 120 ids; this checks one well-known one.
     const selectors = gate.flowSelectors();
     expect(selectors.has("phone-entry.set-phone")).toBe(true);
   });
@@ -147,7 +147,7 @@ describe("testid-flow-currency: live repo selector set (TRAP 1 regression guard)
     }
   });
 
-  it("agrees with the measured pre-commit index-mode count of 100 flow-selected ids", () => {
+  it("agrees with the measured pre-commit index-mode count of 175 flow-selected ids", () => {
     // Exact count is pinned deliberately: it makes a silent parser regression
     // impossible to miss. It moved 91 -> 93 when the B-3 flow rebuild landed
     // (one selector replaced by three, net +2) — a legitimate flow edit must
@@ -178,7 +178,12 @@ describe("testid-flow-currency: live repo selector set (TRAP 1 regression guard)
     // Nothing in this pin's drift came from renames: a renamed selector keeps
     // the count, and `delivery.respond-el(-2)` -> `respond-reject`/`-accept`
     // is one-for-one. Exact assertion unchanged; the canary keeps its force.
-    expect(gate.flowSelectors().size).toBe(120);
+    // 2026-10-19: re-pinned 120 -> 175 (the MEASURED index count) in the
+    // flow-adding commit — the audit-fix lanes' 12 staged flow files moved the
+    // selector set (login-as chooser, P2P, shop-owner surfaces, delivery). Same
+    // rule as every prior re-pin: the committed flow set changed, so the pin
+    // follows the measurement.
+    expect(gate.flowSelectors().size).toBe(175);
   });
 });
 

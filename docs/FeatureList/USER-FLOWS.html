@@ -227,7 +227,7 @@ flowchart TD
 </section>
 <section class="card" id="f-10"><h3>F-10 · 🔨 Dispute / report issue / lost item</h3><pre class="mermaid">
 flowchart TD
-  A["Ride detail — 'Report an issue — available 24h after ride' (shown)"] --&gt; B["Lost item — masked direct call to driver BEFORE filing"]
+  A["Ride detail — 'Report an issue — available 48h after ride' (shown; server truth: rider/fare-disputes+api.ts dispute_window_expired, client DISPUTE_WINDOW_MS)"] --&gt; B["Lost item — masked direct call to driver BEFORE filing"]
   A --&gt; C["Fare dispute / report issue — categorised + evidence (photos, GPS)"]
   C --&gt; D["Status visible to BOTH parties"] --&gt; E["Admin SLA — 72h"] --&gt; F["Outcome + ledger adjustments"]
   C --&gt; G["GPS anomaly auto-check — partial auto-credit before admin review"]

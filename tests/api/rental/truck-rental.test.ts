@@ -54,6 +54,12 @@ jest.mock("@/lib/auth", () => ({
       supabaseUser: { id: "auth-test" },
       dbUser: { id: "db-user-1", role: "rider" },
     }),
+  requireMemberRoles:
+    () =>
+    async () => ({
+      supabaseUser: { id: "auth-test" },
+      dbUser: { id: "db-user-1", role: "rider" },
+    }),
 }));
 
 jest.mock("@/lib/platformConfig", () => ({

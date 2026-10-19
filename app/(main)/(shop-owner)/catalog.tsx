@@ -18,7 +18,10 @@ import {
   Switch,
   ActivityIndicator,
   Alert,
+  Image,
 } from "react-native";
+import * as ImagePicker from "expo-image-picker";
+import { uploadImageToR2 } from "@/lib/imageToURL";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
@@ -36,6 +39,7 @@ interface Product {
   price_bdt: number;
   stock: number;
   category: string | null;
+  image_urls: string[] | null;
   is_active: boolean;
   is_rfq: boolean;
 }
@@ -47,6 +51,7 @@ interface ProductForm {
   price_taka: string;
   stock: string;
   category: string;
+  image_urls: string[];
   is_active: boolean;
   is_rfq: boolean;
 }
@@ -57,6 +62,7 @@ const EMPTY_FORM: ProductForm = {
   price_taka: "",
   stock: "0",
   category: "",
+  image_urls: [],
   is_active: true,
   is_rfq: false,
 };
@@ -83,6 +89,19 @@ export default function ShopCatalogScreen() {
   const [modalVisible, setModalVisible] = useState(false);
   const [form, setForm] = useState<ProductForm>(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+
+  // Named form handlers — the codemod derives each testID from these names
+  // (slug(nameInput) → name-input), so strip→regen round-trips exactly.
+  const nameInput = (v: string) => setForm((f) => ({ ...f, name: v }));
+  const descriptionInput = (v: string) => setForm((f) => ({ ...f, description: v }));
+  const priceInput = (v: string) => setForm((f) => ({ ...f, price_taka: v }));
+  const stockInput = (v: string) => setForm((f) => ({ ...f, stock: v }));
+  const categoryInput = (v: string) => setForm((f) => ({ ...f, category: v }));
+  const activeToggle = (v: boolean) => setForm((f) => ({ ...f, is_active: v }));
+  const rfqToggle = (v: boolean) => setForm((f) => ({ ...f, is_rfq: v }));
+  const removeImage = (u: string) =>
+    setForm((f) => ({ ...f, image_urls: f.image_urls.filter((x) => x !== u) }));
 
   const authHeaders = useCallback(async () => {
     const session = await supabase.auth.getSession();
@@ -139,10 +158,39 @@ export default function ShopCatalogScreen() {
       price_taka: (p.price_bdt / 100).toFixed(2),
       stock: String(p.stock),
       category: p.category ?? "",
+      image_urls: p.image_urls ?? [],
       is_active: p.is_active,
       is_rfq: p.is_rfq,
     });
     setModalVisible(true);
+  };
+
+  // D5-1: product photos ride the existing pipeline
+  // (compress → presign → PUT) under the catalog folder; the URL the
+  // pipeline returns is what the products route accepts (D5-1 validation).
+  const pickProductPhoto = async () => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ["images"],
+        allowsEditing: false,
+        quality: 0.8,
+      });
+      if (result.canceled || !result.assets?.length) return;
+      const file = result.assets[0];
+      setUploadingPhoto(true);
+      const uploaded = await uploadImageToR2({
+        localUri: file.uri,
+        folder: "catalog",
+        fileName: file.fileName ?? `product_${Date.now()}.jpg`,
+        mimeType: file.mimeType,
+      });
+      setForm((f) => ({ ...f, image_urls: [...f.image_urls, uploaded.publicUrl] }));
+    } catch (e) {
+      logger.error("[shop.catalog] photo upload failed", e);
+      Alert.alert(t("shop.dashboard.action_failed"), t("shop.catalog.photo_failed"));
+    } finally {
+      setUploadingPhoto(false);
+    }
   };
 
   const save = async () => {
@@ -162,6 +210,7 @@ export default function ShopCatalogScreen() {
         price_bdt: Math.round(priceTaka * 100),
         stock: Number(form.stock) || 0,
         category: form.category || undefined,
+        image_urls: form.image_urls.length > 0 ? form.image_urls : undefined,
         is_active: form.is_active,
         is_rfq: form.is_rfq,
       });
@@ -291,63 +340,97 @@ export default function ShopCatalogScreen() {
               </Text>
               <TextInput
                 value={form.name}
-                onChangeText={(v) => setForm({ ...form, name: v })}
+                onChangeText={nameInput}
                 placeholder={t("shop.catalog.name")}
                 placeholderTextColor={C.sub}
                 className="rounded-xl border px-3 py-2 mb-3 text-[13px]"
                 style={{ color: C.text, borderColor: C.border, backgroundColor: C.bg }}
                
-               testID="shop-owner.catalog.set-form"/>
+               testID="shop-owner.catalog.name-input"/>
               <TextInput
                 value={form.description}
-                onChangeText={(v) => setForm({ ...form, description: v })}
+                onChangeText={descriptionInput}
                 placeholder={t("shop.catalog.description")}
                 placeholderTextColor={C.sub}
                 multiline
                 className="rounded-xl border px-3 py-2 mb-3 text-[13px]"
                 style={{ color: C.text, borderColor: C.border, backgroundColor: C.bg, minHeight: 60 }}
                
-               testID="shop-owner.catalog.set-form-2"/>
+               testID="shop-owner.catalog.description-input"/>
               <View className="flex-row gap-3 mb-3">
                 <TextInput
                   value={form.price_taka}
-                  onChangeText={(v) => setForm({ ...form, price_taka: v })}
+                  onChangeText={priceInput}
                   placeholder={t("shop.catalog.price_taka")}
                   placeholderTextColor={C.sub}
                   keyboardType="decimal-pad"
                   className="flex-1 rounded-xl border px-3 py-2 text-[13px]"
                   style={{ color: C.text, borderColor: C.border, backgroundColor: C.bg }}
                  
-                 testID="shop-owner.catalog.set-form-3"/>
+                 testID="shop-owner.catalog.price-input"/>
                 <TextInput
                   value={form.stock}
-                  onChangeText={(v) => setForm({ ...form, stock: v })}
+                  onChangeText={stockInput}
                   placeholder={t("shop.catalog.stock_label")}
                   placeholderTextColor={C.sub}
                   keyboardType="number-pad"
                   className="w-24 rounded-xl border px-3 py-2 text-[13px]"
                   style={{ color: C.text, borderColor: C.border, backgroundColor: C.bg }}
                  
-                 testID="shop-owner.catalog.set-form-4"/>
+                 testID="shop-owner.catalog.stock-input"/>
               </View>
               <TextInput
                 value={form.category}
-                onChangeText={(v) => setForm({ ...form, category: v })}
+                onChangeText={categoryInput}
                 placeholder={t("shop.catalog.category")}
                 placeholderTextColor={C.sub}
                 className="rounded-xl border px-3 py-2 mb-3 text-[13px]"
                 style={{ color: C.text, borderColor: C.border, backgroundColor: C.bg }}
                
-               testID="shop-owner.catalog.set-form-5"/>
+               testID="shop-owner.catalog.category-input"/>
+              <View className="mb-3">
+                <View className="flex-row flex-wrap gap-2 mb-2">
+                  {form.image_urls.map((url) => (
+                    <View key={url} className="relative">
+                      <Image
+                        source={{ uri: url }}
+                        style={{ width: 64, height: 64, borderRadius: 8 }}
+                        resizeMode="cover"
+                      />
+                      <TouchableOpacity
+                        className="absolute -top-2 -right-2 rounded-full w-6 h-6 items-center justify-center"
+                        style={{ backgroundColor: C.text }}
+                        onPress={() => removeImage(url)}
+                       testID="shop-owner.catalog.remove-image">
+                        <Text style={{ color: C.bg, fontSize: 12 }}>×</Text>
+                      </TouchableOpacity>
+                    </View>
+                  ))}
+                </View>
+                <TouchableOpacity
+                  className="rounded-xl border px-3 py-2 items-center"
+                  style={{ borderColor: C.border }}
+                  disabled={uploadingPhoto}
+                  onPress={() => void pickProductPhoto()}
+                 testID="shop-owner.catalog.pick-product-photo">
+                  {uploadingPhoto ? (
+                    <ActivityIndicator size="small" color={colors.primary} />
+                  ) : (
+                    <Text className="text-[13px]" style={{ color: C.text }}>
+                      {t("shop.catalog.photo_add")}
+                    </Text>
+                  )}
+                </TouchableOpacity>
+              </View>
               <View className="flex-row justify-between items-center mb-2">
                 <Text className="text-[13px]" style={{ color: C.text }}>
                   {t("shop.catalog.active")}
                 </Text>
                 <Switch
                   value={form.is_active}
-                  onValueChange={(v) => setForm({ ...form, is_active: v })}
+                  onValueChange={activeToggle}
                  
-                 testID="shop-owner.catalog.set-form-6"/>
+                 testID="shop-owner.catalog.active-toggle"/>
               </View>
               <View className="flex-row justify-between items-center mb-4">
                 <Text className="text-[13px]" style={{ color: C.text }}>
@@ -355,9 +438,9 @@ export default function ShopCatalogScreen() {
                 </Text>
                 <Switch
                   value={form.is_rfq}
-                  onValueChange={(v) => setForm({ ...form, is_rfq: v })}
+                  onValueChange={rfqToggle}
                  
-                 testID="shop-owner.catalog.set-form-7"/>
+                 testID="shop-owner.catalog.rfq-toggle"/>
               </View>
               <View className="flex-row gap-2">
                 <TouchableOpacity
@@ -371,7 +454,7 @@ export default function ShopCatalogScreen() {
                 <TouchableOpacity
                   className="flex-1 rounded-xl py-2 items-center"
                   style={{ backgroundColor: colors.primary }}
-                  disabled={saving}
+                  disabled={saving || uploadingPhoto}
                   onPress={() => void save()}
                  
                  testID="shop-owner.catalog.save">

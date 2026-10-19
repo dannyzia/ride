@@ -24,7 +24,7 @@ jest.mock("../cancellationCompensation", () => ({
 }));
 
 import { db } from "../../src/db";
-import { rides, drivers, riderFeeDeductions } from "../../src/db/schema";
+import { rides, drivers, pricing, riderFeeDeductions } from "../../src/db/schema";
 import { requireRole } from "../auth";
 import { evaluateCancellation } from "../cancellation";
 import { createCancellationCredit } from "../cancellationCompensation";
@@ -36,8 +36,12 @@ const RIDE = {
   id: "11111111-1111-4111-8111-111111111111",
   driver_id: "driver-1",
   user_id: "user-1",
-  status: "matched",
+  status: "driver_arrived",
   created_at: new Date("2026-08-15T10:00:00Z"),
+  // Wait started 10 min ago — beyond the default 3-min free wait.
+  wait_start_at: new Date(Date.now() - 10 * 60_000),
+  vehicle_type: "car_economy",
+  zone_id: "zone-1",
 };
 
 beforeEach(() => {
@@ -48,10 +52,18 @@ beforeEach(() => {
   (evaluateCancellation as jest.Mock).mockResolvedValue({ feeBdt: 5000, reason: "cancellation_rider_policy" });
   (createCancellationCredit as jest.Mock).mockResolvedValue(undefined);
 
-  // Ride snapshot read (pre-claim).
+  // Snapshot reads (pre-claim): drivers-row resolution (C4-1 house pattern),
+  // the ride snapshot, and the pricing tier for the wait-gate default.
   (db.select as jest.Mock).mockImplementation(() => ({
     from: jest.fn((table: unknown) => ({
-      where: jest.fn(() => ({ limit: jest.fn(async () => (table === rides ? [RIDE] : [])) })),
+      where: jest.fn(() => ({
+        limit: jest.fn(async () => {
+          if (table === rides) return [RIDE];
+          if (table === drivers) return [{ id: "driver-1" }];
+          if (table === pricing) return [{ free_wait_minutes: 3 }];
+          return [];
+        }),
+      })),
     })),
   }));
 });
@@ -105,7 +117,7 @@ describe("POST /api/ride/[id]/no-show — cancel/no-show interleaving", () => {
     // Fee must be computed from the snapshot captured BEFORE the claim, not a
     // re-read (a re-read would see status='cancelled' and match no policy).
     expect(evaluateCancellation).toHaveBeenCalledWith(
-      { status: "matched", created_at: RIDE.created_at },
+      { status: "driver_arrived", created_at: RIDE.created_at },
       "rider",
     );
 

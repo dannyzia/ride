@@ -181,6 +181,10 @@ const ALLOWED_KEYS = new Set([
   'cod_remittance_overdue_days',
   'cod_dispatch_hold_threshold_bdt',
 
+  // D9-2 (skeptic §D9) — money-movement master switch (default false).
+  // Flipping this one flag restores priced purchases at payments launch.
+  'payments_enabled',
+
   // Fare engine — joma recovery (taka-scale)
   'joma_bike_eco_monthly_bdt',
   'joma_bike_std_monthly_bdt',
@@ -190,6 +194,7 @@ const ALLOWED_KEYS = new Set([
 ]);
 
 const BOOLEAN_KEYS = new Set([
+  'payments_enabled',
   'zone_multi_active_enabled',
   'pickup_measurement_enabled',
   'pickup_fee_enabled',

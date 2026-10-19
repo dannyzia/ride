@@ -1,0 +1,13 @@
+-- C6-4 (STAGE C3-FIX): shop_ledger gains the self-delivery fee credit entry.
+--
+-- A self_delivered order has no courier leg, so there is no courier
+-- earnings/due row — but the customer still paid a delivery fee at order
+-- time (shopOrders.delivery_fee_bdt, snapshotted at placement). That fee
+-- belongs to the SHOP that delivered it (§6.1 exhaustion fallback), and
+-- settleShopOrder now books it as a `delivery_fee` credit in the same tx as
+-- the delivered transition. Courier-delivered orders never book this entry
+-- (the fee is the courier's COD remittance per §12).
+--
+-- D5 rule: ALTER TYPE ADD VALUE runs as its own statement, never sharing a
+-- transaction with anything that uses the new value.
+ALTER TYPE "shop_ledger_entry_type" ADD VALUE 'delivery_fee';

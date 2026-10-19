@@ -26,6 +26,10 @@ interface Prefs {
   service_alerts: boolean;
   email_notifications: boolean;
   sms_notifications: boolean;
+  // D2-2 minimal mutes (server-enforced in lib/notify.ts dispatchBatch).
+  order_updates: boolean;
+  delivery_updates: boolean;
+  shop_updates: boolean;
 }
 
 type PrefKey = keyof Prefs;
@@ -41,6 +45,9 @@ const DEFAULT_PREFS: Prefs = {
   service_alerts: true,
   email_notifications: false,
   sms_notifications: true,
+  order_updates: true,
+  delivery_updates: true,
+  shop_updates: true,
 };
 
 interface PrefRowConfig {
@@ -52,6 +59,10 @@ interface PrefRowConfig {
 
 const ALERT_ROWS: PrefRowConfig[] = [
   { key: "ride_updates", labelKey: "notifications_screen.ride_updates", icon: "car-sport-outline" },
+  // D2-2: per-category mutes for the live classes (server-enforced).
+  { key: "order_updates", labelKey: "notifications_screen.order_updates", icon: "receipt-outline" },
+  { key: "delivery_updates", labelKey: "notifications_screen.delivery_updates", icon: "bicycle-outline" },
+  { key: "shop_updates", labelKey: "notifications_screen.shop_updates", icon: "storefront-outline" },
   { key: "promo_offers", labelKey: "notifications_screen.promo_offers", icon: "pricetag-outline" },
   {
     key: "service_alerts",

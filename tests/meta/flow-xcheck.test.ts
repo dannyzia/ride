@@ -226,6 +226,25 @@ const LOCALE_ONLY = (baseline: FlowDef["baseline"] = EMPTY_BASELINE.entries): Fl
   baseline,
 });
 
+/**
+ * A claim that ENDS IN A SENTENCE PERIOD and is verbatim a live locale value.
+ * The locale value is its ONLY rescuer (app/ source carries no such string), so
+ * check 3b's answer must be "it resolves in i18n".
+ *
+ * REGRESSION FIXTURE (2026-10-16): 3b's candidate set stripped regex
+ * metacharacters, and `.` is one of them — so the claim normalized to a period-
+ * less form that no locale value can equal (values keep their period), and 3b
+ * reported `resolves in NO locale file` for copy that is literally a locale
+ * value. Measured on the real tree: "Pay cash when your order arrives." and
+ * "Cancel this order?" (both live `shops_track` values) were falsely blocked.
+ */
+const PERIOD_LOCALE_VALUE = (): FlowDef => ({
+  flows: { "a.yaml": flow(...tapCta, '- assertVisible: "Pay cash when your order arrives."') },
+  app: CLEAN_APP,
+  screens: CLEAN_SCREENS,
+  locale: { entry: { continue: "Continue" }, track: { cod_hint: "Pay cash when your order arrives." } },
+});
+
 /** `t('a.b')` contributes a KEY to the source corpus; a key never renders. */
 const KEY_SHAPED_SOURCE = (): FlowDef => ({
   flows: { "a.yaml": flow(...tapCta, '- assertVisible: "rider_activity.driver"') },
@@ -328,6 +347,8 @@ const ANCHORS = {
   drift: "} else if (!src.includes(id)) {",
   deadCopy: "deadCopy.push({ ...c, cands });",
   localeMiss: "localeMiss.push({ ...c, cand: hit.cand, via: hit.w.just });",
+  /** 3b stops accepting the literal AS WRITTEN, so a claim ending in `.` is blocked again. */
+  rawCandLocale: "&& !rawCands.some((x) => localeValues.has(x))",
   localeBaseline: "if (localeBaseline.has(x.cand)) continue;",
   missingBaselineGuard: 'violation list.");\n    process.exit(2);',
   orphanExclusion: "if (!orphanedKeys.has(k)) liveValues.add(t);",
@@ -346,6 +367,13 @@ const FAULTS = {
   /** check 3b stops collecting hard-coded literals. */
   localeMiss: (s: string) =>
     neutralize(s, ANCHORS.localeMiss, "if (false) localeMiss.push({ ...c, cand: hit.cand, via: hit.w.just });"),
+  /**
+   * 3b stops consulting the AS-WRITTEN candidate set, restoring the period bug:
+   * a claim ending in a sentence period whose locale value is identical gets
+   * reported locale-only again. Direction matters — this REMOVES a rescue, so the
+   * fixture must flip from clean to blocking.
+   */
+  rawCandLocale: (s: string) => neutralize(s, ANCHORS.rawCandLocale, ""),
   /**
    * check 3b stops honouring the ratchet, so grandfathered literals count as
    * new violations again. Direction matters: making the filter unconditional
@@ -560,6 +588,18 @@ describe("check 3b — LOCALE-ONLY COPY (blocking, ratcheted)", () => {
     const r = runGate({ ...LOCALE_ONLY(), mutate: FAULTS.localeMiss });
     expect(r.code).toBe(0);
     expect(r.out).not.toContain("LOCALE-ONLY COPY (blocking)");
+  });
+
+  it("accepts a claim whose ONLY rescuer is a locale value with a trailing period", () => {
+    const r = runGate(PERIOD_LOCALE_VALUE());
+    expect(r.out).toContain("✅ locale-only copy: clean");
+    expect(r.code).toBe(0);
+  });
+
+  it("blocks that same claim once the as-written candidate check is neutralised (non-vacuity)", () => {
+    const r = runGate({ ...PERIOD_LOCALE_VALUE(), mutate: FAULTS.rawCandLocale });
+    expect(r.out).toContain("❌ LOCALE-ONLY COPY (blocking)");
+    expect(r.code).toBe(2);
   });
 
   it("blocks a baselined literal once the ratchet filter is neutralised (non-vacuity)", () => {

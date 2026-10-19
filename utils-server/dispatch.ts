@@ -60,14 +60,13 @@ async function getScoringWeights(): Promise<typeof DEFAULT_WEIGHTS> {
 }
 
 // MAX_RADIUS_KM is the linear normalisation ceiling for distanceScore.
-// Must be >= the actual search radius (DISPATCH_RING_K * ~0.174 km per H3 res-9 step).
-// k=16 → ~2.8 km real radius; 5 km ceiling prevents compressing far-but-eligible
-// drivers to near-zero scores while still honouring the distance-primary intent.
+// It is a scoring tuning knob, not a restatement of the H3 search radius:
+// distanceScore reaches zero at this distance, while H3 eligibility is
+// governed separately by DISPATCH_RING_K below.
 const MAX_RADIUS_KM = parseFloat(process.env.DISPATCH_MAX_RADIUS_KM ?? '15');
 
 // H3 ring radius for the dispatch candidate search. At resolution 9 (~174m
-// cells) each grid step is ~0.32km, so k=16 ≈ 5km — which matches the scoring
-// threshold (distScore = 1 - distKm/5 in buildCandidateList). The previous
+// cells) each grid step is ~0.32km, so the default k=60 ≈ 19km. The previous
 // k=2 (~400m) was far too small: it caused rides to expire with ZERO offers
 // whenever the nearest driver was more than a few hundred metres away (the
 // Banani pickup to the indexed driver at ~1.9km = grid distance 6 was never
@@ -199,6 +198,10 @@ export async function buildCandidateList(
     and(
       eq(drivers.is_online, true),
       eq(drivers.status, 'active'),
+      // C4-2: break mode excludes the driver from dispatch WITHOUT going
+      // offline — WS, presence, and heartbeat stay alive; offers simply
+      // skip on_break drivers (break_mode.no_requests_break copy).
+      eq(drivers.on_break, false),
       eq(drivers.vehicle_type, vehicleType as any),
       inArray(drivers.id, candidateIds),
       // Busy filter: a driver serving a ride is never a candidate. This must
@@ -231,7 +234,7 @@ export async function buildCandidateList(
       sql`NOT EXISTS (
         SELECT 1 FROM vehicles
         WHERE vehicles.id = drivers.vehicle_id
-        AND (vehicles.fitness_expires_at < CURRENT_DATE OR vehicles.tax_token_expires_at < CURRENT_DATE)
+        AND (vehicles.fitness_expires_at < (now() AT TIME ZONE 'Asia/Dhaka')::date OR vehicles.tax_token_expires_at < (now() AT TIME ZONE 'Asia/Dhaka')::date)
       )`,
     ),
   );
@@ -257,7 +260,7 @@ export async function buildCandidateList(
     .where(and(
       inArray(rides.driver_id, driverIds),
       inArray(rides.status, ['cancelled', 'completed'] as any),
-      sql`date_trunc('day', CASE WHEN ${rides.status} = 'cancelled' THEN ${rides.updated_at} ELSE ${rides.completed_at} END) = CURRENT_DATE`,
+      sql`((CASE WHEN ${rides.status} = 'cancelled' THEN ${rides.updated_at} ELSE ${rides.completed_at} END) AT TIME ZONE 'Asia/Dhaka')::date = (now() AT TIME ZONE 'Asia/Dhaka')::date`,
     ))
     .groupBy(rides.driver_id);
 

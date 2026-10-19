@@ -3,6 +3,7 @@ import { db } from '@/src/db';
 import { rides, drivers } from '@/src/db/schema';
 import { eq, and, inArray } from 'drizzle-orm';
 import { requireRole } from '@/lib/auth';
+import { isPinLocked, recordPinFailure, resetPinAttempts, PIN_MAX_ATTEMPTS } from '@/lib/ridePinLockout';
 import { logger } from '@/lib/logger';
 import { parseJsonBody } from '@/lib/parseBody';
 import { z } from 'zod';
@@ -28,12 +29,24 @@ export async function POST(request: Request, { id }: { id: string }) {
     if (ride.driver_id !== driver.id) {
       return Response.json({ error: 'not_your_ride', message: 'This ride does not belong to you' }, { status: 403 });
     }
-    // PIN verification
+    // PIN verification (C3-4: shared lockout — locked rides reject even the
+    // correct PIN; the 3rd miss locks + notifies the admin).
     const pinParsed = await parseJsonBody(request, z.object({ pin: z.string() }));
     if (!pinParsed.ok) return pinParsed.response;
-    if (!ride.start_pin || ride.start_pin !== pinParsed.data.pin) {
-      return Response.json({ error: 'invalid_pin', message: 'Invalid PIN' }, { status: 403 });
+    if (isPinLocked(ride)) {
+      return Response.json({ error: 'pin_locked', message: 'Ride locked after too many wrong PIN attempts' }, { status: 403 });
     }
+    if (!ride.start_pin || ride.start_pin !== pinParsed.data.pin) {
+      const { attempts, locked } = await recordPinFailure(db, rideId);
+      if (locked) {
+        return Response.json({ error: 'pin_locked', message: 'Ride locked after too many wrong PIN attempts' }, { status: 403 });
+      }
+      return Response.json(
+        { error: 'invalid_pin', message: 'Invalid PIN', attempts_remaining: Math.max(0, PIN_MAX_ATTEMPTS - attempts) },
+        { status: 403 },
+      );
+    }
+    await resetPinAttempts(db, rideId);
 
     // M-1: atomic claim (mirror the WS start handler). A rider cancel landing
     // between the read and an unguarded write would flip a CANCELLED ride to

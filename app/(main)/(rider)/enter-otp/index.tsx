@@ -67,7 +67,10 @@ const EnterOtp = () => {
         } else if (msg.type === "ride:start_failed") {
           clearVerifyTimeout();
           setVerifying(false);
-          setError(t("enter_otp.incorrect_pin"));
+          // Minor (C4-FIX): surface the server's pin_locked distinctly — a
+          // locked ride never unlocks by retrying, so the generic
+          // "incorrect PIN" copy would trap the driver in useless retries.
+          setError(msg.error === "pin_locked" ? t("enter_otp.pin_locked") : t("enter_otp.incorrect_pin"));
           setPinInput("");
         }
       } catch {

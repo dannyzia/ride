@@ -18,6 +18,7 @@ import { computeEstimatedDurationMinutes, checkRideOverlap } from '@/lib/schedul
 import { toUtcIso } from '@/lib/time';
 import * as errors from '@/lib/errors';
 import { normalizeBdPhone, isSamePhone, isConsentFresh } from '@/lib/bookForOther';
+import { holdsRiderRole } from '@/lib/riderRole';
 
 /**
  * Plan-05 W1: the schedule response carries the fare quote in the same flat
@@ -60,7 +61,8 @@ export async function POST(request: Request) {
 
     const [user] = await db.select().from(users).where(eq(users.auth_uid, uid)).limit(1);
     if (!user) return Response.json({ error: 'user_not_found', message: 'User not found' }, { status: 404 });
-    if (user.role !== 'rider') return Response.json({ error: 'forbidden', message: 'Access denied' }, { status: 403 });
+    // C3-8: rider-role MEMBERSHIP (user_roles ∪ legacy users.role).
+    if (!(await holdsRiderRole(db, user.id, user.role))) return Response.json({ error: 'forbidden', message: 'Access denied' }, { status: 403 });
 
     const parsed = await parseJsonBody(request, scheduleSchema);
     if (!parsed.ok) return parsed.response;

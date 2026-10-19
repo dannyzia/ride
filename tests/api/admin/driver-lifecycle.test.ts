@@ -39,6 +39,7 @@ import { requireAdminPermission } from "@/lib/adminRbac";
 import {
   documents,
   drivers,
+  users,
   vehicles,
   vehicleTypeChanges,
 } from "@/src/db/schema";
@@ -271,9 +272,13 @@ describe("POST /api/admin/driver/suspend", () => {
     const res = await suspendPOST(jsonRequest({ driver_id: DRIVER_ID, reason: REASON }));
     expect(res.status).toBe(200);
     expect(await getJson(res)).toEqual({ driver_id: DRIVER_ID, status: "suspended" });
-    expect(directUpdates).toHaveLength(1);
+    // C2-1: suspend mirrors account_status + reason onto the users row so the
+    // shared REST/WS gate 403s with the stored reason.
+    expect(directUpdates).toHaveLength(2);
     expect(directUpdates[0].table).toBe(drivers);
     expect(directUpdates[0].set).toMatchObject({ status: "suspended", is_online: false });
+    expect(directUpdates[1].table).toBe(users);
+    expect(directUpdates[1].set).toMatchObject({ account_status: "suspended", suspension_reason: REASON });
   });
 
   test("F-9.2: notifies the dispatch server's force-offline endpoint (fire-and-forget, correct auth + payload)", async () => {

@@ -12,8 +12,8 @@ import { db } from '@/src/db';
 import { logger } from '@/lib/logger';
 import { readFileSync } from 'fs';
 import { join } from 'path';
-import { startScheduler, withJobBudget } from '@/utils-server/scheduler';
-import { activateRentalRequests, activateDeliveryRequests } from '@/utils-server/activationJobs';
+import { startScheduler, withJobBudget, isQueryCanceled, isTxConflictRetryable } from '@/utils-server/scheduler';
+import { activateRentalRequests } from '@/utils-server/activationJobs';
 import { sweepExpiredEmergencies } from '@/utils-server/emergencyChain';
 import { activateEmergencyRequests } from '@/utils-server/emergencyActivation';
 
@@ -148,9 +148,10 @@ describe('A8 — honest job counter', () => {
     // The counter must equal the ACTUAL number of registered timers — never
     // a hardcoded string again.
     expect(logged).toBe(jest.getTimerCount());
-    // And the current registration count is 60 (58 + S6 jobs 58/59 — the
-    // delivery dispatch tick and the COD remittance reminder sweep,
-    // plan 27 §6.1/§12).
+    // And the current registration count is 60 (was 59; + job 60, the R2
+    // oversized-object reconciler added 2026-10-17 C8-FIX D5-2. Job 55
+    // stays retired since 2026-10-16 B5-1 and its number is never reused —
+    // cf. the scheduler.ts tombstone).
     expect(logged).toBe(60);
   });
 });
@@ -204,6 +205,44 @@ describe('A8 — withJobBudget', () => {
     expect(tick![1]).toMatchObject({ job: 55, outcome: 'timeout' });
   });
 
+  it('PG 57014 wrapped in the Drizzle cause chain is swallowed too (production shape)', async () => {
+    (db as any).transaction = jest.fn(async (fn: any) =>
+      fn({ execute: jest.fn(async () => []) }),
+    );
+
+    // Production throws DrizzleQueryError: the postgres.js { code } lives at
+    // .cause, not on the error itself (S4 dev-DB e2e). The bare-shape test
+    // above pins mocks; this one pins the shape production throws.
+    const wrapped = new Error('canceling statement due to statement timeout');
+    (wrapped as any).cause = { code: '57014' };
+    const result = await withJobBudget(55, 10_000, async () => {
+      throw wrapped;
+    });
+
+    expect(result).toBeUndefined();
+    const tick = mockLoggerInfo.mock.calls.find((c) => String(c[0]).includes('job 55 tick'));
+    expect(tick).toBeDefined();
+    expect(tick![1]).toMatchObject({ job: 55, outcome: 'timeout' });
+  });
+
+  it('a wrapped NON-timeout still classifies as error (no over-swallow)', async () => {
+    (db as any).transaction = jest.fn(async (fn: any) =>
+      fn({ execute: jest.fn(async () => []) }),
+    );
+
+    const wrapped = new Error('duplicate key value violates unique constraint');
+    (wrapped as any).cause = { code: '23505' };
+    await expect(
+      withJobBudget(56, 10_000, async () => {
+        throw wrapped;
+      }),
+    ).rejects.toThrow('duplicate key');
+
+    const tick = mockLoggerInfo.mock.calls.find((c) => String(c[0]).includes('job 56 tick'));
+    expect(tick).toBeDefined();
+    expect(tick![1]).toMatchObject({ job: 56, outcome: 'error' });
+  });
+
   it('bounds idle-in-transaction time by the job\'s OWN budget, per job', async () => {
     // The bound must be the deadline the job was given, not a global constant: a
     // job whose transaction has been idle longer than its budget is already
@@ -244,8 +283,39 @@ describe('A8 — withJobBudget', () => {
 });
 
 
+describe('D8-1 — driver error classification unwraps the cause chain', () => {
+  const bare = (code: string) => Object.assign(new Error(code), { code });
+  const wrapped = (code: string) => {
+    const e = new Error(`wrapped ${code}`);
+    (e as any).cause = { code };
+    return e;
+  };
+
+  it('isQueryCanceled matches bare and wrapped 57014, rejects the rest', () => {
+    expect(isQueryCanceled(bare('57014'))).toBe(true);
+    expect(isQueryCanceled(wrapped('57014'))).toBe(true);
+    expect(isQueryCanceled(wrapped('23505'))).toBe(false);
+    expect(isQueryCanceled(new Error('boom'))).toBe(false);
+    expect(isQueryCanceled(null)).toBe(false);
+    expect(isQueryCanceled(undefined)).toBe(false);
+  });
+
+  it('isTxConflictRetryable matches bare and wrapped 40001/4P000, rejects the rest', () => {
+    for (const code of ['40001', '4P000']) {
+      expect(isTxConflictRetryable(bare(code))).toBe(true);
+      expect(isTxConflictRetryable(wrapped(code))).toBe(true);
+    }
+    expect(isTxConflictRetryable(wrapped('23505'))).toBe(false);
+    expect(isTxConflictRetryable(bare('57014'))).toBe(false);
+    expect(isTxConflictRetryable(new Error('boom'))).toBe(false);
+    expect(isTxConflictRetryable(null)).toBe(false);
+  });
+});
+
+
 // ══════════════════════════════════════════════════════════════════════
-// ADR Phase 1 — tx-threading for the four marketplace scans
+// ADR Phase 1 — tx-threading for the three marketplace scans
+// (B5-1: job 55 delivery activation retired — was four)
 // ══════════════════════════════════════════════════════════════════════
 
 const SCHEDULER_SRC = readFileSync(
@@ -254,16 +324,17 @@ const SCHEDULER_SRC = readFileSync(
 );
 
 describe("ADR Phase 1 — scheduler call sites pass tx", () => {
-  it("all four marketplace blocks thread the tx handle into the scan fn", () => {
+  it("all three marketplace blocks thread the tx handle into the scan fn", () => {
     expect(SCHEDULER_SRC).toContain("(tx) => activateRentalRequests(tx)");
-    expect(SCHEDULER_SRC).toContain("(tx) => activateDeliveryRequests(tx)");
     expect(SCHEDULER_SRC).toContain("(tx) => sweepExpiredEmergencies(tx)");
     expect(SCHEDULER_SRC).toContain("(tx) => activateEmergencyRequests(tx)");
+    // job 55's delivery arm is retired, not re-threaded (B5-1 tombstone)
+    expect(SCHEDULER_SRC).not.toContain("(tx) => activateDeliveryRequests(tx)");
     // and the old ignored-tx form is gone
     expect(SCHEDULER_SRC).not.toContain("(_tx) =>");
   });
 
-  it("the four scan signatures accept a DbClient defaulting to db", () => {
+  it("the three scan signatures accept a DbClient defaulting to db", () => {
     const files = [
       join(__dirname, "..", "..", "..", "utils-server", "activationJobs.ts"),
       join(__dirname, "..", "..", "..", "utils-server", "emergencyChain.ts"),
@@ -271,7 +342,7 @@ describe("ADR Phase 1 — scheduler call sites pass tx", () => {
     ];
     const combined = files.map((f) => readFileSync(f, "utf8")).join("\n");
     expect(combined).toContain("activateRentalRequests(tx: DbClient = db)");
-    expect(combined).toContain("activateDeliveryRequests(tx: DbClient = db)");
+    expect(combined).not.toContain("activateDeliveryRequests(tx: DbClient = db)");
     expect(combined).toContain("sweepExpiredEmergencies(tx: DbClient = db)");
     expect(combined).toContain("activateEmergencyRequests(tx: DbClient = db)");
   });
@@ -314,13 +385,7 @@ describe("ADR Phase 1 — scans route queries through the tx handle", () => {
     expect(db.select).not.toHaveBeenCalled();
   });
 
-  it("activateDeliveryRequests(tx) queries the tx, not global db", async () => {
-    const { tx, txSelect } = mockTxHandle();
-    const { count } = await activateDeliveryRequests(tx as never);
-    expect(count).toBe(0);
-    expect(txSelect).toHaveBeenCalled();
-    expect(db.select).not.toHaveBeenCalled();
-  });
+  // B5-1: activateDeliveryRequests deleted — no tx-threading test for a dead fn.
 
   it("sweepExpiredEmergencies(tx) updates via the tx, not global db", async () => {
     const { tx, txUpdate } = mockTxHandle();

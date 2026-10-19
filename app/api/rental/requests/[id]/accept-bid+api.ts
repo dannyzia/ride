@@ -5,7 +5,7 @@
  */
 import { db } from "@/src/db";
 import { rentalRequests, rentalBids, awardedBidAssignments, rentalRequestEvents, fleetSubscriptions, fleetSubscriptionPlans, fleets, drivers, vehicles, deliveryLegs, emergencyRequests, ambulanceCertifications } from "@/src/db/schema";
-import { requireAnyRole } from "@/lib/auth";
+import { requireMemberRoles } from "@/lib/auth";
 import { parseJsonBody } from "@/lib/parseBody";
 import { getConfigInt } from "@/lib/platformConfig";
 import { logger } from "@/lib/logger";
@@ -20,7 +20,7 @@ const acceptSchema = z.object({
 
 export async function POST(request: Request, { id }: { id: string }) {
   try {
-    const { dbUser } = await requireAnyRole(["rider", "driver"])(request);
+    const { dbUser } = await requireMemberRoles(["rider", "driver"])(request);
 
     const result = await parseJsonBody(request, acceptSchema);
     if (!result.ok) return result.response;

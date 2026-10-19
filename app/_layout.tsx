@@ -161,6 +161,20 @@ export default function RootLayout() {
             }
           } else if (res.status === 401 || res.status === 403) {
             if (segmentsRef.current[0] !== "admin" && segmentsRef.current[0] !== "track") {
+              // C2-1 F-02 X/Y: suspended accounts land on the locked screen
+              // (reason + support contact), not the generic phone entry.
+              try {
+                const errBody = await res.clone().json();
+                if (errBody?.error === "account_suspended") {
+                  const r = typeof errBody.reason === "string" ? errBody.reason : null;
+                  router.replace(
+                    `/(auth)/account-locked${r ? `?reason=${encodeURIComponent(r)}` : ""}`,
+                  );
+                  return;
+                }
+              } catch {
+                // Body unreadable — fall through to phone entry.
+              }
               router.replace("/(auth)/phone-entry");
             }
           } else {

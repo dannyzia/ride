@@ -46,9 +46,11 @@ export interface ActiveRide {
   id: string;
   status: string;
   driver_id: string | null;
+  // C3-6: match payloads no longer carry the driver phone (in-app chat is
+  // the contact channel) — kept optional for legacy REST payloads.
   driver?: {
     name: string;
-    phone: string;
+    phone?: string;
     vehicle_type: string;
     rating: number;
   } | null;

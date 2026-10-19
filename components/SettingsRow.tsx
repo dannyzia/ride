@@ -8,7 +8,10 @@ interface SettingsRowProps {
   icon: keyof typeof Ionicons.glyphMap;
   iconColor?: string;
   label: string;
-  onPress: () => void;
+  // D9-3 (skeptic §D9): optional — rows with no destination (e.g. the
+  // profile phone row until C2-FIX change-phone lands) render as a
+  // non-pressable View instead of a dead button with a noop onPress.
+  onPress?: () => void;
   showChevron?: boolean;
   rightElement?: React.ReactNode;
   isLast?: boolean;
@@ -33,24 +36,40 @@ const SettingsRow = ({
   const textDisabled = isDark ? colors.textDisabledDark : colors.textDisabledLight;
   const borderColor = isDark ? colors.borderDark : colors.borderLight;
 
+  const body = (
+    <>
+      <Ionicons name={icon} size={24} color={iconColor ?? colors.primary} />
+      <Text style={[styles.label, { color: textPrimary }]} numberOfLines={1}>
+        {label}
+      </Text>
+      {rightElement
+        ? rightElement
+        : showChevron && onPress && <Ionicons name="chevron-forward" size={20} color={textDisabled} />}
+    </>
+  );
+
   return (
     <View>
-      <TouchableOpacity
-        accessibilityRole="button"
-        accessibilityLabel={label}
-        onPress={onPress}
-        activeOpacity={0.7}
-        style={styles.row}
-        testID={testID}
-      >
-        <Ionicons name={icon} size={24} color={iconColor ?? colors.primary} />
-        <Text style={[styles.label, { color: textPrimary }]} numberOfLines={1}>
-          {label}
-        </Text>
-        {rightElement
-          ? rightElement
-          : showChevron && <Ionicons name="chevron-forward" size={20} color={textDisabled} />}
-      </TouchableOpacity>
+      {onPress ? (
+        <TouchableOpacity
+          accessibilityRole="button"
+          accessibilityLabel={label}
+          onPress={onPress}
+          activeOpacity={0.7}
+          style={styles.row}
+          testID={testID}
+        >
+          {body}
+        </TouchableOpacity>
+      ) : (
+        <View
+          accessibilityLabel={label}
+          style={styles.row}
+          testID={testID}
+        >
+          {body}
+        </View>
+      )}
       {!isLast && <View style={[styles.divider, { backgroundColor: borderColor }]} />}
     </View>
   );

@@ -27,6 +27,10 @@ export const PLAN05_CONFIG_KEYS = [
   'auto_redispatch_max_attempts',
   // Hotspot map — zone_heat reading freshness window (minutes)
   'hotspot_freshness_minutes',
+  // D9-2 (skeptic §D9): money-movement master switch. Default false —
+  // priced package/topup/pass purchases 409 until month-3 payments launch.
+  // ৳0 trial activation bypasses the gate (launch_free must keep working).
+  'payments_enabled',
 ] as const;
 
 export type Plan05ConfigKey = (typeof PLAN05_CONFIG_KEYS)[number];
@@ -44,6 +48,7 @@ const DEFAULTS: Record<Plan05ConfigKey, string> = {
   auto_redispatch_delay_ms: '15000',       // 15s delay before first re-dispatch
   auto_redispatch_max_attempts: '3',       // give up (expired) after N redispatch attempts
   hotspot_freshness_minutes: '10',         // zone_heat readings older than this are stale
+  payments_enabled: 'false',               // D9-2: money movement OFF until payments launch
 };
 
 /**

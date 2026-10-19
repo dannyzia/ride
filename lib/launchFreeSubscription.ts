@@ -26,8 +26,11 @@ import { and, eq, isNull, notInArray, sql } from "drizzle-orm";
 import { logger } from "./logger";
 import { createZeroAmountPaymentEvent } from "./paymentEvents";
 import { activateSubscription } from "./activateSubscription";
+import { LAUNCH_FREE_PACKAGE_CODE } from "./launchFreePackage";
 
-export const LAUNCH_FREE_PACKAGE_CODE = "launch_free";
+// Single source of truth for the code lives in ./launchFreePackage (client-safe,
+// no DB imports). Re-exported here so existing server importers keep working.
+export { LAUNCH_FREE_PACKAGE_CODE };
 export const LAUNCH_FREE_PACKAGE_NAME = "Launch Free";
 
 /**
@@ -47,19 +50,45 @@ export async function ensureLaunchFreePackage(): Promise<{ id: string }> {
     await tx.execute(
       sql`SELECT pg_advisory_xact_lock(hashtext('ensure_launch_free_package'))`,
     );
+    // C10-1: identity is the stable `code`, never the admin-editable name.
     // Recheck INSIDE the lock: the concurrent creator's row is committed and
     // visible here, so the loser reuses it instead of inserting a duplicate.
     const [existing] = await tx
       .select({ id: packages.id })
       .from(packages)
-      .where(and(eq(packages.name, LAUNCH_FREE_PACKAGE_NAME), isNull(packages.deleted_at)))
+      .where(and(eq(packages.code, LAUNCH_FREE_PACKAGE_CODE), isNull(packages.deleted_at)))
       .limit(1);
     if (existing) return existing;
+
+    // Legacy adopt: DBs synced via `drizzle-kit push` never ran migration
+    // 0081's backfill, so a pre-code "Launch Free" row may exist with NULL
+    // code. Adopt it (stamp the code) rather than minting a duplicate row.
+    // Runs only when no coded row exists, so an admin rename can never
+    // trigger a spurious second plan.
+    const [legacy] = await tx
+      .select({ id: packages.id })
+      .from(packages)
+      .where(
+        and(
+          eq(packages.name, LAUNCH_FREE_PACKAGE_NAME),
+          isNull(packages.code),
+          isNull(packages.deleted_at),
+        ),
+      )
+      .limit(1);
+    if (legacy) {
+      await tx
+        .update(packages)
+        .set({ code: LAUNCH_FREE_PACKAGE_CODE })
+        .where(eq(packages.id, legacy.id));
+      return legacy;
+    }
 
     const [created] = await tx
       .insert(packages)
       .values({
         name: LAUNCH_FREE_PACKAGE_NAME,
+        code: LAUNCH_FREE_PACKAGE_CODE,
         call_count: -1,
         duration_days: 36500,
         price_bdt: 0,

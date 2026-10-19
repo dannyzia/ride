@@ -1,15 +1,20 @@
 // WebSocket protocol types — synchronized with the actual message handlers in
-// utils-server/index.ts (B-8). Inbound = client→server, Outbound = server→client.
-// Phantom types (offer:expired, ride:matched as WS, ride:accept-alternative)
-// were removed; the real wire names (offer:lost, ride:status, ride:expired)
-// are declared here.
+// utils-server/index.ts + rentalHandler/shopHandler/emergencyHandler/
+// deliveryHandler (B-8; re-audited 2026-10-16 for B5-4). Inbound =
+// client→server, Outbound = server→client. Phantom types (offer:expired,
+// ride:matched as WS, ride:accept-alternative) were removed; the real wire
+// names (offer:lost, ride:status, ride:expired) are declared here.
+// Sync check: utils-server/__tests__/ws-contract-sync.test.ts pins every
+// declared domain event against its handler source.
 
 import type { FareBreakdown } from "../lib/fareCalc";
 
 export interface AuthHelloMessage {
   type: "auth:hello";
   access_token: string;
-  role: "driver" | "rider" | "admin";
+  // B5-4: "shop" added — index.ts auth:hello accepts shop-dashboard
+  // sockets (active shop_members row; users.role is NOT consulted).
+  role: "driver" | "rider" | "admin" | "shop";
 }
 
 export interface AuthRefreshMessage {
@@ -64,6 +69,11 @@ export interface OfferRejectMessage {
 export interface ChatTypingMessage {
   type: "chat:typing";
   ride_id: string;
+  // B5-4: fields the index.ts chat branch actually reads (S-1 participant
+  // check runs on recipient_user_id; both are required, else
+  // missing_chat_fields).
+  recipient_user_id: string;
+  is_typing: boolean;
 }
 
 export interface RideSubscribeMessage {
@@ -137,8 +147,62 @@ export interface SosAlertPayload {
   created_at: string;
 }
 
+// ── Marketplace + emergency domains (B5-4) ─────────────────────────────
+// These handlers are S→C notification relays: the server re-emits the event
+// names below with the Z2 producer payloads (REST routes / activation jobs /
+// chain relays). No delivery:* domain exists anymore (B5-1 retired it —
+// do NOT re-declare it).
+
+/** Rental marketplace relay vocabulary (rentalHandler switch). */
+export type RentalEvent =
+  | "rental:bid_request"
+  | "rental:new_bid"
+  | "rental:bid_won"
+  | "rental:bid_settled"
+  | "rental:driver_assigned"
+  | "rental:fleet_ack"
+  | "rental:status";
+
+export interface RentalRelayMessage {
+  type: RentalEvent;
+  request_id: string;
+  [key: string]: unknown;
+}
+
+/** Shop marketplace relay shapes (shopHandler — field-verified 2026-10-16). */
+export type ShopRelayMessage =
+  | { type: "shop:order_status"; order_id: string; status: string; shop_id: string }
+  | { type: "shop:rfq_quote"; rfq_id: string; quoted_price_bdt: number; quoted_notes?: string }
+  | { type: "shop:new_rfq"; rfq_id: string; shop_id: string; title: string }
+  | { type: "shop:delivery_created"; order_id: string; delivery_request_id: string };
+
+/**
+ * Emergency ambulance vocabulary (emergencyHandler inbound + acks, plus the
+ * emergencyChain/index.ts relays — field-verified 2026-10-16).
+ */
+export type EmergencyInboundMessage =
+  | { type: "emergency:accept"; request_id: string }
+  | { type: "emergency:status"; request_id: string; status: string }
+  | { type: "emergency:cancel"; request_id: string; reason?: string };
+
+export type EmergencyRelayMessage =
+  | { type: "emergency:accepted"; request_id: string; status: string }
+  | { type: "emergency:status_ack"; request_id: string; status: string }
+  | { type: "emergency:cancel_ack"; request_id: string }
+  | { type: "emergency:status"; request_id: string; status: string; updated_at: string }
+  | { type: "emergency:cancel"; request_id: string; reason: string | null }
+  | {
+      type: "emergency:new_request";
+      request_id: string;
+      pickup: { address: string; lat: number; lng: number };
+      service_level: string;
+      requires_paramedic: boolean;
+      expires_at: string;
+    }
+  | { type: "emergency:location"; request_id: string; lat: number; lng: number; ts: string | number | null };
+
 export type OutboundMessage =
-  | { type: "auth:ok"; user_id: string; role: "driver" | "rider" | "admin" }
+  | { type: "auth:ok"; user_id: string; role: "driver" | "rider" | "admin" | "shop" }
   | { type: "auth:error"; message: string }
   | { type: "admin:suspended"; message?: string }
   | { type: "error"; message: string }
@@ -177,6 +241,12 @@ export type OutboundMessage =
   | { type: "ride:expired"; ride_id: string }
   | { type: "ride:alternatives"; ride_id: string; alternatives: { vehicle_type: string; fare_breakdown: Record<string, unknown> }[] }
   | { type: "chat:message"; ride_id: string; message: string; sender: string }
-  | { type: "chat:typing"; ride_id: string }
-  | { type: "location:driver"; ride_id: string; lat: number; lng: number }
-  | { type: "admin:sos"; alert: SosAlertPayload };
+  // B5-4: relay carries the S-1 verified sender + the typing flag.
+  | { type: "chat:typing"; ride_id: string; sender_user_id: string; is_typing: boolean }
+  // B5-4: the location:update branch forwards ts + eta_minutes (null when
+  // the driver client omits them).
+  | { type: "location:driver"; ride_id: string; lat: number; lng: number; ts: string | number | null; eta_minutes: number | null }
+  | { type: "admin:sos"; alert: SosAlertPayload }
+  | RentalRelayMessage
+  | ShopRelayMessage
+  | EmergencyRelayMessage;
