@@ -103,6 +103,12 @@ jest.mock("@/src/db", () => {
   return { db };
 });
 
+jest.mock("@/lib/platformConfig", () => ({
+  // S8 §4.3: kill switches OFF — legacy request behavior; also keeps the
+  // positional dbQueue aligned (no extra route-level selects consumed).
+  getPlan05Bool: jest.fn(async () => false),
+}));
+
 jest.mock("@/lib/zone", () => ({
   getZoneForLocation: async () => ({ zone: null }),
   validatePickupZone: async () => ({ valid: true, zone: { id: "zone-1" } }),

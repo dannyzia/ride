@@ -14,12 +14,17 @@
  * re-prompt fallback the §16 order allows instead of silently failing.
  */
 
+import type { Gender } from "@/src/db/schema";
+
 export interface RegistrationHandoff {
   phone: string;
   name: string;
   password: string;
   // C1-1: T&C + Privacy consent carried from the phone-entry checkbox gate.
   terms_accepted: true;
+  // S8 §4.1: self-declared gender picked on register.tsx (Prefer not to say
+  // maps to 'unspecified'); the wizard forwards it as `gender: creds.gender`.
+  gender: Gender;
 }
 
 let handoff: RegistrationHandoff | null = null;

@@ -9,6 +9,23 @@ import { VEHICLE_TYPE_ZOD_ENUM } from "@/lib/vehicleTypes";
 import { getHotspotZone } from "@/lib/hotspot";
 import { logger } from "@/lib/logger";
 
+/**
+ * Nearby driver markers — POST /api/ride/nearby-markers (ambient, public).
+ *
+ * Public ambient supply context: returns up to 50 driver marker points
+ * (id, lat, lng, vehicle_type) for drivers visible within an H3 ring of
+ * `lat`/`lng`. Optional `vehicle_type` narrows the pool.
+ *
+ * Unauthenticated by design — ambient context. No rider identity needed.
+ *
+ * S8 §4.5 CONTRACT (assertion, reviewed on every edit): this endpoint is
+ * NEVER gender-filtered and NEVER women_only-gated. It is ambient supply
+ * context (public markers), not the women-only supply oracle — that role
+ * belongs to the authenticated, gated, bucketed nearby-drivers endpoint.
+ * If a future change adds a gender/women_only branch here, this comment
+ * must be updated and the change must be flagged for the S8 privacy sweep.
+ */
+
 const MARKER_RING_K = 30;
 
 const bodySchema = z.object({

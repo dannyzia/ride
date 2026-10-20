@@ -20,7 +20,7 @@ import { adminFetch } from "@/lib/adminFetch";
 import { colors } from "@/theme/goRide";
 import { VEHICLE_TYPES, type VehicleTypeEnum } from "@/lib/vehicleTypes";
 
-type QueueStatus = "pending" | "temporary" | "rejected" | "all";
+type QueueStatus = "pending" | "temporary" | "rejected" | "all" | "unverified_female";
 
 interface QueueDocument {
   doc_type: string;
@@ -37,6 +37,9 @@ interface QueueDriver {
   phone: string | null;
   vehicle_type: VehicleTypeEnum;
   status: string;
+  // S8 §4.6: declared gender + verification stamp (queue projection).
+  gender: string;
+  gender_verified: boolean;
   submitted_at: string;
   provisional_expires_at: string | null;
   stage2_due_at: string | null;
@@ -82,6 +85,8 @@ const STATUS_TABS: { key: QueueStatus; label: string }[] = [
   { key: "temporary", label: "Temporary" },
   { key: "rejected", label: "Rejected" },
   { key: "all", label: "All" },
+  // S8 §4.6: women-only supply worklist.
+  { key: "unverified_female", label: "Unverified Female" },
 ];
 
 const VEHICLE_OPTIONS = VEHICLE_TYPES.map((v) => ({
@@ -151,6 +156,12 @@ export default function QueueScreen() {
   const [adjustVehicleType, setAdjustVehicleType] = useState(false);
   const [vehicleTypeAdjusted, setVehicleTypeAdjusted] =
     useState<VehicleTypeEnum | null>(null);
+  // S8 §4.6: explicit gender confirmation checkbox (approve flow).
+  const [genderConfirmed, setGenderConfirmed] = useState(false);
+  // S8 §4.6: correction control state (posts to /api/admin/driver/gender).
+  const [correctionGender, setCorrectionGender] = useState<"male" | "female" | "other" | null>(null);
+  const [correctionConfirmed, setCorrectionConfirmed] = useState(false);
+  const [correctionReason, setCorrectionReason] = useState("");
 
   // Track consecutive failures so we can stop auto-refresh when the API is
   // returning errors. This prevents an aggressive retry loop.
@@ -222,6 +233,10 @@ export default function QueueScreen() {
     setNewStatus("active");
     setAdjustVehicleType(false);
     setVehicleTypeAdjusted(null);
+    setGenderConfirmed(false);
+    setCorrectionGender(null);
+    setCorrectionConfirmed(false);
+    setCorrectionReason("");
     setPendingAction({ kind, driver });
   };
 
@@ -230,6 +245,10 @@ export default function QueueScreen() {
     setReason("");
     setAdjustVehicleType(false);
     setVehicleTypeAdjusted(null);
+    setGenderConfirmed(false);
+    setCorrectionGender(null);
+    setCorrectionConfirmed(false);
+    setCorrectionReason("");
   };
 
   const [extraActionDriver, setExtraActionDriver] = useState<QueueDriver | null>(null);
@@ -287,6 +306,9 @@ export default function QueueScreen() {
         body.vehicle_type_adjusted = vehicleTypeAdjusted;
       }
       if (newStatus === "temporary") body.new_status = "temporary";
+      // S8 §4.6: explicit confirmation — stamps gender_verified for female
+      // drivers server-side; anything else leaves verification untouched.
+      body.gender_confirmed = genderConfirmed;
       await runAction(`/api/admin/driver/approve`, body, "Driver approved", {
         json: (d) => {
           const r = d as ApproveResponse;
@@ -326,6 +348,35 @@ export default function QueueScreen() {
         "Driver suspended",
       );
     }
+  };
+
+  // S8 §4.6: gender correction — dropdown + explicit confirmation checkbox
+  // posting to /api/admin/driver/gender (reason 5–500, audited server-side).
+  const submitGenderCorrection = async () => {
+    if (!pendingAction) return;
+    if (!correctionGender) {
+      toast.show("Select a corrected gender", "warning");
+      return;
+    }
+    if (!correctionConfirmed) {
+      toast.show("Confirm the correction checkbox to proceed", "warning");
+      return;
+    }
+    const trimmed = correctionReason.trim();
+    if (trimmed.length < 5 || trimmed.length > 500) {
+      toast.show("Correction reason must be 5–500 characters", "warning");
+      return;
+    }
+    await runAction(
+      `/api/admin/driver/gender`,
+      {
+        driver_id: pendingAction.driver.driver_id,
+        gender: correctionGender,
+        gender_confirmed: correctionConfirmed,
+        reason: trimmed,
+      },
+      "Gender corrected",
+    );
   };
 
   const runAction = async (
@@ -655,12 +706,17 @@ export default function QueueScreen() {
           <View style={{ gap: 14 }}>
             <View style={styles.actionSummaryCard}>
               <Row label="Driver" value={pendingAction.driver.name ?? "—"} />
-              <Row label="Phone" value={pendingAction.driver.phone ?? "—"} />
-              <Row
-                label="Vehicle"
+              <Row label="Phone" value={pendingAction.driver.phone ?? "—"} />              <Row label="Vehicle"
                 value={labelForVehicle(pendingAction.driver.vehicle_type)}
               />
               <Row label="Status" value={pendingAction.driver.status} />
+              {/* S8 §4.6: declared gender next to the NID review surface. */}
+              <Row
+                label="Declared gender"
+                value={`${pendingAction.driver.gender ?? "—"}${
+                  pendingAction.driver.gender_verified ? " (verified)" : " (unverified)"
+                }`}
+              />
               <Row
                 label="Submitted"
                 value={formatDateTime(pendingAction.driver.submitted_at)}
@@ -741,6 +797,16 @@ export default function QueueScreen() {
                   />
                 </View>
 
+                {/* S8 §4.6: explicit confirmation stamps gender_verified for
+                    female drivers. Unchecked = verification untouched. */}
+                <View style={styles.fieldRow}>
+                  <AdminToggle
+                    value={genderConfirmed}
+                    onValueChange={setGenderConfirmed}
+                    label="Gender confirmed — NID checked, stamp female verification"
+                  />
+                </View>
+
                 {adjustVehicleType ? (
                   <View style={styles.vehicleGrid}>
                     {VEHICLE_OPTIONS.map((opt) => {
@@ -771,6 +837,69 @@ export default function QueueScreen() {
                 ) : null}
               </View>
             ) : null}
+
+            {/* S8 §4.6: correction control — gender dropdown + explicit
+                confirmation checkbox posting to /api/admin/driver/gender. */}
+            <View style={{ gap: 10 }}>
+              <Text style={styles.fieldLabel}>CORRECT GENDER</Text>
+              <View style={{ flexDirection: "row", gap: 8 }}>
+                {(["male", "female", "other"] as const).map((g) => {
+                  const selected = correctionGender === g;
+                  return (
+                    <Pressable
+                      key={g}
+                      onPress={() => setCorrectionGender(g)}
+                      style={[
+                        styles.statusChoice,
+                        selected && styles.statusChoiceActive,
+                      ]}
+                     testID="admin.queue.set-correction-gender">
+                      <Text
+                        style={[
+                          styles.statusChoiceText,
+                          selected && styles.statusChoiceTextActive,
+                        ]}
+                      >
+                        {g}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+              <View style={styles.fieldRow}>
+                <AdminToggle
+                  value={correctionConfirmed}
+                  onValueChange={setCorrectionConfirmed}
+                  label="I confirm this correction (NID checked for female verification)"
+                />
+              </View>
+              <textarea
+                value={correctionReason}
+                onChange={(e: { target: { value: string } }) =>
+                  setCorrectionReason(e.target.value)
+                }
+                rows={3}
+                style={{
+                  width: "100%",
+                  padding: "10px",
+                  borderRadius: "8px",
+                  border: "1px solid #2A2D35",
+                  backgroundColor: "#181A20",
+                  color: "#FFFFFF",
+                  fontFamily: "Jakarta-Regular",
+                  fontSize: "14px",
+                  resize: "vertical",
+                }}
+                placeholder="Correction rationale (5–500 chars). Recorded in audit trail."
+              />
+              <Pressable
+                style={[styles.modalBtn, { backgroundColor: colors.adminAccent }]}
+                onPress={submitGenderCorrection}
+                disabled={submitting}
+               testID="admin.queue.submit-gender-correction">
+                <Text style={styles.modalBtnText}>Submit correction</Text>
+              </Pressable>
+            </View>
 
             {pendingAction.kind === "reject" ||
             pendingAction.kind === "suspend" ? (

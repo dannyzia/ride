@@ -1,11 +1,20 @@
 import { useState } from "react";
 import { API_URL } from "@/lib/config";
 import { setRegistrationHandoff } from "@/lib/registrationHandoff";
-import { View, Text, TextInput } from "react-native";
+import { View, Text, TextInput, Pressable } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
 import { colors } from "@/theme/goRide";
+import type { Gender } from "@/src/db/schema";
+
+// S8 §4.1: required gender picker. "Prefer not to say" maps to 'unspecified'.
+const GENDER_OPTIONS: { value: Gender; label: string }[] = [
+  { value: "male", label: "Male" },
+  { value: "female", label: "Female" },
+  { value: "other", label: "Other" },
+  { value: "unspecified", label: "Prefer not to say" },
+];
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useIsDark } from "@/lib/useAppearance";
 import CustomButton from "@/components/CustomButton";
@@ -21,6 +30,7 @@ export default function RegisterScreen() {
   const [name, setName] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [gender, setGender] = useState<Gender | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -49,6 +59,12 @@ export default function RegisterScreen() {
       return;
     }
 
+    // S8 §4.1: gender is required at signup (Prefer not to say is explicit).
+    if (!gender) {
+      setError("Please select your gender");
+      return;
+    }
+
     setLoading(true);
     setError("");
 
@@ -72,7 +88,7 @@ export default function RegisterScreen() {
       // params — URLs leak into history/devtools/crash reports). A missing
       // handoff on the wizard side re-prompts here.
       // C1-1: consent rides the handoff so the wizard's submit carries it.
-      setRegistrationHandoff({ phone: phoneParam ?? "", name, password, terms_accepted: true });
+      setRegistrationHandoff({ phone: phoneParam ?? "", name, password, terms_accepted: true, gender });
       router.push(
         `${ROLE_WIZARD[roleParam]}?phone=${encodeURIComponent(phoneParam ?? "")}&role=${encodeURIComponent(roleParam)}`,
       );
@@ -93,6 +109,8 @@ export default function RegisterScreen() {
           password,
           // C1-1: consent flag — register+api 400s terms_required without it.
           terms_accepted: true,
+          // S8 §4.1: self-declared gender carried in POST /api/register body.
+          gender,
         }),
       });
 
@@ -189,6 +207,38 @@ export default function RegisterScreen() {
           value={confirmPassword}
           onChangeText={setConfirmPassword}
          testID="register.set-confirm-password"/>
+      </View>
+
+      {/* S8 §4.1: Required gender picker */}
+      <Text
+        className="text-[14px] font-JakartaBold mb-2"
+        style={{ color: textSecondary }}
+      >
+        Gender
+      </Text>
+      <View className="flex-row flex-wrap mb-4" testID="register.gender-picker">
+        {GENDER_OPTIONS.map((opt) => {
+          const selected = gender === opt.value;
+          return (
+            <Pressable
+              key={opt.value}
+              onPress={() => setGender(opt.value)}
+             
+              className="rounded-xl border px-4 py-3 mr-2 mb-2"
+              style={{
+                backgroundColor: selected ? colors.primary : surfaceBg,
+                borderColor: selected ? colors.primary : borderColor,
+              }}
+             testID="register.set-gender">
+              <Text
+                className="text-[14px] font-JakartaBold"
+                style={{ color: selected ? colors.textPrimaryDark : textPrimary }}
+              >
+                {opt.label}
+              </Text>
+            </Pressable>
+          );
+        })}
       </View>
 
       {error ? (

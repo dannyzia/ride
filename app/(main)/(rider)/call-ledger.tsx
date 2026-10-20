@@ -17,6 +17,7 @@ import ReactNativeModal from "react-native-modal";
 import { useIsDark, useAppearance } from "@/lib/useAppearance";
 import { useCallLedgerStore } from "@/store/useCallLedgerStore";
 import { useTranslation } from "react-i18next";
+import { VEHICLE_TYPE_VALUES } from "@/lib/vehicleTypes";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -60,7 +61,9 @@ const OUTCOME_I18N: Record<string, string> = {
   refunded: 'call_ledger.refunded', filtered: 'call_ledger.filtered',
 };
 
-const VEHICLE_TYPE_KEYS = ['all', 'bike_basic', 'bike_standard', 'bike_plus', 'cng', 'car_compact', 'car_economy', 'car_comfort', 'car_premium', 'car_xl'] as const;
+// §4.8 consolidation: derived from the canonical registry (scooter joins the
+// filter chip set automatically; chip text follows the existing raw-key render).
+const VEHICLE_TYPE_KEYS = ['all', ...VEHICLE_TYPE_VALUES] as const;
 const VEHICLE_TYPE_I18N: Record<string, string> = {
   all: 'call_ledger.all_types',
 };

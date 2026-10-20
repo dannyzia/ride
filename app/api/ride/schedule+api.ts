@@ -13,7 +13,8 @@ import { z } from 'zod';
 import { parseJsonBody } from '@/lib/parseBody';
 import { VEHICLE_TYPE_ZOD_ENUM } from '@/lib/vehicleTypes';
 import { sendSms } from '@/lib/dprelay';
-import { getPlan05Int } from '@/lib/platformConfig';
+import { getPlan05Int, getPlan05Bool } from '@/lib/platformConfig';
+import { checkWomenOnlyRideGates } from '@/lib/womenOnlyRideGates';
 import { computeEstimatedDurationMinutes, checkRideOverlap } from '@/lib/scheduleUtils';
 import { toUtcIso } from '@/lib/time';
 import * as errors from '@/lib/errors';
@@ -52,6 +53,9 @@ const scheduleSchema = z.object({
   secondary_rider_consent_at: z.string().datetime().optional(),
   upfront_tip_bdt: z.number().int().min(0).max(20000).optional(),
   stops: z.array(z.object({ lat: z.number(), lng: z.number(), address: z.string().min(1).max(500) })).max(2).optional(),
+  // S8 §4.3: women-only request + secondary-rider female attestation.
+  women_only: z.boolean().optional().default(false),
+  secondary_rider_female: z.boolean().optional().default(false),
 });
 
 export async function POST(request: Request) {
@@ -67,7 +71,28 @@ export async function POST(request: Request) {
     const parsed = await parseJsonBody(request, scheduleSchema);
     if (!parsed.ok) return parsed.response;
 
-    const { pickup_lat, pickup_lng, pickup_address, dropoff_lat, dropoff_lng, dropoff_address, vehicle_type, scheduled_at, preference_ids, secondary_rider_name, secondary_rider_phone, secondary_rider_consent, secondary_rider_consent_at, upfront_tip_bdt, stops } = parsed.data;
+    const { pickup_lat, pickup_lng, pickup_address, dropoff_lat, dropoff_lng, dropoff_address, vehicle_type, scheduled_at, preference_ids, secondary_rider_name, secondary_rider_phone, secondary_rider_consent, secondary_rider_consent_at, upfront_tip_bdt, stops, women_only, secondary_rider_female } = parsed.data;
+
+    // S8 §4.3: scooter + women-only gates (fresh-read flags, never cached).
+    // user comes from a star select, so gender is already present (no
+    // explicit-field fix needed here — unlike request+api.ts).
+    const [womenOnlyEnabled, scooterEnabled] = await Promise.all([
+      getPlan05Bool('women_only_rides_enabled'),
+      getPlan05Bool('scooter_vehicle_type_enabled'),
+    ]);
+    const gate = checkWomenOnlyRideGates({
+      userGender: user.gender,
+      vehicleType: vehicle_type,
+      womenOnly: women_only ?? false,
+      secondaryRiderName: secondary_rider_name,
+      secondaryRiderPhone: secondary_rider_phone,
+      secondaryRiderFemale: secondary_rider_female ?? false,
+      womenOnlyEnabled,
+      scooterEnabled,
+    });
+    if (!gate.ok) {
+      return Response.json({ error: gate.error, message: gate.message }, { status: gate.status });
+    }
 
     const scheduledDate = new Date(scheduled_at);
     const now = new Date();
@@ -284,6 +309,9 @@ export async function POST(request: Request) {
         secondary_rider_phone: secondary_rider_phone || null,
         is_booked_for_someone_else: !!(secondary_rider_phone || secondary_rider_name),
         upfront_tip_bdt: upfront_tip_bdt ?? 0,
+        // S8 §4.3: women-only request markers (dispatch reads women_only).
+        women_only: women_only ?? false,
+        secondary_rider_female: secondary_rider_female ?? false,
         // v6 shadow (PATCH 1)
         fare_v6_shadow: fareBreakdown as any,
         fare_v6_shadow_computed_at: new Date(),

@@ -9,6 +9,7 @@ import { logger } from "@/lib/logger";
 import { colors, spacing, radii } from "@/theme/goRide";
 import { formatBDT } from "@/lib/format";
 import { useIsDark } from "@/lib/useAppearance";
+import { useTranslation } from "react-i18next";
 import CountdownRing from "./CountdownRing";
 import SlideButton from "@/components/SlideButton";
 
@@ -30,6 +31,7 @@ const HEAT_CHIP: Record<
 };
 
 export default function RideOfferSheet() {
+  const { t } = useTranslation();
   const { activeOffer, setActiveOffer } = useDriverFlowStore();
   const ws = useWSStore((s) => s.ws);
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -308,6 +310,35 @@ export default function RideOfferSheet() {
                 </Text>
               </View>
             )}
+            {/* S8 §4.4: women-only badge — the ONLY gender-adjacent signal on
+                the card (no rider gender is ever shown). */}
+            {activeOffer.women_only === true && (
+              <View
+                testID="rider.offer.women-only-badge"
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: 4,
+                  paddingHorizontal: spacing.sm,
+                  paddingVertical: 2,
+                  borderRadius: radii.xs,
+                  backgroundColor: colors.primary + "20",
+                  alignSelf: "flex-start",
+                  marginTop: 2,
+                }}
+              >
+                <Ionicons name="female-outline" size={11} color={colors.primary} />
+                <Text
+                  style={{
+                    fontFamily: "Jakarta-Bold",
+                    fontSize: 10,
+                    color: colors.primary,
+                  }}
+                >
+                  {t("women_only_badge")}
+                </Text>
+              </View>
+            )}
           </View>
         </View>
       </View>
@@ -395,6 +426,20 @@ export default function RideOfferSheet() {
           </Text>
         </View>
       </View>
+
+      {/* S8 §4.4: self-declared copy — shown on women-only offers only. */}
+      {activeOffer.women_only === true && (
+        <Text
+          style={{
+            fontFamily: "Jakarta-Regular",
+            fontSize: 12,
+            color: textSecondary,
+            marginBottom: spacing.md,
+          }}
+        >
+          {t("driver_offer_gender_self_declared")}
+        </Text>
+      )}
 
       {/* Upfront tip badge (Pattern A inline styles — no NativeWind, no emoji) */}
       {activeOffer.upfront_tip_bdt > 0 ? (

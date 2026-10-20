@@ -10,6 +10,7 @@ import {
 import { AdminShell } from "@/components/admin/AdminShell";
 import { useAdminToast } from "@/components/admin/AdminToast";
 import { adminFetch } from "@/lib/adminFetch";
+import { vehicleTypeLabel } from "@/lib/vehicleTypes";
 import { colors } from "@/theme/goRide";
 
 type GateStatus = "green" | "red" | "calibration_needed";
@@ -123,19 +124,6 @@ const TREND_CHIP: Record<
 };
 
 const AUTO_REFRESH_MS = 60_000;
-
-/** Short vehicle type label for display. */
-const VT_LABEL: Record<string, string> = {
-  bike_basic: "Bike Basic",
-  bike_standard: "Bike Std",
-  bike_plus: "Bike Plus",
-  cng: "CNG",
-  car_compact: "Compact",
-  car_economy: "Economy",
-  car_comfort: "Comfort",
-  car_premium: "Premium",
-  car_xl: "XL",
-};
 
 function formatMeasured(key: string, value: number | null): string {
   if (value === null) return "—";
@@ -609,7 +597,7 @@ function DeviationDetailPanel({ detail }: { detail: DeviationDetail }) {
           {detail.by_vehicle_type.map((vt) => (
             <View key={vt.vehicle_type} style={styles.devVehicleRow}>
               <Text style={[styles.devVehicleCell, styles.devVehicleCellType]}>
-                {VT_LABEL[vt.vehicle_type] ?? vt.vehicle_type}
+                {vehicleTypeLabel(vt.vehicle_type)}
               </Text>
               <Text
                 style={[
@@ -702,7 +690,7 @@ function DeviationDetailPanel({ detail }: { detail: DeviationDetail }) {
                     {new Date(r.completed_at).toLocaleDateString()}
                   </Text>
                   <Text style={[styles.devRideCell, styles.devRideTypeCell]}>
-                    {VT_LABEL[r.vehicle_type] ?? r.vehicle_type}
+                    {vehicleTypeLabel(r.vehicle_type)}
                   </Text>
                   <Text style={[styles.devRideCell, styles.devRideAmtCell]}>
                     {paisaToTaka(r.v2_total_bdt)}

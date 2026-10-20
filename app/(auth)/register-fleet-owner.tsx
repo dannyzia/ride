@@ -127,6 +127,9 @@ export default function RegisterFleetOwnerScreen() {
                 name: creds.name,
                 password: creds.password,
                 role: "fleet_owner",
+                // S8 §4.1: explicit gender forward (no spread — silent drops
+                // would fall back to the DB default with no error).
+                gender: creds.gender,
                 fleet,
                 // C1-1: consent carried via the handoff from the phone-entry gate.
                 terms_accepted: creds.terms_accepted,

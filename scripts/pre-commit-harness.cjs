@@ -160,6 +160,15 @@ const TOOL_FILES = [
  * checkout.
  */
 const CORPUS_DIRS = [
+  // The i18n orphan auditor (stage 8) resolves `t(TABLE[key])` sites by
+  // FOLLOWING the import into the defining module — including `@/lib/*`
+  // module tables (e.g. lib/rideGateErrorCopy.ts, added with the S8 women-only
+  // gate copy). Without this overlay the worktree pairs the working tree's
+  // app/ imports with the BASE COMMIT's lib/, where the table does not exist
+  // yet: the import cannot resolve and the table's keys report as NEW
+  // orphans. MEASURED 2026-10-20: exactly that phantom failure on
+  // error_scooter_disabled + error_secondary_rider_attestation_required.
+  path.join("lib"),
   path.join("maestro", "flows"),
   // Stage 4 (flow load) resolves every `runScript: { file: }` path against the
   // filesystem, so the scripts the flows reference are INPUT, exactly like the
@@ -171,9 +180,13 @@ const CORPUS_DIRS = [
   "app",
   "components",
   "i18n",
+  path.join("store"),
 ];
 /** Selector resolution reads the map as data — same class as the dirs above. */
-const CORPUS_FILES = [path.join("maestro", "tools", "testid-map.json")];
+const CORPUS_FILES = [
+  path.join("maestro", "tools", "testid-map.json"),
+  path.join("src", "db", "schema.ts"),
+];
 
 /** A benign app/ edit: every later stage RUNS on it, and all of them pass. */
 const BENIGN_APP_EDIT = "app/(auth)/_layout.tsx";
@@ -596,7 +609,10 @@ function git(args, cwd, opts = {}) {
  */
 function runHook(cwd, spec, stdin) {
   try {
-    const stdout = execFileSync("bash", [spec.hookFile], {
+    const gitBash = process.platform === "win32" && fs.existsSync("C:\\Program Files\\Git\\bin\\bash.exe")
+      ? "C:\\Program Files\\Git\\bin\\bash.exe"
+      : "bash";
+    const stdout = execFileSync(gitBash, [spec.hookFile.replace(/\\/g, "/")], {
       cwd,
       encoding: "utf8",
       stdio: [stdin === null ? "ignore" : "pipe", "pipe", "pipe"],

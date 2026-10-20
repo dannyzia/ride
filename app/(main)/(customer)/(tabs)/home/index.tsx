@@ -31,15 +31,20 @@ import {
 import {
   VEHICLE_CATEGORIES,
   VEHICLE_TYPES,
+  getVehicleTypesByCategory,
   type VehicleTypeEnum,
   type VehicleIconName,
 } from "@/lib/vehicleTypes";
 import { supabase } from "@/lib/supabase";
 import { API_URL } from "@/lib/config";
 import { logger } from "@/lib/logger";
+import { RIDE_GATE_ERROR_COPY } from "@/lib/rideGateErrorCopy";
 import { colors } from "@/theme/goRide";
 import { useIsDark, useAppearance } from "@/lib/useAppearance";
 import SosBanner from "@/components/SosBanner";
+import SetGenderPrompt from "@/components/SetGenderPrompt";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { STORAGE_KEYS } from "@/lib/storageKeys";
 import { useTranslation } from "react-i18next";
 import { formatBDT } from "@/lib/format";
 
@@ -67,12 +72,10 @@ interface SavedPlace {
 
 // ── Category → vehicle type prefix mapping ───────────────────────
 function getTypesForCategory(cat: VehicleCategory): VehicleTypeEnum[] {
-  if (cat === "bike") return ["bike_basic", "bike_standard", "bike_plus"];
-  if (cat === "cng") return ["cng"];
-  if (cat === "car")
-    return ["car_compact", "car_economy", "car_comfort", "car_premium"];
-  if (cat === "large_car") return ["car_xl"];
-  return [];
+  // §4.8 consolidation: derived from the registry — never a literal copy.
+  // The bike list gains scooter automatically here; the booking sheet gates
+  // it on scooter_vehicle_type_enabled before rendering the card.
+  return getVehicleTypesByCategory(cat).map((v) => v.key);
 }
 
 const SNAP_POINTS = ["50%", "70%"];
@@ -172,6 +175,15 @@ const {
   const [routeGeo, setRouteGeo] = useState<[number, number][] | null>(null);
   const [pickupEta, setPickupEta] = useState<number | null>(null);
   const [nearbyCount, setNearbyCount] = useState<number>(0);
+  // S8 §4.3: women-only booking state (sticky preference + kill switches).
+  const [userGender, setUserGender] = useState<string | null>(null);
+  const [womenOnlyEnabled, setWomenOnlyEnabled] = useState(false);
+  const [scooterEnabled, setScooterEnabled] = useState(true);
+  const [womenOnly, setWomenOnly] = useState(false);
+  const [secondaryFemale, setSecondaryFemale] = useState(false);
+  // Disablement handshake: explicit ack that the paused-mode request is
+  // standard (never a silent women_only:false).
+  const [pausedAck, setPausedAck] = useState(false);
 
   const sheetRef = useRef<BottomSheet>(null);
 
@@ -184,11 +196,47 @@ const {
   );
 
   // Estimates filtered to current category
+  // S8 §4.3: scooter card hidden while its kill switch is off.
   const categoryEstimates = useMemo(() => {
     if (!selectedCategory || !estimates.length) return [];
     const typeKeys = getTypesForCategory(selectedCategory);
-    return estimates.filter((e) => typeKeys.includes(e.vehicle_type as VehicleTypeEnum));
-  }, [estimates, selectedCategory]);
+    return estimates.filter(
+      (e) =>
+        typeKeys.includes(e.vehicle_type as VehicleTypeEnum) &&
+        (scooterEnabled || e.vehicle_type !== "scooter"),
+    );
+  }, [estimates, selectedCategory, scooterEnabled]);
+
+  // S8 §4.3: identity + kill switches + sticky preference (non-blocking).
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        const stored = await AsyncStorage.getItem(STORAGE_KEYS.WOMEN_ONLY_PREFERENCE);
+        if (!active) return;
+        if (stored === "true") setWomenOnly(true);
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        const token = session?.access_token;
+        if (!token || !active) return;
+        const res = await fetch(`${API_URL}/api/user/me`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok || !active) return;
+        const data = await res.json();
+        if (!active) return;
+        setUserGender(data?.user?.gender ?? null);
+        setWomenOnlyEnabled(data?.women_only_rides_enabled === true);
+        setScooterEnabled(data?.scooter_vehicle_type_enabled !== false);
+      } catch {
+        // non-blocking: booking works without the toggle
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const selectedEstimate = useMemo(
     () =>
@@ -521,6 +569,13 @@ useEffect(() => {
             pickup_lat: pickupCoords.lat,
             pickup_lng: pickupCoords.lng,
             vehicle_type: typeKey,
+            // S8 §4.3: reflect the requested pool, not the mixed pool.
+            ...(userGender === "female" &&
+            selectedCategory === "bike" &&
+            womenOnlyEnabled &&
+            womenOnly
+              ? { women_only: true }
+              : {}),
           }),
         });
         if (!res.ok || !active) return;
@@ -536,7 +591,7 @@ useEffect(() => {
     fetchNearby();
     const id = setInterval(fetchNearby, 30_000);
     return () => { active = false; clearInterval(id); };
-  }, [pickupCoords, bookingStep, selectedCategory]);
+  }, [pickupCoords, bookingStep, selectedCategory, userGender, womenOnlyEnabled, womenOnly]);
 
   // Clear markers when leaving FARES
   useEffect(() => {
@@ -693,8 +748,27 @@ useEffect(() => {
     fetchEstimates();
   }, [fetchEstimates, setBookingStep]);
 
-  const handleCallForRide = useCallback(async () => {
+  // S8 §4.3: explicitWomenOnly overrides the toggle state — used by the
+  // paused-mode handshake (Proceed with Standard Ride books women_only:false
+  // explicitly, never silently).
+  const handleCallForRide = useCallback(async (explicitWomenOnly?: boolean) => {
     if (!pickupCoords || !dropoffCoords || !selectedVehicleType) return;
+    // S8 §4.3 R-4 visibility: female rider + bike category + kill switch.
+    const showToggle =
+      userGender === "female" && selectedCategory === "bike" && womenOnlyEnabled;
+    const handshakeVisible =
+      userGender === "female" &&
+      selectedCategory === "bike" &&
+      !womenOnlyEnabled &&
+      womenOnly &&
+      !pausedAck;
+    // Forbidden silent fallback: the paused banner demands an explicit tap
+    // on Proceed before any standard-ride request goes out.
+    if (handshakeVisible && explicitWomenOnly === undefined) {
+      Alert.alert(t('banner_women_only_paused'));
+      return;
+    }
+    const effectiveWomenOnly = explicitWomenOnly ?? (showToggle && womenOnly);
     setRequesting(true);
     try {
       const {
@@ -723,6 +797,9 @@ useEffect(() => {
           stops: stops.length > 0 ? stops : undefined,
           selected_discount_type: selectedPromo?.type || "none",
           selected_discount_amount_bdt: selectedPromo?.amount_bdt || 0,
+          // S8 §4.3: women-only markers (server gates each code).
+          women_only: effectiveWomenOnly,
+          secondary_rider_female: secondaryFemale,
         }),
       });
       const data = await res.json();
@@ -742,9 +819,12 @@ useEffect(() => {
         setRideStatus("finding");
         router.push("/(main)/(customer)/finding-driver");
       } else {
+        // S8 §4.9: known booking-gate codes show localized copy; anything
+        // else keeps the server's honest message.
+        const gateCopy = data.error ? RIDE_GATE_ERROR_COPY[data.error] : undefined;
         Alert.alert(
           t('rider_home.request_failed'),
-          data.message || data.error || t('rider_home.no_driver_found'),
+          gateCopy ? t(gateCopy) : (data.message || data.error || t('rider_home.no_driver_found')),
         );
       }
     } catch (err) {
@@ -764,12 +844,24 @@ useEffect(() => {
      stops,
      selectedPromo,
      t,
+     userGender,
+     selectedCategory,
+     womenOnlyEnabled,
+     womenOnly,
+     secondaryFemale,
+     pausedAck,
      setRideStatus,
      setRiderDropoff,
      setRiderPickup,
      setRiderVehicleType,
      setSearchingRideId,
    ]);
+
+  // S8 §4.3: disablement handshake — explicit standard-ride confirmation.
+  const handleProceedStandardRide = useCallback(() => {
+    setPausedAck(true);
+    handleCallForRide(false);
+  }, [handleCallForRide]);
 
   // ── Backdrop ───────────────────────────────────────────────────
   const renderBackdrop = useCallback(
@@ -1214,6 +1306,98 @@ useEffect(() => {
         </View>
       )}
 
+      {/* S8 §4.3: women-only toggle (R-4: female + bike + kill switch). */}
+      {userGender === "female" && selectedCategory === "bike" && womenOnlyEnabled && (
+        <View style={{ marginTop: 16, gap: 8 }}>
+          <TouchableOpacity
+            style={[
+              styles.vehicleRow,
+              {
+                backgroundColor: womenOnly ? colors.primary : surfaceBg,
+                borderColor: womenOnly ? colors.primary : borderColor,
+              },
+            ]}
+            onPress={() => {
+              const next = !womenOnly;
+              setWomenOnly(next);
+              setPausedAck(false);
+              AsyncStorage.setItem(
+                STORAGE_KEYS.WOMEN_ONLY_PREFERENCE,
+                next ? "true" : "false",
+              ).catch(() => {});
+            }}
+            accessibilityRole="switch"
+           testID="customer.home.set-women-only">
+            <Ionicons
+              name="woman-outline"
+              size={22}
+              color={womenOnly ? colors.white : textSecondary}
+            />
+            <View style={{ flex: 1, marginLeft: 10 }}>
+              <Text style={{ color: womenOnly ? colors.white : textPrimary, fontFamily: "Jakarta-SemiBold", fontSize: 14 }}>
+                {t('women_only_toggle_title')}
+              </Text>
+              <Text style={{ color: womenOnly ? colors.white : textSecondary, fontSize: 12 }}>
+                {t('women_only_toggle_hint')}
+              </Text>
+            </View>
+            <Ionicons
+              name={womenOnly ? "checkmark-circle" : "ellipse-outline"}
+              size={22}
+              color={womenOnly ? colors.white : textDisabled}
+            />
+          </TouchableOpacity>
+          {womenOnly && (
+            <TouchableOpacity
+              onPress={() => setSecondaryFemale((v) => !v)}
+              accessibilityRole="checkbox"
+              style={{ flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 4 }}
+             testID="customer.home.set-secondary-female">
+              <Ionicons
+                name={secondaryFemale ? "checkbox" : "square-outline"}
+                size={22}
+                color={secondaryFemale ? colors.primary : textSecondary}
+              />
+              <Text style={{ color: textPrimary, fontSize: 13, flex: 1 }}>
+                {t('secondary_rider_female_confirm')}
+              </Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
+
+      {/* S8 §4.3: disablement handshake — paused banner + explicit button.
+          Tapping Proceed books women_only:false explicitly (never silent). */}
+      {userGender === "female" &&
+        selectedCategory === "bike" &&
+        !womenOnlyEnabled &&
+        womenOnly &&
+        !pausedAck && (
+          <View
+            style={{
+              marginTop: 16,
+              borderRadius: 12,
+              borderWidth: 1,
+              borderColor: colors.amber,
+              backgroundColor: surfaceBg,
+              padding: 14,
+              gap: 10,
+            }}
+           testID="customer.home.women-only-paused">
+            <Text style={{ color: textPrimary, fontSize: 13 }}>
+              {t('banner_women_only_paused')}
+            </Text>
+            <TouchableOpacity
+              style={[styles.callBtn, { backgroundColor: colors.primary }]}
+              onPress={handleProceedStandardRide}
+             testID="customer.home.handle-proceed-standard-ride">
+              <Text style={styles.callBtnText}>
+                {t('action_proceed_standard_ride')}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
       {/* Promo/Voucher */}
       {selectedEstimate?.available_discounts &&
         selectedEstimate.available_discounts.length > 0 && (
@@ -1299,7 +1483,7 @@ useEffect(() => {
             opacity: selectedVehicleType ? 1 : 0.5,
           },
         ]}
-        onPress={handleCallForRide}
+        onPress={() => handleCallForRide()}
         disabled={!selectedVehicleType || requesting}
        testID="customer.home.handle-call-for-ride">
         {requesting ? (
@@ -1319,6 +1503,8 @@ useEffect(() => {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SosBanner />
+      {/* S8 §4.2: write-once gender prompt for legacy unspecified users. */}
+      <SetGenderPrompt />
       <StatusBar
         translucent
         backgroundColor="transparent"

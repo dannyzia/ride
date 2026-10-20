@@ -8,11 +8,11 @@ import {
   vehicles,
   systemConfig,
 } from "@/src/db/schema";
-import { eq, inArray } from "drizzle-orm";
+import { eq, inArray, and } from "drizzle-orm";
 import { requireAdminPermission } from '@/lib/adminRbac';
 import { logger } from "@/lib/logger";
 
-type StatusFilter = "pending" | "temporary" | "rejected" | "all";
+type StatusFilter = "pending" | "temporary" | "rejected" | "all" | "unverified_female";
 
 export async function GET(request: Request) {
   try {
@@ -26,12 +26,13 @@ export async function GET(request: Request) {
       "temporary",
       "rejected",
       "all",
+      "unverified_female",
     ];
     if (!validStatuses.includes(statusParam)) {
       return Response.json(
         {
           error: "validation_error",
-          message: "status must be one of pending|temporary|rejected|all",
+          message: "status must be one of pending|temporary|rejected|all|unverified_female",
         },
         { status: 400 },
       );
@@ -48,10 +49,18 @@ export async function GET(request: Request) {
       : 70;
 
     // Build status filter
+    // S8 §4.6: unverified_female = ACTIVE female drivers awaiting gender
+    // verification (the women-only supply worklist).
     const statusFilter =
       statusParam === "all"
         ? inArray(drivers.status, ["pending", "temporary", "rejected"])
-        : eq(drivers.status, statusParam);
+        : statusParam === "unverified_female"
+          ? and(
+              eq(drivers.status, "active"),
+              eq(drivers.gender, "female"),
+              eq(drivers.gender_verified, false),
+            )
+          : eq(drivers.status, statusParam);
 
     const rows = await db
       .select({
@@ -59,6 +68,9 @@ export async function GET(request: Request) {
         user_id: drivers.user_id,
         vehicle_type: drivers.vehicle_type,
         status: drivers.status,
+        // S8 §4.6: declared gender rides every projection (modal + table).
+        gender: drivers.gender,
+        gender_verified: drivers.gender_verified,
         submitted_at: drivers.created_at,
         provisional_expires_at: drivers.provisional_expires_at,
         is_legacy_operator: drivers.is_legacy_operator,
@@ -166,6 +178,8 @@ export async function GET(request: Request) {
         phone: r.user_phone,
         vehicle_type: r.vehicle_type,
         status: r.status,
+        gender: r.gender,
+        gender_verified: r.gender_verified,
         submitted_at: r.submitted_at,
         provisional_expires_at: r.provisional_expires_at,
         stage2_due_at: r.stage2_due_at,

@@ -15,6 +15,7 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import { colors } from "@/theme/goRide";
 import { useIsDark } from "@/lib/useAppearance";
 import { useFleetStore } from "@/store/useFleetStore";
+import { vehicleTypeLabel } from "@/lib/vehicleTypes";
 import { getAuthHeaders } from "@/lib/fleetAuth";
 import FleetScreen from "@/components/fleet/FleetScreen";
 import { logger } from "@/lib/logger";
@@ -34,17 +35,7 @@ interface DriverData {
   vehicle_reg: string | null;
 }
 
-const VEHICLE_TYPE_LABELS: Record<string, string> = {
-  bike_basic: "Bike Basic",
-  bike_standard: "Bike Standard",
-  bike_plus: "Bike Plus",
-  cng: "CNG",
-  car_compact: "Car Compact",
-  car_economy: "Car Economy",
-  car_comfort: "Car Comfort",
-  car_premium: "Car Premium",
-  car_xl: "Car XL",
-};
+// §4.8 consolidation: labels via the shared vehicleTypeLabel helper.
 
 export default function DriverDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -161,7 +152,7 @@ export default function DriverDetail() {
   }
 
   const typeLabel =
-    VEHICLE_TYPE_LABELS[driver.vehicle_type] ?? driver.vehicle_type;
+    vehicleTypeLabel(driver.vehicle_type);
   const isOnline = driver.is_online;
   const hasVehicle = !!driver.vehicle_id;
   const rating = driver.rating ? Number(driver.rating) : 0;

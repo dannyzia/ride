@@ -36,6 +36,12 @@ export const STORAGE_KEYS = {
 
   /** C1-5: last-used login-as role, preselected on the next chooser visit. */
   LAST_USED_ROLE: 'ride:auth:last_used_role' as const,
+
+  /** S8 §4.2: gender-prompt snooze expiry (epoch ms). Prompt hidden until past. */
+  GENDER_PROMPT_SNOOZED_UNTIL: 'ride:user:gender_prompt_snoozed_until' as const,
+
+  /** S8 §4.3: sticky women-only preference ('true' | 'false', rider home + schedule). */
+  WOMEN_ONLY_PREFERENCE: 'ride:rider:women_only' as const,
 } as const;
 
 export type StorageKey =

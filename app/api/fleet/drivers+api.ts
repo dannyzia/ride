@@ -169,8 +169,10 @@ export async function POST(request: Request) {
       }
 
       // 4. Target must be a registered user (plan §4.3 body contract).
+      // S8 §4.1 + R11-H1: gender is read here INSIDE the tx (never from an
+      // outer snapshot) so a concurrent PATCH /api/user/me cannot be lost.
       const [targetUser] = await tx
-        .select({ id: users.id })
+        .select({ id: users.id, gender: users.gender })
         .from(users)
         .where(eq(users.id, targetUserId))
         .limit(1);
@@ -201,6 +203,8 @@ export async function POST(request: Request) {
             fleet_id: fleetId,
             // Schema NOT NULL — register+api.ts precedent default (delta note).
             vehicle_type: "bike_basic",
+            // S8 §4.1: copy the in-tx users.gender onto the stub.
+            gender: targetUser.gender,
             status: "pending",
           })
           .returning();

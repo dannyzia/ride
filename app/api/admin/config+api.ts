@@ -185,6 +185,11 @@ const ALLOWED_KEYS = new Set([
   // Flipping this one flag restores priced purchases at payments launch.
   'payments_enabled',
 
+  // S8 §4.2/§4.6 — women-only + scooter kill switches. Owner-only writes
+  // enforced generically via OWNER_ONLY_CONFIG_KEYS in PATCH below.
+  'women_only_rides_enabled',
+  'scooter_vehicle_type_enabled',
+
   // Fare engine — joma recovery (taka-scale)
   'joma_bike_eco_monthly_bdt',
   'joma_bike_std_monthly_bdt',
@@ -195,6 +200,8 @@ const ALLOWED_KEYS = new Set([
 
 const BOOLEAN_KEYS = new Set([
   'payments_enabled',
+  'women_only_rides_enabled',
+  'scooter_vehicle_type_enabled',
   'zone_multi_active_enabled',
   'pickup_measurement_enabled',
   'pickup_fee_enabled',

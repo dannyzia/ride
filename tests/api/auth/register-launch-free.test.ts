@@ -374,3 +374,40 @@ describe("POST /api/register — T&C consent gate (C1-1) + OTP order (C1-8)", ()
     expect(consumeVerification).not.toHaveBeenCalled();
   });
 });
+
+// ── S8 §4.1 (S8b Step 2): self-declared gender at registration ───────────
+// The signup picker's gender flows into users.gender AND (driver path)
+// drivers.gender; absent → 'unspecified' (write-once barrier start state);
+// anything outside the enum is rejected at the boundary (Zod 400).
+describe("POST /api/register — self-declared gender (S8 §4.1)", () => {
+  it("persists the picked gender onto the users insert (rider path)", async () => {
+    const res = await registerRoute(
+      makeRequest({ ...driverBody(), role: "rider", vehicle_type: undefined, gender: "female" }),
+    );
+    expect(res.status).toBe(201);
+    const userInserts = mockInserts.filter((i) => i.table === schema.users);
+    expect(userInserts).toHaveLength(1);
+    expect(userInserts[0].vals.gender).toBe("female");
+  });
+
+  it("persists the picked gender onto BOTH users and drivers inserts (driver path)", async () => {
+    const res = await registerRoute(makeRequest({ ...driverBody(), gender: "other" }));
+    expect(res.status).toBe(201);
+    const userInserts = mockInserts.filter((i) => i.table === schema.users);
+    const driverInserts = mockInserts.filter((i) => i.table === schema.drivers);
+    expect(userInserts[0].vals.gender).toBe("other");
+    expect(driverInserts[0].vals.gender).toBe("other");
+  });
+
+  it("defaults to 'unspecified' when the picker carries none (write-once start state)", async () => {
+    const res = await registerRoute(makeRequest(driverBody()));
+    expect(res.status).toBe(201);
+    const userInserts = mockInserts.filter((i) => i.table === schema.users);
+    expect(userInserts[0].vals.gender).toBe("unspecified");
+  });
+
+  it("400s a gender outside the enum at the boundary", async () => {
+    const res = await registerRoute(makeRequest({ ...driverBody(), gender: "robot" }));
+    expect(res.status).toBe(400);
+  });
+});

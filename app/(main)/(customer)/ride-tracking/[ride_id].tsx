@@ -66,6 +66,9 @@ interface RideDetails {
   status: string;
   otp: string;
   created_at: string;
+  // S8 §4.4: arrives via GET /api/ride/[id] (full-row spread). Badge only —
+  // never counterparty gender.
+  women_only?: boolean;
 }
 
 export default function RideTrackingScreen() {
@@ -516,6 +519,29 @@ export default function RideTrackingScreen() {
             ride (null when none) — discovery is push + WS driven, the
             10s poller inside is only a fallback. */}
         <ExtraChargeApproval rideId={typeof ride_id === "string" ? ride_id : null} />
+
+        {/* S8 §4.4: women-only badge chip on the active ride card. */}
+        {ride?.women_only === true && (
+          <View
+            testID="customer.ride-tracking.ride_id.women-only-badge"
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 4,
+              paddingHorizontal: 10,
+              paddingVertical: 4,
+              borderRadius: 999,
+              backgroundColor: colors.primary + "20",
+              alignSelf: "flex-start",
+              marginBottom: 8,
+            }}
+          >
+            <Ionicons name="female-outline" size={13} color={colors.primary} />
+            <Text style={{ fontFamily: "Jakarta-Bold", fontSize: 12, color: colors.primary }}>
+              {t("women_only_badge")}
+            </Text>
+          </View>
+        )}
 
         {/* ── EN ROUTE / ARRIVED ── */}
         {(trackingState === "en_route" || trackingState === "arrived") && (

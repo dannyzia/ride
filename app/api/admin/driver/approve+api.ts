@@ -21,6 +21,9 @@ const schema = z.object({
   new_status: z.enum(['active', 'temporary']).optional(),
   vehicle_type_adjusted: VEHICLE_TYPE_ZOD_ENUM.optional(),
   reason: z.string().max(500).optional(),
+  // S8 §4.6: explicit checkbox from queue.tsx — stamps gender_verified ONLY
+  // for female drivers. Absent/false leaves verification untouched.
+  gender_confirmed: z.boolean().optional(),
 });
 
 export async function POST(request: Request) {
@@ -29,7 +32,7 @@ export async function POST(request: Request) {
 
     const result = await parseJsonBody(request, schema);
     if (!result.ok) return result.response;
-    const { driver_id, new_status, vehicle_type_adjusted, reason } = result.data;
+    const { driver_id, new_status, vehicle_type_adjusted, reason, gender_confirmed } = result.data;
 
     const [driver] = await db.select().from(drivers).where(eq(drivers.id, driver_id)).limit(1);
     if (!driver) return Response.json({ error: 'driver_not_found', message: 'Driver not found' }, { status: 404 });
@@ -40,6 +43,13 @@ export async function POST(request: Request) {
       status: finalStatus,
       updated_at: new Date(),
     };
+
+    // S8 §4.6: stamp gender_verified ONLY on explicit confirmation of a
+    // female driver. Male/other/unconfirmed rows stay unverified.
+    const stampFemaleVerified = driver.gender === 'female' && gender_confirmed === true;
+    if (stampFemaleVerified) {
+      updates.gender_verified = true;
+    }
 
     let provisionalExpiresAt: Date | null = null;
     if (finalStatus === 'temporary') {
@@ -109,6 +119,7 @@ export async function POST(request: Request) {
       finalStatus,
       vehicleTypeAdjusted,
       adjustedTo,
+      genderVerifiedStamped: stampFemaleVerified,
       adminId: admin.id,
     });
 

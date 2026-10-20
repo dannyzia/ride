@@ -23,6 +23,8 @@ import { logger } from "@/lib/logger";
 import { z } from "zod";
 import { parseJsonBody } from "@/lib/parseBody";
 import { VEHICLE_TYPE_ZOD_ENUM } from "@/lib/vehicleTypes";
+import { getPlan05Bool } from "@/lib/platformConfig";
+import { checkWomenOnlyRideGates } from "@/lib/womenOnlyRideGates";
 import { getStagedPromo, clearStagedPromo } from "@/lib/promoCache";
 import { normalizeBdPhone, isSamePhone, isConsentFresh } from "@/lib/bookForOther";
 import { holdsRiderRole } from "@/lib/riderRole";
@@ -53,6 +55,9 @@ const requestSchema = z.object({
   stops: z.array(z.object({ lat: z.number(), lng: z.number(), address: z.string().min(1).max(500) })).max(2).optional(),
   female_driver_preference: z.boolean().optional(),
   promo_code: z.string().min(1).max(50).optional(),
+  // S8 §4.3: women-only request + secondary-rider female attestation.
+  women_only: z.boolean().optional().default(false),
+  secondary_rider_female: z.boolean().optional().default(false),
 });
 
 /**
@@ -90,7 +95,7 @@ export async function POST(request: Request) {
     const uid = supabaseUser.id;
 
     const [user] = await db
-      .select({ id: users.id, role: users.role, total_rides: users.total_rides, phone: users.phone })
+      .select({ id: users.id, role: users.role, total_rides: users.total_rides, phone: users.phone, gender: users.gender })
       .from(users)
       .where(eq(users.auth_uid, uid))
       .limit(1);
@@ -125,7 +130,28 @@ export async function POST(request: Request) {
       stops,
       female_driver_preference,
       promo_code,
+      women_only,
+      secondary_rider_female,
     } = parsed.data;
+
+    // S8 §4.3: scooter + women-only gates (fresh-read flags, never cached).
+    const [womenOnlyEnabled, scooterEnabled] = await Promise.all([
+      getPlan05Bool("women_only_rides_enabled"),
+      getPlan05Bool("scooter_vehicle_type_enabled"),
+    ]);
+    const gate = checkWomenOnlyRideGates({
+      userGender: user.gender,
+      vehicleType: vehicle_type,
+      womenOnly: women_only ?? false,
+      secondaryRiderName: secondary_rider_name,
+      secondaryRiderPhone: secondary_rider_phone,
+      secondaryRiderFemale: secondary_rider_female ?? false,
+      womenOnlyEnabled,
+      scooterEnabled,
+    });
+    if (!gate.ok) {
+      return Response.json({ error: gate.error, message: gate.message }, { status: gate.status });
+    }
 
     // Zone check
     const zoneCheck = await validatePickupZone(pickup_lat, pickup_lng);
@@ -524,6 +550,9 @@ export async function POST(request: Request) {
           is_booked_for_someone_else: !!(secondary_rider_phone || secondary_rider_name),
           upfront_tip_bdt: upfront_tip_bdt ?? 0,
           female_driver_preference: female_driver_preference ?? false,
+          // S8 §4.3: women-only request markers (dispatch reads women_only).
+          women_only: women_only ?? false,
+          secondary_rider_female: secondary_rider_female ?? false,
           cancellation_fee_applied: false,
 
           // v6 shadow (PATCH 1): log alongside v2 fare, never billed in Stage 0

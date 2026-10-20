@@ -123,6 +123,9 @@ export default function RegisterDeliveryManScreen() {
                 name: creds.name,
                 password: creds.password,
                 role: "delivery_man",
+                // S8 §4.1: explicit gender forward (no spread — silent drops
+                // would fall back to the DB default with no error).
+                gender: creds.gender,
                 delivery,
                 // C1-1: consent carried via the handoff from the phone-entry gate.
                 terms_accepted: creds.terms_accepted,

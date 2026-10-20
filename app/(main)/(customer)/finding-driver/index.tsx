@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { View, Text, TouchableOpacity, ActivityIndicator, StatusBar } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import Animated, {
   useSharedValue,
@@ -53,7 +53,15 @@ export default function FindingDriver() {
   const textSecondary = isDark ? colors.textSecondaryDark : colors.textSecondaryLight;
   const borderColor = isDark ? colors.borderDark : colors.borderLight;
 
-  const { pickupLat, pickupLng, selectedVehicleType, clearRoute, setSearchingRideId, setRideStatus, setSelectedVehicleType } = useRiderStore();
+  const { ride_id: rideIdParam } = useLocalSearchParams<{ ride_id?: string }>();
+  const { pickupLat, pickupLng, selectedVehicleType, clearRoute, setSearchingRideId, setRideStatus, setSelectedVehicleType, setPickup, setDropoff, setPickupCoords, setDropoffCoords } = useRiderStore();
+  // S8 §4.3: honest no-fallback state — set on ride:expired with
+  // reason 'no_women_only_drivers' (never a silent mixed-ride fallback).
+  const [noWomenOnly, setNoWomenOnly] = useState<{ rideId: string } | null>(null);
+  // Women-only flag of the hydrated ride — forwarded to the nearby poll so
+  // the count reflects the requested pool, not the mixed pool.
+  const [hydratedWomenOnly, setHydratedWomenOnly] = useState(false);
+  const hydrationDone = useRef(false);
   const [count, setCount] = useState<number | null>(null);
   const [eta, setEta] = useState<number | null>(null);
   const [error, setError] = useState(false);
@@ -94,6 +102,135 @@ export default function FindingDriver() {
     // to the no-drivers screen instead of letting the pulse run on a dead ride.
     router.replace("/(main)/(customer)/no-drivers-available");
   }, []);
+
+  // S8 §4.3: deep-link hydration — when opened via push carrying ride_id
+  // into an unhydrated store, GET /api/ride/[id] restores pickup/dropoff,
+  // vehicle type, and scheduled state so retry actions post cleanly.
+  const hydrateRide = useCallback(async (rideId: string) => {
+    const { data: { session } } = await supabase.auth.getSession();
+    const token = session?.access_token;
+    if (!token) return null;
+    const res = await fetch(`${API_URL}/api/ride/${rideId}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    const ride = data?.ride;
+    if (!ride) return null;
+    const plat = Number(ride.origin_latitude);
+    const plng = Number(ride.origin_longitude);
+    const dlat = Number(ride.destination_latitude);
+    const dlng = Number(ride.destination_longitude);
+    if (![plat, plng, dlat, dlng].every(Number.isFinite)) return null;
+    setPickup(ride.origin_address ?? "", plat, plng);
+    setDropoff(ride.destination_address ?? "", dlat, dlng);
+    setPickupCoords({ lat: plat, lng: plng });
+    setDropoffCoords({ lat: dlat, lng: dlng });
+    if (ride.vehicle_type) setSelectedVehicleType(ride.vehicle_type as VehicleType);
+    setSearchingRideId(rideId);
+    setRideStatus("finding");
+    setHydratedWomenOnly(ride.women_only === true);
+    return ride as {
+      origin_latitude: number;
+      origin_longitude: number;
+      origin_address: string | null;
+      destination_latitude: number;
+      destination_longitude: number;
+      destination_address: string | null;
+      vehicle_type: string;
+      scheduled_at: string | null;
+      status: string;
+      women_only: boolean;
+      secondary_rider_name: string | null;
+      secondary_rider_phone: string | null;
+      secondary_rider_female: boolean;
+    };
+  }, [setPickup, setDropoff, setPickupCoords, setDropoffCoords, setSelectedVehicleType, setSearchingRideId, setRideStatus]);
+
+  useEffect(() => {
+    if (hydrationDone.current) return;
+    hydrationDone.current = true;
+    const effectiveRideId = rideIdParam ?? useRiderStore.getState().searchingRideId;
+    const storeHydrated = useRiderStore.getState().pickupLat != null;
+    if (effectiveRideId && (!storeHydrated || useRiderStore.getState().searchingRideId !== effectiveRideId)) {
+      hydrateRide(effectiveRideId).catch((e) => {
+        logger.error("[finding-driver] deep-link hydration failed", e);
+      });
+    }
+  }, [rideIdParam, hydrateRide]);
+
+  // S8 §4.3: no-fallback retry — re-requests from the hydrated ride params.
+  // Scheduled rides retain is_scheduled + schedule time; immediate rides go
+  // through /api/ride/request. Secondary-rider attestation carries over.
+  const rerequestRide = useCallback(async (rideId: string, womenOnly: boolean) => {
+    const { data: { session } } = await supabase.auth.getSession();
+    const token = session?.access_token;
+    if (!token) return;
+    const ride = await hydrateRide(rideId);
+    if (!ride) return;
+    const headers = {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    };
+    const scheduled = ride.scheduled_at != null || ride.status === "scheduled";
+    const body: Record<string, unknown> = scheduled
+      ? {
+          pickup_lat: Number(ride.origin_latitude),
+          pickup_lng: Number(ride.origin_longitude),
+          pickup_address: ride.origin_address ?? "",
+          dropoff_lat: Number(ride.destination_latitude),
+          dropoff_lng: Number(ride.destination_longitude),
+          dropoff_address: ride.destination_address ?? "",
+          vehicle_type: ride.vehicle_type,
+          scheduled_at: ride.scheduled_at,
+          women_only: womenOnly,
+        }
+      : {
+          pickup_lat: Number(ride.origin_latitude),
+          pickup_lng: Number(ride.origin_longitude),
+          pickup_address: ride.origin_address ?? "",
+          dropoff_lat: Number(ride.destination_latitude),
+          dropoff_lng: Number(ride.destination_longitude),
+          dropoff_address: ride.destination_address ?? "",
+          vehicle_type: ride.vehicle_type,
+          women_only: womenOnly,
+        };
+    if (ride.secondary_rider_name) body.secondary_rider_name = ride.secondary_rider_name;
+    if (ride.secondary_rider_phone) body.secondary_rider_phone = ride.secondary_rider_phone;
+    if (ride.secondary_rider_female) body.secondary_rider_female = true;
+    const res = await fetch(
+      scheduled ? `${API_URL}/api/ride/schedule` : `${API_URL}/api/ride/request`,
+      { method: "POST", headers, body: JSON.stringify(body) },
+    );
+    const data = await res.json().catch(() => null);
+    if (res.ok && data?.ride_id) {
+      setNoWomenOnly(null);
+      setFindingState("searching");
+      driverFound.current = false;
+      setSearchingRideId(data.ride_id);
+      setRideStatus("finding");
+      setHydratedWomenOnly(womenOnly);
+    } else {
+      logger.error("[finding-driver] re-request failed", { status: res.status, error: data?.error });
+    }
+  }, [hydrateRide, setSearchingRideId, setRideStatus]);
+
+  const handleBookMixed = useCallback(() => {
+    if (noWomenOnly) rerequestRide(noWomenOnly.rideId, false);
+  }, [noWomenOnly, rerequestRide]);
+
+  const handleTryWomenOnlyAgain = useCallback(() => {
+    if (noWomenOnly) rerequestRide(noWomenOnly.rideId, true);
+  }, [noWomenOnly, rerequestRide]);
+
+  const handleNoWomenOnlyDone = useCallback(() => {
+    clearRoute();
+    setSearchingRideId(null);
+    setRideStatus("idle");
+    setSelectedVehicleType(null);
+    setNoWomenOnly(null);
+    router.replace("/(main)/(customer)/(tabs)/home");
+  }, [clearRoute, setSearchingRideId, setRideStatus, setSelectedVehicleType]);
 
   // X-1: the WebSocket path is the PRIMARY transition out of this screen. The
   // push banner tap (root layout) is only the fallback — a rider whose banner
@@ -187,7 +324,14 @@ export default function FindingDriver() {
         driverFound.current = true;
         goToTracking(msg.ride_id);
       } else if (msg.type === "ride:expired" && msg.ride_id) {
-        router.replace("/(main)/(customer)/no-drivers-available");
+        // S8 §4.3: women-only exhaustion renders the honest no-fallback
+        // sheet (three explicit actions); every other reason keeps the
+        // legacy no-drivers route.
+        if ((msg as { reason?: string }).reason === "no_women_only_drivers") {
+          setNoWomenOnly({ rideId: msg.ride_id });
+        } else {
+          router.replace("/(main)/(customer)/no-drivers-available");
+        }
       } else if (msg.type === "ride:alternatives" && Array.isArray(msg.alternatives)) {
         setAlternatives(msg.alternatives as Alternative[]);
       }
@@ -240,6 +384,8 @@ export default function FindingDriver() {
           pickup_lat: pickupLat,
           pickup_lng: pickupLng,
           vehicle_type: vehicleType,
+          // S8 §4.3: reflect the requested pool, not the mixed pool.
+          ...(hydratedWomenOnly ? { women_only: true } : {}),
         }),
         signal,
       });
@@ -278,7 +424,7 @@ export default function FindingDriver() {
         setError(true);
       }
     }
-  }, [pickupLat, pickupLng, selectedVehicleType]);
+  }, [pickupLat, pickupLng, selectedVehicleType, hydratedWomenOnly]);
 
   const handleCancel = async () => {
     try {
@@ -461,6 +607,52 @@ export default function FindingDriver() {
              testID="customer.finding-driver.set-finding-state-2">
               <Text className="text-base font-JakartaBold" style={{ color: colors.white }}>
                 {t('finding_driver.try_again')}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* S8 §4.3: honest no-fallback sheet — three explicit actions, never
+a silent mixed-ride fallback. */}
+        {noWomenOnly && (
+          <View
+            testID="customer.finding-driver.no-women-only-sheet"
+            className="rounded-2xl p-5 mb-4 border"
+            style={{ backgroundColor: isDark ? colors.darkSecondary : colors.gray100, borderColor }}
+          >
+            <View className="flex-row items-center mb-2">
+              <Ionicons name="woman-outline" size={22} color={colors.primary} />
+              <Text className="ml-2 text-[17px] font-JakartaBold" style={{ color: textPrimary }}>
+                {t('no_women_only_title')}
+              </Text>
+            </View>
+            <Text className="text-sm font-Jakarta mb-4" style={{ color: textSecondary }}>
+              {t('no_women_only_body')}
+            </Text>
+            <TouchableOpacity
+              className="rounded-full py-3 items-center mb-2"
+              style={{ backgroundColor: colors.primary }}
+              onPress={handleBookMixed}
+             testID="customer.finding-driver.handle-book-mixed">
+              <Text className="text-[15px] font-JakartaBold" style={{ color: colors.white }}>
+                {t('women_only_action_book_mixed')}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              className="rounded-full py-3 items-center mb-2 border"
+              style={{ borderColor: colors.primary }}
+              onPress={handleTryWomenOnlyAgain}
+             testID="customer.finding-driver.handle-try-women-only-again">
+              <Text className="text-[15px] font-JakartaBold" style={{ color: colors.primary }}>
+                {t('women_only_action_try_again')}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              className="rounded-full py-3 items-center"
+              onPress={handleNoWomenOnlyDone}
+             testID="customer.finding-driver.handle-no-women-only-done">
+              <Text className="text-[15px] font-JakartaBold" style={{ color: textSecondary }}>
+                {t('women_only_action_done')}
               </Text>
             </TouchableOpacity>
           </View>

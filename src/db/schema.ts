@@ -53,6 +53,8 @@ export const genderEnum = pgEnum("gender", [
   "other",
   "unspecified",
 ]);
+/** Single-source gender union for the registration handoff, API schemas, and UI pickers (S8). */
+export type Gender = (typeof genderEnum.enumValues)[number];
 export const userRoleEnum = pgEnum("user_role", [
   "rider",
   "driver",

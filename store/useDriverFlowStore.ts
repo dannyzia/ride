@@ -80,6 +80,9 @@ interface RideOffer {
   expires_in_ms: number;
   expires_at: string;
   upfront_tip_bdt: number;
+  // S8 §4.4: set by the WS ride:offer mapping (msg.women_only ?? false).
+  // Drives the Women-Only badge on the offer sheet. Never gender data.
+  women_only: boolean;
 }
 
 interface DriverFlowState {

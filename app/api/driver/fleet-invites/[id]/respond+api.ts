@@ -128,9 +128,17 @@ export async function POST(request: Request, { id }: { id: string }) {
       if (!existingDriver) {
         // R9 upgrade path — the consented invite provisions the driver stub
         // (platform document verification still required before offers).
+        // S8 §4.1 + R11-H1: re-read users.gender INSIDE this tx (never the
+        // pre-tx dbUser snapshot) so a concurrent PATCH /api/user/me cannot
+        // be overwritten with a stale value.
+        const [owner] = await tx
+          .select({ gender: users.gender })
+          .from(users)
+          .where(eq(users.id, dbUser.id))
+          .limit(1);
         const [driverRow] = await tx
           .insert(drivers)
-          .values({ user_id: dbUser.id, fleet_id: fleetId, vehicle_type: "bike_basic", status: "pending" })
+          .values({ user_id: dbUser.id, fleet_id: fleetId, vehicle_type: "bike_basic", gender: owner?.gender ?? "unspecified", status: "pending" })
           .returning({ id: drivers.id });
         return { driver_id: driverRow.id, attached: "provisioned" as const };
       }

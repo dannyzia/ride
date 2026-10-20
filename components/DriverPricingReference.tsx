@@ -20,6 +20,7 @@ import { API_URL } from "@/lib/config";
 import { supabase } from "@/lib/supabase";
 import { colors } from "@/theme/goRide";
 import { formatBDT } from "@/lib/format";
+import { vehicleTypeLabel } from "@/lib/vehicleTypes";
 
 interface PricingData {
   vehicle_type: string;
@@ -45,18 +46,9 @@ function paisaToTaka(paisa: number): string {
   return formatBDT(paisa, { decimals: true });
 }
 
-/** Human label for vehicle type. */
-const VT_LABEL: Record<string, string> = {
-  bike_basic: "Bike Basic",
-  bike_standard: "Bike Standard",
-  bike_plus: "Bike Plus",
-  cng: "CNG",
-  car_compact: "Car Compact",
-  car_economy: "Car Economy",
-  car_comfort: "Car Comfort",
-  car_premium: "Car Premium",
-  car_xl: "Car XL",
-};
+/** Human label for vehicle type — §4.8 consolidation via the shared helper
+ * (falls back to the raw key for unknown values, same as the old map's
+ * `?? raw` fallback, and covers scooter which the literal map never had). */
 
 export default function DriverPricingReference() {
   const [expanded, setExpanded] = useState(false);
@@ -99,7 +91,7 @@ export default function DriverPricingReference() {
   if (error) return null;
   if (!pricing) return null;
 
-  const vtLabel = VT_LABEL[pricing.vehicle_type] ?? pricing.vehicle_type;
+  const vtLabel = vehicleTypeLabel(pricing.vehicle_type);
   const kmRate = pricing.per_km_bdt;
   const timeRate = pricing.per_min_bdt;
   const freeWait = pricing.free_wait_minutes;

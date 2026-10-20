@@ -25,6 +25,10 @@ const schema = z
     // flag surfaces as 400 terms_required (not a generic validation error).
     terms_accepted: z.boolean().optional(),
     password: z.string().min(6, "Password must be at least 6 characters"),
+    // S8 §4.1: self-declared gender from the signup picker. Optional at the
+    // API layer so legacy clients still register (as 'unspecified'); the UI
+    // picker is required going forward.
+    gender: z.enum(["male", "female", "other", "unspecified"]).optional(),
     vehicle_type: VEHICLE_TYPE_ZOD_ENUM.optional(),
     shop: z
       .object({
@@ -58,7 +62,7 @@ export async function POST(request: Request) {
   const result = await parseJsonBody(request, schema);
   if (!result.ok) return result.response;
 
-  const { phone, name, role, password, vehicle_type, shop, fleet, delivery, terms_accepted } = result.data;
+  const { phone, name, role, password, gender, vehicle_type, shop, fleet, delivery, terms_accepted } = result.data;
 
   // C1-1: new registrations must carry explicit T&C + Privacy consent.
   if (terms_accepted !== true)
@@ -130,9 +134,13 @@ export async function POST(request: Request) {
 
   try {
     const created = await db.transaction(async (tx) => {
+      // R11-H1 note: user + driver rows are written in this SAME tx from the
+      // same body value, so no stale-snapshot race exists here. Async stub
+      // paths (fleet attach / invite accept) MUST re-read users.gender inside
+      // their own tx instead — see those routes.
       const [user] = await tx
         .insert(users)
-        .values({ auth_uid: authUid, phone, name, role, terms_accepted_at: new Date() })
+        .values({ auth_uid: authUid, phone, name, role, gender: gender ?? "unspecified", terms_accepted_at: new Date() })
         .returning();
 
       // §1/§2: every signup path records the account's membership role.
@@ -175,6 +183,7 @@ export async function POST(request: Request) {
             user_id: user.id,
             fleet_id: fleet.id,
             vehicle_type: vehicle_type ?? "bike_basic",
+            gender: gender ?? "unspecified",
             status: "pending",
           })
           .returning({ id: drivers.id });

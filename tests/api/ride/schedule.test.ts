@@ -45,6 +45,8 @@ jest.mock("@/lib/dprelay", () => ({
 }));
 jest.mock("@/lib/platformConfig", () => ({
   getPlan05Int: jest.fn(async (key: string) => (key === "schedule_min_lead_minutes" ? 30 : 7)),
+  // S8 §4.3: kill switches default OFF (legacy request behavior).
+  getPlan05Bool: jest.fn(async () => false),
 }));
 jest.mock("@/lib/scheduleUtils", () => ({
   computeEstimatedDurationMinutes: jest.fn(() => 20),

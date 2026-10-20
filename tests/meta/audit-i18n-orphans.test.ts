@@ -531,8 +531,13 @@ describe("MISSING carries the call site", () => {
   it("reports a called key absent from the locale with file:line, and ignores non-key shapes", () => {
     const r = runAudit(MISSING());
     const j = report(r);
-    expect(j.missing).toEqual([{ key: "ghost.key", file: "app/a.tsx", line: 5 }]);
-    // `t("nodot")` is not key-shaped and is neither missing nor a failure.
+    expect(j.missing).toEqual([
+      { key: "ghost.key", file: "app/a.tsx", line: 5 },
+      // Root (dotless) keys are first-class since 2026-10-20: `t("nodot")` is a
+      // real reference to a ROOT key, so absent from the locale it is MISSING
+      // with its site — the pre-2026-10-20 contract silently dropped it.
+      { key: "nodot", file: "app/a.tsx", line: 6 },
+    ]);
     expect(j.orphans).toEqual([]);
   });
 });

@@ -23,6 +23,7 @@ import { useBarikoiMapStyle } from "@/utils/mapUtils";
 import { logger } from "@/lib/logger";
 import { getDriverFix } from "@/lib/driverLocationFix";
 import SosBanner from "@/components/SosBanner";
+import SetGenderPrompt from "@/components/SetGenderPrompt";
 import SosCounterpartyBanner from "@/components/SosCounterpartyBanner";
 import { VEHICLE_TYPES } from "@/lib/vehicleTypes";
 import { relativeTime } from "@/lib/time";
@@ -112,6 +113,12 @@ export default function DriverHome() {
   const [locationLoading, setLocationLoading] = useState(true);
   // Live hotspot zones for the "Hotspot near you" card — refreshed every 60s.
   const [hotspotZones, setHotspotZones] = useState<HotspotPoint[] | null>(null);
+  // S8 §4.4: women-only mode — server state (toggle GET) + offer recency for
+  // the 15-minute idle nudge. Banner visibility never depends on client
+  // toggles; only the server's `women_only_enabled`.
+  const [womenOnlyOn, setWomenOnlyOn] = useState(false);
+  const [idleNudge, setIdleNudge] = useState(false);
+  const lastOfferAtRef = useRef<number>(Date.now());
 
   // When the WS last dropped — drives the "Last connected: X ago" caption
   // under the offline button. Null until the first drop.
@@ -464,6 +471,51 @@ export default function DriverHome() {
     fetchDailyStats();
   }, [fetchDailyStats, isOnline]);
 
+  // S8 §4.4: women-only server state — refetched on mount + online
+  // transitions so the banner tracks the toggle (set in Settings) without a
+  // restart. Non-blocking — a failure leaves the banner hidden.
+  const fetchWomenOnly = useCallback(async () => {
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) return;
+      const res = await fetch(`${API_URL}/api/driver/women-only-toggle`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) return;
+      const data: { enabled?: boolean } = await res.json();
+      setWomenOnlyOn(data.enabled === true);
+    } catch {
+      // Network error — banner stays hidden until the next tick
+    }
+  }, []);
+  useEffect(() => {
+    void fetchWomenOnly();
+  }, [fetchWomenOnly, isOnline]);
+
+  // An arriving offer resets the idle clock and clears the nudge.
+  useEffect(() => {
+    if (activeOffer) {
+      lastOfferAtRef.current = Date.now();
+      setIdleNudge(false);
+    }
+  }, [activeOffer]);
+
+  // Idle nudge: armed + online + offerless for >15 minutes suggests
+  // switching back to mixed rides (60s tick, mirrors the hotspot card).
+  useEffect(() => {
+    if (!womenOnlyOn || !isOnline || activeOffer) {
+      setIdleNudge(false);
+      return;
+    }
+    const id = setInterval(() => {
+      if (Date.now() - lastOfferAtRef.current > 15 * 60_000) setIdleNudge(true);
+    }, 60_000);
+    return () => clearInterval(id);
+  }, [womenOnlyOn, isOnline, activeOffer]);
+
   // ── WebSocket Connection (this screen OWNS the socket + onmessage) ─
   useEffect(() => {
     let ws: WebSocket;
@@ -541,6 +593,8 @@ export default function DriverHome() {
             expires_in_ms: msg.expires_in_ms,
             expires_at: msg.expires_at,
             upfront_tip_bdt: msg.upfront_tip_bdt ?? 0,
+            // S8 §4.4: badge source for the offer sheet (never gender data).
+            women_only: msg.women_only ?? false,
           });
         } else if (type === "lead:billed") {
           // §6 lead economics: the server debited 1 call at OFFER receipt and
@@ -845,6 +899,8 @@ export default function DriverHome() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: bg }}>
       <SosBanner />
+      {/* S8 §4.2: write-once gender prompt for legacy unspecified users. */}
+      <SetGenderPrompt />
       {/* C3-7: rider-SOS counterparty banner (driver is the counterparty). */}
       <SosCounterpartyBanner />
       <StatusBar
@@ -1230,6 +1286,76 @@ export default function DriverHome() {
               }}
             >
               {t('driver_home.reconnecting')}
+            </Text>
+          </View>
+        )}
+
+        {/* S8 §4.4: persistent Women-Only ON banner (server state) */}
+        {womenOnlyOn && (
+          <View
+            pointerEvents="none"
+            style={{
+              position: "absolute",
+              top: 104,
+              left: spacing.lg,
+              right: spacing.lg,
+              backgroundColor: colors.primary,
+              borderRadius: radii.md,
+              paddingVertical: spacing.sm,
+              paddingHorizontal: spacing.md,
+              flexDirection: "row",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: spacing.sm,
+            }}
+            testID="rider.d.women-only-banner"
+          >
+            <Ionicons name="female-outline" size={16} color={colors.white} />
+            <Text
+              style={{
+                fontFamily: "Jakarta-SemiBold",
+                fontSize: 16,
+                color: colors.white,
+              }}
+            >
+              {t('driver_women_only_banner')}
+            </Text>
+          </View>
+        )}
+
+        {/* S8 §4.4: idle nudge — armed with zero offers for >15 minutes */}
+        {idleNudge && !activeOffer && (
+          <View
+            pointerEvents="none"
+            style={{
+              position: "absolute",
+              top: womenOnlyOn ? 152 : 104,
+              left: spacing.lg,
+              right: spacing.lg,
+              backgroundColor: surfaceBg,
+              borderWidth: 1,
+              borderColor: borderColor,
+              borderRadius: radii.md,
+              paddingVertical: spacing.sm,
+              paddingHorizontal: spacing.md,
+              flexDirection: "row",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: spacing.sm,
+            }}
+            testID="rider.d.women-only-nudge"
+          >
+            <Ionicons name="time-outline" size={16} color={textSecondary} />
+            <Text
+              style={{
+                fontFamily: "Jakarta-Regular",
+                fontSize: 14,
+                color: textSecondary,
+                textAlign: "center",
+                flexShrink: 1,
+              }}
+            >
+              {t('driver_women_only_idle_nudge')}
             </Text>
           </View>
         )}

@@ -104,6 +104,10 @@ export const OWNER_ONLY_CONFIG_KEYS: ReadonlySet<string> = new Set([
   'pickup_cap_pct_of_fare_v6',
   'night_mult_value',
   'night_schedule',
+  // S8 §4.2/§4.6: women-only + scooter kill switches — owner flips only, so
+  // they cannot be prematurely activated during staging or deployment.
+  'women_only_rides_enabled',
+  'scooter_vehicle_type_enabled',
 ]);
 
 /** Pickup free-radius keys guardrailed to ±0.25 km per change (ops_manager scope). */

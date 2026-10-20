@@ -18,7 +18,10 @@ import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
 import { useCustomer } from "@/store";
 import { useRiderStore } from "@/store/useRiderStore";
-import { VEHICLE_TYPES, VehicleTypeEnum } from "@/lib/vehicleTypes";
+import { VEHICLE_TYPES, VehicleTypeEnum, BIKE_FAMILY } from "@/lib/vehicleTypes";
+import { RIDE_GATE_ERROR_COPY } from "@/lib/rideGateErrorCopy";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { STORAGE_KEYS } from "@/lib/storageKeys";
 import BarikoiAutocomplete from "@/components/BarikoiAutocomplete";
 import ScheduleRideSheet from "@/components/ScheduleRideSheet";
 import { icons } from "@/constants/data";
@@ -27,17 +30,11 @@ import { useTranslation } from "react-i18next";
 const MIN_LEAD_MS = 30 * 60 * 1000;
 const MAX_LEAD_MS = 7 * 24 * 60 * 60 * 1000;
 
-const VEHICLE_TYPE_LABEL_KEYS: Record<string, string> = {
-  bike_basic: "schedule_ride.vehicle_bike_basic",
-  bike_standard: "schedule_ride.vehicle_bike_standard",
-  bike_plus: "schedule_ride.vehicle_bike_plus",
-  cng: "schedule_ride.vehicle_cng",
-  car_compact: "schedule_ride.vehicle_car_compact",
-  car_economy: "schedule_ride.vehicle_car_economy",
-  car_comfort: "schedule_ride.vehicle_car_comfort",
-  car_premium: "schedule_ride.vehicle_car_premium",
-  car_xl: "schedule_ride.vehicle_car_xl",
-};
+// §4.8 consolidation: vehicle label keys are built inline at the t() call
+// site (see the vehicle grid below). A filled-then-indexed const table is
+// invisible to the i18n orphan auditor — `t(`ns.prefix.${x}`)` is the
+// template-prefix evidence tier that keeps the registry-driven keys
+// provably reachable. vehicle_scooter joins automatically; its key lands §4.9.
 
 export default function ScheduleRide() {
   const { t } = useTranslation();
@@ -62,6 +59,42 @@ export default function ScheduleRide() {
   const [scheduledAt, setScheduledAt] = useState<Date | null>(null);
   const [requesting, setRequesting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // S8 §4.3: women-only toggle (same R-4 visibility rule as booking sheet).
+  const [userGender, setUserGender] = useState<string | null>(null);
+  const [womenOnlyEnabled, setWomenOnlyEnabled] = useState(false);
+  const [womenOnly, setWomenOnly] = useState(false);
+  const [secondaryFemale, setSecondaryFemale] = useState(false);
+
+  // Identity + kill switch + sticky preference (shared key with home sheet).
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        const stored = await AsyncStorage.getItem(STORAGE_KEYS.WOMEN_ONLY_PREFERENCE);
+        const { data: { session } } = await supabase.auth.getSession();
+        const token = session?.access_token;
+        if (!token || !active) return;
+        const res = await fetch(`${API_URL}/api/user/me`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok || !active) return;
+        const data = await res.json();
+        if (!active) return;
+        setUserGender(data?.user?.gender ?? null);
+        setWomenOnlyEnabled(data?.women_only_rides_enabled === true);
+        if (stored === "true") setWomenOnly(true);
+      } catch (e) {
+        logger.error("[schedule-ride] women-only init failed", e);
+      }
+    })();
+    return () => { active = false; };
+  }, []);
+
+  // S8 §4.3 R-4: female rider + bike-family type + kill switch on.
+  const showWomenOnlyToggle =
+    userGender === "female" &&
+    BIKE_FAMILY.includes(vehicleType) &&
+    womenOnlyEnabled;
 
   // Default: one hour out, rounded up to the next half-hour — always inside
   // the server's [now + 30 min, now + 7 days] window by construction.
@@ -129,6 +162,9 @@ export default function ScheduleRide() {
           dropoff_address: destinationAddress,
           vehicle_type: vehicleType,
           scheduled_at: scheduledAt.toISOString(),
+          // S8 §4.3: women-only markers (server gates each code).
+          women_only: showWomenOnlyToggle && womenOnly,
+          secondary_rider_female: secondaryFemale,
         }),
       });
       const data = await res.json();
@@ -146,8 +182,11 @@ export default function ScheduleRide() {
         });
         return;
       }
+      // S8 §4.9: known booking-gate codes show localized copy; anything
+      // else keeps the server's honest message.
+      const gateCopy = data?.error ? RIDE_GATE_ERROR_COPY[data.error] : undefined;
       setError(
-        data?.message ?? t('schedule_ride.could_not_schedule'),
+        gateCopy ? t(gateCopy) : (data?.message ?? t('schedule_ride.could_not_schedule')),
       );
     } catch (e) {
       logger.error("[schedule-ride] schedule failed", e);
@@ -219,7 +258,7 @@ export default function ScheduleRide() {
         <View style={styles.vehicleGrid}>
           {VEHICLE_TYPES.map((vt) => {
             const isActive = vt.key === vehicleType;
-            const label = VEHICLE_TYPE_LABEL_KEYS[vt.key] ? t(VEHICLE_TYPE_LABEL_KEYS[vt.key]) : vt.display_en;
+            const label = t(`schedule_ride.vehicle_${vt.key}`, { defaultValue: vt.display_en });
             return (
               <TouchableOpacity
                 key={vt.key}
@@ -250,6 +289,60 @@ export default function ScheduleRide() {
             );
           })}
         </View>
+
+        {/* S8 §4.3: women-only toggle (female + bike + kill switch). */}
+        {showWomenOnlyToggle && (
+          <View style={{ marginTop: 20, gap: 10 }}>
+            <TouchableOpacity
+              onPress={() => {
+                const next = !womenOnly;
+                setWomenOnly(next);
+                AsyncStorage.setItem(
+                  STORAGE_KEYS.WOMEN_ONLY_PREFERENCE,
+                  next ? "true" : "false",
+                ).catch(() => {});
+              }}
+              accessibilityRole="switch"
+              style={[
+                styles.vehicleChip,
+                {
+                  borderColor: womenOnly ? colors.primary : borderColor,
+                  backgroundColor: womenOnly ? colors.primary : surfaceBg,
+                },
+              ]}
+             testID="customer.schedule-ride.set-women-only">
+              <Text
+                style={[
+                  styles.vehicleChipText,
+                  { color: womenOnly ? colors.white : textPrimary },
+                ]}
+              >
+                {t('women_only_toggle_title')}
+              </Text>
+            </TouchableOpacity>
+            {womenOnly && (
+              <Text style={[styles.hint, { color: textSecondary, marginTop: 0 }]}>
+                {t('women_only_toggle_hint')}
+              </Text>
+            )}
+            {womenOnly && (
+              <TouchableOpacity
+                onPress={() => setSecondaryFemale((v) => !v)}
+                accessibilityRole="checkbox"
+                style={{ flexDirection: "row", alignItems: "center", gap: 8 }}
+               testID="customer.schedule-ride.set-secondary-female">
+                <Ionicons
+                  name={secondaryFemale ? "checkbox" : "square-outline"}
+                  size={22}
+                  color={secondaryFemale ? colors.primary : textSecondary}
+                />
+                <Text style={[styles.hint, { color: textPrimary, marginTop: 0, flex: 1 }]}>
+                  {t('secondary_rider_female_confirm')}
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
 
         {/* Date + time via ScheduleRideSheet */}
         <Text style={[styles.sectionTitle, styles.sectionGap, { color: textPrimary }]}>

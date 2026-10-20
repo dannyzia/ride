@@ -16,6 +16,7 @@ import { useRouter } from "expo-router";
 import { colors } from "@/theme/goRide";
 import { useIsDark } from "@/lib/useAppearance";
 import { useFleetStore } from "@/store/useFleetStore";
+import { vehicleTypeLabel } from "@/lib/vehicleTypes";
 import FleetScreen from "@/components/fleet/FleetScreen";
 import FleetTabBar from "@/components/fleet/FleetTabBar";
 import { getAuthHeaders } from "@/lib/fleetAuth";
@@ -60,17 +61,8 @@ type OperationsRow = VehicleRow | DriverRow;
 
 const PAGE_SIZE = 20;
 
-const VEHICLE_TYPE_LABELS: Record<string, string> = {
-  bike_basic: "Bike Basic",
-  bike_standard: "Bike Standard",
-  bike_plus: "Bike Plus",
-  cng: "CNG",
-  car_compact: "Car Compact",
-  car_economy: "Car Economy",
-  car_comfort: "Car Comfort",
-  car_premium: "Car Premium",
-  car_xl: "Car XL",
-};
+// §4.8 consolidation: labels via the shared vehicleTypeLabel helper — the
+// duplicate per-screen vehicle label literal (which predated scooter) is gone.
 
 // ── Component ─────────────────────────────────────────────────────────────
 
@@ -424,7 +416,7 @@ function VehicleCard({
   const isAssigned = !!vehicle.driver_id;
   const isOnline = !!vehicle.is_online;
   const typeLabel =
-    VEHICLE_TYPE_LABELS[vehicle.vehicle_type] ?? vehicle.vehicle_type;
+    vehicleTypeLabel(vehicle.vehicle_type);
 
   return (
     <TouchableOpacity
@@ -608,7 +600,7 @@ function DriverCard({
   const hasVehicle = !!driver.vehicle_id;
   const rating = driver.rating ? Number(driver.rating) : 0;
   const typeLabel =
-    VEHICLE_TYPE_LABELS[driver.vehicle_type] ?? driver.vehicle_type;
+    vehicleTypeLabel(driver.vehicle_type);
 
   const initials = driver.name
     .split(" ")

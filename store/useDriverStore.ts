@@ -23,6 +23,12 @@ export interface DriverState {
     acceptance_rate: number;
     completed_rides_count: number;
     min_per_km_bdt: number | null;
+    // S8 §4.4: GET /api/driver/me spreads the full drivers row, so these
+    // arrive at runtime. Optional (older cached shapes lack them) — the
+    // driver-home banner reads the toggle GET (server state) instead.
+    gender?: string;
+    gender_verified?: boolean;
+    women_only_enabled?: boolean;
   } | null;
   activeSubscription: {
     id: string;

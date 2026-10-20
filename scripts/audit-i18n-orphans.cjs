@@ -90,6 +90,16 @@ const SCAN_DIRS = ["app", "components"];
 const LOCALES = ["en", "bn"];
 const LOCALE_FILES = LOCALES.map((l) => path.join("i18n", "locales", l, "common.json"));
 const KEY_SHAPE = /^[a-z0-9]+(_[a-z0-9]+)*(\.[a-z0-9_]+)+$/;
+// Root keys (S8 §4.9, 2026-10-20): a top-level scalar in common.json is a
+// legitimate i18next key under `defaultNS: 'common'` — t('gender_male') is a
+// real reachability edge. KEY_SHAPE above predates the flat-key convention
+// and false-flagged every root key as an orphan (measured: all 26 S8 keys).
+// Scope is deliberately narrow: STATIC call arguments and dynamic TABLE
+// VALUES only. The file-fallback literal net (KEY_SHAPE at fileLiterals) is
+// left dotted — widening it would let any bare word in a file shield a root
+// key that file never renders.
+const ROOT_KEY_SHAPE = /^[a-z0-9]+(_[a-z0-9]+)*$/;
+const isKeyShape = (s) => KEY_SHAPE.test(s) || ROOT_KEY_SHAPE.test(s);
 
 const EMPTY = [];
 
@@ -167,7 +177,17 @@ function collectIdentifiers(node, out = new Set()) {
     return out;
   }
   if (ts.isIdentifier(node)) out.add(node.text);
-  ts.forEachChild(node, (c) => collectIdentifiers(c, out));
+  // NOTE (2026-10-20, S8 §4.9): the callback MUST return undefined —
+  // collectIdentifiers returns the (truthy) out-set from its PropertyAccess
+  // branch, and ts.forEachChild treats a truthy callback result as a
+  // short-circuit. The old arrow form aborted after the first property-access
+  // child, silently dropping every later sibling: any t(x) whose initializer
+  // STARTED with `a.b` (e.g. `cond ? TABLE[k] : undefined`) never reached the
+  // table and reported the key as an orphan. Measured on the real tree:
+  // women-only.tsx t(copyKey) and home's t(gateCopy) both lost their table.
+  ts.forEachChild(node, (c) => {
+    collectIdentifiers(c, out);
+  });
   return out;
 }
 
@@ -425,7 +445,7 @@ function scanFile(file) {
         argRanges.push([arg.getStart(sf), arg.end]);
         const line = sf.getLineAndCharacterOfPosition(node.getStart(sf)).line + 1;
         if (ts.isStringLiteral(arg) || ts.isNoSubstitutionTemplateLiteral(arg)) {
-          if (KEY_SHAPE.test(arg.text)) staticUses.push({ key: arg.text, file: rel, line });
+          if (isKeyShape(arg.text)) staticUses.push({ key: arg.text, file: rel, line });
         } else {
           const keys = new Set();
           const state = { seen: new Set(), evidence: new Set() };
@@ -448,7 +468,7 @@ function scanFile(file) {
             }
           }
           const prefix = templatePrefix(arg);
-          const keyList = [...keys].filter((k) => KEY_SHAPE.test(k));
+          const keyList = [...keys].filter((k) => isKeyShape(k));
           dynamic.push({
             file: rel,
             line,
