@@ -27,7 +27,6 @@ import { logger } from "@/lib/logger";
 import { supabase } from "@/lib/supabase";
 import { enqueueSosAlert } from "@/lib/sosQueue";
 import NetInfo from "@react-native-community/netinfo";
-import { getSystemConfig } from "@/lib/platformConfig";
 
 // ─── Role Detection ───────────────────────────────────────────────
 
@@ -305,10 +304,15 @@ export default function GlobalActionButtons() {
   // ── SOS contact loading (no inline blocker) ──
   const loadSosContacts = useCallback(async () => {
     try {
-      const config = await getSystemConfig(["sos_contacts"]);
-      const raw = config.sos_contacts;
-      if (Array.isArray(raw) && raw.length > 0 && raw.every((c: unknown) => typeof (c as SosContact).label === "string" && typeof (c as SosContact).number === "string")) {
-        setSosContacts(raw as SosContact[]);
+      const res = await fetch(`${SOS_API_URL}/api/sos/contacts`);
+      if (res.ok) {
+        const data = await res.json();
+        const raw = data.contacts;
+        if (Array.isArray(raw) && raw.length > 0 && raw.every((c: unknown) => typeof (c as SosContact).label === "string" && typeof (c as SosContact).number === "string")) {
+          setSosContacts(raw as SosContact[]);
+        } else {
+          setSosContacts([SOS_POLICE_PREDEFAULT]);
+        }
       } else {
         setSosContacts([SOS_POLICE_PREDEFAULT]);
       }
