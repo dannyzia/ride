@@ -14,7 +14,7 @@ export const DEFAULT_SPEED_TABLE: EtaSpeedTable = {
 };
 
 export function vehicleGroup(vehicleType: string): VehicleGroup {
-  if (vehicleType.startsWith("bike_")) return "bike";
+  if (vehicleType.startsWith("bike_") || vehicleType === "scooter") return "bike";
   if (vehicleType === "cng") return "cng";
   return "car";
 }

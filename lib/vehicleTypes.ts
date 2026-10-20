@@ -5,6 +5,7 @@ export const VEHICLE_TYPE_VALUES = [
   "bike_basic",
   "bike_standard",
   "bike_plus",
+  "scooter",
   "cng",
   "car_compact",
   "car_economy",
@@ -41,6 +42,7 @@ export const VEHICLE_TIER_ORDER: Record<VehicleTypeEnum, number> = {
   bike_basic: 0,
   bike_standard: 1,
   bike_plus: 2,
+  scooter: 0,
   cng: 3,
   car_compact: 4,
   car_economy: 5,
@@ -119,6 +121,20 @@ export const VEHICLE_TYPES: VehicleTypeDefinition[] = [
     subtitle_en: "Premium performance bike",
     subtitle_bn: "প্রিমিয়াম পারফরম্যান্স বাইক",
     cc_range: ">150",
+    has_ac: null,
+    seats: 1,
+    min_age_years: 1,
+    max_age_years: null,
+    driver_req: null,
+    category: "bike",
+  },
+  {
+    key: "scooter",
+    display_en: "Scooter",
+    display_bn: "স্কুটার",
+    subtitle_en: "Fast & affordable",
+    subtitle_bn: "দ্রুত ও সাশ্রয়ী",
+    cc_range: null,
     has_ac: null,
     seats: 1,
     min_age_years: 1,
@@ -212,6 +228,12 @@ export const VEHICLE_TYPES: VehicleTypeDefinition[] = [
   },
 ];
 
+export const BIKE_FAMILY: readonly VehicleTypeEnum[] = ["bike_basic", "bike_standard", "bike_plus", "scooter"];
+
+export function vehicleTypeLabel(vt: string): string {
+  return VEHICLE_TYPES.find((v) => v.key === vt)?.display_en ?? vt;
+}
+
 export function getVehicleType(key: VehicleTypeEnum): VehicleTypeDefinition {
   const t = VEHICLE_TYPES.find((v) => v.key === key);
   if (!t) throw new Error(`Unknown vehicle type: ${key}`);
@@ -269,9 +291,10 @@ export function validateDriverMinKm(
 //
 // Rule order (first match wins):
 //  1. auto_rickshaw → cng
-//  2. motorcycle/scooter ≤110cc → bike_basic
-//  3. motorcycle/scooter 111–150cc → bike_standard
-//  4. motorcycle/scooter >150cc → bike_plus
+//  2a. scooter body → scooter (Rule 2a, before cc bands)
+//  2. motorcycle ≤110cc → bike_basic
+//  3. motorcycle 111–150cc → bike_standard
+//  4. motorcycle >150cc → bike_plus
 //  5. seats ≥6 + van/mpv/minibus/suv_large → car_xl
 //  6. premium match (server-resolved) → car_premium
 //  7. cc > 2000 → car_premium
@@ -336,14 +359,17 @@ export function classifyVehicle(input: ClassifyVehicleInput): ClassifyVehicleRes
   const { body_type, engine_cc, registered_seats, premium_match } = input;
   const seats = registered_seats ?? 0;
   const cc = engine_cc ?? 0;
-  const isMotorcycle = body_type === "motorcycle" || body_type === "scooter";
+  const isMotorcycle = body_type === "motorcycle";
 
   // Rule 1: auto-rickshaw → cng
   if (body_type === "auto_rickshaw") {
     return { vehicle_type: "cng", rule: "auto_rickshaw" };
   }
 
-  // Rules 2–4: motorcycle/scooter bands
+  // Rule 2a: scooter body -> scooter vehicle type (strict matching, R5/D-c)
+  if (body_type === "scooter") return { vehicle_type: "scooter", rule: "scooter_body" };
+
+  // Rules 2–4: motorcycle cc bands (scooter handled by Rule 2a above)
   if (isMotorcycle) {
     if (cc <= 110) return { vehicle_type: "bike_basic", rule: "motorcycle_cc_bands" };
     if (cc <= 150) return { vehicle_type: "bike_standard", rule: "motorcycle_cc_bands" };
@@ -408,6 +434,7 @@ export const PICKUP_CATEGORY: Record<VehicleTypeEnum, PickupCategory> = {
   bike_basic: 'bike',
   bike_standard: 'bike',
   bike_plus: 'bike',
+  scooter: 'bike',
   cng: 'cng',
   car_compact: 'car',
   car_economy: 'car',

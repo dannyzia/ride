@@ -16,15 +16,16 @@ import {
 // ── Canonical registry tests ───────────────────────────────────────────────
 
 describe('Vehicle Type Registry', () => {
-  test('exactly 9 vehicle types defined', () => {
-    expect(VEHICLE_TYPE_VALUES).toHaveLength(9);
+  test('exactly 10 vehicle types defined', () => {
+    expect(VEHICLE_TYPE_VALUES).toHaveLength(10);
   });
 
-  test('all 9 expected values present in order', () => {
+  test('all 10 expected values present in order', () => {
     expect(VEHICLE_TYPE_VALUES).toEqual([
       'bike_basic',
       'bike_standard',
       'bike_plus',
+      'scooter',
       'cng',
       'car_compact',
       'car_economy',
@@ -54,13 +55,17 @@ describe('Vehicle Type Registry', () => {
     expect(VEHICLE_TIER_ORDER.car_compact).toBeLessThan(VEHICLE_TIER_ORDER.car_economy);
   });
 
-  test('tier order is strictly ascending from bike_basic to car_xl', () => {
+  test('scooter ties bike_basic at tier 0 (economic twin)', () => {
+    expect(VEHICLE_TIER_ORDER.scooter).toBe(VEHICLE_TIER_ORDER.bike_basic);
+  });
+
+  test('tier order is non-descending from bike_basic to car_xl', () => {
     const ordered: VehicleTypeEnum[] = [
-      'bike_basic', 'bike_standard', 'bike_plus', 'cng', 'car_compact',
+      'bike_basic', 'scooter', 'bike_standard', 'bike_plus', 'cng', 'car_compact',
       'car_economy', 'car_comfort', 'car_premium', 'car_xl',
     ];
     for (let i = 1; i < ordered.length; i++) {
-      expect(VEHICLE_TIER_ORDER[ordered[i]]).toBeGreaterThan(
+      expect(VEHICLE_TIER_ORDER[ordered[i]]).toBeGreaterThanOrEqual(
         VEHICLE_TIER_ORDER[ordered[i - 1]],
       );
     }
@@ -81,7 +86,7 @@ describe('Vehicle Type Registry', () => {
 // ── Zod consistency ────────────────────────────────────────────────────────
 
 describe('Zod enum consistency', () => {
-  test('VEHICLE_TYPE_ZOD_ENUM accepts all 9 values', () => {
+  test('VEHICLE_TYPE_ZOD_ENUM accepts all 10 values', () => {
     for (const v of VEHICLE_TYPE_VALUES) {
       const result = VEHICLE_TYPE_ZOD_ENUM.safeParse(v);
       expect(result.success).toBe(true);
@@ -136,14 +141,12 @@ describe('classifyVehicle — motorcycle/scooter bands', () => {
     expect(result.rule).toBe('motorcycle_cc_bands');
   });
 
-  test('scooter ≤110cc → bike_basic', () => {
-    const result = classifyVehicle({ body_type: 'scooter', engine_cc: 100 });
-    expect(result.vehicle_type).toBe('bike_basic');
-  });
-
-  test('scooter >150cc → bike_plus', () => {
-    const result = classifyVehicle({ body_type: 'scooter', engine_cc: 160 });
-    expect(result.vehicle_type).toBe('bike_plus');
+  test('scooter body → scooter regardless of cc (Rule 2a strict match)', () => {
+    for (const cc of [80, 100, 110, 150, 160, 250]) {
+      const result = classifyVehicle({ body_type: 'scooter', engine_cc: cc });
+      expect(result.vehicle_type).toBe('scooter');
+      expect(result.rule).toBe('scooter_body');
+    }
   });
 });
 

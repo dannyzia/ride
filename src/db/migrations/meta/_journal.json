@@ -603,6 +603,20 @@
       "when": 1761091210000,
       "tag": "0085_shop_ledger_delivery_fee",
       "breakpoints": true
+    },
+    {
+      "idx": 86,
+      "version": "7",
+      "when": 1761091211000,
+      "tag": "0086_scooter_vehicle_type",
+      "breakpoints": true
+    },
+    {
+      "idx": 87,
+      "version": "7",
+      "when": 1761091212000,
+      "tag": "0087_gender_women_only",
+      "breakpoints": true
     }
   ]
 }

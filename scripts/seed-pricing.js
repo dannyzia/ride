@@ -32,6 +32,16 @@ const PRICING = [
     floor_min: 10,
   },
   {
+    // Scooter: economic twin of bike_basic (spread-clone)
+    vehicle_type: "scooter",
+    base_fare_bdt: 2500,
+    per_km_bdt: 775,
+    intercity_per_km_bdt: 1160,
+    per_min_bdt: 175,
+    floor_length_km: 2.0,
+    floor_min: 10,
+  },
+  {
     vehicle_type: "cng",
     base_fare_bdt: 4000,
     per_km_bdt: 1500,

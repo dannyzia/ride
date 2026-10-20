@@ -22,6 +22,11 @@ jest.mock("../../lib/h3", () => ({
 }));
 jest.mock("../../lib/vehicleTypes", () => ({
   checkDriverEligibility: jest.fn(() => ({ eligible: true })),
+  BIKE_FAMILY: ["bike_basic", "bike_standard", "bike_plus", "scooter"],
+}));
+// S8: kill switch reads are mocked per-suite (default OFF → legacy behavior).
+jest.mock("../../lib/platformConfig", () => ({
+  getPlan05Bool: jest.fn(async () => false),
 }));
 jest.mock("../../lib/fareFrameworkConfig", () => ({
   getFareFrameworkConfig: jest.fn(async () => ({
@@ -100,6 +105,8 @@ const DRIVER_BASE: Record<string, unknown> = {
   min_per_km_bdt: null,
   vehicle_type: "bike_basic",
   gender: "male",
+  gender_verified: false,
+  women_only_enabled: false,
   auto_accept_enabled: false,
   auto_accept_radius_meters: null,
   subscription_id: "sub-1",
@@ -107,6 +114,12 @@ const DRIVER_BASE: Record<string, unknown> = {
   daily_calls_used: 0,
   daily_cap: 50,
 };
+
+// S8: buildCandidateList fail-closes on a missing ride. The mock keys by
+// table only, so the ride row rides FIRST in every rides array below — the
+// GROUP BY consumers skip it (no driver_id), and limit(1) serves it to the
+// ride fetch.
+const RIDE_ROW = { user_id: "rider-1", women_only: false, vehicle_type: "bike_basic" };
 
 const RIDE_ID = "ride-abc";
 const ZONE_ID = "zone-xyz";
@@ -169,7 +182,7 @@ describe("proximityCooldownWindowMinutes", () => {
 describe("buildCandidateList — proximity-cancel cooldown filter", () => {
   test("driver with a recent proximity cancel is excluded", async () => {
     seedDrivers(["driver-1", "driver-2"]);
-    BY_TABLE.set(rides, [proximityCancel("driver-1", 5)]); // 5 min ago, 1 offense, window 15
+    BY_TABLE.set(rides, [RIDE_ROW, proximityCancel("driver-1", 5)]); // 5 min ago, 1 offense, window 15
 
     const result = await run(["driver-1", "driver-2"]);
     expect(result).toContain("driver-2");
@@ -178,7 +191,7 @@ describe("buildCandidateList — proximity-cancel cooldown filter", () => {
 
   test("cancel outside the base window does not exclude", async () => {
     seedDrivers(["driver-1"]);
-    BY_TABLE.set(rides, [proximityCancel("driver-1", 30)]); // 30 ≥ 15 → free
+    BY_TABLE.set(rides, [RIDE_ROW, proximityCancel("driver-1", 30)]); // 30 ≥ 15 → free
 
     expect(await run(["driver-1"])).toContain("driver-1");
   });
@@ -186,6 +199,7 @@ describe("buildCandidateList — proximity-cancel cooldown filter", () => {
   test("second offense doubles the window (2× base)", async () => {
     seedDrivers(["driver-1", "driver-2"]);
     BY_TABLE.set(rides, [
+      RIDE_ROW,
       // newest 20 min ago; two offenses → window 30 → still cooling
       { ...proximityCancel("driver-1", 20), offense_count: "2" },
     ]);
@@ -200,6 +214,7 @@ describe("buildCandidateList — proximity-cancel cooldown filter", () => {
   test("third offense caps at 4× base; old-enough repeat offender is free", async () => {
     seedDrivers(["driver-1", "driver-3"]);
     BY_TABLE.set(rides, [
+      RIDE_ROW,
       // 3 offenses, newest 50 min ago; window 60 → still cooling
       { ...proximityCancel("driver-1", 50), offense_count: "3" },
       // 3 offenses, newest 65 min ago; window 60 → free
@@ -214,6 +229,7 @@ describe("buildCandidateList — proximity-cancel cooldown filter", () => {
   test("rider-cancelled or non-proximity cancels never trigger the filter", async () => {
     seedDrivers(["driver-1", "driver-2"]);
     BY_TABLE.set(rides, [
+      RIDE_ROW,
       // The mock keys by table only — emulate the WHERE filters by simply
       // not returning proximity rows for these drivers (empty result set
       // is exactly what the indexed query yields for non-matching rows).

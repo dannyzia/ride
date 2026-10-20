@@ -194,14 +194,14 @@ describe('POST /api/driver/vehicles — classification integration', () => {
       expect((await res.json()).classification.suggested_vehicle_type).toBe('bike_plus');
     });
 
-    test('scooter 110cc → bike_basic', async () => {
+    test('scooter 110cc → scooter (Rule 2a strict body match)', async () => {
       queueNewVehicleSelects();
       const res = await POST(makePost({
         brand: 'Honda', model: 'Dio', registration_year: 2023,
         registration_plate: 'DHK-SC01', body_type: 'scooter',
         engine_cc: 110, number_of_seats: 2,
       }));
-      expect((await res.json()).classification.suggested_vehicle_type).toBe('bike_basic');
+      expect((await res.json()).classification.suggested_vehicle_type).toBe('scooter');
     });
 
     test('van 2982cc 10 seats → car_xl', async () => {

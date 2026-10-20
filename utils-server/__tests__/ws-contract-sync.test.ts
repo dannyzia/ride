@@ -68,6 +68,21 @@ describe("B5-4 — WS contract sync (types.ts ↔ handlers)", () => {
     expect(INDEX).toContain('"emergency:location"');
   });
 
+  it("S8 women-only events: offer:revoked + women_only marker + no_women_only_drivers reason", () => {
+    // R11-H2 revocation emitted by executeMatchFlow on safety rejection.
+    // (INDEX sends use single quotes; match the bare event names.)
+    expect(TYPES).toContain("offer:revoked");
+    expect(TYPES).toContain("safety_check_failed");
+    expect(INDEX).toContain("offer:revoked");
+    expect(INDEX).toContain("safety_check_failed");
+    // Driver offer badge data (S8b renders it).
+    expect(TYPES).toContain("women_only: boolean");
+    expect(INDEX).toContain("women_only: ride.women_only");
+    // Exhaustion reason for the honest no-fallback sheet.
+    expect(TYPES).toContain("no_women_only_drivers");
+    expect(INDEX).toContain("no_women_only_drivers");
+  });
+
   it("auth hello/ok admit shop; chat:typing + location:driver carry live fields", () => {
     expect(TYPES).toContain('role: "driver" | "rider" | "admin" | "shop"');
     expect(INDEX).toContain('role === "shop"');

@@ -113,6 +113,8 @@ export interface RideOfferMessage {
    *  surcharge) — the offer card MUST display this, not total_bdt. */
   driver_fare_bdt: number;
   vehicle_type: string;
+  /** S8: women-only ride marker for the driver offer badge (rider gender itself is never exposed). */
+  women_only: boolean;
   rider_id: string;
   rider_phone: string;
   rider_first_name: string;
@@ -214,6 +216,11 @@ export type OutboundMessage =
   | { type: "offer:accepted"; ride_id: string; dropoff: { address: string; lat: number; lng: number } }
   | { type: "offer:rejected"; ride_id: string; reason?: string }
   /**
+   * S8 (R11-H2): explicit revocation sent to the driver socket when an
+   * accept fails the women-only safety check (the lead stays billed).
+   */
+  | { type: "offer:revoked"; ride_id: string; reason: "safety_check_failed" }
+  /**
    * Phase D: sequential-chain terminal notification for the driver whose
    * offer ended without a match. The lead stays billed in every case.
    */
@@ -238,7 +245,7 @@ export type OutboundMessage =
     }
   | { type: "ride:arrived"; ride_id: string }
   | { type: "ride:cancelled"; ride_id: string; cancelled_by?: "rider" | "driver" | "system" }
-  | { type: "ride:expired"; ride_id: string }
+  | { type: "ride:expired"; ride_id: string; reason?: 'no_drivers_available' | 'no_women_only_drivers' | 'invalid_pickup_coordinates' }
   | { type: "ride:alternatives"; ride_id: string; alternatives: { vehicle_type: string; fare_breakdown: Record<string, unknown> }[] }
   | { type: "chat:message"; ride_id: string; message: string; sender: string }
   // B5-4: relay carries the S-1 verified sender + the typing flag.

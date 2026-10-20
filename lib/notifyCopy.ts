@@ -18,6 +18,7 @@ export type NotifyLocale = 'en' | 'bn';
 export type NotifyCopyKey =
   | 'ride_matched'
   | 'ride_completed'
+  | 'ride_scheduled_women_only_exhausted'
   | 'driver_arrived'
   | 'shop_order_picked_up'
   | 'shop_order_delivered'
@@ -40,6 +41,16 @@ const COPY: Record<NotifyCopyKey, { en: CopyEntry; bn: CopyEntry }> = {
   ride_completed: {
     en: { title: 'Ride Complete', body: 'Thanks for riding with us! Rate your driver.' },
     bn: { title: 'রাইড সম্পন্ন', body: 'আমাদের সাথে যাত্রার জন্য ধন্যবাদ! আপনার ড্রাইভারকে রেট করুন।' },
+  },
+  ride_scheduled_women_only_exhausted: {
+    en: {
+      title: 'No Women-Only Drivers Available',
+      body: "We couldn't find a women-only driver for your scheduled ride.",
+    },
+    bn: {
+      title: 'কোনো নারী চালক পাওয়া যায়নি',
+      body: 'আপনার নির্ধারিত রাইডের জন্য কোনো নারী চালক পাওয়া যায়নি।',
+    },
   },
   driver_arrived: {
     en: { title: 'Driver Arrived', body: 'Your driver has arrived at the pickup location.' },

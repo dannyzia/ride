@@ -26,6 +26,7 @@ export const vehicleTypeEnum = pgEnum("vehicle_type", [
   "bike_basic",
   "bike_standard",
   "bike_plus",
+  "scooter",
   "cng",
   "car_compact",
   "car_economy",
@@ -45,6 +46,12 @@ export const bodyTypeEnum = pgEnum("body_type", [
   "mpv",
   "van",
   "minibus",
+]);
+export const genderEnum = pgEnum("gender", [
+  "male",
+  "female",
+  "other",
+  "unspecified",
 ]);
 export const userRoleEnum = pgEnum("user_role", [
   "rider",
@@ -304,6 +311,7 @@ export const users = pgTable(
     // legacy rows pre-dating the gate stay valid; new registrations stamp
     // it from the carried terms_accepted flag (400 terms_required if absent).
     terms_accepted_at: timestamptz("terms_accepted_at"),
+    gender: genderEnum("gender").notNull().default("unspecified"),
     deleted_at: timestamptz("deleted_at"),
     created_at: timestamptz("created_at").notNull().defaultNow(),
     updated_at: timestamptz("updated_at").notNull().defaultNow(),
@@ -417,7 +425,9 @@ export const drivers = pgTable(
     // interrupts an active ride). Server-side gate in utils-server dispatch.
     deliveries_enabled: boolean("deliveries_enabled").notNull().default(false),
     auto_accept_radius_meters: integer("auto_accept_radius_meters").notNull().default(500),
-    gender: varchar("gender", { length: 10 }),
+    gender: genderEnum("gender").notNull().default("unspecified"),
+    gender_verified: boolean("gender_verified").notNull().default(false),
+    women_only_enabled: boolean("women_only_enabled").notNull().default(false),
     created_at: timestamptz("created_at").notNull().defaultNow(),
     updated_at: timestamptz("updated_at").notNull().defaultNow(),
   },
@@ -756,6 +766,8 @@ export const rides = pgTable(
     // is recorded and surfaced to the driver (see [id]/complete+api.ts).
     upfront_tip_forfeited_bdt: integer("upfront_tip_forfeited_bdt").notNull().default(0),
     female_driver_preference: boolean("female_driver_preference").default(false),
+    women_only: boolean("women_only").notNull().default(false),
+    secondary_rider_female: boolean("secondary_rider_female").notNull().default(false),
     distance_km: numeric("distance_km", { precision: 7, scale: 3 }).notNull(),
     platform_commission_bdt: integer("platform_commission_bdt"),
     scheduled_at: timestamptz("scheduled_at"),

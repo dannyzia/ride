@@ -24,10 +24,13 @@ import {
   dispatchOffers,
   callLedger,
   drivers,
+  rides,
 } from '../src/db/schema';
 import { eq, and, sql, desc } from 'drizzle-orm';
 import { logger } from '../lib/logger';
 import { driverErrorCode } from '../lib/idempotency';
+import { isDriverEligibleForRideGender } from '../lib/womenOnlyEligibility';
+import { type VehicleTypeEnum } from '../lib/vehicleTypes';
 
 export interface DebitResult {
   billed: boolean;
@@ -39,6 +42,14 @@ export interface DebitLeadParams {
   driverId: string;
   /** Position of this offer in the sequential chain (dispatch_offers.batch_index). Default 0. */
   chainIndex?: number;
+  /**
+   * REQUIRED: kill-switch state supplied by the caller (buildCandidateList /
+   * dispatchChain), read ONCE per dispatch from platform_config. Zero DB
+   * queries for config run before or inside the debit transaction
+   * (APP_POOL_SIZE = 5 — a per-offer config read would starve the pool on
+   * long sequential chains).
+   */
+  womenOnlyFeatureEnabled: boolean;
 }
 
 type DbTx = Parameters<Parameters<typeof db.transaction>[0]>[0];
@@ -129,18 +140,55 @@ export async function debitLeadForOffer(
     return { billed: false, balanceAfter: null };
   }
 
-  // 4b. Account-status guard (F-9.1): re-read the live drivers row INSIDE the
-  // debit tx. The candidate pool checked status='active' + is_online at build
-  // time, but pool build and this debit can be minutes apart on a long chain —
-  // a driver suspended (or gone offline) in between must not be debited or
-  // offered. Not FOR UPDATE: nothing else writes status online-path; a stale
-  // read here only costs one skipped candidate, never a wrong charge.
+  // 4b. Account-status + mid-chain drift guard (F-9.1, S8): re-read the live
+  // drivers row AND the ride row INSIDE the debit tx. The candidate pool
+  // checked status='active' + is_online at build time, but pool build and
+  // this debit can be minutes apart on a long chain — a driver suspended
+  // (or gone offline) in between must not be debited or offered. Not FOR
+  // UPDATE: nothing else writes status online-path; a stale read here only
+  // costs one skipped candidate, never a wrong charge.
   const [driverRow] = await tx
-    .select({ status: drivers.status, is_online: drivers.is_online })
+    .select({
+      status: drivers.status,
+      is_online: drivers.is_online,
+      gender: drivers.gender,
+      gender_verified: drivers.gender_verified,
+      women_only_enabled: drivers.women_only_enabled,
+      vehicle_type: drivers.vehicle_type,
+    })
     .from(drivers)
     .where(eq(drivers.id, driverId))
     .limit(1);
-  if (!driverRow || driverRow.status !== 'active' || driverRow.is_online !== true) {
+
+  const [rideRow] = await tx
+    .select({ women_only: rides.women_only, vehicle_type: rides.vehicle_type })
+    .from(rides)
+    .where(eq(rides.id, rideId))
+    .limit(1);
+
+  // Fail closed if driver or ride missing
+  if (!driverRow || !rideRow || driverRow.status !== 'active' || driverRow.is_online !== true) {
+    return { billed: false, balanceAfter: null };
+  }
+
+  // Require vehicle type equality (guards against mid-chain vehicle switch)
+  if (driverRow.vehicle_type !== rideRow.vehicle_type) {
+    logger.info('[leadBilling] driver vehicle_type drifted mid-chain — skipping debit', { rideId, driverId });
+    return { billed: false, balanceAfter: null };
+  }
+
+  // Pass womenOnlyFeatureEnabled directly from params (zero additional DB queries inside tx)
+  const isStillEligible = isDriverEligibleForRideGender({
+    driverGender: driverRow.gender,
+    driverGenderVerified: driverRow.gender_verified,
+    driverWomenOnlyEnabled: Boolean(driverRow.women_only_enabled),
+    rideWomenOnly: Boolean(rideRow.women_only),
+    vehicleType: rideRow.vehicle_type as VehicleTypeEnum,
+    womenOnlyFeatureEnabled: params.womenOnlyFeatureEnabled ?? false,
+  });
+
+  if (!isStillEligible) {
+    logger.info('[leadBilling] driver drifted ineligible mid-chain — skipping debit', { rideId, driverId });
     return { billed: false, balanceAfter: null };
   }
 
@@ -222,6 +270,9 @@ export async function debitLeadForOffer(
  * and the call_ledger debit commit or roll back together. The sequential
  * dispatch pipeline calls this — one offer per transaction. SkipBillingError
  * from inside the tx surfaces as billed=false (with a full rollback).
+ *
+ * Zero DB queries run here for config: womenOnlyFeatureEnabled arrives on
+ * params, read once per dispatch by the caller (APP_POOL_SIZE = 5 safety).
  */
 export async function debitLeadForOfferTx(
   params: DebitLeadParams,

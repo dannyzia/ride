@@ -60,7 +60,7 @@ import {
 } from "../src/db/schema";
 import { eq, and, inArray, isNull, sql, desc } from "drizzle-orm";
 import { logger } from "../lib/logger";
-import { getPlan05Int } from "../lib/platformConfig";
+import { getPlan05Bool, getPlan05Int } from "../lib/platformConfig";
 import { getZoneForLocation } from "../lib/zone";
 import { getH3Cell, getH3Ring } from "../lib/h3";
 import { calculateFare, haversineKm } from "../lib/fareCalc";
@@ -105,7 +105,8 @@ function withTimeout<T>(thenable: PromiseLike<T>, ms: number): Promise<T> {
     );
   });
 }
-import { VEHICLE_TYPE_VALUES, PICKUP_CATEGORY, type VehicleTypeEnum } from "../lib/vehicleTypes";
+import { VEHICLE_TYPE_VALUES, PICKUP_CATEGORY, BIKE_FAMILY, type VehicleTypeEnum } from "../lib/vehicleTypes";
+import { isDriverSafeForRideAccept } from "../lib/womenOnlyEligibility";
 import {
   getFareFrameworkConfig,
   parseConfigNumber,
@@ -2285,6 +2286,8 @@ async function executeMatchFlow(
       last_location_lat: drivers.last_location_lat,
       last_location_lng: drivers.last_location_lng,
       last_location_at: drivers.last_location_at,
+      gender: drivers.gender,
+      gender_verified: drivers.gender_verified,
     })
     .from(drivers)
     .innerJoin(users, eq(users.id, drivers.user_id))
@@ -2305,6 +2308,28 @@ async function executeMatchFlow(
       driverId,
     });
     return "race_lost";
+  }
+
+  // S8: the accept must correspond to a live delivered offer for this
+  // (ride, driver). A forged offer:accept with no offer row (or a stale
+  // row from a previous ride) never reaches the match commit.
+  const [liveOffer] = await db
+    .select({ id: dispatchOffers.id })
+    .from(dispatchOffers)
+    .where(
+      and(
+        eq(dispatchOffers.ride_id, rideId),
+        eq(dispatchOffers.driver_id, driverId),
+        eq(dispatchOffers.outcome, 'delivered'),
+      ),
+    )
+    .limit(1);
+  if (!liveOffer) {
+    logger.warn('[dispatch] accept rejected — no live delivered offer for (ride, driver)', {
+      ride_id: rideId,
+      driverId,
+    });
+    return 'race_lost';
   }
 
   // Generate a 4-digit ride-start PIN (rider reads aloud, driver enters it)
@@ -2341,10 +2366,35 @@ async function executeMatchFlow(
       zone_id: rides.zone_id,
       fare_breakdown: rides.fare_breakdown,
       pickup_fee_high_bdt: rides.pickup_fee_high_bdt,
+      women_only: rides.women_only,
+      scheduled_at: rides.scheduled_at,
     })
     .from(rides)
     .where(eq(rides.id, rideId))
     .limit(1);
+
+  // Fail closed: a missing ride row never matches (fail-open would admit
+  // a women-only accept with rideWomenOnly=false).
+  if (!ride) {
+    logger.error('[dispatch] accept rejected — ride not found, failing closed', { rideId, driverId });
+    return 'race_lost';
+  }
+
+  // S8 match-time safety: a women-only ride accepts verified female drivers
+  // ONLY. The driver's women_only_enabled toggle is deliberately NOT
+  // re-checked here — an already-debited legitimate offer must not be
+  // rejected for a toggle flip (ruling 8: every offered lead stays billed).
+  const isSafe = isDriverSafeForRideAccept({
+    driverGender: driverRow.gender,
+    driverGenderVerified: driverRow.gender_verified,
+    rideWomenOnly: ride.women_only,
+  });
+  if (!isSafe) {
+    logger.warn('[dispatch] accept rejected — driver fails women_only safety check', { rideId, driverId });
+    // R11-H2: explicit revocation so the driver understands the rejection
+    sendToDriverSocket({ type: 'offer:revoked', ride_id: rideId, reason: 'safety_check_failed' });
+    return 'race_lost';
+  }
 
   // Phase F quote state 2 — firm at accept, BEFORE the match commit.
   // Ruling 16: with the fee off (Stage 0) the figures are still computed
@@ -2684,6 +2734,12 @@ async function dispatchRidePipeline(
     return;
   }
 
+  // S8 kill switch: read ONCE per pipeline and pass into every offer debit
+  // (zero config queries inside the debit tx — APP_POOL_SIZE = 5). When OFF,
+  // armed drivers' toggles are neutralized at debit time, mirroring the
+  // candidate-loop filter; in-flight women-only rides stay female-only.
+  const womenOnlyFeatureEnabled = await getPlan05Bool('women_only_rides_enabled');
+
   // ── Offer TTL + pickup-fee config (fresh read; platform_config) ──────
   const frameworkCfg = await getFareFrameworkConfig([
     'dispatch_offer_ttl_seconds',
@@ -2762,7 +2818,7 @@ async function dispatchRidePipeline(
       // Offer-time debit — one transaction per offer (offer row + deduction
       // commit or roll back together). leadBilling.ts is the sole writer.
       debitLead: (driverId, chainIndex) =>
-        debitLeadForOfferTx({ rideId: ride.id, driverId, chainIndex }),
+        debitLeadForOfferTx({ rideId: ride.id, driverId, chainIndex, womenOnlyFeatureEnabled }),
 
       emitLeadBilled: (driverId, balanceAfter) => {
         sendToDriver(driverId, {
@@ -2847,6 +2903,9 @@ async function dispatchRidePipeline(
             Number((ride.fare_breakdown as Record<string, unknown> | null)?.total_bdt ?? 0) +
             Number(ride.preference_surcharge_bdt ?? 0),
           vehicle_type: ride.vehicle_type,
+          // S8: women-only marker for the driver offer badge (S8b renders
+          // it; rider gender itself is never exposed — self-declared note).
+          women_only: ride.women_only ?? false,
           rider_id: ride.user_id,
           rider_phone: rider?.phone ?? "",
           rider_first_name: riderFirstName,
@@ -2909,6 +2968,15 @@ async function handleNoDrivers(
   ride: typeof rides.$inferSelect,
   allowDowngrade = false,
 ) {
+  // S8 (D-i6): women-only exhaustion NEVER enters the generic mixed
+  // downgrade loop below. Alternatives span the bike family only, each
+  // gated on live verified-female supply at that tier's zone fare.
+  if (ride.women_only) {
+    await handleNoWomenOnlyDrivers(ride);
+    return;
+  }
+  // S8 (§3.5): a disabled scooter is never offered as an alternative.
+  const scooterEnabled = await getPlan05Bool('scooter_vehicle_type_enabled');
   if (allowDowngrade) {
     await db
       .update(rides)
@@ -2926,6 +2994,9 @@ async function handleNoDrivers(
     }[] = [];
     for (const vt of VEHICLE_TYPE_VALUES) {
       if (vt === ride.vehicle_type) continue;
+      if (vt === 'scooter' && !scooterEnabled) {
+        continue; // Never offer disabled scooter as an alternative
+      }
       const candidateIds = getDriversInCells(cells, vt);
       if (!candidateIds.length) continue;
       const [pricingRow] = await db
@@ -2978,6 +3049,129 @@ async function handleNoDrivers(
       ride_id: ride.id,
       reason: "no_drivers_available",
     });
+  }
+}
+
+/**
+ * S8 (D-i6) women-only exhaustion: honest no-fallback path.
+ *
+ * Evaluates ONLY bike-family tiers (bike_basic, bike_standard, bike_plus,
+ * scooter when enabled). An alternative is generated ONLY for tiers with
+ * live verified-female supply, priced at that tier's zone fare. Car, CNG,
+ * and mixed/male supply are strictly excluded — when no verified female
+ * drivers exist across any bike tier, alternatives is [].
+ */
+async function handleNoWomenOnlyDrivers(
+  ride: typeof rides.$inferSelect,
+) {
+  const scooterEnabled = await getPlan05Bool('scooter_vehicle_type_enabled');
+  const cells = getH3Ring(
+    parseFloat(ride.origin_latitude?.toString() ?? "0"),
+    parseFloat(ride.origin_longitude?.toString() ?? "0"),
+    DISPATCH_RING_K,
+  );
+  const alternatives: {
+    vehicle_type: string;
+    available_drivers: number;
+    fare_breakdown: Record<string, unknown>;
+  }[] = [];
+  for (const vt of BIKE_FAMILY) {
+    if (vt === ride.vehicle_type) continue;
+    if (vt === 'scooter' && !scooterEnabled) {
+      continue; // Never offer disabled scooter as an alternative
+    }
+    const candidateIds = getDriversInCells(cells, vt);
+    if (!candidateIds.length) continue;
+    // Verified-female supply gate: the tier qualifies only while live
+    // verified female drivers are present in it.
+    const femaleRows = await db
+      .select({ id: drivers.id })
+      .from(drivers)
+      .where(
+        and(
+          inArray(drivers.id, candidateIds),
+          eq(drivers.is_online, true),
+          eq(drivers.status, 'active'),
+          eq(drivers.gender, 'female' as any),
+          eq(drivers.gender_verified, true),
+        ),
+      );
+    if (!femaleRows.length) continue;
+    const [pricingRow] = await db
+      .select()
+      .from(pricing)
+      .where(
+        and(
+          eq(pricing.vehicle_type, vt as any),
+          eq(pricing.zone_id, ride.zone_id),
+          eq(pricing.is_active, true),
+        ),
+      )
+      .limit(1);
+    if (!pricingRow) continue;
+    alternatives.push({
+      vehicle_type: vt,
+      available_drivers: femaleRows.length,
+      fare_breakdown: calculateFare(
+        {
+          base_fare_bdt: pricingRow.base_fare_bdt,
+          per_km_bdt: pricingRow.per_km_bdt,
+          intercity_per_km_bdt: pricingRow.intercity_per_km_bdt ?? 0,
+          per_min_bdt: pricingRow.per_min_bdt,
+          floor_length_km: Number(pricingRow.floor_length_km ?? 0),
+          floor_min: pricingRow.floor_min ?? 0,
+          brta_fare_ceiling_bdt: pricingRow.brta_fare_ceiling_bdt,
+          platform_commission_percent: Number(
+            pricingRow.platform_commission_percent ?? 0,
+          ),
+        },
+        parseFloat(ride.distance_km?.toString() ?? "0"),
+        0,
+        undefined,
+        0,
+        null,
+        false,
+      ) as unknown as Record<string, unknown>,
+    });
+  }
+
+  await db
+    .update(rides)
+    .set({ status: 'expired' })
+    .where(eq(rides.id, ride.id));
+  sendToRider(ride.user_id, {
+    type: 'ride:expired',
+    ride_id: ride.id,
+    reason: 'no_women_only_drivers',
+    // Additive: D-i6 bike-family alternatives ([] when no verified female
+    // supply anywhere) for the honest no-fallback sheet (S8b renders it).
+    alternatives,
+  });
+  logger.info('[dispatch] women-only ride exhausted — no verified female supply', {
+    ride_id: ride.id,
+    alternatives: alternatives.length,
+  });
+
+  // Scheduled women-only rides push a localized retry deep-link on
+  // exhaustion (dedupe keyed per ride — redispatch never double-pushes).
+  const isScheduled = ride.scheduled_at != null;
+  if (isScheduled) {
+    await sendNotification(
+      ride.user_id,
+      'ride:expired',
+      'No Women-Only Drivers Available',
+      "We couldn't find a women-only driver for your scheduled ride.",
+      { deepLink: 'ride-retry', ride_id: ride.id, is_scheduled: String(isScheduled) },
+      {
+        copyKey: 'ride_scheduled_women_only_exhausted',
+        idempotencyKey: `ride:${ride.id}:women_only_exhausted`,
+      },
+    ).catch((e: unknown) =>
+      logger.warn('[dispatch] scheduled women-only exhaustion push failed (non-blocking)', {
+        ride_id: ride.id,
+        error: e instanceof Error ? e.message : String(e),
+      }),
+    );
   }
 }
 

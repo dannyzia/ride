@@ -3,7 +3,9 @@ import { drivers, rides, dispatchOffers, systemConfig, pricing, preferences, sub
 import { eq, and, inArray, sql, gte } from 'drizzle-orm';
 import { getH3Ring } from '../lib/h3';
 import { getDriversInCells, HEARTBEAT_STALE_MS } from './h3Index';
-import { checkDriverEligibility } from '../lib/vehicleTypes';
+import { checkDriverEligibility, type VehicleTypeEnum } from '../lib/vehicleTypes';
+import { isDriverEligibleForRideGender } from '../lib/womenOnlyEligibility';
+import { getPlan05Bool } from '../lib/platformConfig';
 import { haversineKm } from '../lib/fareCalc';
 import { logger } from '../lib/logger';
 import { getColdDropInfos } from './coldDrop';
@@ -148,6 +150,31 @@ export async function buildCandidateList(
   const returnLeadAffinityMultiplier = parseConfigNumber(leverCfg.return_lead_affinity_multiplier, 1.1);
   const cooldownBaseMinutes = parseConfigNumber(leverCfg.proximity_cancel_cooldown_minutes, 15);
 
+  // ── Ride row: fetched FIRST, fail closed (S8 women-only matching) ─────
+  // The candidate loop and the blocklist check below both depend on this
+  // row. A missing/failed read dispatches nothing rather than matching
+  // blind (a women_only ride must never enter a gender-blind pool).
+  const [ride] = await db
+    .select({
+      user_id: rides.user_id,
+      women_only: rides.women_only,
+      vehicle_type: rides.vehicle_type,
+    })
+    .from(rides)
+    .where(eq(rides.id, rideId))
+    .limit(1);
+
+  // Fail closed: if ride does not exist or read failed, do NOT dispatch
+  if (!ride) {
+    logger.error('[dispatch] ride not found — failing closed, returning empty candidates', { rideId });
+    return [];
+  }
+
+  // Kill switch: read ONCE per dispatch (never per offer — APP_POOL_SIZE = 5).
+  // When OFF, armed drivers' women_only_enabled toggles are neutralized;
+  // in-flight women-only rides keep female-only matching regardless.
+  const killSwitchEnabled = await getPlan05Bool('women_only_rides_enabled');
+
   // ── Pricing row: system per-km rate (used for min_per_km_bdt filter) ──
   const [pricingRow] = await db.select({ per_km_bdt: pricing.per_km_bdt })
     .from(pricing)
@@ -175,6 +202,8 @@ export async function buildCandidateList(
     min_per_km_bdt:       drivers.min_per_km_bdt,
     vehicle_type:         drivers.vehicle_type,
     gender:               drivers.gender,
+    gender_verified:      drivers.gender_verified,
+    women_only_enabled:   drivers.women_only_enabled,
     auto_accept_enabled:  drivers.auto_accept_enabled,
     auto_accept_radius_meters: drivers.auto_accept_radius_meters,
     subscription_id:      subscriptions.id,
@@ -378,15 +407,6 @@ export async function buildCandidateList(
   const commuteByDriver = new Map<string, CommutePref>();
   const blockedDriverIds = new Set<string>();
 
-  // ── Female preference global check — done once before loop ────────────
-  const [rideOwner] = await db.select({ user_id: rides.user_id, female_driver_preference: rides.female_driver_preference })
-    .from(rides).where(eq(rides.id, rideId)).limit(1);
-  let femalePref = rideOwner?.female_driver_preference ?? false;
-  if (femalePref) {
-    const femaleCount = driverRows.filter(d => d.gender === 'female').length;
-    if (femaleCount === 0) femalePref = false; // No female drivers — fall back to all
-  }
-
   if (driverIds.length > 0) {
     // Fail-open by design: a DB error leaves every driver eligible. These are
     // preferences, not correctness gates — same semantics as the old
@@ -400,11 +420,11 @@ export async function buildCandidateList(
       for (const c of commuteRows) {
         if (!commuteByDriver.has(c.driver_id)) commuteByDriver.set(c.driver_id, c);
       }
-      if (rideOwner) {
+      {
         const blockedRows = await db.select({ driver_id: driverBlocklists.driver_id })
           .from(driverBlocklists)
           .where(and(
-            eq(driverBlocklists.rider_id, rideOwner.user_id),
+            eq(driverBlocklists.rider_id, ride.user_id),
             inArray(driverBlocklists.driver_id, driverIds),
           ));
         for (const b of blockedRows) blockedDriverIds.add(b.driver_id);
@@ -449,10 +469,20 @@ export async function buildCandidateList(
     }
 
     // ── Blocklist filter (batched) ──
-    if (rideOwner && blockedDriverIds.has(d.id)) continue;
+    if (blockedDriverIds.has(d.id)) continue;
 
-    // ── Female driver preference — skip male drivers if femalePref is active ──
-    if (femalePref && d.gender !== 'female') continue;
+    // ── Women-only gender eligibility (S8, single shared predicate) ─────
+    // Women-only rides admit verified female drivers only; armed drivers
+    // self-exclude from mixed bike rides while the kill switch is ON.
+    const isEligible = isDriverEligibleForRideGender({
+      driverGender: d.gender,
+      driverGenderVerified: d.gender_verified,
+      driverWomenOnlyEnabled: d.women_only_enabled,
+      rideWomenOnly: ride.women_only,
+      vehicleType: vehicleType as VehicleTypeEnum,
+      womenOnlyFeatureEnabled: killSwitchEnabled,
+    });
+    if (!isEligible) continue;
 
     // ── Balance checks (required before auto-accept) ─────────────────────
     if (d.calls_remaining === null || d.calls_remaining === 0) {

@@ -79,9 +79,9 @@ describe('Manual review — classifier returns null', () => {
 });
 
 describe('Edge cases', () => {
-  test('vehicle_type enum accepts all 9 values', () => {
+  test('vehicle_type enum accepts all 10 values', () => {
     const allTypes: VehicleTypeEnum[] = [
-      'bike_basic', 'bike_standard', 'bike_plus', 'cng',
+      'bike_basic', 'bike_standard', 'bike_plus', 'scooter', 'cng',
       'car_compact', 'car_economy', 'car_comfort', 'car_premium', 'car_xl',
     ];
     for (const vt of allTypes) {

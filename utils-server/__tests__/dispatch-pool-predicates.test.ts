@@ -27,6 +27,11 @@ jest.mock("../../lib/h3", () => ({
 }));
 jest.mock("../../lib/vehicleTypes", () => ({
   checkDriverEligibility: jest.fn(() => ({ eligible: true })),
+  BIKE_FAMILY: ["bike_basic", "bike_standard", "bike_plus", "scooter"],
+}));
+// S8: kill switch reads are mocked per-suite (default OFF → legacy behavior).
+jest.mock("../../lib/platformConfig", () => ({
+  getPlan05Bool: jest.fn(async () => false),
 }));
 jest.mock("../../lib/fareFrameworkConfig", () => ({
   getFareFrameworkConfig: jest.fn(async () => ({})),
@@ -88,6 +93,8 @@ beforeEach(() => {
 
   BY_TABLE.set(pricing, [{ per_km_bdt: 775 }]);
   BY_TABLE.set(drivers, []);
+  // S8: buildCandidateList fail-closes on a missing ride — seed the ride row.
+  BY_TABLE.set(rides, [{ user_id: "rider-p", women_only: false, vehicle_type: "bike_basic" }]);
 });
 
 function capturedPredicateSql(): { sql: string; params: unknown[] } {

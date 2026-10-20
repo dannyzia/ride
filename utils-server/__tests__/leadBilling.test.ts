@@ -24,6 +24,8 @@ import {
   callLedger,
   dispatchOffers,
   drivers,
+  rides,
+  platformConfig,
 } from "../../src/db/schema";
 import { debitLeadForOffer, debitLeadForOfferTx } from "../leadBilling";
 
@@ -35,6 +37,8 @@ interface FakeState {
   callLedger: Row[];
   dispatchOffers: Row[];
   drivers: Row[];
+  rides: Row[];
+  platformConfig: Row[];
 }
 
 interface TxLike {
@@ -43,7 +47,17 @@ interface TxLike {
   update: (table: unknown) => { set: (s: Row) => { where: () => Promise<unknown> } };
 }
 
-const ACTIVE_DRIVER: Row = { id: "driver-1", status: "active", is_online: true };
+const ACTIVE_DRIVER: Row = {
+  id: "driver-1",
+  status: "active",
+  is_online: true,
+  gender: "male",
+  gender_verified: false,
+  women_only_enabled: false,
+  vehicle_type: "bike_basic",
+};
+
+const MIXED_RIDE: Row = { id: "ride-1", women_only: false, vehicle_type: "bike_basic" };
 
 function makePgError(code: string): Error & { code: string } {
   const err = new Error("duplicate key value violates unique constraint") as Error & { code: string };
@@ -64,8 +78,13 @@ function buildDbMock(initial: Partial<FakeState>): {
     // F-9.1: default seed — an ACTIVE, ONLINE driver row, matching the
     // pre-guard world where only the pool filter (status='active') existed.
     // Tests that exercise the status guard override or clear this.
-    drivers: initial.drivers ?? [
-      { id: "driver-1", status: "active", is_online: true },
+    // S8: default driver carries the expanded projection fields; the
+    // default ride is a mixed bike_basic ride; platformConfig seeds the
+    // kill switch OFF (legacy behavior unless a test opts into ON).
+    drivers: initial.drivers ?? [{ ...ACTIVE_DRIVER }],
+    rides: initial.rides ?? [{ ...MIXED_RIDE }],
+    platformConfig: initial.platformConfig ?? [
+      { key: "women_only_rides_enabled", value: "false" },
     ],
   };
   const updates: { table: unknown; set: Row }[] = [];
@@ -76,6 +95,8 @@ function buildDbMock(initial: Partial<FakeState>): {
     if (table === callLedger) return state.callLedger;
     if (table === dispatchOffers) return state.dispatchOffers;
     if (table === drivers) return state.drivers;
+    if (table === rides) return state.rides;
+    if (table === platformConfig) return state.platformConfig;
     return [];
   };
 
@@ -166,6 +187,8 @@ function buildDbMock(initial: Partial<FakeState>): {
         state.callLedger = snapshot.callLedger;
         state.dispatchOffers = snapshot.dispatchOffers;
         state.drivers = snapshot.drivers;
+        state.rides = snapshot.rides;
+        state.platformConfig = snapshot.platformConfig;
         throw e;
       }
     },
@@ -198,6 +221,7 @@ describe("debitLeadForOfferTx — happy path", () => {
       rideId: "ride-1",
       driverId: "driver-1",
       chainIndex: 3,
+      womenOnlyFeatureEnabled: false,
     });
 
     expect(res).toEqual({ billed: true, balanceAfter: 4 });
@@ -235,7 +259,7 @@ describe("debitLeadForOfferTx — happy path", () => {
       packages: [{ ...PACKAGE }],
     });
 
-    const res = await debitLeadForOfferTx({ rideId: "ride-1", driverId: "driver-1" });
+    const res = await debitLeadForOfferTx({ rideId: "ride-1", driverId: "driver-1", womenOnlyFeatureEnabled: false });
 
     expect(res).toEqual({ billed: true, balanceAfter: -1 });
     expect(state.callLedger[0]).toMatchObject({ balance_after: -1, delta: -1 });
@@ -252,7 +276,7 @@ describe("debitLeadForOfferTx — skip paths (no writes)", () => {
       packages: [{ ...PACKAGE }],
     });
 
-    const res = await debitLeadForOfferTx({ rideId: "ride-1", driverId: "driver-1" });
+    const res = await debitLeadForOfferTx({ rideId: "ride-1", driverId: "driver-1", womenOnlyFeatureEnabled: false });
 
     expect(res.billed).toBe(false);
     expect(res.balanceAfter).toBeNull();
@@ -266,7 +290,7 @@ describe("debitLeadForOfferTx — skip paths (no writes)", () => {
       packages: [{ ...PACKAGE, daily_cap: 50 }],
     });
 
-    const res = await debitLeadForOfferTx({ rideId: "ride-1", driverId: "driver-1" });
+    const res = await debitLeadForOfferTx({ rideId: "ride-1", driverId: "driver-1", womenOnlyFeatureEnabled: false });
 
     expect(res.billed).toBe(false);
     expect(state.callLedger).toHaveLength(0);
@@ -279,7 +303,7 @@ describe("debitLeadForOfferTx — skip paths (no writes)", () => {
       packages: [{ ...PACKAGE }],
     });
 
-    const res = await debitLeadForOfferTx({ rideId: "ride-1", driverId: "driver-1" });
+    const res = await debitLeadForOfferTx({ rideId: "ride-1", driverId: "driver-1", womenOnlyFeatureEnabled: false });
 
     expect(res.billed).toBe(false);
     expect(state.callLedger).toHaveLength(0);
@@ -297,7 +321,7 @@ describe("debitLeadForOfferTx — exactly-once per (ride_id, driver_id)", () => 
       ],
     });
 
-    const res = await debitLeadForOfferTx({ rideId: "ride-1", driverId: "driver-1" });
+    const res = await debitLeadForOfferTx({ rideId: "ride-1", driverId: "driver-1", womenOnlyFeatureEnabled: false });
 
     expect(res.billed).toBe(false);
     expect(state.callLedger).toHaveLength(0);
@@ -321,7 +345,7 @@ describe("debitLeadForOfferTx — exactly-once per (ride_id, driver_id)", () => 
       ],
     });
 
-    const res = await debitLeadForOfferTx({ rideId: "ride-1", driverId: "driver-1" });
+    const res = await debitLeadForOfferTx({ rideId: "ride-1", driverId: "driver-1", womenOnlyFeatureEnabled: false });
 
     expect(res.billed).toBe(false);
     // Atomicity: the offer row inserted inside the tx was rolled back with
@@ -347,13 +371,18 @@ describe("debitLeadForOfferTx — atomicity (invariant 10)", () => {
         from: (table: unknown) => ({
           where: () => {
             // F-9.1: the drivers row read (step 4b) + the subscription and
-            // package reads all flow through here.
+            // package reads all flow through here. S8: the rides read
+            // (step 4b ride row) resolves to the mocked rides table so the
+            // fail-closed ride check passes and the mid-tx failure below
+            // still fires at the call_ledger insert.
             const rows =
               table === packages
                 ? mock.state.packages
                 : table === drivers
                   ? mock.state.drivers
-                  : mock.state.subscriptions;
+                  : table === rides
+                    ? mock.state.rides
+                    : mock.state.subscriptions;
             const chain: Record<string, unknown> = {
               orderBy: () => chain,
               for: () => chain,
@@ -387,13 +416,15 @@ describe("debitLeadForOfferTx — atomicity (invariant 10)", () => {
           mock.state.callLedger = snapshot.callLedger;
           mock.state.dispatchOffers = snapshot.dispatchOffers;
           mock.state.drivers = snapshot.drivers;
+          mock.state.rides = snapshot.rides;
+          mock.state.platformConfig = snapshot.platformConfig;
           throw e;
         }
       },
     );
 
     await expect(
-      debitLeadForOfferTx({ rideId: "ride-1", driverId: "driver-1" }),
+      debitLeadForOfferTx({ rideId: "ride-1", driverId: "driver-1", womenOnlyFeatureEnabled: false }),
     ).rejects.toThrow("connection reset mid-tx");
 
     expect(mock.state.dispatchOffers).toHaveLength(0);
@@ -410,8 +441,13 @@ describe("debitLeadForOffer — caller-owned tx passthrough", () => {
     const mock = buildDbMock({
       subscriptions: [{ ...ACTIVE_SUB }],
       packages: [{ ...PACKAGE }],
+      rides: [{ ...MIXED_RIDE, id: "ride-9" }],
     });
-    const res = await debitLeadForOffer(mock.tx, { rideId: "ride-9", driverId: "driver-1" });
+    const res = await debitLeadForOffer(mock.tx, {
+      rideId: "ride-9",
+      driverId: "driver-1",
+      womenOnlyFeatureEnabled: false,
+    });
     expect(res.billed).toBe(true);
     expect(res.balanceAfter).toBe(4);
   });
@@ -422,10 +458,10 @@ describe("debitLeadForOfferTx — account-status guard (F-9.1)", () => {
     const { state } = buildDbMock({
       subscriptions: [{ ...ACTIVE_SUB }],
       packages: [{ ...PACKAGE }],
-      drivers: [{ id: "driver-1", status: "suspended", is_online: true }],
+      drivers: [{ ...ACTIVE_DRIVER, status: "suspended" }],
     });
 
-    const res = await debitLeadForOfferTx({ rideId: "ride-1", driverId: "driver-1" });
+    const res = await debitLeadForOfferTx({ rideId: "ride-1", driverId: "driver-1", womenOnlyFeatureEnabled: false });
 
     expect(res).toEqual({ billed: false, balanceAfter: null });
     expect(state.dispatchOffers).toHaveLength(0);
@@ -437,10 +473,10 @@ describe("debitLeadForOfferTx — account-status guard (F-9.1)", () => {
     const { state } = buildDbMock({
       subscriptions: [{ ...ACTIVE_SUB }],
       packages: [{ ...PACKAGE }],
-      drivers: [{ id: "driver-1", status: "active", is_online: false }],
+      drivers: [{ ...ACTIVE_DRIVER, is_online: false }],
     });
 
-    const res = await debitLeadForOfferTx({ rideId: "ride-1", driverId: "driver-1" });
+    const res = await debitLeadForOfferTx({ rideId: "ride-1", driverId: "driver-1", womenOnlyFeatureEnabled: false });
 
     expect(res).toEqual({ billed: false, balanceAfter: null });
     expect(state.dispatchOffers).toHaveLength(0);
@@ -454,7 +490,7 @@ describe("debitLeadForOfferTx — account-status guard (F-9.1)", () => {
       drivers: [],
     });
 
-    const res = await debitLeadForOfferTx({ rideId: "ride-1", driverId: "driver-1" });
+    const res = await debitLeadForOfferTx({ rideId: "ride-1", driverId: "driver-1", womenOnlyFeatureEnabled: false });
 
     expect(res).toEqual({ billed: false, balanceAfter: null });
     expect(state.dispatchOffers).toHaveLength(0);
@@ -467,7 +503,7 @@ describe("debitLeadForOfferTx — account-status guard (F-9.1)", () => {
       drivers: [{ ...ACTIVE_DRIVER }],
     });
 
-    const res = await debitLeadForOfferTx({ rideId: "ride-1", driverId: "driver-1" });
+    const res = await debitLeadForOfferTx({ rideId: "ride-1", driverId: "driver-1", womenOnlyFeatureEnabled: false });
 
     expect(res).toEqual({ billed: true, balanceAfter: 4 });
     expect(state.dispatchOffers).toHaveLength(1);
@@ -520,12 +556,14 @@ describe("debitLeadForOfferTx — drizzle-wrapped 23505 (S6 regression)", () => 
           mock.state.callLedger = snapshot.callLedger;
           mock.state.dispatchOffers = snapshot.dispatchOffers;
           mock.state.drivers = snapshot.drivers;
+          mock.state.rides = snapshot.rides;
+          mock.state.platformConfig = snapshot.platformConfig;
           throw e;
         }
       },
     );
 
-    const res = await debitLeadForOfferTx({ rideId: "ride-1", driverId: "driver-1" });
+    const res = await debitLeadForOfferTx({ rideId: "ride-1", driverId: "driver-1", womenOnlyFeatureEnabled: false });
 
     // Pre-fix: SkipBillingError was never thrown for the wrapped error and
     // this call REJECTED. Post-fix: recognized → rollback-and-skip.
@@ -533,5 +571,134 @@ describe("debitLeadForOfferTx — drizzle-wrapped 23505 (S6 regression)", () => 
     expect(mock.state.dispatchOffers).toHaveLength(0); // offer row rolled back
     expect(mock.state.callLedger).toHaveLength(0);
     expect(mock.state.subscriptions[0].calls_remaining).toBe(5); // untouched
+  });
+});
+
+// ── S8 step-4b mid-chain drift guard + kill-switch fault pairs ─────────────
+// Every offered driver is billed regardless of outcome (ruling 8), but the
+// debit itself is skipped — with zero writes — when the driver drifted out
+// of eligibility between pool build and offer time.
+describe("debitLeadForOfferTx — S8 step 4b (women-only drift guard)", () => {
+  const FEMALE_VERIFIED: Row = {
+    ...ACTIVE_DRIVER,
+    gender: "female",
+    gender_verified: true,
+  };
+  const WOMEN_ONLY_RIDE: Row = { id: "ride-wo", women_only: true, vehicle_type: "bike_basic" };
+
+  function base(over: Partial<FakeState>) {
+    return buildDbMock({
+      subscriptions: [{ ...ACTIVE_SUB }],
+      packages: [{ ...PACKAGE }],
+      ...over,
+    });
+  }
+
+  test("women-only ride + verified female driver → billed (kill switch ON)", async () => {
+    const { state } = base({
+      drivers: [FEMALE_VERIFIED],
+      rides: [WOMEN_ONLY_RIDE],
+    });
+    const res = await debitLeadForOfferTx({
+      rideId: "ride-wo",
+      driverId: "driver-1",
+      womenOnlyFeatureEnabled: true,
+    });
+    expect(res).toEqual({ billed: true, balanceAfter: 4 });
+    expect(state.dispatchOffers).toHaveLength(1);
+    expect(state.callLedger).toHaveLength(1);
+  });
+
+  test("women-only ride + UNVERIFIED female driver → skipped, zero writes", async () => {
+    const { state } = base({
+      drivers: [{ ...FEMALE_VERIFIED, gender_verified: false }],
+      rides: [WOMEN_ONLY_RIDE],
+    });
+    const res = await debitLeadForOfferTx({
+      rideId: "ride-wo",
+      driverId: "driver-1",
+      womenOnlyFeatureEnabled: true,
+    });
+    expect(res).toEqual({ billed: false, balanceAfter: null });
+    expect(state.dispatchOffers).toHaveLength(0);
+    expect(state.callLedger).toHaveLength(0);
+  });
+
+  test("women-only ride + male driver → skipped, zero writes", async () => {
+    const { state } = base({ rides: [WOMEN_ONLY_RIDE] });
+    const res = await debitLeadForOfferTx({
+      rideId: "ride-wo",
+      driverId: "driver-1",
+      womenOnlyFeatureEnabled: true,
+    });
+    expect(res).toEqual({ billed: false, balanceAfter: null });
+    expect(state.dispatchOffers).toHaveLength(0);
+    expect(state.callLedger).toHaveLength(0);
+  });
+
+  test("mixed ride + armed toggle + kill switch ON → skipped (self-exclusion)", async () => {
+    const { state } = base({
+      drivers: [{ ...FEMALE_VERIFIED, women_only_enabled: true }],
+    });
+    const res = await debitLeadForOfferTx({
+      rideId: "ride-1",
+      driverId: "driver-1",
+      womenOnlyFeatureEnabled: true,
+    });
+    expect(res).toEqual({ billed: false, balanceAfter: null });
+    expect(state.dispatchOffers).toHaveLength(0);
+    expect(state.callLedger).toHaveLength(0);
+  });
+
+  test("mixed ride + armed toggle + kill switch OFF → billed (toggle neutralized)", async () => {
+    const { state } = base({
+      drivers: [{ ...FEMALE_VERIFIED, women_only_enabled: true }],
+    });
+    const res = await debitLeadForOfferTx({
+      rideId: "ride-1",
+      driverId: "driver-1",
+      womenOnlyFeatureEnabled: false,
+    });
+    expect(res).toEqual({ billed: true, balanceAfter: 4 });
+    expect(state.dispatchOffers).toHaveLength(1);
+  });
+
+  test("missing ride row → skipped, zero writes (fail closed)", async () => {
+    const { state } = base({ rides: [] });
+    const res = await debitLeadForOfferTx({
+      rideId: "ride-1",
+      driverId: "driver-1",
+      womenOnlyFeatureEnabled: false,
+    });
+    expect(res).toEqual({ billed: false, balanceAfter: null });
+    expect(state.dispatchOffers).toHaveLength(0);
+    expect(state.callLedger).toHaveLength(0);
+  });
+
+  test("mid-chain vehicle switch (driver scooter vs ride bike_basic) → skipped", async () => {
+    const { state } = base({
+      drivers: [{ ...FEMALE_VERIFIED, vehicle_type: "scooter" }],
+    });
+    const res = await debitLeadForOfferTx({
+      rideId: "ride-1",
+      driverId: "driver-1",
+      womenOnlyFeatureEnabled: false,
+    });
+    expect(res).toEqual({ billed: false, balanceAfter: null });
+    expect(state.dispatchOffers).toHaveLength(0);
+    expect(state.callLedger).toHaveLength(0);
+  });
+
+  test("R11-C1: women_only=true on a CAR ride fails open → billed (never restricts the pool)", async () => {
+    const { state } = base({
+      rides: [{ id: "ride-car", women_only: true, vehicle_type: "car_economy" }],
+      drivers: [{ ...ACTIVE_DRIVER, vehicle_type: "car_economy" }],
+    });
+    const res = await debitLeadForOfferTx({
+      rideId: "ride-car",
+      driverId: "driver-1",
+      womenOnlyFeatureEnabled: true,
+    });
+    expect(res).toEqual({ billed: true, balanceAfter: 4 });
   });
 });

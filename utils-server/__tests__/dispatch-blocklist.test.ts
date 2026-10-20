@@ -24,6 +24,11 @@ jest.mock("../../lib/h3", () => ({
 }));
 jest.mock("../../lib/vehicleTypes", () => ({
   checkDriverEligibility: jest.fn(() => ({ eligible: true })),
+  BIKE_FAMILY: ["bike_basic", "bike_standard", "bike_plus", "scooter"],
+}));
+// S8: kill switch reads are mocked per-suite (default OFF → legacy behavior).
+jest.mock("../../lib/platformConfig", () => ({
+  getPlan05Bool: jest.fn(async () => false),
 }));
 jest.mock("../../lib/fareFrameworkConfig", () => ({
   getFareFrameworkConfig: jest.fn(async () => ({
@@ -103,6 +108,8 @@ const DRIVER_BASE: Record<string, unknown> = {
   min_per_km_bdt: null,
   vehicle_type: "bike_basic",
   gender: "male",
+  gender_verified: false,
+  women_only_enabled: false,
   auto_accept_enabled: false,
   auto_accept_radius_meters: null,
   subscription_id: "sub-1",
@@ -114,7 +121,7 @@ const DRIVER_BASE: Record<string, unknown> = {
 // Ride owner row — returned for the ride-owner lookup (limit(1)); the
 // quality/cooldown group-by queries over `rides` receive the same row and
 // skip it (no driver_id).
-const OWNER_ROW = { user_id: "rider-owner", female_driver_preference: false };
+const OWNER_ROW = { user_id: "rider-owner", women_only: false, vehicle_type: "bike_basic" };
 
 const RIDE_ID = "ride-blk";
 const ZONE_ID = "zone-xyz";

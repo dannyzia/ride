@@ -9,6 +9,7 @@
  * (d) no DELETE is ever emitted
  */
 import { jest, describe, it, expect } from "@jest/globals";
+import { VEHICLE_TYPE_VALUES } from "../../lib/vehicleTypes";
 
 // ── Fixtures ─────────────────────────────────────────────────────────────
 
@@ -432,11 +433,8 @@ describe("import-vehicle-models", () => {
       expect(updateSet).toHaveProperty("updated_at");
     });
 
-    it("all 9 vehicle_type values are valid enum members", () => {
-      const VALID_TYPES = new Set([
-        "bike_basic", "bike_standard", "bike_plus", "cng",
-        "car_compact", "car_economy", "car_comfort", "car_premium", "car_xl",
-      ]);
+    it("all 10 vehicle_type values are valid enum members", () => {
+      const VALID_TYPES = new Set<string>(VEHICLE_TYPE_VALUES);
 
       for (const row of MASTER_FIXTURE) {
         const cleaned = stripMetadata(row);

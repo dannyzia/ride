@@ -31,6 +31,8 @@ export const PLAN05_CONFIG_KEYS = [
   // priced package/topup/pass purchases 409 until month-3 payments launch.
   // ৳0 trial activation bypasses the gate (launch_free must keep working).
   'payments_enabled',
+  'women_only_rides_enabled',
+  'scooter_vehicle_type_enabled',
 ] as const;
 
 export type Plan05ConfigKey = (typeof PLAN05_CONFIG_KEYS)[number];
@@ -49,6 +51,8 @@ const DEFAULTS: Record<Plan05ConfigKey, string> = {
   auto_redispatch_max_attempts: '3',       // give up (expired) after N redispatch attempts
   hotspot_freshness_minutes: '10',         // zone_heat readings older than this are stale
   payments_enabled: 'false',               // D9-2: money movement OFF until payments launch
+  women_only_rides_enabled: 'false',
+  scooter_vehicle_type_enabled: 'false',
 };
 
 /**

@@ -18,7 +18,7 @@ jest.mock("@/lib/logger", () => ({
   logger: { info: jest.fn(), error: jest.fn(), warn: jest.fn(), debug: jest.fn() },
 }));
 jest.mock("@/lib/vehicleTypes", () => ({
-  VEHICLE_TYPE_VALUES: ["bike_basic", "bike_standard", "car_economy"],
+  VEHICLE_TYPE_VALUES: ["bike_basic", "bike_standard", "scooter", "car_economy"],
   checkDriverEligibility: jest.fn(),
 }));
 
@@ -146,6 +146,15 @@ describe("POST /api/driver/vehicle-type-change", () => {
     expect(res.status).toBe(422);
     expect((await getJson(res)).error).toBe("eligibility_not_met");
     expect(txUpdates).toHaveLength(0);
+  });
+
+  test("S8 lateral move: bike_basic → scooter succeeds (no tier gate on the driver route)", async () => {
+    const res = await POST(jsonRequest({ new_vehicle_type: "scooter" }));
+    expect(res.status).toBe(200);
+    expect(await getJson(res)).toEqual({ success: true, vehicle_type: "scooter" });
+    expect(txUpdates).toHaveLength(2);
+    expect(txUpdates[0].set.vehicle_type).toBe("scooter");
+    expect(txUpdates[1].set.vehicle_type).toBe("scooter");
   });
 
   test("success syncs drivers AND vehicles tables in one tx (no divergence)", async () => {

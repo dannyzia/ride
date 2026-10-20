@@ -22,6 +22,11 @@ jest.mock("../../lib/h3", () => ({
 }));
 jest.mock("../../lib/vehicleTypes", () => ({
   checkDriverEligibility: jest.fn(() => ({ eligible: true })),
+  BIKE_FAMILY: ["bike_basic", "bike_standard", "bike_plus", "scooter"],
+}));
+// S8: kill switch reads are mocked per-suite (default OFF → legacy behavior).
+jest.mock("../../lib/platformConfig", () => ({
+  getPlan05Bool: jest.fn(async () => false),
 }));
 jest.mock("../../lib/fareFrameworkConfig", () => ({
   getFareFrameworkConfig: jest.fn(async () => ({
@@ -43,6 +48,7 @@ import { db } from "../../src/db";
 import {
   drivers,
   pricing,
+  rides,
   dispatchOffers,
 } from "../../src/db/schema";
 import { getDriversInCells } from "../h3Index";
@@ -83,6 +89,9 @@ beforeEach(() => {
   }));
 
   (db.execute as jest.Mock).mockResolvedValue([]);
+
+  // S8: buildCandidateList fail-closes on a missing ride — seed the ride row.
+  BY_TABLE.set(rides, [{ user_id: "rider-1", women_only: false, vehicle_type: "bike_basic" }]);
 });
 
 const DRIVER_BASE: Record<string, unknown> = {
@@ -96,6 +105,8 @@ const DRIVER_BASE: Record<string, unknown> = {
   min_per_km_bdt: null,
   vehicle_type: "bike_basic",
   gender: "male",
+  gender_verified: false,
+  women_only_enabled: false,
   auto_accept_enabled: false,
   auto_accept_radius_meters: null,
   subscription_id: "sub-1",

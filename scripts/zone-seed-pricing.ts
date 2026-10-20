@@ -47,19 +47,24 @@ interface PricingDefaults {
   brta_fare_ceiling_bdt: number | null;
 }
 
+// Scooter is the economic twin of bike_basic: one literal, spread-cloned into
+// both BD_DEFAULTS entries (a self-reference inside the BD_DEFAULTS literal
+// would read the const in its own TDZ and crash at import time).
+const BIKE_BASIC_PRICING_DEFAULTS: PricingDefaults = {
+  base_fare_bdt: 2500,
+  per_km_bdt: 775,
+  intercity_per_km_bdt: 1160,
+  per_min_bdt: 175,
+  floor_length_km: "2.00",
+  floor_min: 10,
+  platform_commission_percent: "15.00",
+  free_wait_minutes: 1,
+  wait_fee_per_minute_bdt: 200,
+  brta_fare_ceiling_bdt: null,
+};
+
 const BD_DEFAULTS: Record<VehicleTypeEnum, PricingDefaults> = {
-  bike_basic: {
-    base_fare_bdt: 2500,
-    per_km_bdt: 775,
-    intercity_per_km_bdt: 1160,
-    per_min_bdt: 175,
-    floor_length_km: "2.00",
-    floor_min: 10,
-    platform_commission_percent: "15.00",
-    free_wait_minutes: 1,
-    wait_fee_per_minute_bdt: 200,
-    brta_fare_ceiling_bdt: null,
-  },
+  bike_basic: { ...BIKE_BASIC_PRICING_DEFAULTS },
   bike_standard: {
     base_fare_bdt: 2500,
     per_km_bdt: 950,
@@ -84,6 +89,7 @@ const BD_DEFAULTS: Record<VehicleTypeEnum, PricingDefaults> = {
     wait_fee_per_minute_bdt: 200,
     brta_fare_ceiling_bdt: null,
   },
+  scooter: { ...BIKE_BASIC_PRICING_DEFAULTS },
   cng: {
     base_fare_bdt: 4000,
     per_km_bdt: 1500,

@@ -188,6 +188,10 @@ describe('car_compact — ETA grouping', () => {
     }
   });
 
+  test('scooter maps to "bike" ETA group (never the car speed table)', () => {
+    expect(vehicleGroup('scooter')).toBe('bike');
+  });
+
   test('cng is its own ETA group', () => {
     expect(vehicleGroup('cng')).toBe('cng');
   });
@@ -217,6 +221,7 @@ describe('UI metadata — VEHICLE_ICONS completeness', () => {
     bike_basic: 'bicycle',
     bike_standard: 'bicycle',
     bike_plus: 'bicycle',
+    scooter: 'bicycle',
     cng: 'car-sport',
     car_compact: 'car',
     car_economy: 'car',
@@ -230,6 +235,7 @@ describe('UI metadata — VEHICLE_ICONS completeness', () => {
     bike_basic: 'icons.cab',
     bike_standard: 'icons.cab',
     bike_plus: 'icons.cab',
+    scooter: 'icons.cab',
     cng: 'icons.cab',
     car_compact: 'icons.cab',
     car_economy: 'icons.cab',
@@ -238,7 +244,7 @@ describe('UI metadata — VEHICLE_ICONS completeness', () => {
     car_xl: 'icons.cab',
   };
 
-  test('home VEHICLE_ICONS covers all 9 vehicle types', () => {
+  test('home VEHICLE_ICONS covers all 10 vehicle types', () => {
     for (const vt of VEHICLE_TYPE_VALUES) {
       expect(HOME_ICONS).toHaveProperty(vt);
       expect(typeof HOME_ICONS[vt]).toBe('string');
@@ -246,12 +252,12 @@ describe('UI metadata — VEHICLE_ICONS completeness', () => {
     }
   });
 
-  test('home VEHICLE_ICONS has no extra keys beyond the 9 types', () => {
+  test('home VEHICLE_ICONS has no extra keys beyond the 10 types', () => {
     const keys = Object.keys(HOME_ICONS);
     expect(keys).toHaveLength(VEHICLE_TYPE_VALUES.length);
   });
 
-  test('find-ride VEHICLE_ICONS covers all 9 vehicle types', () => {
+  test('find-ride VEHICLE_ICONS covers all 10 vehicle types', () => {
     for (const vt of VEHICLE_TYPE_VALUES) {
       expect(FIND_RIDE_ICONS).toHaveProperty(vt);
       expect(typeof FIND_RIDE_ICONS[vt]).toBe('string');
@@ -259,7 +265,7 @@ describe('UI metadata — VEHICLE_ICONS completeness', () => {
     }
   });
 
-  test('find-ride VEHICLE_ICONS has no extra keys beyond the 9 types', () => {
+  test('find-ride VEHICLE_ICONS has no extra keys beyond the 10 types', () => {
     const keys = Object.keys(FIND_RIDE_ICONS);
     expect(keys).toHaveLength(VEHICLE_TYPE_VALUES.length);
   });

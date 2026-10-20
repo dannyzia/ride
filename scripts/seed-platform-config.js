@@ -58,10 +58,12 @@ async function seed() {
       -- D9-2 (skeptic §D9): money-movement master switch. Default false —
       -- priced package/topup/pass purchases 409 until month-3 payments
       -- launch. One flag (PATCH /api/admin/config) restores everything.
-      ('payments_enabled',                     'false', now())
+      ('payments_enabled',                     'false', now()),
+      ('women_only_rides_enabled',             'false', now()),
+      ('scooter_vehicle_type_enabled',         'false', now())
     ON CONFLICT (key) DO NOTHING;
   `);
-  console.log("platform_config seeded (22 keys)");
+  console.log("platform_config seeded (24 keys)");
   await client.end();
 }
 seed().catch(console.error);
