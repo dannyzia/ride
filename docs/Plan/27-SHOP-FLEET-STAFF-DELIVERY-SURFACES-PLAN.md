@@ -704,3 +704,53 @@ Order: fix the wrong-depth class; repair `fix-runflow-paths.cjs`; convert the ru
 **Two real defects found by RUNNING the checks, not by reading the code:** (a) the decision route read `request.headers` directly, which the existing `driver-lifecycle` test double does not provide — a best-effort audit meta was able to 500 a money-adjacent decision; now optional-chained. (b) my first S7 test harness collapsed every in-tx read onto one row set, which made the reversal do `NaN` arithmetic — it would have shipped a green test proving nothing; rebuilt on a queue-consuming tx stub, which is how the `reversed_bdt` assertions became meaningful.
 
 **NOT VERIFIED, stated plainly:** (1) no Playwright spec has executed end-to-end (no browsers + needs the live app + an admin session) — the lane is discoverable and fails loudly, which is all this workspace can prove; (2) CI wiring for the lane was deliberately NOT added: the lane needs a running app and an admin session that CI does not have, and `ci.yml` cannot be validated on this host (actionlint is not runnable here, the same limitation S6.2 recorded). Adding a job that cannot pass would be worse than recording the gap. Activation steps are in the manifest row and the config header. (3) migration 0075 has NOT been applied to the dev DB — it is additive and nullable, and nothing in this stage reads the new column back, but it must be applied before the reject path is exercised against a real database. (4) device day remains ENV-blocked, unchanged by this stage.
+
+---
+
+## §BUILDER STEP NOTES (S8 — Women-Only Matching, Universal Gender & Scooter Vehicle Type)
+
+*Appended by the orchestrator/builder; S8a landed in `3e94ea5`, S8b landed in `2aa9b1c`, client SOS DB isolation in `ba77c30`.*
+
+**1. Data & Schema:**
+- Universal gender enum on `users` (`male`, `female`, `other`, `unspecified`) and `drivers.gender_verified` boolean.
+- `drivers.women_only_enabled` toggle and `rides.is_women_only` flag.
+- Scooter vehicle type added as a first-class economic twin of `bike_basic` with dedicated fare matrix and category segregation.
+- Platform config kill-switches: `women_only_rides_enabled` and `scooter_vehicle_type_enabled`.
+
+**2. Dispatch Engine & Server:**
+- `utils-server/dispatch.ts`: Zero-silent-fallback guarantee for women-only rides — female riders requesting women-only rides match strictly against verified female drivers.
+- Scooter vehicle matching: separate pool filtering, preserving sequential single-offer dispatch and debit-on-offer upfront lead billing.
+
+**3. API & Client Surfaces:**
+- `app/api/driver/women-only-toggle+api.ts`: Verification and activation gates.
+- Booking and fare screens updated with Scooter vehicle option and Women-Only preference chip for female riders.
+- Driver Home reflects active Women-Only mode indicator.
+- Client SOS contacts route created to isolate direct DB queries from mobile client bundle.
+
+**4. Physical Hardware Verification (Stage S8):**
+- Dual hardware pass on Pixel 6a (Android 16) and Redmi 9 (MIUI 12 / Android 10).
+- 9/9 scenarios verified: identity gate, driver toggle, sequential dispatch, debit-on-offer, PIN verification, cash fare settlement, mutual ratings, category boundary suppression, scooter twin economics, and dynamic platform kill switches. Full report: `docs/reports/STAGE-S8-PHYSICAL-DEVICE-QA-REPORT.md`.
+
+---
+
+## §BUILDER STEP NOTES (S9 — Full 7-Vertical QA Suite & Dual-Device Hardware Verification)
+
+*Appended by the orchestrator/builder; landed in `6e82758`.*
+
+**1. Automated Vertical QA Suite:**
+- Created 9 modular end-to-end execution scripts in `scripts/qa/`:
+  1. `step1-delivery-complete.mjs`: Courier parcel delivery, R2 photo proof, COD cash collection & earnings settlement.
+  2. `step2-rental-bidding.mjs`: Fleet rental bidding, award, and 5-minute SLA assignment countdown.
+  3. `step3-ambulance-emergency.mjs`: Emergency ambulance request with DGHS ALS certification validation & complete state transitions.
+  4. `step4-offer-rejection.mjs`: Sequential offer decline, clean next-candidate advance without penalty, and leg reset.
+  5. `step5-food-delivery.mjs`: Restaurant food order, automated leg creation, shop prep, courier offer acceptance, dual OTP handover, and settlement.
+  6. `step6-workshop-lifecycle.mjs`: Vehicle parts/workshop booking, vehicle details validation, and 2h SLA auto-decline sweep.
+  7. `step7-shop-staff-lifecycle.mjs`: Shop staff invite by phone, orders-only isolation, and restriction from financial settlement ledger.
+  8. `step8-truck-rental.mjs`: Truck cargo rental RFQ, fleet bid submission, and awarded execution.
+  9. `step9-live-dual-device-ride.mjs`: Live dual-device ride dispatch, lead debit-on-offer (-1 call), PIN-verified lifecycle, cash collection, and mutual ratings.
+
+**2. Physical Hardware Live Verification:**
+- Executed on Pixel 6a (Rider Fatima) and Redmi 9 (Driver Test Driver / Shop Owner / Courier) connected via Wi-Fi ADB.
+- Real-time Metro bundler (port 8081) and live WebSocket server (port 3001) over reverse port forwarding.
+- Full verification report: `docs/reports/STAGE-S9-FULL-VERTICAL-PHYSICAL-DEVICE-QA-REPORT.md`.
+- Quality gates verified: `npm run lint` (0 errors), `npx tsc --noEmit` (0 errors), `utils-server/tsc` (0 errors), all 10 pre-commit gates passing.

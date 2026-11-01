@@ -150,6 +150,8 @@ driver_ui.xml
 
 # Local scratch: probe scripts, logs, exports and device captures (never committed)
 .tmp/
+.tempmediaStorage/
+scratch/
 
 *storybook.log
 storybook-static
