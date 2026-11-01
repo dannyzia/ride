@@ -1,26 +1,34 @@
 // [public]
 import { supabaseAdmin } from '../../../lib/supabaseServer';
 import { heldRoles } from '@/lib/launchRoles';
+import { logger } from '@/lib/logger';
 
 export async function POST(request: Request) {
+  logger.info('[verify-token] POST received');
   const authHeader = request.headers.get('Authorization') ?? '';
   const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
   if (!token) {
+    logger.info('[verify-token] missing token');
     return Response.json({ error: 'missing_token', message: 'Authentication token missing' }, { status: 401 });
   }
 
+  logger.info('[verify-token] calling supabaseAdmin.auth.getUser');
   const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
+  logger.info('[verify-token] getUser result', { hasUser: !!user, error: error?.message });
   if (error || !user) {
     return Response.json({ error: 'invalid_token', message: 'Invalid authentication token' }, { status: 401 });
   }
 
-  const { data: dbUser } = await supabaseAdmin
+  logger.info('[verify-token] querying dbUser for auth_uid', { authUid: user.id });
+  const { data: dbUser, error: dbError } = await supabaseAdmin
     .from('users')
     .select('id, role, phone, name, account_status, suspension_reason, deleted_at')
     .eq('auth_uid', user.id)
     .single();
+  logger.info('[verify-token] dbUser query done', { hasDbUser: !!dbUser, error: dbError?.message });
 
   if (!dbUser) {
+    logger.info('[verify-token] no dbUser found, retrying...');
     // Registration race: SIGNED_IN may fire before the users row commits
     await new Promise(r => setTimeout(r, 500));
     const { data: retryUser } = await supabaseAdmin
@@ -29,8 +37,10 @@ export async function POST(request: Request) {
       .eq('auth_uid', user.id)
       .single();
     if (!retryUser) {
+      logger.info('[verify-token] retryUser not found, returning exists: false');
       return Response.json({ exists: false });
     }
+    logger.info('[verify-token] retryUser found, calling respond');
     return respond(retryUser);
   }
 
@@ -69,8 +79,21 @@ export async function POST(request: Request) {
   // ACTIVE-only on purpose: gating on pending/rejected roles would bounce a
   // fully-unverified multi-holder straight into the chooser forever.
   async function respond(row: { id: string; role: string; phone: string | null; name: string | null }) {
-    const held = await heldRoles(row.id);
+    logger.info('[verify-token] respond called for user', { id: row.id, role: row.role });
+    let held: any[] = [];
+    try {
+      const timeout = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('heldRoles timeout')), 2500)
+      );
+      held = await Promise.race([heldRoles(row.id), timeout]);
+      logger.info('[verify-token] heldRoles result', { count: held.length });
+    } catch (err: any) {
+      logger.warn('[verify-token] heldRoles fallback to primary role', { message: err?.message });
+    }
     const active: string[] = held.filter((r) => r.status === 'active').map((r) => r.role);
+    if (active.length === 0 && row.role) {
+      active.push(row.role);
+    }
     // Staff lane (Flow 15): an active shop_members row surfaces the shop
     // surface in the chooser as a synthetic `shop_staff` entry — invited
     // staff hold no user_roles row of their own. Fail-closed: a probe

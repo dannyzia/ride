@@ -201,7 +201,11 @@ export default function BreakMode() {
       }
       // Sync store state after successful break end
       useDriverStore.getState().setOnBreak(false, null);
-      router.back();
+      if (router.canGoBack()) {
+        router.back();
+      } else {
+        router.replace("/(main)/(rider)/d/(tabs)");
+      }
     } catch (err) {
       logger.error("BreakMode end failed", err);
       setError(t('break_mode.network_error_retry'));
@@ -248,11 +252,17 @@ export default function BreakMode() {
         }}
       >
         <TouchableOpacity
-          onPress={() => router.back()}
+          onPress={() => {
+            if (router.canGoBack()) {
+              router.back();
+            } else {
+              router.replace("/(main)/(rider)/d/(tabs)");
+            }
+          }}
           accessibilityRole="button"
           accessibilityLabel={t('break_mode.go_back')}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-         testID="rider.break-mode.el-1">
+         testID="rider.break-mode.replace-tabs">
           <Ionicons name="chevron-back" size={24} color={textPrimary} />
         </TouchableOpacity>
         <Text

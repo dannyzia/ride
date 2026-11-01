@@ -38,7 +38,7 @@ All core features are **fully implemented**:
 - **Database**: ~97 tables, ~32 enums in `src/db/schema.ts` (vehicleTypeEnum with 9 lowercase values, bodyTypeEnum, rideStatusEnum, pickupFeeStateEnum, etc.). Fare Framework v1 added: `zone_heat`, `zone_heat_history`, `pickup_distance_samples`, `fraud_flags`, `zone_recalibration_queue`, `cancel_surveys`. See `docs/Plan/IMPLEMENTATION-AGENT-PROMPT.md` § Database Schema for the full inventory — do not manually re-list all tables here or elsewhere; reference that doc.
 - **Admin panel**: `app/admin/` with web-only routes for verification, packages, zones, configuration. **Phase F15** consolidated all admin entities (driver queue, lifecycle, incentives, promos, preferences, referral campaigns, point offers, vehicle models, sample media, platform config, monitoring) into one coherent dashboard. All 10 API items + 14 UI items built and tsc-clean. See `docs/Plan/14-DEV-CHECKLIST.yaml` phase F15. **Phase F16** (Ride Fare Framework v1) added 4 admin screens: `fare-config`, `heat-monitor`, `pickup-analytics`, `trust-safety`.
 - **Chat**: In-app messaging with `store/useChatStore.ts` and `app/api/chat/`.
-- **Driver flows**: Onboarding, home, offers, ledger. 7 Zustand stores in `store/`.
+- **Driver flows**: Onboarding, home, offers, ledger. 19 Zustand stores in `store/` (7 barrel + 12 file stores), all reset via the `storeRegistry` in `lib/authCleanup.ts` — never quote a store count from memory; the registry is the list.
 
 **Verification:** No Clerk, Stripe, or Firebase references remain in the codebase (checked 2026-06).
 
@@ -264,7 +264,7 @@ grep -ri "clerk\|stripe\|firebase" app/ lib/ utils-server/ src/   # must return 
 # reported, NOT blocked — attribution is what every consumer resolves, and nothing reads `line`.
 # MEASURED rationale (do not "simplify" this back): stage 3 is NOT defeated by a stale map — its
 # MAP DRIFT check re-reads app/, so a flow-referenced id that goes stale still fails there. Flows
-# reference 93 of the map's ids (map total 1101, the same as the committed testid-map.json — regenerate with
+# reference 120 of the map's ids (map total 1273, the same as the committed testid-map.json — regenerate with
 # node maestro/tools/testid-manifest.cjs before quoting); the rest rot with NO signal (verified: renaming an
 # unreferenced id leaves flow-xcheck at exit 0), and stage 3 only runs on flow commits, so the rot
 # surfaces later to whoever selects the id, in an unrelated commit. The map is also the index used
@@ -277,15 +277,15 @@ grep -ri "clerk\|stripe\|firebase" app/ lib/ utils-server/ src/   # must return 
 # correctly, commit only app/ + the map — stage 5 is green (the map really was regenerated) and stage 3
 # never runs (no flow staged), so every flow selecting the old id keeps a DEAD selector until some
 # later unrelated commit touches that flow and makes it read as a flow bug. Stage 6 intersects the
-# ids this commit REMOVES with the set flows actually select (93 of the map's ids, test-pinned), so it blocks ONLY real
+# ids this commit REMOVES with the set flows actually select (120 of the map's ids, test-pinned), so it blocks ONLY real
 # orphans — renaming an id no flow uses stays green. It stands down when any flow is staged, because
 # stage 3 then verifies every selector authoritatively. Both maps come from git (`HEAD:` vs `:`), so it
 # asks "what does THIS commit delete". MEASURED, do not "simplify" this back: writing the selector
 # regex with the POSIX class `[[:space:]]` is VALID in the `git grep -E` pattern but NOT in JavaScript
 # (it means "one of [ : s p a c e then a literal ]"), which yields ZERO selectors and turns this into
 # a gate that silently passes every commit forever. `tests/meta/testid-flow-currency.test.ts` pins the
-# pre-commit INDEX-mode count at exactly 100 for that reason (its fixture tree is a copy of the
-# shipped CLI; the open tree's worktree-mode count is also 100). Replace 93/99/100 only if a committed
+# pre-commit INDEX-mode count at exactly 120 for that reason (its fixture tree is a copy of the
+# shipped CLI; the open tree's worktree-mode count is also 120). Replace 93/99/100/120 only if a committed
 # flow selector set itself changes.
 # CI MODES (2026-10-05, owner ruling): both tools gained `--head-vs-worktree`, and the
 # `maestro-drift` job runs them on every PR — on a clean checkout the index modes above compare
@@ -397,8 +397,8 @@ grep -ri "clerk\|stripe\|firebase" app/ lib/ utils-server/ src/   # must return 
 # the worktree (`git grep` without --cached) — the only mode that catches a flow still selecting
 # an id the map-at-HEAD claims but the tree no longer declares. Both modes re-run on every PR, so
 # a commit made where the hook is absent (web UI, fresh clone, --no-verify) is still audited.
-# Measured 2026-10-07 on the real tree, the worktree mode reports 100 flow-selected testIDs;
-# the harness pins the pre-commit index mode at 99. The ci.yml
+# Measured 2026-10-16 on the real tree, BOTH modes report 120 flow-selected testIDs;
+# `tests/meta/testid-flow-currency.test.ts` pins the pre-commit index mode at 120. The ci.yml
 # `precommit-gates` job (PR runs only) closes the index-scoped gap the other jobs cannot reach: it
 # replays the PR as a staged changeset on a throwaway branch (`git reset --soft` to base), adds four
 # benign probes so every stage gets real work, then runs the REAL hook and requires zero
@@ -498,7 +498,7 @@ The Ride project MUST remain on **Expo Managed workflow with Development Builds*
 - `components/` — Shared UI components, flat (no `src/` prefix, no `components/common/` subfolder); has `components/admin/` and `components/auth/` subfolders only
 - `theme/goRide.ts` — Single-file design token source (colors, typography, spacing, radii, shadows). Dark mode is handled by NativeWind `dark:` variants + `tailwind.config.js` aliases — there is no `ThemeProvider`/theme Context
 - `lib/` — Shared utilities (auth, DB, map, payment, validation)
-- `store/` — Zustand state stores (7 stores: useDriverStore, useRiderStore, useChatStore, useDriverStatusStore, usePackageStore, useCallLedgerStore, useDriverFlowStore)
+- `store/` — Zustand state stores (19 total: 7 barrel in `store/index.ts`, 12 file stores `store/use*.ts`). Sign-out resets every one via the `storeRegistry` in `lib/authCleanup.ts` — the registry, not this line, is the list
 - `src/db/schema.ts` — Drizzle schema (~97 tables, ~32 enums exported)
 - `utils-server/` — WebSocket dispatch server (separate package)
 - `scripts/` — Seed scripts (system-config, pricing, packages, platform-config, admin)
@@ -518,6 +518,7 @@ The Ride project MUST remain on **Expo Managed workflow with Development Builds*
 - `dispatch_offers` new rows (outcome `delivered`) → ONLY `utils-server/leadBilling.ts` (inserted in the SAME transaction as the call_ledger deduction). Terminal-outcome updates and `fetch_confirmed_at` telemetry stamps → `utils-server/index.ts` (offer:accept `accepted`, offer:reject `rejected`, chain `expired` stamps, fetch:confirm stamps) and `utils-server/scheduler.ts` job 20 (stale-offer crash-recovery `expired` flips, threshold `dispatch_offer_ttl_seconds + 5s`). `utils-server/dispatch.ts` no longer writes dispatch_offers (no 'filtered' audit rows — pool exclusions are not persisted). Sequential dispatch = one outstanding offer per ride, debit at offer time (`utils-server/dispatchChain.ts` holds the in-memory chain state)
 - `payment_events` row creation + PortPos invoice initiation → ONLY `lib/paymentEvents.ts` (`initiatePortposPayment`, `createZeroAmountPaymentEvent`), called by `app/api/rider/wallet/topup+api.ts`, `app/api/rider/passes+api.ts`, `app/api/driver/wallet/topup+api.ts`, `app/api/package/purchase+api.ts`
 - `payment_events` status transitions (`paid`/`failed`, `confirmed_at`, `subscription_id`) → `lib/activateSubscription.ts`, `app/api/payment/portpos/callback+api.ts`, and `lib/paymentRepair.ts` (`repairPaymentEvent` — shared transactional repair invoked by the callback itself and by `utils-server/compensationWorker.ts`; audited Z-2/Z-3)
+- Wallet balances are denormalized caches, never written alone: every mutation runs inside `db.transaction` together with its money-event row (same-tx `balance_after` subselect, so ledger and cache agree). Rider (`users.rider_wallet_balance_bdt` + `rider_wallet_transactions`): `lib/paymentRepair.ts` (topup repair), `app/api/rider/points+api.ts` (points→wallet; event is the `point_transactions` row), `app/api/ride/[id]/tip+api.ts` (rider tip debit), `lib/walletCashback.ts` (earn/redeem/expire), `app/api/ride/[id]/complete+api.ts` (tip + pass debits), `app/api/admin/fare-disputes+api.ts` + `app/api/admin/riders/[id]/refund+api.ts` (refunds). Driver (`drivers.driver_wallet_balance_bdt` + `driver_wallet_transactions`): `lib/cancellationCompensation.ts`, `lib/paymentRepair.ts` (topup), `app/api/ride/[id]/tip+api.ts` (tip credit), `app/api/ride/[id]/complete+api.ts` (promo-subsidy receivable). RECORDED DIVERGENCES (in-tx/event-row rule not met — harden, don't copy): `lib/gamification.ts` `grantAchievement` (unique-index-guarded, no tx, no txn row) and `utils-server/scheduler.ts` job 23 promo rewards (no tx, no txn row). No other file writes these balance columns. (D1-4, verified 2026-10-17)
 - `platform_config` gains one job-writer: `heat_backtest_correlation` via scheduler job 37 (weekly backtest). All other `platform_config` writes are admin-only via `PATCH /api/admin/config`.
 - No other file writes these tables directly.
 
@@ -535,6 +536,8 @@ The Ride project MUST remain on **Expo Managed workflow with Development Builds*
 Supabase phone OTP. Client uses `lib/supabase.ts` (`EXPO_PUBLIC_SUPABASE_URL` + `EXPO_PUBLIC_SUPABASE_ANON_KEY`). Server uses `lib/supabaseServer.ts` (`SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY`). Protected API routes call `verifySupabaseToken(request)` or `requireRole(request, role)` from `lib/auth.ts`. **No exceptions.** No `x-user-id` header substitution.
 
 **Fleet authorization (Phase 2):** fleet staff roles (`OWNER|MANAGER|DISPATCHER|ACCOUNTANT|VIEWER`) live EXCLUSIVELY in `fleet_members` — never `users.role` (which stays immutable/singular). Use `requireFleetMember(fleetId, allowedRoles?)` from `lib/auth.ts` to scope any fleet route to a specific fleet: it verifies the Supabase token, looks up the users row, asserts an ACTIVE `fleet_members` row for `(user, fleetId)` (and an allowed role when constrained), then throws 403 on any miss. Because `fleetId` is bound into the curried guard, URL-param tampering for cross-fleet access is structurally impossible. E.g. `app/api/fleets/[id]+api.ts`. Client switches its "Current Mode" entirely in local state via `store/useFleetStore.ts` (`activeMode`) — never a logout, never a `users.role` mutation.
+
+**Public shop catalog (A2-4):** `GET /api/shop/list`, `GET /api/shop/products`, `GET /api/shop/[id]`, and `GET /api/shop/types` are public by design and carry the top-of-file `// [public]` marker. Shop-management reads such as `GET /api/shop/[id]/products` remain shop-member gated and must stay unmarked.
 
 ### Vehicle Types
 9 lowercase values: `bike_basic`, `bike_standard`, `bike_plus`, `cng`, `car_compact`, `car_economy`, `car_comfort`, `car_premium`, `car_xl`. Import Zod enum from `lib/vehicleTypes.ts` — never define inline. Old values (`MOTORCYCLE`, `CNG_AUTO_RICKSHAW`, `CAR`, `MICROBUS`) are removed. `car_compact` sits between `cng` and `car_economy` in tier order.
@@ -623,7 +626,7 @@ No `console.log`. Use `lib/logger.ts` (`logger.info`, `logger.error`, etc.).
 ### Dispatch Logic
 - Sequential chain: one outstanding offer per ride at any time (`utils-server/dispatchChain.ts` holds in-memory chain state). No chain-length cap.
 - Bill-on-offer: lead debited at offer time (not fetch:confirm). Every offered driver is billed regardless of outcome (accept/reject/expire). `fetch:confirm` is telemetry-only.
-- Ordering tiers (applied to score, stable sort desc): (1) new-driver protection tier (`new_driver_priority_leads` within `new_driver_priority_days`), (2) cold-drop boost Lever 2 (temporary multiplier decaying over ~15 min), (3) return-lead affinity Lever 3 (pickup zone matches recent cold drop zone), (4) existing commute bonus (1.1×).
+- Ordering tiers (applied to score, stable sort desc): (1) new-driver protection tier (`new_driver_priority_leads` within `new_driver_priority_days`), (2) cold-drop boost Lever 2 (temporary multiplier decaying over ~15 min), (3) return-lead affinity Lever 3 (pickup zone matches recent cold drop zone). Commute is a pool filter, not a scoring tier.
 - Auto-accept relocated to offer step (rating ≥ 4.8, radius gate, first-wins). Auto-accept drivers billed the same 1 lead.
 - Pool filters unchanged: vehicle type (BEFORE H3 scoring), calls_remaining > 0 / unlimited, daily cap, chain-exclusion (previously billed drivers skipped), suspension/online, commute, min_per_km, blocklist, female-preference, cooldown.
 - Daily cap check belongs in dispatch candidate pool construction (`dispatch.ts`); `leadBilling.ts` re-checks it as defense-in-depth inside the debit transaction.

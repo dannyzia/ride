@@ -29,6 +29,9 @@ export async function POST(request: Request, { id }: { id: string }) {
     if (ride.driver_id !== driver.id) {
       return Response.json({ error: 'not_your_ride', message: 'This ride does not belong to you' }, { status: 403 });
     }
+    if (ride.status === 'in_progress') {
+      return Response.json({ ok: true, status: 'in_progress', started_at: ride.started_at ? new Date(ride.started_at).toISOString() : new Date().toISOString() });
+    }
     // PIN verification (C3-4: shared lockout — locked rides reject even the
     // correct PIN; the 3rd miss locks + notifies the admin).
     const pinParsed = await parseJsonBody(request, z.object({ pin: z.string() }));
@@ -62,6 +65,26 @@ export async function POST(request: Request, { id }: { id: string }) {
         error: 'invalid_status',
         message: `Cannot start ride in status: ${ride.status}`,
       }, { status: 409 });
+    }
+
+    // Emit WebSocket event to rider & finalize pickup trace
+    const wsPort = process.env.UTILS_SERVER_PORT ?? "3001";
+    const internalSecret = process.env.WEBSOCKET_INTERNAL_SECRET;
+    if (internalSecret && ride.user_id) {
+      fetch(`http://127.0.0.1:${wsPort}/internal/ride/started`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${internalSecret}`,
+        },
+        signal: AbortSignal.timeout(3_000),
+        body: JSON.stringify({
+          ride_id: rideId,
+          rider_user_id: ride.user_id,
+        }),
+      }).catch((e) =>
+        logger.warn("[ride/start] WS emit failed", { error: errors.getErrorMessage(e) }),
+      );
     }
 
     logger.info('[ride/start] ride started', { rideId, driverId: driver.id });

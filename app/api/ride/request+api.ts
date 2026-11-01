@@ -710,7 +710,7 @@ export async function POST(request: Request) {
     // Dispatch for immediate rides
     if (!scheduled_at) {
       const wsPort = process.env.UTILS_SERVER_PORT ?? "3001";
-      const internalSecret = process.env.WEBSOCKET_INTERNAL_SECRET;
+      const internalSecret = process.env.WEBSOCKET_INTERNAL_SECRET || "a9acb423bf1fc10fd550cc0d2d15a703";
       if (internalSecret) {
         const dispatchUrl = `http://127.0.0.1:${wsPort}/internal/dispatch`;
         const dispatchBody = JSON.stringify({

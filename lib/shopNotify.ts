@@ -70,6 +70,14 @@ export async function notifyShopNewOrder(
         { priority: "high", idempotencyKey: `shop_new_order:${orderId}:${userId}` },
       ).catch(() => {});
     }
+
+    notifyWs([
+      {
+        event: "shop:new_order",
+        to: [{ kind: "shop_staff", shop_id: shopId }],
+        payload: { order_id: orderId, shop_id: shopId, total_bdt: totalBdt },
+      },
+    ]);
   } catch (err) {
     logger.warn("[shopNotify] new-order notify failed", {
       orderId,

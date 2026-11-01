@@ -469,7 +469,8 @@ export default function DriverHome() {
   // Fetch on mount and whenever we come back ONLINE (offline→online transition)
   useEffect(() => {
     fetchDailyStats();
-  }, [fetchDailyStats, isOnline]);
+    loadDriverProfile();
+  }, [fetchDailyStats, loadDriverProfile, isOnline]);
 
   // S8 §4.4: women-only server state — refetched on mount + online
   // transitions so the banner tracks the toggle (set in Settings) without a

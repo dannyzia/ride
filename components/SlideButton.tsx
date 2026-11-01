@@ -1,6 +1,6 @@
 import { colors } from '@/theme/goRide';
 import React, { useRef } from 'react';
-import { View, Text, Animated, PanResponder, Dimensions } from 'react-native';
+import { Text, Animated, PanResponder, Dimensions, TouchableOpacity } from 'react-native';
 import Ionicons from "@expo/vector-icons/Ionicons";
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -26,6 +26,8 @@ const SlideButton: React.FC<SlideButtonProps> = ({
     const panResponder = useRef(
         PanResponder.create({
             onStartShouldSetPanResponder: () => true,
+            onMoveShouldSetPanResponder: () => true,
+            onPanResponderTerminationRequest: () => false,
             onPanResponderMove: (_, gesture) => {
                 if (gesture.dx > 0 && gesture.dx <= sliderWidth - handleWidth) {
                     pan.setValue({ x: gesture.dx, y: 0 });
@@ -49,11 +51,20 @@ const SlideButton: React.FC<SlideButtonProps> = ({
                     }).start();
                 }
             },
+            onPanResponderTerminate: () => {
+                Animated.spring(pan, {
+                    toValue: { x: 0, y: 0 },
+                    useNativeDriver: false,
+                    bounciness: 10,
+                }).start();
+            },
         })
     ).current;
 
     return (
-        <View
+        <TouchableOpacity
+            activeOpacity={0.85}
+            onPress={onComplete}
             className="h-16 rounded-full justify-center items-center px-2 relative overflow-hidden"
             style={{ width: sliderWidth, backgroundColor: bgColor }}
         >
@@ -81,7 +92,7 @@ const SlideButton: React.FC<SlideButtonProps> = ({
             >
                 <Ionicons name="chevron-forward" size={24} color={bgColor} />
             </Animated.View>
-        </View>
+        </TouchableOpacity>
     );
 };
 

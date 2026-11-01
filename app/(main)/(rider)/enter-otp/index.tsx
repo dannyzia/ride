@@ -9,6 +9,8 @@ import { useRideOfferStore, useWSStore } from "@/store";
 import { router } from "expo-router";
 import { useIsDark, useAppearance } from "@/lib/useAppearance";
 import { useTranslation } from "react-i18next";
+import { API_URL } from "@/lib/config";
+import { supabase } from "@/lib/supabase";
 
 const EnterOtp = () => {
   const [pinInput, setPinInput] = useState("");
@@ -81,25 +83,91 @@ const EnterOtp = () => {
     return () => ws.removeEventListener("message", onMessage);
   }, [ws, activeRideId]);
 
-  const handleVerify = () => {
+  // Auto-advance if the ride is already in_progress in DB
+  useEffect(() => {
+    if (!activeRideId) return;
+    (async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) return;
+      try {
+        const res = await fetch(`${API_URL}/api/ride/${activeRideId}/details`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.ride_status === "in_progress") {
+            clearVerifyTimeout();
+            setVerifying(false);
+            router.replace("/(main)/(rider)/finish-ride");
+          }
+        }
+      } catch {
+        // ignore fetch errors
+      }
+    })();
+  }, [activeRideId]);
+
+  const handleVerify = async () => {
     if (verifying) return;
     setError("");
     if (pinInput.length !== 4 || !activeRideId) {
       setError(t("enter_otp.enter_pin"));
       return;
     }
-    if (!ws || ws.readyState !== WebSocket.OPEN) {
-      setError(t("enter_otp.not_connected"));
-      return;
-    }
     setVerifying(true);
-    ws.send(
-      JSON.stringify({
-        type: "ride:start",
-        ride_id: activeRideId,
-        pin: pinInput,
-      }),
-    );
+
+    // 1. Try WebSocket start
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(
+        JSON.stringify({
+          type: "ride:start",
+          ride_id: activeRideId,
+          pin: pinInput,
+        }),
+      );
+    }
+
+    // 2. Also call HTTP start endpoint directly
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (token) {
+        const res = await fetch(`${API_URL}/api/ride/${activeRideId}/start`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ pin: pinInput }),
+        });
+        const data = await res.json();
+        if (data.ok || data.status === "in_progress") {
+          clearVerifyTimeout();
+          setVerifying(false);
+          router.replace("/(main)/(rider)/finish-ride");
+          return;
+        } else if (data.error === "pin_locked") {
+          clearVerifyTimeout();
+          setVerifying(false);
+          setError(t("enter_otp.pin_locked"));
+          setPinInput("");
+          return;
+        } else if (data.error === "invalid_pin") {
+          clearVerifyTimeout();
+          setVerifying(false);
+          setError(t("enter_otp.incorrect_pin"));
+          setPinInput("");
+          return;
+        }
+      }
+    } catch {
+      // fallback to WS or timeout
+      if (!ws || ws.readyState !== WebSocket.OPEN) {
+        setError(t("enter_otp.not_connected"));
+      }
+    }
+
     verifyTimeoutRef.current = setTimeout(() => {
       setVerifying(false);
       setError(t("enter_otp.no_response"));

@@ -160,11 +160,11 @@ export async function courierDebtHoldsDispatch(
       and(
         eq(courierRemittanceDues.delivery_man_user_id, courierUserId),
         eq(courierRemittanceDues.status, 'pending'),
-        sql`${courierRemittanceDues.created_at} < ${cutoff}`,
+        sql`${courierRemittanceDues.created_at} < ${cutoff.toISOString()}`,
       ),
     );
   const overdueTotal = Number(row?.total ?? 0);
-  return overdueTotal >= thresholdBdt;
+  return overdueTotal > 0 && overdueTotal >= thresholdBdt;
 }
 
 /** Batch variant for the dispatch candidate pool (one query, same rule). */
@@ -188,13 +188,14 @@ export async function couriersOnDispatchHold(
       and(
         inArray(courierRemittanceDues.delivery_man_user_id, courierUserIds),
         eq(courierRemittanceDues.status, 'pending'),
-        sql`${courierRemittanceDues.created_at} < ${cutoff}`,
+        sql`${courierRemittanceDues.created_at} < ${cutoff.toISOString()}`,
       ),
     )
     .groupBy(courierRemittanceDues.delivery_man_user_id);
   const held = new Set<string>();
   for (const row of rows) {
-    if (Number(row.total ?? 0) >= thresholdBdt) held.add(row.user_id);
+    const total = Number(row.total ?? 0);
+    if (total > 0 && total >= thresholdBdt) held.add(row.user_id);
   }
   return held;
 }

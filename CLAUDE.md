@@ -219,7 +219,7 @@ grep -ri "clerk\|stripe" app/ lib/ utils-server/           # must return nothing
 # reported, NOT blocked — attribution is what every consumer resolves, and nothing reads `line`.
 # MEASURED rationale (do not "simplify" this back): stage 3 is NOT defeated by a stale map — its
 # MAP DRIFT check re-reads app/, so a flow-referenced id that goes stale still fails there. Flows
-# reference 93 of the map's ids (map total 1101, the same as the committed testid-map.json — regenerate with
+# reference 120 of the map's ids (map total 1273, the same as the committed testid-map.json — regenerate with
 # node maestro/tools/testid-manifest.cjs before quoting); the rest rot with NO signal (verified: renaming an
 # unreferenced id leaves flow-xcheck at exit 0), and stage 3 only runs on flow commits, so the rot
 # surfaces later to whoever selects the id, in an unrelated commit. The map is also the index used
@@ -232,15 +232,15 @@ grep -ri "clerk\|stripe" app/ lib/ utils-server/           # must return nothing
 # correctly, commit only app/ + the map — stage 5 is green (the map really was regenerated) and stage 3
 # never runs (no flow staged), so every flow selecting the old id keeps a DEAD selector until some
 # later unrelated commit touches that flow and makes it read as a flow bug. Stage 6 intersects the
-# ids this commit REMOVES with the set flows actually select (93 of the map's ids, test-pinned), so it blocks ONLY real
+# ids this commit REMOVES with the set flows actually select (120 of the map's ids, test-pinned), so it blocks ONLY real
 # orphans — renaming an id no flow uses stays green. It stands down when any flow is staged, because
 # stage 3 then verifies every selector authoritatively. Both maps come from git (`HEAD:` vs `:`), so it
 # asks "what does THIS commit delete". MEASURED, do not "simplify" this back: writing the selector
 # regex with the POSIX class `[[:space:]]` is VALID in the `git grep -E` pattern but NOT in JavaScript
 # (it means "one of [ : s p a c e then a literal ]"), which yields ZERO selectors and turns this into
 # a gate that silently passes every commit forever. `tests/meta/testid-flow-currency.test.ts` pins the
-# pre-commit INDEX-mode count at exactly 100 for that reason (its fixture tree is a copy of the
-# shipped CLI; the open tree's worktree-mode count is also 100). Replace 93/99/100 only if a committed
+# pre-commit INDEX-mode count at exactly 120 for that reason (its fixture tree is a copy of the
+# shipped CLI; the open tree's worktree-mode count is also 120). Replace 93/99/100/120 only if a committed
 # flow selector set itself changes.
 # CI MODES (2026-10-05, owner ruling): both tools gained `--head-vs-worktree`, and the
 # `maestro-drift` job runs them on every PR — on a clean checkout the index modes above compare
@@ -260,7 +260,7 @@ grep -ri "clerk\|stripe" app/ lib/ utils-server/           # must return nothing
 # tests/meta/testid-flow-currency.test.ts each run the SHIPPED CLI in a throwaway git repo for
 # this mode, PAIRED with a fault-injected copy whose detector is neutralised and must flip the
 # outcome (6 new tests; a no-op gate fails the suite instead of passing quietly). On the open tree
-# the CI-mode number is 100 flow-selected testIDs (index mode, `git grep --cached`, is 99) —
+# the CI-mode number is 120 flow-selected testIDs (index mode, `git grep --cached`, is 120) —
 # do not re-pin the harness until the next committed flow edit.
 # Stage 3 runs `node maestro/tools/flow-xcheck.cjs` whenever a maestro/flows/**.yaml is staged.
 # TWO BLOCKING checks: (a) a flow `id:` selector absent from maestro/tools/testid-map.json can
@@ -455,7 +455,7 @@ If you cannot confirm the six Section 20 gates are complete, **do not generate f
 
 ### Key Libraries (implemented)
 - **UI**: NativeWind (TailwindCSS), Lottie, react-native-paper, GoRide design tokens in `theme/goRide.ts`
-- **State**: Zustand stores in `store/` (7 stores: useDriverStore, useRiderStore, useChatStore, useDriverStatusStore, usePackageStore, useCallLedgerStore, useDriverFlowStore)
+- **State**: Zustand stores in `store/` (19 total: 7 barrel in `store/index.ts`, 12 file stores `store/use*.ts`; sign-out resets every one via the `storeRegistry` in `lib/authCleanup.ts` — the registry, not this line, is the list)
 - **Map**: `@maplibre/maplibre-react-native` + Barikoi API (`barikoiapis`) via `utils/mapUtils.ts`
 - **Database**: Supabase PostgreSQL + Drizzle ORM (`src/db/schema.ts`) — ~97 tables, ~32 enums
 - **Auth**: Supabase Auth phone OTP (`lib/auth.ts`, `lib/supabase.ts`, `lib/supabaseServer.ts`)
@@ -487,7 +487,7 @@ Rider requests ride → POST /api/ride/request → zone check + fare calc
   → Per offer: leadBilling debit (dispatch_offers + call_ledger in ONE tx)
     → lead:billed to driver → ride:offer (drop ZONE + heat tag + pickup fee estimate)
     → settle via offer:accept / offer:reject / TTL expiry / socket close
-  → Ordering tiers: new-driver protection → cold-drop boost (L2) → return-lead affinity (L3) → commute bonus (1.1×)
+  → Ordering tiers: new-driver protection tier → cold-drop boost (L2) → return-lead affinity (L3). Commute is a pool filter, not a scoring tier.
   → Auto-accept at offer step (rating ≥ 4.8, radius gate, first-wins)
   → Pool exhausted → no_drivers/alternatives (existing flow)
 ```
@@ -566,6 +566,7 @@ See AGENTS.md for the complete rules reference. Key rules:
 - **dispatch_offers writes**: `utils-server/leadBilling.ts` is the sole writer of new rows (`delivered`, in one tx with the deduction); terminal-outcome updates in `utils-server/index.ts` (accept/reject/expired stamps, `fetch_confirmed_at` telemetry stamps) and `utils-server/scheduler.ts` job 20 (stale-offer crash-recovery expiry only, skip younger than `dispatch_offer_ttl_seconds + 5s`). `dispatch.ts` no longer writes (no 'filtered' rows — filtering audit is not persisted)
 - **platform_config writers**: admin-only via `PATCH /api/admin/config` PLUS one job-writer: `heat_backtest_correlation` via scheduler job 37 (weekly backtest)
 - **payment_events writes**: row creation + PortPos invoice initiation ONLY via `lib/paymentEvents.ts` (`initiatePortposPayment` — used by rider/wallet/topup, rider/passes, driver/wallet/topup, package/purchase); status transitions (`paid`/`failed`) in `lib/activateSubscription.ts`, `app/api/payment/portpos/callback+api.ts`, and `lib/paymentRepair.ts` (`repairPaymentEvent` — shared transactional repair invoked by the callback and `utils-server/compensationWorker.ts`)
+- **Wallet writes**: balances (`users.rider_wallet_balance_bdt`, `drivers.driver_wallet_balance_bdt`) are denormalized caches — every mutation runs in-tx with its money-event row (same-tx `balance_after`). Rider sites: paymentRepair, rider/points, ride tip, walletCashback, ride complete, admin fare-disputes + riders refund. Driver sites: cancellationCompensation, paymentRepair, ride tip, ride complete. RECORDED DIVERGENCES: gamification grantAchievement + scheduler job 23 promo rewards (no tx, no txn row — harden, don't copy). Full list in AGENTS.md § Write Ownership (D1-4)
 - **PortPos callback security**: the public callback must call `portposClient.verifyIPN()` (secret-bearing) and Zod-validate the invoice response before crediting wallets / activating subscriptions
 - **Idempotency-Key convention** (decision `01M23628A1566SK1D5XXV1NT5G`): all state-changing POSTs SHOULD accept `Idempotency-Key`; the `(route, key)` barrier lives DB-backed in `idempotency_keys` (table, migration 0056), helper `lib/idempotency.ts` with `IDEMPOTENCY_ROUTES` route ids. Duplicate claim ⇒ replay the original outcome (`Idempotency-Replayed: true`), in-flight ⇒ `409 idempotency_key_in_progress`, 23505 race loser ⇒ read-and-return winner. Store the outcome on EVERY terminal path of an executed claim (typed failures replay too). Wired: rider/driver wallet topup, rider passes (optional header), package purchase (required). Exempt: SOS insert, /internal/*, PortPos callback. Full rules in AGENTS.md § Idempotency-Key Convention
 - **Single instance**: `INSTANCE_COUNT=1` required for WebSocket dispatch (no split-brain)

@@ -84,9 +84,14 @@ const FinishRide = () => {
   // nothing else works, so send the driver home (Home owns reconnect).
   useEffect(() => {
     if (!ws) {
-      Alert.alert(t('finish_ride.connection_lost'), t('finish_ride.not_connected_message'), [
-        { text: t('finish_ride.ok'), onPress: () => router.replace("/(main)/(rider)/d") },
-      ]);
+      const timer = setTimeout(() => {
+        if (!useWSStore.getState().ws) {
+          Alert.alert(t('finish_ride.connection_lost'), t('finish_ride.not_connected_message'), [
+            { text: t('finish_ride.ok'), onPress: () => router.replace("/(main)/(rider)/d") },
+          ]);
+        }
+      }, 3000);
+      return () => clearTimeout(timer);
     }
   }, [ws, router]);
 

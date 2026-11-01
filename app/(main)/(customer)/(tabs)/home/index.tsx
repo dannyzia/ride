@@ -194,6 +194,15 @@ const {
     pickupCoords.lat !== 0 &&
     dropoffCoords.lat !== 0
   );
+  logger.info('[DEBUG hasRoute]', {
+    hasRoute,
+    pickupCoords,
+    dropoffCoords,
+    pickup,
+    destination,
+    userLatitude,
+    userLongitude,
+  });
 
   // Estimates filtered to current category
   // S8 §4.3: scooter card hidden while its kill switch is off.
@@ -472,26 +481,43 @@ useEffect(() => {
 
     setEstimateLoading(true);
     setEstimateError(null);
+    logger.info('[home] fetchEstimates start', { pickupCoords, dropoffCoords, API_URL });
     try {
       const {
         data: { session },
       } = await supabase.auth.getSession();
       const token = session?.access_token ?? "";
-      const res = await fetch(`${API_URL}/api/ride/estimate`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify({
-          pickup_lat: pickupCoords.lat,
-          pickup_lng: pickupCoords.lng,
-          dropoff_lat: dropoffCoords.lat,
-          dropoff_lng: dropoffCoords.lng,
-          stops: stops.length > 0 ? stops : undefined,
-        }),
-      });
+      logger.info('[home] fetchEstimates token obtained', { hasToken: !!token });
+      const targetUrl = `${API_URL}/api/ride/estimate`;
+      logger.info('[home] fetchEstimates calling', { targetUrl });
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 45000);
+      let res: Response;
+      try {
+        const validStops = stops.filter(
+          (s) => s.address && s.address.trim().length > 0 && s.lat !== 0,
+        );
+        res = await fetch(targetUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          body: JSON.stringify({
+            pickup_lat: pickupCoords.lat,
+            pickup_lng: pickupCoords.lng,
+            dropoff_lat: dropoffCoords.lat,
+            dropoff_lng: dropoffCoords.lng,
+            stops: validStops.length > 0 ? validStops : undefined,
+          }),
+          signal: controller.signal,
+        });
+      } finally {
+        clearTimeout(timer);
+      }
+      logger.info('[home] fetchEstimates response received', { status: res.status });
       const data = await res.json();
+      logger.info('[home] fetchEstimates data parsed', { hasEstimates: !!data.estimates, err: data.error });
       if (data.estimates) {
         setEstimates(data.estimates);
         setCachedEstimates(
@@ -504,7 +530,8 @@ useEffect(() => {
       } else if (data.error) {
         setEstimateError(data.message || data.error);
       }
-    } catch {
+    } catch (err: unknown) {
+      logger.error('[home] fetchEstimates catch error', err instanceof Error ? err.message : String(err));
       setEstimateError(t('rider_home.estimates_failed'));
     } finally {
       setEstimateLoading(false);
@@ -780,6 +807,16 @@ useEffect(() => {
         return;
       }
 
+      const validStops = stops.filter(
+        (s) => s.address && s.address.trim().length > 0 && s.lat !== 0,
+      );
+      const effectivePickupAddress =
+        pickup?.address?.trim() ||
+        `${pickupCoords.lat.toFixed(4)}, ${pickupCoords.lng.toFixed(4)}`;
+      const effectiveDropoffAddress =
+        destination?.address?.trim() ||
+        `${dropoffCoords.lat.toFixed(4)}, ${dropoffCoords.lng.toFixed(4)}`;
+
       const res = await fetch(`${API_URL}/api/ride/request`, {
         method: "POST",
         headers: {
@@ -789,12 +826,12 @@ useEffect(() => {
         body: JSON.stringify({
           pickup_lat: pickupCoords.lat,
           pickup_lng: pickupCoords.lng,
-          pickup_address: pickup?.address || "",
+          pickup_address: effectivePickupAddress,
           dropoff_lat: dropoffCoords.lat,
           dropoff_lng: dropoffCoords.lng,
-          dropoff_address: destination?.address || "",
+          dropoff_address: effectiveDropoffAddress,
           vehicle_type: selectedVehicleType,
-          stops: stops.length > 0 ? stops : undefined,
+          stops: validStops.length > 0 ? validStops : undefined,
           selected_discount_type: selectedPromo?.type || "none",
           selected_discount_amount_bdt: selectedPromo?.amount_bdt || 0,
           // S8 §4.3: women-only markers (server gates each code).

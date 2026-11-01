@@ -172,6 +172,7 @@ interface WSClient {
   supabaseUid?: string;
   role?: "driver" | "rider" | "admin" | "shop";
   driverId?: string;
+  vehicleType?: string;
   subscribedRideId?: string; // rider: which ride they are tracking
   lastSeen?: number; // epoch ms of last heartbeat (for stale-connection cleanup)
   driverSessionId?: string; // PATCH 4: driver session tracking for utilization
@@ -907,10 +908,17 @@ const server = http.createServer(async (req, res) => {
     });
     req.on("end", async () => {
       try {
-        const { ride_id } = JSON.parse(body);
+        const { ride_id, rider_user_id } = JSON.parse(body);
         if (!ride_id) {
           writeJson(400, { error: "missing_fields" });
           return;
+        }
+        if (rider_user_id) {
+          sendToRider(rider_user_id, {
+            type: "ride:status",
+            ride_id,
+            status: "in_progress",
+          });
         }
         // Phase F quote state 3: ride start closes the accept→start trace
         // window — persist realized km + confidence. The root
@@ -967,7 +975,8 @@ wss.on("connection", (ws: WebSocket) => {
       return;
     }
 
-    switch (domain) {
+    try {
+      switch (domain) {
       /* ── Auth ──────────────────────────────────────────────────── */
       case "auth": {
         if (action === "hello") {
@@ -1097,6 +1106,8 @@ wss.on("connection", (ws: WebSocket) => {
                   return;
                 }
                 client.driverId = driver.id;
+                client.vehicleType = driver.vehicle_type;
+                client.lastSeen = Date.now();
 
                 // One driver, one live socket. On reconnect, close the
                 // previous socket (if any) so the orphan can't keep sending
@@ -1289,6 +1300,12 @@ wss.on("connection", (ws: WebSocket) => {
           return;
         }
 
+        const now = Date.now();
+        client.lastSeen = now; // refresh staleness tracker immediately on every heartbeat
+        if (!connectedDrivers.has(client.driverId) || connectedDrivers.get(client.driverId) !== client) {
+          connectedDrivers.set(client.driverId, client);
+        }
+
         // Phase F/G: every driver GPS point feeds the 30-min ring buffer
         // (Phase G detection + live last-known position for the firm-quote
         // driver fix) and any active accept→start trace. Runs BEFORE the
@@ -1298,22 +1315,44 @@ wss.on("connection", (ws: WebSocket) => {
         const cell = getH3Cell(lat, lng);
         logger.info('[ws] heartbeat', { driverId: client.driverId, lat, lng, cell });
 
-        // Always update in-memory H3 index for accurate dispatch scoring
-        const [driverRow] = await db
-          .select({ vehicle_type: drivers.vehicle_type, zone_id: drivers.zone_id })
-          .from(drivers)
-          .where(eq(drivers.id, client.driverId))
-          .limit(1);
-        if (driverRow) {
-          updateDriver(client.driverId, cell, driverRow.vehicle_type);
+        // Update in-memory H3 index using cached vehicleType when possible
+        let vType = client.vehicleType;
+        if (!vType) {
+          try {
+            const [driverRow] = await db
+              .select({ vehicle_type: drivers.vehicle_type, zone_id: drivers.zone_id })
+              .from(drivers)
+              .where(eq(drivers.id, client.driverId))
+              .limit(1);
+            if (driverRow) {
+              vType = driverRow.vehicle_type;
+              client.vehicleType = vType;
+            }
+          } catch (e: any) {
+            logger.warn('[ws] heartbeat vehicle_type query error', { driverId: client.driverId, error: e?.message });
+          }
+        }
+        if (vType) {
+          updateDriver(client.driverId, cell, vType);
         }
 
         // Persist to DB every 30s (throttled in h3Index.ts)
-        const now = Date.now();
-        client.lastSeen = now; // refresh staleness tracker on every heartbeat
         const lastPersist = getLastPersist(client.driverId);
         if (now - lastPersist < 30_000) break;
         setLastPersist(client.driverId, now);
+
+        // Fetch current DB zone for hysteresis comparison
+        let currentZoneId: string | null = null;
+        try {
+          const [row] = await db
+            .select({ zone_id: drivers.zone_id })
+            .from(drivers)
+            .where(eq(drivers.id, client.driverId))
+            .limit(1);
+          currentZoneId = row?.zone_id ?? null;
+        } catch (e: any) {
+          logger.warn('[ws] heartbeat zone query error', { driverId: client.driverId, error: e?.message });
+        }
 
         // Z-4 + hysteresis: Resolve driver zone from heartbeat coordinates.
         // Uses getZoneForLocation which respects zone_multi_active_enabled:
@@ -1329,9 +1368,6 @@ wss.on("connection", (ws: WebSocket) => {
         } catch (e: unknown) {
           logger.error('[ws] zone resolution failed for driver heartbeat', e);
         }
-
-        // Fetch current DB zone for hysteresis comparison
-        const currentZoneId: string | null = driverRow?.zone_id ?? null;
 
         // Outside all zones → immediately set null (no hysteresis needed)
         let finalZoneId = currentZoneId;
@@ -1372,16 +1408,20 @@ wss.on("connection", (ws: WebSocket) => {
           }
         }
 
-        await db
-          .update(drivers)
-          .set({
-            last_location_lat: String(lat),
-            last_location_lng: String(lng),
-            last_location_at: new Date(),
-            h3_cell_res9: cell,
-            zone_id: finalZoneId,
-          })
-          .where(eq(drivers.id, client.driverId));
+        try {
+          await db
+            .update(drivers)
+            .set({
+              last_location_lat: String(lat),
+              last_location_lng: String(lng),
+              last_location_at: new Date(),
+              h3_cell_res9: cell,
+              zone_id: finalZoneId,
+            })
+            .where(eq(drivers.id, client.driverId));
+        } catch (e: any) {
+          logger.warn('[ws] heartbeat db update failed', { driverId: client.driverId, error: e?.message });
+        }
         break;
       }
 
@@ -1728,6 +1768,11 @@ wss.on("connection", (ws: WebSocket) => {
             send(ws, { type: "error", message: "not_your_ride" });
             break;
           }
+          if (startRide.status === "in_progress") {
+            // Already started — reply ride:started idempotently
+            send(ws, { type: "ride:started", ride_id: rideId });
+            break;
+          }
           // C3-4: locked rides reject even the correct PIN.
           if (startRide.start_pin_locked_at != null) {
             send(ws, {
@@ -1921,6 +1966,9 @@ wss.on("connection", (ws: WebSocket) => {
 
       default:
         send(ws, { type: "error", message: `unknown_type: ${type}` });
+    }
+    } catch (err: any) {
+      logger.error("[ws] message dispatch error", { type, error: err?.message });
     }
   });
 

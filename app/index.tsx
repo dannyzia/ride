@@ -83,17 +83,29 @@ export default function Splash() {
       const {
         data: { session },
       } = await supabase.auth.getSession();
+      logger.info('[splash] runAuthCheck session', { hasSession: !!session, hasUser: !!session?.user });
       if (!session?.user) {
         // §9.3 SPLASH→WELCOME — no session means first-run; the welcome
         // screen owns onboarding entry.
+        logger.info('[splash] no session, redirecting to welcome');
         redirect("/(auth)/welcome");
         return;
       }
 
-      const res = await fetch(`${API_URL}/api/auth/verify-token`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${session.access_token}` },
-      });
+      logger.info('[splash] calling verify-token', { url: `${API_URL}/api/auth/verify-token` });
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000);
+      let res: Response;
+      try {
+        res = await fetch(`${API_URL}/api/auth/verify-token`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${session.access_token}` },
+          signal: controller.signal,
+        });
+      } finally {
+        clearTimeout(timeoutId);
+      }
+      logger.info('[splash] verify-token status', { status: res.status });
 
       if (res.status === 401 || res.status === 403) {
         // Session rejected — registration/auth flow must restart.
@@ -141,6 +153,7 @@ export default function Splash() {
   // Hold the splash for 1.5s before the auth check. Timer is cleared on
   // unmount so a navigate-away during the wait never fires a stale check.
   useEffect(() => {
+    mountedRef.current = true;
     const timer = setTimeout(() => {
       void runAuthCheck();
     }, 1500);

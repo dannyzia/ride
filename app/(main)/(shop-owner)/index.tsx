@@ -18,6 +18,7 @@ import {
   Text,
   TouchableOpacity,
   ScrollView,
+  RefreshControl,
   Switch,
   Modal,
   ActivityIndicator,
@@ -27,7 +28,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { router } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import { useTranslation } from "react-i18next";
 import { API_URL } from "@/lib/config";
 import { supabase } from "@/lib/supabase";
@@ -110,6 +111,7 @@ export default function ShopDashboardScreen() {
   const [plans, setPlans] = useState<PlanRow[]>([]);
   const [segment, setSegment] = useState<"new" | "active" | "ready" | "history">("new");
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [actingId, setActingId] = useState<string | null>(null);
   const [prepTarget, setPrepTarget] = useState<ShopOrder | null>(null);
   const [rejectTarget, setRejectTarget] = useState<ShopOrder | null>(null);
@@ -166,6 +168,18 @@ export default function ShopDashboardScreen() {
     }
   }, []);
 
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await load();
+    setRefreshing(false);
+  }, [load]);
+
+  useFocusEffect(
+    useCallback(() => {
+      void load();
+    }, [load]),
+  );
+
   useEffect(() => {
     void load();
   }, [load]);
@@ -184,6 +198,7 @@ export default function ShopDashboardScreen() {
         const type = readType(event.data);
         if (
           type === "shop:order_status" ||
+          type === "shop:new_order" ||
           type === "shop:availability" ||
           type === "shop:workshop_request_status"
         ) {
@@ -312,7 +327,17 @@ export default function ShopDashboardScreen() {
 
   return (
     <SafeAreaView className="flex-1" style={{ backgroundColor: C.bg }}>
-      <ScrollView contentContainerStyle={{ padding: 20 }}>
+      <ScrollView
+        contentContainerStyle={{ padding: 20 }}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={colors.primary}
+            colors={[colors.primary]}
+          />
+        }
+      >
         {/* Header */}
         <View className="flex-row items-center justify-between mb-4">
           <View>

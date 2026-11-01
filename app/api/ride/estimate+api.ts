@@ -48,11 +48,15 @@ const estimateSchema = z.object({
 });
 
 export async function POST(request: Request) {
+  logger.info('[estimate] POST invoked');
   try {
     const supabaseUser = await verifySupabaseToken(request);
+    logger.info('[estimate] token verified', { userId: supabaseUser?.id });
     const [rider] = await db.select({ id: users.id, total_rides: users.total_rides }).from(users).where(eq(users.auth_uid, supabaseUser.id)).limit(1);
+    logger.info('[estimate] rider found in db', { found: !!rider, riderId: rider?.id });
     if (!rider) return Response.json({ error: 'user_not_found', message: 'User not found' }, { status: 404 });
     const parsed = await parseJsonBody(request, estimateSchema);
+    logger.info('[estimate] body parsed', { ok: parsed.ok });
     if (!parsed.ok) return parsed.response;
     const { pickup_lat, pickup_lng, dropoff_lat, dropoff_lng, vehicle_type, preference_ids, stops } = parsed.data;
     const _upfrontTip = parsed.data.upfront_tip_bdt;

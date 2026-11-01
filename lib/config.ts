@@ -20,7 +20,13 @@ function isAndroidEmulator(): boolean {
 }
 
 function isProdUrl(url: string): boolean {
-  return url.length > 0 && !url.includes("localhost") && !url.includes("10.0.2.2");
+  return (
+    url.length > 0 &&
+    !url.includes("localhost") &&
+    !url.includes("127.0.0.1") &&
+    !url.includes("10.0.2.2") &&
+    !url.includes("192.168.")
+  );
 }
 
 // ── Env vars ──────────────────────────────────────────────────
@@ -38,7 +44,7 @@ function resolveApiUrl(): string {
   // 2. Production domain
   if (isProdUrl(ENV_API)) return ENV_API;
 
-  // 3. Emulator fallback
+  // 3. Emulator / localhost fallback
   return isAndroidEmulator() ? "http://10.0.2.2:8081" : "http://localhost:8081";
 }
 
@@ -52,9 +58,7 @@ function resolveWsUrl(): string {
   // 2. If env var is set to a production domain, use it
   if (isProdUrl(ENV_WS)) return ENV_WS;
 
-  // 3. Fallback: emulator uses 10.0.2.2, dev machine uses localhost
-  //    Note: on physical devices without DEV_LAN_IP, ws://localhost:3001
-  //    points to the PHONE, not the dev machine — set DEV_LAN_IP instead.
+  // 3. Emulator / localhost fallback
   return isAndroidEmulator() ? "ws://10.0.2.2:3001" : "ws://localhost:3001";
 }
 

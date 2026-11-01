@@ -1,7 +1,9 @@
 import "../global.css";
 import { useEffect, useRef, useState } from "react";
-import { Platform, View, ActivityIndicator, Appearance } from "react-native";
+import { Platform, View, ActivityIndicator, Appearance, LogBox } from "react-native";
 import { Slot, useRouter, useSegments } from "expo-router";
+
+LogBox.ignoreAllLogs();
 import { useFonts } from "expo-font";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import * as SplashScreen from "expo-splash-screen";

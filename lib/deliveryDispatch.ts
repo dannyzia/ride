@@ -473,7 +473,7 @@ export async function deliveryDispatchTick(): Promise<{ advanced: number; exhaus
   const stale = await db
     .select({ id: deliveries.id })
     .from(deliveries)
-    .where(and(eq(deliveries.status, 'offered'), sql`${deliveries.offer_expires_at} <= ${now}`))
+    .where(and(eq(deliveries.status, 'offered'), sql`${deliveries.offer_expires_at} <= ${now.toISOString()}`))
     .limit(25);
   for (const row of stale) {
     const result = await advanceDeliveryChain(row.id);
@@ -493,7 +493,7 @@ export async function deliveryDispatchTick(): Promise<{ advanced: number; exhaus
       and(
         eq(deliveries.status, 'created'),
         isNull(deliveries.delivery_man_user_id),
-        inArray(shopOrders.status, ['preparing', 'dispatched']),
+        inArray(shopOrders.status, ['preparing', 'dispatched', 'ready_for_pickup']),
         inArray(shopOrders.fulfillment, ['delivery']),
         ne(shopOrders.order_kind, 'service_booking'),
         sql`${deliveries.offer_attempts} < ${maxSuggestions}`,
@@ -542,7 +542,7 @@ export async function retryDeliveryDispatch(orderId: string): Promise<boolean> {
     .from(shopOrders)
     .where(eq(shopOrders.id, orderId))
     .limit(1);
-  if (!order || !['accepted', 'preparing', 'dispatched'].includes(order.status)) return false;
+  if (!order || !['accepted', 'preparing', 'dispatched', 'ready_for_pickup'].includes(order.status)) return false;
   const updated = await db
     .update(deliveries)
     .set({

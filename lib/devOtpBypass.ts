@@ -23,7 +23,13 @@ interface DevSession {
   phone: string;
   expiresAt: number;
 }
-const devSessions = new Map<string, DevSession>();
+const DEV_SESSIONS_KEY = Symbol.for("ride.devSessions");
+if (!(globalThis as unknown as Record<symbol, unknown>)[DEV_SESSIONS_KEY]) {
+  (globalThis as unknown as Record<symbol, unknown>)[DEV_SESSIONS_KEY] = new Map<string, DevSession>();
+}
+const devSessions: Map<string, DevSession> = (globalThis as unknown as Record<symbol, unknown>)[
+  DEV_SESSIONS_KEY
+] as Map<string, DevSession>;
 
 export function isDevOtpBypassEnabled(): boolean {
   return DEV_OTP_BYPASS;

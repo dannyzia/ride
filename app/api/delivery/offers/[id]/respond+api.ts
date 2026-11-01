@@ -160,7 +160,7 @@ export async function POST(request: Request, { id }: { id: string }) {
             // §6.1 step 4: the order enters the assignment state from the
             // dispatching states (preparing = auto-triggered search,
             // dispatched = shop-triggered search).
-            status: 'courier_assigned',
+            status: order.status === 'ready_for_pickup' ? 'ready_for_pickup' : 'courier_assigned',
             updated_at: new Date(),
           })
           .where(
@@ -237,5 +237,5 @@ export async function POST(request: Request, { id }: { id: string }) {
 
 /** SQL predicate: the order must still be awaiting courier assignment. */
 function inArrayStatusPrep() {
-  return sql`${shopOrders.status} IN ('preparing', 'dispatched')`;
+  return sql`${shopOrders.status} IN ('preparing', 'dispatched', 'ready_for_pickup')`;
 }

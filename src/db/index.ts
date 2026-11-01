@@ -185,7 +185,12 @@ function createPool() {
 
 type DrizzleDb = ReturnType<typeof createPool>["db"];
 
-let pool = createPool();
+declare global {
+  // eslint-disable-next-line no-var
+  var __ride_db_pool: ReturnType<typeof createPool> | undefined;
+}
+
+let pool = globalThis.__ride_db_pool ?? (globalThis.__ride_db_pool = createPool());
 
 /**
  * The application pool. A Proxy rather than the drizzle instance itself, so
@@ -390,6 +395,7 @@ export async function probeAppPoolCapacity(
 export async function recyclePool(): Promise<void> {
   const dying = pool;
   pool = createPool();
+  globalThis.__ride_db_pool = pool;
   try {
     await dying.client.end({ timeout: 0 });
   } catch {
