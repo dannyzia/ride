@@ -313,7 +313,7 @@ export async function POST(request: Request) {
         women_only: women_only ?? false,
         secondary_rider_female: secondary_rider_female ?? false,
         // v6 shadow (PATCH 1)
-        fare_v6_shadow: fareBreakdown as any,
+        fare_v6_shadow: v6FareBreakdown as any,
         fare_v6_shadow_computed_at: new Date(),
        }).returning();
 

@@ -556,7 +556,7 @@ export async function POST(request: Request) {
           cancellation_fee_applied: false,
 
           // v6 shadow (PATCH 1): log alongside v2 fare, never billed in Stage 0
-          fare_v6_shadow: fareBreakdown as any,
+          fare_v6_shadow: v6FareBreakdown as any,
           fare_v6_shadow_computed_at: new Date(),
          })
         .returning();

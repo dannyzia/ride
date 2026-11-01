@@ -28,7 +28,7 @@ import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
 import { haversineKm } from "@/lib/hotspots";
 import Map, { type MapHotspot } from "@/components/Map";
-import { colors, radii, spacing } from "@/theme/goRide";
+import { colors, radii, spacing, typography, fonts } from "@/theme/goRide";
 import { useIsDark } from "@/lib/useAppearance";
 
 interface HotspotRow {
@@ -329,8 +329,8 @@ const styles = StyleSheet.create({
   headerTitle: {
     flex: 1,
     textAlign: "center",
-    fontFamily: "Jakarta-Bold",
-    fontSize: 18,
+    fontFamily: fonts.heading,
+    fontSize: typography.lg,
     letterSpacing: -0.3,
   },
   segmentRow: {
@@ -347,7 +347,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   segmentBtnActive: { backgroundColor: colors.primary },
-  segmentText: { fontFamily: "Jakarta-SemiBold", fontSize: 13 },
+  segmentText: { fontFamily: fonts.headingSemi, fontSize: typography.sm },
   center: {
     flex: 1,
     alignItems: "center",
@@ -355,16 +355,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xl,
     gap: 12,
   },
-  centerText: { fontFamily: "Jakarta-Regular", fontSize: 14, textAlign: "center" },
+  centerText: { fontFamily: fonts.body, fontSize: typography.sm, textAlign: "center" },
   retryBtn: {
     borderWidth: 1,
     borderRadius: radii.md,
     paddingHorizontal: spacing.lg,
     paddingVertical: 10,
   },
-  retryText: { fontFamily: "Jakarta-SemiBold", fontSize: 13 },
+  retryText: { fontFamily: fonts.headingSemi, fontSize: typography.sm },
   listContent: { padding: spacing.lg, gap: 10 },
-  listMeta: { fontFamily: "Jakarta-Regular", fontSize: 12, marginBottom: 2 },
+  listMeta: { fontFamily: fonts.body, fontSize: typography.xs, marginBottom: 2 },
   row: {
     flexDirection: "row",
     alignItems: "center",
@@ -376,9 +376,9 @@ const styles = StyleSheet.create({
   },
   rowSelected: { borderWidth: 2, borderColor: colors.primary },
   rowMain: { flex: 1 },
-  rowName: { fontFamily: "Jakarta-SemiBold", fontSize: 14 },
-  rowSub: { fontFamily: "Jakarta-Regular", fontSize: 12, marginTop: 2 },
-  rowTier: { fontFamily: "Jakarta-Bold", fontSize: 12 },
+  rowName: { fontFamily: fonts.headingSemi, fontSize: typography.sm },
+  rowSub: { fontFamily: fonts.body, fontSize: typography.xs, marginTop: 2 },
+  rowTier: { fontFamily: fonts.heading, fontSize: typography.xs },
   dot: { width: 10, height: 10, borderRadius: 5 },
   mapWrap: { flex: 1 },
   selectedCard: {
@@ -394,5 +394,5 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
   },
-  selectedName: { flex: 1, fontFamily: "Jakarta-SemiBold", fontSize: 14 },
+  selectedName: { flex: 1, fontFamily: fonts.headingSemi, fontSize: typography.sm },
 });

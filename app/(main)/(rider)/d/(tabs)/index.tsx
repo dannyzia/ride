@@ -16,7 +16,7 @@ import RideOfferSheet from "@/components/RideOfferSheet";
 import DriverStatsBar from "@/components/DriverStatsBar";
 import { showToast } from "@/components/Toast";
 import ScreenLabel from "@/components/ScreenLabel";
-import { colors, spacing, radii } from "@/theme/goRide";
+import { colors, spacing, radii, typography, fonts } from "@/theme/goRide";
 import { useIsDark, useAppearance } from "@/lib/useAppearance";
 import MapLibreGL from "@/utils/maplibreLoader";
 import { useBarikoiMapStyle } from "@/utils/mapUtils";
@@ -925,8 +925,8 @@ export default function DriverHome() {
             <Ionicons name="location-outline" size={32} color={textSecondary} />
             <Text
               style={{
-                fontFamily: "Jakarta-Regular",
-                fontSize: 16,
+                fontFamily: fonts.body,
+                fontSize: typography.base,
                 color: textSecondary,
                 marginTop: spacing.sm,
               }}
@@ -973,7 +973,8 @@ export default function DriverHome() {
               justifyContent: "center",
             }}
           >
-            <Text style={{ fontFamily: "Jakarta-Regular", fontSize: 16, color: textSecondary }}>
+            <Text style={{ fontFamily: fonts.body,
+                fontSize: typography.base, color: textSecondary }}>
               {t('driver_home.map_view')}
             </Text>
           </View>
@@ -1096,8 +1097,8 @@ export default function DriverHome() {
                 <Ionicons name="power" size={22} color={colors.white} />
                 <Text
                   style={{
-                    fontFamily: "Jakarta-Bold",
-                    fontSize: 12,
+                    fontFamily: fonts.heading,
+                    fontSize: typography.xs,
                     color: colors.white,
                     marginTop: 2,
                   }}
@@ -1109,8 +1110,8 @@ export default function DriverHome() {
             {lastOnlineAt && !wsConnected ? (
               <Text
                 style={{
-                  fontFamily: "Jakarta-Regular",
-                  fontSize: 14,
+                  fontFamily: fonts.body,
+                  fontSize: typography.sm,
                   color: textSecondary,
                   marginTop: spacing.md,
                   textAlign: "center",
@@ -1159,8 +1160,8 @@ export default function DriverHome() {
             />
             <Text
               style={{
-                fontFamily: "Jakarta-SemiBold",
-                fontSize: 16,
+                fontFamily: fonts.headingSemi,
+                fontSize: typography.base,
                 color: textPrimary,
               }}
               numberOfLines={1}
@@ -1168,7 +1169,8 @@ export default function DriverHome() {
               {driver?.name ?? "Driver"}
             </Text>
             {driver?.vehicle_type ? (
-              <Text style={{ fontFamily: "Jakarta-Regular", fontSize: 14, color: textSecondary }}>
+              <Text style={{ fontFamily: fonts.body,
+                  fontSize: typography.sm, color: textSecondary }}>
                 · {vehicleTypeDisplay[driver.vehicle_type] ?? driver.vehicle_type}
               </Text>
             ) : null}
@@ -1281,8 +1283,8 @@ export default function DriverHome() {
             <Ionicons name="cloud-offline-outline" size={16} color={colors.black} />
             <Text
               style={{
-                fontFamily: "Jakarta-SemiBold",
-                fontSize: 16,
+                fontFamily: fonts.headingSemi,
+                fontSize: typography.base,
                 color: colors.black,
               }}
             >
@@ -1314,8 +1316,8 @@ export default function DriverHome() {
             <Ionicons name="female-outline" size={16} color={colors.white} />
             <Text
               style={{
-                fontFamily: "Jakarta-SemiBold",
-                fontSize: 16,
+                fontFamily: fonts.headingSemi,
+                fontSize: typography.base,
                 color: colors.white,
               }}
             >
@@ -1349,8 +1351,8 @@ export default function DriverHome() {
             <Ionicons name="time-outline" size={16} color={textSecondary} />
             <Text
               style={{
-                fontFamily: "Jakarta-Regular",
-                fontSize: 14,
+                fontFamily: fonts.body,
+                  fontSize: typography.sm,
                 color: textSecondary,
                 textAlign: "center",
                 flexShrink: 1,
@@ -1430,13 +1432,14 @@ export default function DriverHome() {
                   justifyContent: "space-between",
                 }}
               >
-                <Text style={{ fontFamily: "Jakarta-Regular", fontSize: 14, color: textSecondary }}>
+                <Text style={{ fontFamily: fonts.body,
+                  fontSize: typography.sm, color: textSecondary }}>
                   {t('driver_home.calls_remaining')}
                 </Text>
                 <Text
                   style={{
-                    fontFamily: "Jakarta-Bold",
-                    fontSize: 18,
+                    fontFamily: fonts.heading,
+                    fontSize: typography.lg,
                     color: textPrimary,
                     fontVariant: ["tabular-nums"],
                   }}
@@ -1449,7 +1452,8 @@ export default function DriverHome() {
               {/* C10-3: exhausted (0, not the -1 unlimited sentinel) or past expiry — offers are paused. */}
               {(activeSubscription.calls_remaining === 0 ||
                 new Date(activeSubscription.expires_at).getTime() < Date.now()) ? (
-                <Text style={{ fontFamily: "Jakarta-Bold", fontSize: 13, color: colors.danger, marginTop: 4 }}>
+                <Text style={{ fontFamily: fonts.heading,
+                    fontSize: typography.sm, color: colors.danger, marginTop: 4 }}>
                   {t('driver_home.plan_expired_offers_paused')}
                 </Text>
               ) : null}
@@ -1467,7 +1471,8 @@ export default function DriverHome() {
               }}
             >
               {/* C10-3: no active subscription (expired/lapsed) — offers are paused. */}
-              <Text style={{ fontFamily: "Jakarta-Bold", fontSize: 13, color: colors.danger, marginBottom: 8, textAlign: "center" }}>
+              <Text style={{ fontFamily: fonts.heading,
+                    fontSize: typography.sm, color: colors.danger, marginBottom: 8, textAlign: "center" }}>
                 {t('driver_home.plan_expired_offers_paused')}
               </Text>
               <TouchableOpacity
@@ -1475,7 +1480,8 @@ export default function DriverHome() {
                 accessibilityRole="button"
                 accessibilityLabel="Buy a package"
                testID="rider.d.push-packages">
-                <Text style={{ fontFamily: "Jakarta-Bold", fontSize: 16, color: colors.primary }}>
+                <Text style={{ fontFamily: fonts.heading,
+                    fontSize: typography.base, color: colors.primary }}>
                   {t('driver_home.buy_package')}
                 </Text>
               </TouchableOpacity>
@@ -1518,8 +1524,8 @@ export default function DriverHome() {
                 <Text
                   numberOfLines={1}
                   style={{
-                    fontFamily: "Jakarta-SemiBold",
-                    fontSize: 16,
+                    fontFamily: fonts.headingSemi,
+                fontSize: typography.base,
                     color: textPrimary,
                   }}
                 >
@@ -1527,8 +1533,8 @@ export default function DriverHome() {
                 </Text>
                 <Text
                   style={{
-                    fontFamily: "Jakarta-Regular",
-                    fontSize: 14,
+                    fontFamily: fonts.body,
+                  fontSize: typography.sm,
                     color: textSecondary,
                   }}
                 >
@@ -1541,8 +1547,8 @@ export default function DriverHome() {
               >
                 <Text
                   style={{
-                    fontFamily: "Jakarta-Regular",
-                    fontSize: 14,
+                    fontFamily: fonts.body,
+                  fontSize: typography.sm,
                     color: textSecondary,
                   }}
                 >
@@ -1593,10 +1599,10 @@ export default function DriverHome() {
                 <Ionicons name="swap-horizontal" size={22} color={colors.primary} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={{ fontFamily: 'Jakarta-SemiBold', fontSize: 15, color: textPrimary }}>
+                <Text style={{ fontFamily: fonts.headingSemi, fontSize: typography.base, color: textPrimary }}>
                   {t('driver_home.marketplace_bidding')}
                 </Text>
-                <Text style={{ fontFamily: 'Jakarta', fontSize: 12, color: textSecondary, marginTop: 2 }}>
+                <Text style={{ fontFamily: fonts.body, fontSize: typography.xs, color: textSecondary, marginTop: 2 }}>
                   {marketplaceAccess.length === 1
                     ? `${marketplaceAccess[0].fleet_name} · ${marketplaceAccess[0].role}`
                     : t('driver_home.fleets_available', { count: marketplaceAccess.length })}
@@ -1636,11 +1642,11 @@ export default function DriverHome() {
               >
                 <Ionicons name="alert-circle" size={28} color={colors.amber} />
               </View>
-              <Text style={{ fontFamily: 'Jakarta-Bold', fontSize: 18, color: textPrimary, textAlign: 'center' }}>
+              <Text style={{ fontFamily: fonts.heading, fontSize: typography.lg, color: textPrimary, textAlign: 'center' }}>
                 {t('driver_home.active_session_found')}
               </Text>
             </View>
-            <Text style={{ fontFamily: 'Jakarta-Regular', fontSize: 14, color: textSecondary, textAlign: 'center', marginBottom: 24 }}>
+            <Text style={{ fontFamily: fonts.body, fontSize: typography.sm, color: textSecondary, textAlign: 'center', marginBottom: 24 }}>
               {t('driver_home.active_session_desc')}
             </Text>
             <TouchableOpacity
@@ -1651,13 +1657,13 @@ export default function DriverHome() {
               }}
               style={{ backgroundColor: colors.primary, borderRadius: 12, height: 52, alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}
              testID="rider.d.set-show-recovery-dialog">
-              <Text style={{ fontFamily: 'Jakarta-SemiBold', fontSize: 16, color: colors.white }}>{t('driver_home.resume_working')}</Text>
+              <Text style={{ fontFamily: fonts.headingSemi, fontSize: typography.base, color: colors.white }}>{t('driver_home.resume_working')}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               onPress={handleForceEndSession}
               style={{ backgroundColor: surfaceBg, borderRadius: 12, height: 52, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.danger }}
              testID="rider.d.handle-force-end-session">
-              <Text style={{ fontFamily: 'Jakarta-SemiBold', fontSize: 16, color: colors.danger }}>{t('driver_home.end_session')}</Text>
+              <Text style={{ fontFamily: fonts.headingSemi, fontSize: typography.base, color: colors.danger }}>{t('driver_home.end_session')}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -1672,7 +1678,7 @@ export default function DriverHome() {
           }]}
         >
           <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={{ fontFamily: 'Jakarta-Medium', fontSize: 14, color: textSecondary, marginTop: 12 }}>
+          <Text style={{ fontFamily: fonts.bodyMedium, fontSize: typography.sm, color: textSecondary, marginTop: 12 }}>
             {t('driver_home.checking_session')}
           </Text>
         </View>
@@ -1689,11 +1695,11 @@ export default function DriverHome() {
           }}
         >
           <Ionicons name="warning-outline" size={20} color={colors.danger} style={{ marginRight: 12 }} />
-          <Text style={{ fontFamily: 'Jakarta-Medium', fontSize: 14, color: textPrimary, flex: 1 }}>
+          <Text style={{ fontFamily: fonts.bodyMedium, fontSize: typography.sm, color: textPrimary, flex: 1 }}>
             {sessionError}
           </Text>
           <TouchableOpacity onPress={() => recoverSession(true)} testID="rider.d.recover-session">
-            <Text style={{ fontFamily: 'Jakarta-SemiBold', fontSize: 14, color: colors.primary }}>{t('driver_home.retry')}</Text>
+            <Text style={{ fontFamily: fonts.headingSemi, fontSize: typography.sm, color: colors.primary }}>{t('driver_home.retry')}</Text>
           </TouchableOpacity>
         </View>
       )}

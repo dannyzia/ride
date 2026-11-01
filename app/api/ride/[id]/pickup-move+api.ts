@@ -279,7 +279,7 @@ export async function POST(request: Request, { id }: { id: string }) {
               }
             : {}),
           // v6 shadow (PATCH 1)
-          fare_v6_shadow: fareBreakdown as any,
+          fare_v6_shadow: v6FareBreakdown as any,
           fare_v6_shadow_computed_at: new Date(),
           ...(forced
             ? {

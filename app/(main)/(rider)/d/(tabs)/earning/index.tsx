@@ -14,7 +14,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { API_URL } from "@/lib/config";
-import { colors, radii } from "@/theme/goRide";
+import { colors, radii, typography, fonts } from "@/theme/goRide";
 import { useIsDark } from "@/lib/useAppearance";
 import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
@@ -614,17 +614,17 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   errorText: {
-    fontFamily: "Jakarta-Medium",
-    fontSize: 13,
+    fontFamily: fonts.bodyMedium,
+    fontSize: typography.sm,
     flex: 1,
   },
   retryText: {
-    fontFamily: "Jakarta-Bold",
-    fontSize: 13,
+    fontFamily: fonts.heading,
+    fontSize: typography.sm,
   },
   sectionTitle: {
-    fontFamily: "Jakarta-Bold",
-    fontSize: 16,
+    fontFamily: fonts.heading,
+    fontSize: typography.base,
     marginTop: 8,
   },
   dayRow: {
@@ -642,8 +642,8 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   dayLabel: {
-    fontFamily: "Jakarta-SemiBold",
-    fontSize: 14,
+    fontFamily: fonts.headingSemi,
+    fontSize: typography.sm,
   },
   todayBadge: {
     paddingHorizontal: 8,
@@ -651,25 +651,25 @@ const styles = StyleSheet.create({
     borderRadius: radii.pill,
   },
   todayBadgeText: {
-    fontFamily: "Jakarta-Bold",
-    fontSize: 11,
+    fontFamily: fonts.heading,
+    fontSize: typography.xs,
   },
   dayRight: {
     alignItems: "flex-end",
   },
   dayEarnings: {
-    fontFamily: "Jakarta-Bold",
-    fontSize: 15,
+    fontFamily: fonts.heading,
+    fontSize: typography.base,
     fontVariant: ["tabular-nums"],
   },
   dayTrips: {
-    fontFamily: "Jakarta-Regular",
-    fontSize: 12,
+    fontFamily: fonts.body,
+    fontSize: typography.xs,
     marginTop: 2,
   },
   emptyText: {
-    fontFamily: "Jakarta-Regular",
-    fontSize: 13,
+    fontFamily: fonts.body,
+    fontSize: typography.sm,
     paddingVertical: 8,
   },
   menuRow: {
@@ -681,7 +681,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   menuLabel: {
-    fontFamily: "Jakarta-Bold",
-    fontSize: 15,
+    fontFamily: fonts.heading,
+    fontSize: typography.base,
   },
 });

@@ -2942,63 +2942,63 @@
     "(main)/(rider)/d/(tabs)/index.tsx": [
       {
         "id": "rider.d.toggle-online",
-        "line": 1061
+        "line": 1062
       },
       {
         "id": "rider.d.push-shops",
-        "line": 1192
+        "line": 1194
       },
       {
         "id": "rider.d.set-theme",
-        "line": 1210
+        "line": 1212
       },
       {
         "id": "rider.d.push-break-mode",
-        "line": 1229
+        "line": 1231
       },
       {
         "id": "rider.d.toggle-online-2",
-        "line": 1241
+        "line": 1243
       },
       {
         "id": "rider.d.push-break-mode-2",
-        "line": 1255
+        "line": 1257
       },
       {
         "id": "rider.d.women-only-banner",
-        "line": 1312
+        "line": 1314
       },
       {
         "id": "rider.d.women-only-nudge",
-        "line": 1347
+        "line": 1349
       },
       {
         "id": "rider.d.get-driver-fix",
-        "line": 1398
+        "line": 1400
       },
       {
         "id": "rider.d.push-packages",
-        "line": 1477
+        "line": 1482
       },
       {
         "id": "rider.d.push-hotspot-map",
-        "line": 1501
+        "line": 1507
       },
       {
         "id": "rider.d.push-rental-bidder",
-        "line": 1584
+        "line": 1590
       },
       {
         "id": "rider.d.set-show-recovery-dialog",
-        "line": 1653
-      },
-      {
-        "id": "rider.d.handle-force-end-session",
         "line": 1659
       },
       {
+        "id": "rider.d.handle-force-end-session",
+        "line": 1665
+      },
+      {
         "id": "rider.d.recover-session",
-        "line": 1695
+        "line": 1701
       }
     ],
     "(main)/(rider)/d/(tabs)/profile/index.tsx": [

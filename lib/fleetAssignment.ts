@@ -25,12 +25,16 @@
  *     (NULL = unassigned pool vehicle).
  * All cache writes happen inside the SAME transaction as the assignment row.
  */
-import { and, eq, isNull, ne } from "drizzle-orm";
+import { and, eq, inArray, isNull, ne } from "drizzle-orm";
 import { db } from "@/src/db";
 import {
   drivers,
   fleets,
   fleetVehicleAssignments,
+  auditLogs,
+  fleetBillingTransactions,
+  fleetMembers,
+  rides,
   vehicles,
 } from "@/src/db/schema";
 import { logger } from "@/lib/logger";
@@ -50,6 +54,24 @@ export class FleetAssignmentError extends Error {
   ) {
     super(message);
     this.name = "FleetAssignmentError";
+  }
+}
+
+export class FleetExitError extends Error {
+  constructor(
+    public code:
+      | "driver_has_unsettled_dues"
+      | "active_trip_in_progress"
+      | "fleet_has_overdue_billing"
+      | "vehicle_not_in_fleet"
+      | "driver_not_in_fleet"
+      | "vehicle_not_found"
+      | "driver_not_found",
+    message: string,
+    public details?: Record<string, unknown>,
+  ) {
+    super(message);
+    this.name = "FleetExitError";
   }
 }
 
@@ -211,4 +233,360 @@ export async function unassignVehicle(
     vehicle_id: input.vehicle_id,
     driver_id: active?.driver_id ?? null,
   });
+}
+
+/**
+ * Dues gate check for driver exit (BD-1..3):
+ * 1. Wallet balance < 0 (unsettled debits) -> BLOCKED.
+ * 2. Active ride in progress -> BLOCKED.
+ */
+export async function checkDriverExitDues(
+  tx: FleetTx,
+  driverId: string,
+): Promise<{ blocked: boolean; reason?: string; details?: Record<string, unknown> }> {
+  const [driver] = await tx
+    .select({
+      id: drivers.id,
+      balance: drivers.driver_wallet_balance_bdt,
+    })
+    .from(drivers)
+    .where(eq(drivers.id, driverId))
+    .limit(1);
+
+  if (!driver) {
+    return { blocked: true, reason: "driver_not_found" };
+  }
+
+  // BD-1: Dues gate blocks exit entirely if wallet balance is negative.
+  if (driver.balance < 0) {
+    return {
+      blocked: true,
+      reason: "driver_has_unsettled_dues",
+      details: { debt_bdt: Math.abs(driver.balance) },
+    };
+  }
+
+  // In-flight lock: cannot leave while a ride is active.
+  const activeRideStatuses = ["matched", "driver_arriving", "driver_arrived", "in_progress"] as const;
+  const [activeRide] = await tx
+    .select({ id: rides.id })
+    .from(rides)
+    .where(
+      and(
+        eq(rides.driver_id, driverId),
+        inArray(rides.status, [...activeRideStatuses]),
+      ),
+    )
+    .limit(1);
+
+  if (activeRide) {
+    return {
+      blocked: true,
+      reason: "active_trip_in_progress",
+      details: { ride_id: activeRide.id },
+    };
+  }
+
+  return { blocked: false };
+}
+
+/**
+ * Dues gate check for vehicle delisting (BD-1..3):
+ * 1. Active trip on vehicle's assigned driver -> BLOCKED.
+ * 2. Overdue/pending fleet subscription transactions -> BLOCKED.
+ */
+export async function checkFleetVehicleExitDues(
+  tx: FleetTx,
+  vehicleId: string,
+  fleetId: string,
+): Promise<{ blocked: boolean; reason?: string; details?: Record<string, unknown> }> {
+  const [vehicle] = await tx
+    .select({
+      id: vehicles.id,
+      fleet_id: vehicles.fleet_id,
+      driver_id: vehicles.driver_id,
+    })
+    .from(vehicles)
+    .where(eq(vehicles.id, vehicleId))
+    .limit(1);
+
+  if (!vehicle) {
+    return { blocked: true, reason: "vehicle_not_found" };
+  }
+  if (vehicle.fleet_id !== fleetId) {
+    return { blocked: true, reason: "vehicle_not_in_fleet" };
+  }
+
+  // Check in-flight trip if vehicle currently has an assigned driver
+  if (vehicle.driver_id) {
+    const activeRideStatuses = ["matched", "driver_arriving", "driver_arrived", "in_progress"] as const;
+    const [activeRide] = await tx
+      .select({ id: rides.id })
+      .from(rides)
+      .where(
+        and(
+          eq(rides.driver_id, vehicle.driver_id),
+          inArray(rides.status, [...activeRideStatuses]),
+        ),
+      )
+      .limit(1);
+
+    if (activeRide) {
+      return {
+        blocked: true,
+        reason: "active_trip_in_progress",
+        details: { ride_id: activeRide.id },
+      };
+    }
+  }
+
+  // BD-3: Fleet-owed dues (unsettled subscription transactions) block vehicle delisting
+  const [overdueTx] = await tx
+    .select({ id: fleetBillingTransactions.id, amount_bdt: fleetBillingTransactions.amount_bdt })
+    .from(fleetBillingTransactions)
+    .where(
+      and(
+        eq(fleetBillingTransactions.fleet_id, fleetId),
+        inArray(fleetBillingTransactions.status, ["pending", "overdue"]),
+      ),
+    )
+    .limit(1);
+
+  if (overdueTx) {
+    return {
+      blocked: true,
+      reason: "fleet_has_overdue_billing",
+      details: { transaction_id: overdueTx.id, amount_bdt: overdueTx.amount_bdt },
+    };
+  }
+
+  return { blocked: false };
+}
+
+/**
+ * Delist a vehicle from a fleet (ISSUE-36 / Plan 27 §4.4).
+ * Enforces the dues gate, closes any active assignment, clears vehicles.fleet_id/driver_id,
+ * and clears drivers.vehicle_id if assigned.
+ * BD-2: Platform admin can override the block; audited in audit_logs.
+ */
+/**
+ * Ensure a solo NATIVE fleet exists for a user (universal fleet model).
+ */
+export async function getOrCreateSoloFleet(tx: FleetTx, userId: string): Promise<string> {
+  const [existing] = await tx
+    .select({ id: fleets.id })
+    .from(fleets)
+    .where(and(eq(fleets.owner_user_id, userId), eq(fleets.fleet_type, "NATIVE")))
+    .limit(1);
+
+  if (existing) {
+    return existing.id;
+  }
+
+  const [created] = await tx
+    .insert(fleets)
+    .values({
+      owner_user_id: userId,
+      name: "Solo Fleet",
+      fleet_type: "NATIVE",
+      status: "ACTIVE",
+    })
+    .returning({ id: fleets.id });
+
+  return created.id;
+}
+
+export async function delistVehicleFromFleet(
+  tx: FleetTx,
+  input: {
+    vehicle_id: string;
+    fleet_id: string;
+    actor_user_id: string;
+    admin_override?: boolean;
+    admin_override_reason?: string;
+  },
+): Promise<{ success: boolean; vehicle_id: string }> {
+  const gate = await checkFleetVehicleExitDues(tx, input.vehicle_id, input.fleet_id);
+
+  if (gate.blocked) {
+    if (!input.admin_override) {
+      throw new FleetExitError(
+        gate.reason as any,
+        `Vehicle delisting blocked: ${gate.reason}`,
+        gate.details,
+      );
+    }
+
+    // BD-2: Audited override
+    await tx.insert(auditLogs).values({
+      actor_user_id: input.actor_user_id,
+      fleet_id: input.fleet_id,
+      action: "fleet_vehicle_delist_override",
+      entity_type: "vehicle",
+      entity_id: input.vehicle_id,
+      new_value: {
+        reason: input.admin_override_reason ?? "admin_override",
+        bypassed_gate: gate.reason,
+        details: gate.details,
+      },
+    });
+  }
+
+  const now = new Date();
+
+  // Close active assignment row
+  const [active] = await tx
+    .select({ driver_id: fleetVehicleAssignments.driver_id })
+    .from(fleetVehicleAssignments)
+    .where(
+      and(
+        eq(fleetVehicleAssignments.vehicle_id, input.vehicle_id),
+        isNull(fleetVehicleAssignments.unassigned_at),
+      ),
+    )
+    .limit(1);
+
+  await tx
+    .update(fleetVehicleAssignments)
+    .set({ unassigned_at: now, status: "ended", reason: "delisted_from_fleet" })
+    .where(
+      and(
+        eq(fleetVehicleAssignments.vehicle_id, input.vehicle_id),
+        isNull(fleetVehicleAssignments.unassigned_at),
+      ),
+    );
+
+  const targetFleetId = await getOrCreateSoloFleet(tx, input.actor_user_id);
+
+  // Clear denormalized caches and detach vehicle from fleet (reverts to actor solo fleet)
+  await tx
+    .update(vehicles)
+    .set({ fleet_id: targetFleetId, driver_id: null, updated_at: now })
+    .where(eq(vehicles.id, input.vehicle_id));
+
+  if (active) {
+    await tx
+      .update(drivers)
+      .set({ vehicle_id: null, updated_at: now })
+      .where(eq(drivers.id, active.driver_id));
+  }
+
+  logger.info("[fleet] vehicle delisted from fleet", {
+    fleet_id: input.fleet_id,
+    vehicle_id: input.vehicle_id,
+    actor_user_id: input.actor_user_id,
+    admin_override: !!input.admin_override,
+  });
+
+  return { success: true, vehicle_id: input.vehicle_id };
+}
+
+/**
+ * Remove a driver from a fleet or allow driver to leave (ISSUE-36 / Plan 27 §4.4).
+ * Enforces the dues gate, detaches drivers.fleet_id, unassigns any held vehicle,
+ * and marks fleetMembers.removed_at.
+ * BD-2: Platform admin can override the block; audited in audit_logs.
+ */
+export async function removeDriverFromFleet(
+  tx: FleetTx,
+  input: {
+    driver_id: string;
+    fleet_id: string;
+    actor_user_id: string;
+    admin_override?: boolean;
+    admin_override_reason?: string;
+  },
+): Promise<{ success: boolean; driver_id: string }> {
+  const [driver] = await tx
+    .select({
+      id: drivers.id,
+      user_id: drivers.user_id,
+      fleet_id: drivers.fleet_id,
+      vehicle_id: drivers.vehicle_id,
+    })
+    .from(drivers)
+    .where(eq(drivers.id, input.driver_id))
+    .limit(1);
+
+  if (!driver) {
+    throw new FleetExitError("driver_not_found", "Driver not found");
+  }
+  if (driver.fleet_id !== input.fleet_id) {
+    throw new FleetExitError("driver_not_in_fleet", "Driver does not belong to this fleet");
+  }
+
+  const gate = await checkDriverExitDues(tx, input.driver_id);
+
+  if (gate.blocked) {
+    if (!input.admin_override) {
+      throw new FleetExitError(
+        gate.reason as any,
+        `Driver exit blocked: ${gate.reason}`,
+        gate.details,
+      );
+    }
+
+    // BD-2: Audited override
+    await tx.insert(auditLogs).values({
+      actor_user_id: input.actor_user_id,
+      fleet_id: input.fleet_id,
+      action: "fleet_driver_exit_override",
+      entity_type: "driver",
+      entity_id: input.driver_id,
+      new_value: {
+        reason: input.admin_override_reason ?? "admin_override",
+        bypassed_gate: gate.reason,
+        details: gate.details,
+      },
+    });
+  }
+
+  const now = new Date();
+
+  // If driver holds an active vehicle assignment, close it and clear vehicle cache
+  if (driver.vehicle_id) {
+    await tx
+      .update(fleetVehicleAssignments)
+      .set({ unassigned_at: now, status: "ended", reason: "driver_exited_fleet" })
+      .where(
+        and(
+          eq(fleetVehicleAssignments.driver_id, input.driver_id),
+          isNull(fleetVehicleAssignments.unassigned_at),
+        ),
+      );
+
+    await tx
+      .update(vehicles)
+      .set({ driver_id: null, updated_at: now })
+      .where(eq(vehicles.id, driver.vehicle_id));
+  }
+
+  const soloFleetId = await getOrCreateSoloFleet(tx, driver.user_id);
+
+  // Clear driver's held vehicle and revert fleet pointer to solo fleet
+  await tx
+    .update(drivers)
+    .set({ fleet_id: soloFleetId, vehicle_id: null, updated_at: now })
+    .where(eq(drivers.id, input.driver_id));
+
+  // Stamp fleet_members.removed_at
+  await tx
+    .update(fleetMembers)
+    .set({ removed_at: now, status: "inactive", updated_at: now })
+    .where(
+      and(
+        eq(fleetMembers.fleet_id, input.fleet_id),
+        eq(fleetMembers.user_id, driver.user_id),
+        isNull(fleetMembers.removed_at),
+      ),
+    );
+
+  logger.info("[fleet] driver removed from fleet", {
+    fleet_id: input.fleet_id,
+    driver_id: input.driver_id,
+    actor_user_id: input.actor_user_id,
+    admin_override: !!input.admin_override,
+  });
+
+  return { success: true, driver_id: input.driver_id };
 }
