@@ -1,10 +1,10 @@
-# Plan 28 (v2.0) — Live Ride Sharing & In-Progress Breadcrumb Engine
+# Plan 28 (v2.1) — Live Ride Sharing & In-Progress Breadcrumb Engine
 
-> **Document Status:** REWRITTEN UNDER ARCHITECT RULINGS (2026-11-01)  
-> **Replaces:** Plan 28 v1.0 (Rejected on architectural, privacy, and schema grounds)  
+> **Document Status:** VERIFIED & HARDENED (EGM Goldfish Review Approved with Amendments)  
+> **Replaces:** Plan 28 v1.0 (Rejected)  
 > **Target Release:** Safety & Telematics Phase  
 > **Core Invariants Preserved:**
-> 1. **P1-17 (Terminal Privacy Unbroken):** Zero public post-trip coordinate exposure. Route replay & GPX export are strictly authenticated, participant-only (`auth.uid == ride.user_id` or assigned driver or admin) and in-app only.
+> 1. **P1-17 (Terminal Privacy Unbroken):** Zero public post-trip coordinate exposure. Route replay & GPX export are strictly authenticated, participant-only (`isParticipant` via `lib/rideParticipants.ts` or admin) and in-app only.
 > 2. **Auto-Share v1 is SMS-Only:** Triggered exclusively at match time in `executeMatchFlow` alongside `sendMatchPinSms`. Server-side WhatsApp is dropped (client 1-tap user tap only).
 > 3. **Dedicated In-Progress Telematics Module (`utils-server/breadcrumbs.ts`):** Uncoupled from `utils-server/trace.ts` (which is pickup-only and deleted at trip start). Captures `in_progress` only; bounded memory cap; flushed on existing `/internal/ride/completed` and `/internal/ride/cancelled`.
 > 4. **No Phantom Fields:** WS ingestion uses existing `LocationUpdateMessage` (`lat`, `lng`, `ts`, `ride_id`). Speed is derived on query ($\Delta d / \Delta t$), preserving the WS contract.
@@ -21,7 +21,7 @@
 | **R-3: Auto-Share Trigger Site** | Trigger at ride MATCH, not completion or request. | Located directly in `executeMatchFlow` ([`utils-server/index.ts` #L2632](file:///d:/My%20Projects/Current%20Project/Ride/utils-server/index.ts#L2632)) adjacent to `sendMatchPinSms`. |
 | **R-4: Telematics Scope** | Breadcrumbs record `in_progress` only. Accept-to-start (pickup) is excluded. | Protects driver pre-pickup privacy. Recording begins at `ride:start` and terminates at `ride:completed` / `ride:cancelled`. |
 | **R-5: Buffer Architecture** | Dedicated `utils-server/breadcrumbs.ts` ring buffer. Zero dependence on `trace.ts`. | Keyed by `ride_id`, capped at 720 points per ride (1 hour at 5s), flushed in batches of $\le 500$ rows to Postgres, with immediate flush on internal completion/cancellation endpoints. |
-| **R-6: Retention & Purge** | Day-one 30-day retention policy. | Partitioned or indexed by `recorded_at`, purged via daily scheduler job. |
+| **R-6: Retention & Purge** | Day-one 30-day retention policy via Scheduler Job 61. | Partitioned or indexed by `recorded_at`, purged via daily scheduler job. |
 
 ---
 
@@ -196,8 +196,8 @@ To prevent connection starvation on the shared 5-connection pool:
    * Timeout of **3,000ms** per insert transaction to prevent pool deadlocks.
 
 ### 4.2 Lifecycle Event Triggers
-1. **Ride Start (`ride:started`):**
-   * Initializes the breadcrumb buffer for `ride_id`.
+1. **Ride Start (`ride:started` and WS `ride:start`):**
+   * Initializes the breadcrumb buffer for `ride_id`. Triggered both via the WebSocket handler in `utils-server/index.ts` (#L1800-1832) and the HTTP endpoint `POST /internal/ride/started` (#L904-936).
 2. **Ride Completion / Cancellation (`/internal/ride/completed` and `/internal/ride/cancelled`):**
    * Existing endpoints in `utils-server/index.ts` call:
      ```typescript
@@ -216,20 +216,26 @@ To prevent connection starvation on the shared 5-connection pool:
   * Public track endpoint **NEVER** serves breadcrumb arrays, GPX downloads, or post-trip replay scrubber data.
 
 ### 5.2 Authenticated Route Replay & GPX Export (In-App Only)
-Route scrubber replay and GPX download are **strictly in-app, authenticated features** gated against IDOR vulnerabilities:
+Route scrubber replay and GPX download are **strictly in-app, authenticated features** gated against IDOR vulnerabilities using the canonical participant helper:
 
 #### Endpoint 1: `GET /api/ride/[id]/breadcrumbs`
 * **Authentication:** Requires valid Supabase JWT (`verifySupabaseToken(request)`).
-* **Participant Authorization Guard:**
+* **Participant Authorization Guard (`lib/rideParticipants.ts`):**
   ```typescript
-  const [ride] = await db.select(...).from(rides).where(eq(rides.id, id)).limit(1);
+  import { resolveRideParticipantIds, isParticipant } from "@/lib/rideParticipants";
+
+  const [ride] = await db.select({
+    id: rides.id,
+    user_id: rides.user_id,
+    driver_id: rides.driver_id,
+  }).from(rides).where(eq(rides.id, id)).limit(1);
+
   if (!ride) return Response.json({ error: "not_found" }, { status: 404 });
 
-  // STRICT IDOR CHECK: Only trip rider, assigned driver, or admin can access
-  const isRider = ride.user_id === user.id;
-  const isDriver = ride.driver_id === driver?.id;
-  const isAdmin = user.role === "admin";
-  if (!isRider && !isDriver && !isAdmin) {
+  // Canonical resolution: resolves drivers.id -> users.id to prevent false 403s on drivers
+  const participantIds = await resolveRideParticipantIds(db, ride);
+  const isAuthorized = isParticipant(participantIds, user.id) || user.role === "admin";
+  if (!isAuthorized) {
     return Response.json({ error: "forbidden", message: "Access denied" }, { status: 403 });
   }
   ```
@@ -244,7 +250,7 @@ Route scrubber replay and GPX download are **strictly in-app, authenticated feat
   ```
 
 #### Endpoint 2: `GET /api/ride/[id]/export/gpx`
-* **Authentication:** Same participant-only JWT authorization guard as above.
+* **Authentication:** Same canonical `resolveRideParticipantIds` authorization guard as above.
 * **Format:** Clean standard GPX 1.1 XML stream (`application/gpx+xml`).
 * **Sanitization:** All metadata text (ride ID, vehicle type) is XML-escaped; zero unescaped user-input strings are embedded.
 
@@ -276,7 +282,9 @@ import("../lib/rideShareSms")
 ## 7. Mobile Client & Deep Linking (React Native)
 
 ### 7.1 Android & iOS Manifest Configuration
-Manifest queries must be declared via `expo-build-properties` to resolve WhatsApp on Android 11+ (API 30+):
+Manifest queries must be declared via `expo-build-properties` to resolve WhatsApp on Android 11+ (API 30+).
+
+Prerequisite: `npm install expo-build-properties` in root package.
 
 In `app.config.js`:
 ```javascript
@@ -351,16 +359,18 @@ const handleWhatsAppShare = async (rawPhone?: string) => {
 
 ## 8. Data Retention & Purge Job
 
-### 8.1 30-Day Automated Purge
-Add Job 38 to `utils-server/scheduler.ts` (Daily at 03:30 UTC):
+### 8.1 30-Day Automated Purge (Job 61)
+Add Job 61 to `utils-server/scheduler.ts` (Daily at 03:30 UTC):
+*(Numbered Job 61 to follow Job 60 Storage Reconciler; avoids collision with Job 38 Dawdle Guard)*
+
 ```typescript
-// Job 38: Purge ride breadcrumbs older than 30 days
+// Job 61 — Purge ride breadcrumbs older than 30 days (daily).
 async function purgeOldBreadcrumbs(): Promise<void> {
   const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
   const deleted = await db
     .delete(rideBreadcrumbs)
     .where(lt(rideBreadcrumbs.recorded_at, cutoff));
-  logger.info("[scheduler] purged expired breadcrumbs", { cutoff });
+  logger.info("[scheduler] job 61 purged expired breadcrumbs", { cutoff });
 }
 ```
 * **Storage Footprint:**
@@ -380,7 +390,8 @@ Phase 1: Database Migration 0088 & Drizzle Schema
 Phase 2: utils-server Telematics Ingestion & Flush Hooks
   ├── Dedicated utils-server/breadcrumbs.ts buffer module (capped at 720 pts/ride)
   ├── WS location:update branch recording during in_progress
-  ├── Hook /internal/ride/completed and /internal/ride/cancelled to flushAndEvict
+  ├── Hook /internal/ride/started, /internal/ride/completed, and /internal/ride/cancelled
+  ├── Register Job 61 in utils-server/scheduler.ts
   └── Gate: jest tests for buffer flush, chunking <= 500 rows, and memory caps
 
 Phase 3: Auto-Share Match SMS Engine
@@ -389,11 +400,12 @@ Phase 3: Auto-Share Match SMS Engine
   └── Gate: Unit tests with mock SMS sender; rate limit boundary assertions
 
 Phase 4: Authenticated In-App Replay & GPX Export API
-  ├── GET /api/ride/[id]/breadcrumbs with IDOR guard (rider/driver/admin only)
-  ├── GET /api/ride/[id]/export/gpx with XML escaping & IDOR guard
+  ├── GET /api/ride/[id]/breadcrumbs with resolveRideParticipantIds guard
+  ├── GET /api/ride/[id]/export/gpx with XML escaping & resolveRideParticipantIds guard
   └── Gate: tests/api/ride/track.test.ts passes unaltered (P1-17 green) + 403 IDOR test
 
 Phase 5: Mobile Client Deep Linking & Settings UI
+  ├── Root dependency: npm install expo-build-properties
   ├── Client-safe lib/clientPhone.ts
   ├── WhatsApp 1-tap deep link in ride-tracking/[ride_id].tsx
   ├── Auto-share emergency contacts toggle in settings UI
