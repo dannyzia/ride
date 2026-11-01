@@ -509,8 +509,10 @@ The Ride project MUST remain on **Expo Managed workflow with Development Builds*
 
 ## Critical Rules
 
-### Money
-**Always integer paisa (BDT).** Never floats. Never strings. Divide by 100 only at UI display. Every `*_bdt` column and API field is integer paisa. Commission calculated on post-minimum-floor fare, never on raw total.
+### Money & Zero Escrow Invariant
+- **Always integer paisa (BDT).** Never floats. Never strings. Divide by 100 only at UI display. Every `*_bdt` column and API field is integer paisa. Commission calculated on post-minimum-floor fare, never on raw total.
+- **Zero Escrow / Zero Payouts (Owner Ruling 2026-11-01):** The platform is a **lead distribution service**, NOT a financial custodian or escrow broker. Riders pay drivers 100% of ride fares directly (cash or personal MFS: bKash/Nagad). Drivers pay the platform only for lead subscription packs via PortPos. The platform NEVER holds rider trip money and NEVER operates driver bank payout/withdrawal rails.
+- **Voice Calling (Owner Ruling 2026-11-01):** WebRTC/SIP in-app VoIP calling and third-party number masking are permanently dropped. Native cellular dialer (`tel:`) is the sole calling mechanism.
 
 ### Write Ownership (violating these is a critical bug)
 - `call_ledger` deduction rows (`event_type='deduction'`, `reason='offer_sent'`) → ONLY `utils-server/leadBilling.ts` (`debitLeadForOffer` — Phase D debit-on-offer; `heartbeat.ts` is DELETED). Refund rows no longer exist: AC-7 accept-race refunds and the unconsumed-deduction sweep are deleted (ruling 8 — every offered driver is billed regardless of outcome)

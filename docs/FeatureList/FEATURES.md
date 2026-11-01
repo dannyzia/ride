@@ -612,11 +612,12 @@ Implemented by coding model, verified through 3 audit rounds. All code from `doc
 - Seed data: 4 tax rates (VAT 5% + AIT 1%), 14 chart of accounts
 - ACCOUNTING_API_KEY in .env.local for external API auth
 
-### Phase 4: Safety & Future — PARTIAL
+### Phase 4: Safety & Future — STATUS UPDATES
 - Auto-Accept — **IMPLEMENTED** (dispatch logic + settings screen; was schema-only)
 - Driver Promo Codes — backend scheduler credits exist; admin UI rider-only, no driver view
-- Voice Calling (concept)
-- Crash Detection (concept)
+- Voice Calling / Number Masking — **DROPPED BY OWNER RULING** (native cellular `tel:` dialer is sole mechanism; VoIP/WebRTC ditched)
+- Crash Detection — **PARKED BY DESIGN** (telematics accelerometer triggers impractical on BD roads; one-touch SOS + GPS tracking active)
+- Automated Bank Payout Rails — **DROPPED BY OWNER RULING** (platform never holds ride funds; riders pay drivers directly; zero escrow)
 - Female Driver Preference (concept)
 - Offline Map Caching (concept)
 
@@ -644,10 +645,10 @@ Implemented by coding model, verified through 3 audit rounds. All code from `doc
 | Unwire-or-wire: CheckboxGroup, HeatmapOverlay | Low | **Wire-half DONE (v20 verification):** ProgressBar (active-subscription), Badge (activity tab), Avatar (profile), MinRateSlider (min-rate), LiveMeter (ride-tracking) all have importers now; **remaining: delete CheckboxGroup (no consumer) + HeatmapOverlay (superseded by Map CircleLayer)** — zero importers confirmed |
 | i18n sweep (EN/BN) | Low | **LANDED (R2.4/R2.4b — v20 correction of the stale "GREENFIELD" row):** `i18n/i18n.ts` (react-i18next + AsyncStorage) + real `i18n/locales/{en,bn}/common.json`; 126 screens import `useTranslation`; rider selector `settings/app-language` + driver selector `settings/language` persist via `useAppearance.language`; no "coming soon" placeholder remains. Remaining: bn coverage audit on non-swept screens |
 | Deep linking with expo-linking (promo→apply-promos, push→ride-tracking; dep present, imported nowhere) | Low | Only `ride://` manual use in PaymentResultScreen |
-| Instant pay / payout history | Deferred | Separate withdrawal epic (Plan 05 Q3) |
+| Automated Bank Payout Rails / Instant pay | **DROPPED** | Dropped by owner ruling 2026-11-01. Zero escrow architecture: platform never holds ride funds; riders pay drivers directly in cash or personal MFS; drivers pay platform only for lead subscription packages via PortPos. No payout rails will ever exist. |
 | Driver Promo Codes UI + admin target_role form | Future | Scheduler auto-credits exist |
-| Voice Calling / Number Masking | Future | Concept — saved in P5-GROWTH-REFERENCE.md |
-| Crash Detection | Future | Concept — saved in P5-GROWTH-REFERENCE.md |
+| Voice Calling / Telephony Number Masking | **DROPPED** | Dropped by owner ruling 2026-11-01. Native cellular dialer (`tel:`) is the sole calling mechanism; in-app WebRTC/SIP VoIP is permanently ditched. |
+| Crash Detection | **PARKED** | Concept telematics evaluated. Impractical on BD roads (pothole/speed breaker false-positives, budget Android sensor battery drain); one-touch SOS with intensity clustering + live GPS tracking active. |
 | Female Driver Preference | Future | Concept |
 | Offline Map Caching | Future | Concept |
 | Gamification (tiers/streaks/achievements) | Future | Full code saved in P5-GROWTH-REFERENCE.md |

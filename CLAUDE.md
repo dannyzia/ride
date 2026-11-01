@@ -561,6 +561,8 @@ See `docs/Plan/19-GLOSSARY.md` for complete glossary. Key terms:
 See AGENTS.md for the complete rules reference. Key rules:
 
 - **Money**: All amounts in integer paisa (BDT), never floats. Divide by 100 only at UI display.
+- **Zero Escrow / Zero Payouts (Owner Ruling 2026-11-01)**: The platform is a lead distribution engine, NOT an escrow custodian. Riders pay drivers directly in cash or personal MFS. The platform never holds rider fares and will never operate driver bank payout/withdrawal rails.
+- **Voice Calling (Owner Ruling 2026-11-01)**: In-app VoIP (WebRTC/SIP) and number masking are permanently dropped. Native cellular dialer (`tel:`) is the sole calling mechanism.
 - **Vehicle types**: 9 lowercase: `bike_basic`, `bike_standard`, `bike_plus`, `cng`, `car_compact`, `car_economy`, `car_comfort`, `car_premium`, `car_xl`
 - **call_ledger writes**: `utils-server/leadBilling.ts` (offer-time deduction rows, `reason='offer_sent'` — Phase D debit-on-offer; heartbeat.ts is deleted) and `lib/activateSubscription.ts` (initial_load, credit, expiry_writeoff). Refund rows no longer exist (AC-7 deleted, ruling 8 — every offer is billed regardless of outcome)
 - **dispatch_offers writes**: `utils-server/leadBilling.ts` is the sole writer of new rows (`delivered`, in one tx with the deduction); terminal-outcome updates in `utils-server/index.ts` (accept/reject/expired stamps, `fetch_confirmed_at` telemetry stamps) and `utils-server/scheduler.ts` job 20 (stale-offer crash-recovery expiry only, skip younger than `dispatch_offer_ttl_seconds + 5s`). `dispatch.ts` no longer writes (no 'filtered' rows — filtering audit is not persisted)
