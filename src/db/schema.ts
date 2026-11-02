@@ -884,6 +884,27 @@ export const rides = pgTable(
   ],
 );
 
+// Plan 28 (Stage 2): compact telematics storage — 1 row per completed ride.
+// Points are appended crash-safely via JSONB concatenation in
+// utils-server/breadcrumbs.ts (flushAndEvictRoute); the buffer decimates at
+// 1,000 points. RLS is FORCED with no policies: only the service role touches
+// this table (see migration 0088).
+export const rideRoutes = pgTable(
+  "ride_routes",
+  {
+    ride_id: uuid("ride_id")
+      .primaryKey()
+      .references(() => rides.id, { onDelete: "cascade" }),
+    points: jsonb("points").notNull(), // Array of { lat: number, lng: number, ts: number }
+    distance_meters: numeric("distance_meters", { precision: 10, scale: 2 }),
+    duration_seconds: integer("duration_seconds"),
+    created_at: timestamptz("created_at").notNull().defaultNow(),
+  },
+  (t) => [
+    index("ride_routes_created_at_idx").on(t.created_at),
+  ]
+);
+
 export const cancellationPolicies = pgTable("cancellation_policies", {
   id: uuid("id").defaultRandom().primaryKey(),
   name: varchar("name", { length: 100 }).notNull(),

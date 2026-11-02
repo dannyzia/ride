@@ -617,6 +617,13 @@
       "when": 1761091212000,
       "tag": "0087_gender_women_only",
       "breakpoints": true
+    },
+    {
+      "idx": 88,
+      "version": "7",
+      "when": 1793620287350,
+      "tag": "0088_ride_routes_and_telematics",
+      "breakpoints": true
     }
   ]
 }
