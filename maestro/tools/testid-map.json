@@ -1,5 +1,5 @@
 {
-  "total": 1303,
+  "total": 1309,
   "screens": {
     "(auth)/_layout.tsx": [
       {
@@ -2174,47 +2174,47 @@
     "(main)/(customer)/ride-tracking/[ride_id].tsx": [
       {
         "id": "customer.ride-tracking.ride_id.replace-home",
-        "line": 394
+        "line": 408
       },
       {
         "id": "customer.ride-tracking.ride_id.el-1",
-        "line": 480
+        "line": 494
       },
       {
         "id": "customer.ride-tracking.ride_id.set-theme",
-        "line": 501
+        "line": 515
       },
       {
         "id": "customer.ride-tracking.ride_id.handle-share",
-        "line": 507
+        "line": 521
       },
       {
         "id": "customer.ride-tracking.ride_id.women-only-badge",
-        "line": 526
+        "line": 540
       },
       {
         "id": "customer.ride-tracking.ride_id.push-chat",
-        "line": 595
+        "line": 609
       },
       {
         "id": "customer.ride-tracking.ride_id.handle-cancel",
-        "line": 599
+        "line": 613
       },
       {
         "id": "customer.ride-tracking.ride_id.handle-copy-pin",
-        "line": 634
+        "line": 648
       },
       {
         "id": "customer.ride-tracking.ride_id.push-chat-2",
-        "line": 664
+        "line": 678
       },
       {
         "id": "customer.ride-tracking.ride_id.handle-share-2",
-        "line": 668
+        "line": 682
       },
       {
         "id": "customer.ride-tracking.ride_id.push-rate-driver",
-        "line": 693
+        "line": 707
       }
     ],
     "(main)/(customer)/schedule-ride/index.tsx": [
@@ -3252,23 +3252,23 @@
     "(main)/(rider)/finish-ride/index.tsx": [
       {
         "id": "rider.finish-ride.set-cash-received-taka",
-        "line": 445
+        "line": 458
       },
       {
         "id": "rider.finish-ride.set-show-toll-modal",
-        "line": 477
+        "line": 490
       },
       {
         "id": "rider.finish-ride.push-rate-rider",
-        "line": 663
+        "line": 676
       },
       {
         "id": "rider.finish-ride.handle-go-home",
-        "line": 668
+        "line": 681
       },
       {
         "id": "rider.finish-ride.set-theme",
-        "line": 694
+        "line": 707
       }
     ],
     "(main)/(rider)/hotspot-map/index.tsx": [
@@ -5677,16 +5677,40 @@
     ],
     "track/[rideId].tsx": [
       {
+        "id": "track.rideId.freshness-badge",
+        "line": 118
+      },
+      {
+        "id": "track.rideId.freshness-badge",
+        "line": 132
+      },
+      {
         "id": "track.rideId.set-theme",
-        "line": 83
+        "line": 160
       },
       {
         "id": "track.rideId.set-theme-2",
-        "line": 101
+        "line": 178
       },
       {
         "id": "track.rideId.set-theme-3",
-        "line": 160
+        "line": 198
+      },
+      {
+        "id": "track.rideId.status-pill",
+        "line": 207
+      },
+      {
+        "id": "track.rideId.driver-card",
+        "line": 223
+      },
+      {
+        "id": "track.rideId.route-summary",
+        "line": 262
+      },
+      {
+        "id": "track.rideId.el-1",
+        "line": 289
       }
     ]
   }

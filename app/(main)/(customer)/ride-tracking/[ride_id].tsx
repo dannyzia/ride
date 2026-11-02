@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   Alert,
   Share,
+  Linking,
   StatusBar,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -367,10 +368,23 @@ export default function RideTrackingScreen() {
 
   const handleShare = async () => {
     try {
-      const message = t('ride_tracking.share_message', { url: `${API_URL}/track/${ride_id}` });
-      await Share.share({ message });
-    } catch {
-      logger.warn("[tracking] share failed");
+      // Plan 28 Stage 4: 1-tap WhatsApp ride share — the receiver opens the
+      // public Live Status & Safety Card at /track/[rideId]. WhatsApp can be
+      // missing (or the scheme refused); fall back to the OS share sheet.
+      const baseUrl = process.env.EXPO_PUBLIC_SERVER_URL || process.env.EXPO_PUBLIC_API_URL || "https://ride.com.bd";
+      const shareUrl = `${baseUrl}/track/${ride_id}`;
+      const dName = driver?.full_name ?? "Driver";
+      const vType = driver?.vehicle_type ?? "vehicle";
+      const message = `I am on a Ride trip with ${dName} (${vType}). Track my ride live: ${shareUrl}`;
+      const whatsappUrl = `whatsapp://send?text=${encodeURIComponent(message)}`;
+
+      try {
+        await Linking.openURL(whatsappUrl);
+      } catch {
+        await Share.share({ message });
+      }
+    } catch (e) {
+      logger.warn("[tracking] share failed", e);
     }
   };
 

@@ -956,7 +956,6 @@
     "fee_may_apply": "A cancellation fee may apply",
     "no_show_fee": "A no-show fee applies — the driver has arrived and waited",
     "keep_ride": "Keep ride",
-    "share_message": "Track my ride live: {{url}}",
     "loading_ride": "Loading your ride…",
     "ride_not_found": "This ride could not be found",
     "reconnecting_last_update": "Reconnecting — last update {{time}}",
