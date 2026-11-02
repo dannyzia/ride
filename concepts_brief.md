@@ -37,11 +37,12 @@ This specification unifies passenger safety sharing, post-trip documentation, an
   > *"Emergency SOS! [Rider Name] needs help. Location: [lat],[lng]. Track: https://ride.com.bd/track/[ride_id]"*
 * **Cost Allocation:** Platform absorbs the ~0.35 BDT SMS gateway fee per contact as an operational safety obligation. Distress events are rare (<0.01% of rides), keeping monthly costs negligible.
 
-### 4. In-Progress GPS Breadcrumbs & In-App Replay
-* **Telematics Loop:** Emitted every 5 seconds over WebSocket by `finish-ride/index.tsx`, buffered in `utils-server/breadcrumbs.ts`, flushed in batches of $\le 500$ rows to Postgres.
-* **Security:** `ride_breadcrumbs` is protected with `ENABLE ROW LEVEL SECURITY`, `FORCE ROW LEVEL SECURITY`, and `REVOKE ALL FROM anon, authenticated`.
-* **In-App Replay:** Authenticated riders and drivers can review the full route replay with an interactive time/speed scrubber inside `history-detail/index.tsx` and export standard GPX files.
-* **Retention:** 30-day automated purge (Scheduler Job 61) with legal holds for rides associated with active `fare_disputes` or `sos_alerts`.
+### 4. In-Progress GPS Breadcrumbs & In-App Route Playback
+* **Telematics Loop:** Emitted every 5 seconds over WebSocket by `finish-ride/index.tsx`, buffered purely in-memory in `utils-server/breadcrumbs.ts`, eliminating hot-path relational database queries.
+* **Storage Model:** Persisted upon ride completion as a single compact record in `ride_routes` (`points JSONB`), cutting database row churn by 99.7% (~1,000 rows/day vs 240,000 rows/day) and eliminating connection pool starvation on Postgres.
+* **Security:** `ride_routes` is protected with `ENABLE ROW LEVEL SECURITY`, `FORCE ROW LEVEL SECURITY`, and `REVOKE ALL FROM anon, authenticated`.
+* **In-App Display:** Authenticated riders and drivers can review the exact route polyline driven on the customer history detail screen (`history-detail/index.tsx`) via MapLibreGL with bounding camera.
+* **Retention:** 30-day automated purge (Scheduler Job 61) using a bounded subquery, with safety holds protecting routes associated with active `sos_alerts` or unresolved `fare_disputes`.
 
 ---
 
@@ -52,7 +53,7 @@ This specification unifies passenger safety sharing, post-trip documentation, an
   * Post-ride receipt email generation and dispatch for users with registered email addresses.
   * Instant 999 native cellular dialing on SOS tap.
   * Platform-funded distress SMS broadcast to emergency contacts on SOS.
-  * In-progress telematics ingestion buffer, secure storage, and authenticated route replay scrubber.
+  * In-progress in-memory telematics ingestion buffer, compact single-record route storage, and authenticated in-app route polyline display.
 
 * **Out-of-Scope Non-Goals:**
   * Routine match-time SMS notifications for non-emergency trips.
