@@ -1,81 +1,97 @@
-# Ride Safety & Documentation: WhatsApp Sharing, Post-Ride Email Receipts, and SOS Compliance
+# Brainstorm Brief: Peer-to-Peer MFS Assistance, Dispatch Messaging, and Core Tracking Rulings
 
 * **Author:** Zia / Antigravity
 * **Date:** 2026-11-02
-* **Status:** Working Hypothesis Refinement
-
-## Overview
-
-This specification unifies passenger safety sharing, post-trip documentation, and statutory emergency response into three cleanly decoupled subsystems:
-1. **Rider-Initiated Live Ride Sharing:** Simple 1-tap WhatsApp dispatch sharing real-time tracking during active trips at zero platform cost.
-2. **Post-Trip Email Documentation:** Asynchronous receipt and trip summary email (bill, route overview, vehicle details) sent upon ride completion for documentation and corporate reimbursement.
-3. **Statutory 999 SOS & Platform-Funded Distress SMS:** Instant native 999 cellular dialing backed by automated backend distress SMS with GPS coordinates broadcast to emergency contacts.
+* **Status:** In-Progress Brainstorm (Step 1: Clarification & Stress-Testing)
+* **Topics:**
+  1. Peer-to-Peer (P2P) MFS Assistance at Drop-off (Zero Escrow / Zero Custody)
+  2. Reassuring Dispatch Stage Messaging in `finding-driver`
+  3. Authoritative Core Tracking Architecture Rulings (Adopted in Plan 28 v3.2)
 
 ---
 
-## Analysis & Architectural Alignments
+## 1. Feature 1: Peer-to-Peer MFS Assistance at Drop-Off
 
-### 1. Live Ride Sharing via WhatsApp (Rider-Initiated)
-* **Execution:** Tapping "Share via WhatsApp" on the active tracking screen (`app/(main)/(customer)/ride-tracking/[ride_id].tsx`) opens WhatsApp with a pre-filled, localized string:
-  > *"I am on a Ride trip with [Driver Name] ([Vehicle Model], Plate: [Plate Number]). Track my ride live: https://ride.com.bd/track/[ride_id]"*
-* **Security & Privacy (P1-17 Invariant):** The public tracking URL displays real-time driver coordinates and moving car marker *only while the ride is active*. Once the ride transitions to `completed` or `cancelled`, the public link strictly degrades to a status-only receipt with coordinates nulled.
-* **Cost & Friction:** 0 BDT platform gateway cost; zero dependency on third-party WhatsApp Business API; rider maintains full autonomy over which contact or group receives the link.
+### 1.1 Problem Statement & Context
+In Bangladesh, passengers frequently lack exact physical cash at trip end and negotiate to pay via bKash or Nagad. Today, this process creates severe friction:
+1. The driver recites an 11-digit mobile number aloud in loud traffic.
+2. The passenger manually types the number into their bKash/Nagad app, reads it back to confirm the driver's name, enters the fare, and enters their PIN.
+3. Both parties wait 30–90 seconds for cellular SMS confirmation before parting ways, blocking roadside traffic.
+4. Any mistyped digit results in funds being sent to a random stranger, triggering immediate customer distress.
 
-### 2. Post-Trip Email Documentation (Uber-Style Trip Receipts)
-* **Trigger:** Fired asynchronously upon ride completion (`POST /api/ride/[id]/complete`).
-* **Recipient:** Sent to the rider's registered email (`users.email`). If `users.email` is absent, the dispatch gracefully skips with zero disruption.
-* **Content:**
-  * Trip Bill: Fare breakdown, payment method (cash / MFS), base fare, distance fee, and discounts applied.
-  * Trip Details: Date, start time, end time, pickup location name, dropoff location name.
-  * Vehicle & Driver: Driver name, rating, vehicle model, plate number.
-  * Route Snapshot: Static map image or link to in-app route history.
-* **Delivery Infrastructure:** Uses a lightweight transactional email provider (e.g. Resend or standard SMTP) via an isolated background queue that never blocks the ride completion HTTP response.
+### 1.2 Proposed Technical Architecture (Preserving Zero Custody)
+* **Driver Configuration:**
+  * Drivers register their primary personal MFS provider (`bKash`, `Nagad`, `Rocket`) and personal wallet number in their driver profile.
+  * Defaults to their authenticated login phone number if not overridden.
+* **Rider Drop-Off UI (`app/(main)/(customer)/ride-tracking/[ride_id].tsx`):**
+  * When the ride enters drop-off / fare settlement, the rider screen displays a payment method selector: `[ Cash ]` vs `[ bKash / Nagad ]`.
+  * If `[ bKash / Nagad ]` is selected:
+    * Displays the driver's MFS provider logo and verified phone number.
+    * A **"Copy Number"** button to eliminate manual typing errors.
+    * A dynamically generated **MFS QR Code** encoding the driver's personal wallet number and the exact payable BDT fare.
+    * The rider scans the QR code directly inside their bKash or Nagad app, which pre-populates the recipient number and fare amount in the Send Money screen.
+* **Zero Escrow Invariant:**
+  * The transaction occurs 100% peer-to-peer between the rider's wallet and the driver's wallet.
+  * Ride backend **never handles, routes, or holds** passenger fare money.
+  * The driver confirms receipt on their device (`finish-ride/index.tsx`) by sliding "Payment Received (MFS)", completing the ride state machine.
 
-### 3. Statutory Emergency Response & Distress SMS
-* **Local Law (999 Mandate):** "DIAL FIRST (T-1)" rule is enforced on the SOS screen (`app/(main)/(customer)/emergency-sos/index.tsx`). Tapping SOS immediately launches `tel:999` via the cellular dialer, guaranteeing emergency connection even without mobile data.
-* **Platform-Funded Distress SMS:** `POST /api/sos/alert` sends distress SMS messages via `sendSmsSos` to all registered `user_emergency_contacts`:
-  > *"Emergency SOS! [Rider Name] needs help. Location: [lat],[lng]. Track: https://ride.com.bd/track/[ride_id]"*
-* **Cost Allocation:** Platform absorbs the ~0.35 BDT SMS gateway fee per contact as an operational safety obligation. Distress events are rare (<0.01% of rides), keeping monthly costs negligible.
-
-### 4. In-Progress GPS Breadcrumbs & In-App Route Playback
-* **Telematics Loop:** Emitted every 5 seconds over WebSocket by `finish-ride/index.tsx`, buffered purely in-memory in `utils-server/breadcrumbs.ts`, eliminating hot-path relational database queries.
-* **Storage Model:** Persisted upon ride completion as a single compact record in `ride_routes` (`points JSONB`), cutting database row churn by 99.7% (~1,000 rows/day vs 240,000 rows/day) and eliminating connection pool starvation on Postgres.
-* **Security:** `ride_routes` is protected with `ENABLE ROW LEVEL SECURITY`, `FORCE ROW LEVEL SECURITY`, and `REVOKE ALL FROM anon, authenticated`.
-* **In-App Display:** Authenticated riders and drivers can review the exact route polyline driven on the customer history detail screen (`history-detail/index.tsx`) via MapLibreGL with bounding camera.
-* **Retention:** 30-day automated purge (Scheduler Job 61) using a bounded subquery, with safety holds protecting routes associated with active `sos_alerts` or unresolved `fare_disputes`.
-
----
-
-## Goals vs. Non-Goals
-
-* **In-Scope Goals:**
-  * 1-tap WhatsApp deep link for active trip sharing.
-  * Post-ride receipt email generation and dispatch for users with registered email addresses.
-  * Instant 999 native cellular dialing on SOS tap.
-  * Platform-funded distress SMS broadcast to emergency contacts on SOS.
-  * In-progress in-memory telematics ingestion buffer, compact single-record route storage, and authenticated in-app route polyline display.
-
-* **Out-of-Scope Non-Goals:**
-  * Routine match-time SMS notifications for non-emergency trips.
-  * Server-side automated WhatsApp Business API messaging.
-  * Mandatory email collection during initial phone OTP onboarding.
-  * VoIP / SIP in-app voice calling (native cellular `tel:` only).
+### 1.3 Critical Stress-Testing & Counter-Arguments
+1. **Send Money Telecom Fee:**
+   * Sending money between personal bKash/Nagad accounts incurs a 5 BDT transaction fee (unless configured as a favorite number). Will riders complain if they pay 5 BDT extra on top of the fare?
+2. **MFS Network Delay vs. Driver Distrust:**
+   * During peak evening hours, bKash/Nagad SMS notifications often experience 1–3 minute network delivery delays on local mobile operators (Grameenphone, Banglalink, Robi). If the rider shows their phone screen ("Transaction Successful") but the driver's phone has not yet received the SMS, drivers frequently refuse to let riders exit.
+3. **Number Entry Error Risk at Onboarding:**
+   * If a driver mistypes their MFS number in profile settings, riders will send real money to an incorrect party. The driver onboarding flow must enforce verification (e.g., matching the registered driver KYC SIM or requiring a confirmation re-entry).
 
 ---
 
-## Alternatives Weighed
+## 2. Feature 2: Transparent Dispatch Stage Messaging
 
-1. **Email for Real-Time Emergency Alerts:**
-   * *Rejected.* Email latency (5–15 minutes) and spam filters make it dangerous for active emergency tracking. WhatsApp and SMS are immediate.
-2. **Automated Server-Side WhatsApp Dispatch:**
-   * *Rejected.* Requires Meta Business verification and per-template fees (~$0.03/msg). User-initiated WhatsApp sharing is zero-cost and preserves rider control.
-3. **Real-Time GPS Trail on Public Tracking Link Post-Ride:**
-   * *Rejected.* Violates P1-17 security invariant. Public links must never expose historical home/work locations after a trip ends. Replay is strictly authenticated inside the mobile app.
+### 2.1 Problem Statement & Context
+In `app/(main)/(customer)/finding-driver/index.tsx`, when a ride request is dispatched:
+1. The screen renders a generic pulsing radar animation.
+2. If Driver 1 declines or times out (15s timer), the sequential dispatch chain expands rings and offers to Driver 2 and Driver 3.
+3. The rider receives zero feedback about this background progress. After 15–20 seconds of an unresponsive radar pulse, riders assume the app is stuck and cancel the request.
+
+### 2.2 Proposed Technical Architecture
+* **Client-Side or WebSocket Stage Indicators:**
+  * Replace the static text ("Looking for nearby drivers...") with dynamic, informative stage transitions:
+    * **0–15s:** *"Checking with nearest drivers in [Zone/Neighborhood]..."*
+    * **15–45s:** *"Expanding search to nearby [Vehicle Type]s (2–3 km)..."*
+    * **45–90s:** *"Connecting with active drivers in wider area..."*
+    * **90–120s:** *"High demand nearby; finalizing search options..."*
+* **Option A (Pure Client Heuristic):** Driven by elapsed search timers in `finding-driver/index.tsx` using the known pickup zone name from `useRiderStore`. Requires 0 WebSocket protocol changes.
+* **Option B (Server WebSocket Event):** `utils-server/dispatch.ts` emits a lightweight `ride:dispatch_stage` event whenever the H3 ring expands (`k_ring: 1 -> 2 -> 3`).
+
+### 2.3 Critical Stress-Testing & Counter-Arguments
+1. **Perceived ETA Anxiety:**
+   * If the UI explicitly says *"Expanding search to 3 km"*, riders may anticipate a 10–15 minute pickup wait and cancel immediately to try another app, whereas a generic message might have kept them waiting.
+2. **Exposing Supply Scarcity:**
+   * Revealing too much dispatch telemetry exposes low platform driver density in cold zones. Messaging must communicate activity and diligence without signaling desperation or empty roads.
 
 ---
 
-## Key Decisions & Staging for Next Steps
+## 3. Core Architecture Rulings (Adopted in Plan 28 v3.2)
 
-1. **Email Receipts:** Add optional email field prompt in customer profile settings ("Add email to receive ride receipts") and hook receipt generation to ride completion.
-2. **WhatsApp Button:** Embed 1-tap share button in `ride-tracking/[ride_id].tsx`.
-3. **Proceed to Formal Goldfish Review:** Validate the complete architecture across the 6 specialized review lenses (Design, Codebase Details, Zoom-Out/YAGNI, Comprehension, Implementation Readiness, Structural).
+### Ruling 1: Public Web Tracking Screen (`app/track/[rideId].tsx`)
+* **Decision:** **Option A (Dedicated Live Status & Safety Card)**
+* **Rationale:** `@maplibre/maplibre-react-native` stubs to `null` on web builds (`utils/maplibreLoader.web.ts`). Attempting to render native map components on web falls back to a broken gray box. Re-scoping the web page to a responsive mobile-first Live Status Card provides full reassurance (driver photo, vehicle plate, journey addresses, live status pill, GPS freshness age, and a 1-tap 999 police button) without bundle bloat or broken canvas stubs.
+
+### Ruling 2: Driver GPS Capture Scope (`finish-ride/index.tsx`)
+* **Decision:** **Option A (Foreground-Only Capture with High Accuracy)**
+* **Rationale:** `Location.watchPositionAsync` in React Native Expo operates while the app is in the foreground. True headless background execution requires `expo-task-manager` (uninstalled) and complex native socket bridging. In Bangladesh, drivers keep their phones mounted on the vehicle dashboard with the Ride screen active during trips. Precision is restored to `Location.Accuracy.High` (5–10m resolution) for sharp corridor deviation detection.
+
+---
+
+## 4. Goals vs. Non-Goals
+
+### In-Scope Goals
+* Design a frictionless, error-free peer-to-peer MFS QR and copy flow at drop-off that adheres strictly to Zero Custody.
+* Design reassuring, multi-stage dispatch status copy in `finding-driver` to reduce premature rider cancellations.
+* Build a responsive Mobile-Web Live Status & Safety Card on `app/track/[rideId].tsx` with live signal freshness and emergency 999 dialing.
+* Maintain high-accuracy foreground telematics in `finish-ride/index.tsx`.
+
+### Out-of-Scope Non-Goals
+* On-platform digital fare collection, escrow wallets, or payment gateway routing (strictly rejected).
+* Automated verification of personal bKash/Nagad transaction IDs (requires merchant API access which violates zero custody and incurs merchant discount rates).
+* Headless background GPS collection via `expo-task-manager`.
