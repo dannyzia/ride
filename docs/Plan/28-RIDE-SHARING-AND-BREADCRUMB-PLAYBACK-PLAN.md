@@ -1,9 +1,9 @@
-# Plan 28 (v3.2) — Live Ride Sharing & Route Telematics Engine
+# Plan 28 (v3.3) — Live Ride Sharing & Route Telematics Engine
 
-> **Document Status:** GOLDFISH RESOLVED SPEC (v3.2 — 2026-11-02)  
-> **Replaces:** Plan 28 v1.0, v2.0, v2.1, v2.2, v2.3, v3.0, and v3.1  
-> **Audited By Swarm:** `egm-design`, `egm-codebase-details`, `egm-implementation-readiness`, `egm-zoom-out`  
-> **Audited Against:** `utils-server/index.ts`, `utils-server/trace.ts`, `utils-server/scheduler.ts`, `app/api/ride/[id]/{track,details,cancel,complete}+api.ts`, `app/(main)/(rider)/finish-ride/index.tsx`, `app/(main)/(customer)/(tabs)/history-detail/index.tsx`, `app/(main)/(customer)/ride-tracking/[ride_id].tsx`, `app/track/[rideId].tsx`, `src/db/schema.ts`, `tests/api/ride/track.test.ts`.
+> **Document Status:** GOLDFISH RESOLVED SPEC (v3.3 — 2026-11-02)  
+> **Replaces:** Plan 28 v1.0, v2.0, v2.1, v2.2, v2.3, v3.0, v3.1, and v3.2  
+> **Audited By Swarm & Codebase Review:** `egm-design`, `egm-codebase-details`, `egm-implementation-readiness`, `egm-zoom-out`  
+> **Audited Against (Live Disk):** `utils-server/index.ts`, `utils-server/trace.ts`, `utils-server/scheduler.ts`, `utils-server/activeTrips.ts`, `utils-server/breadcrumbs.ts`, `app/api/ride/[id]/{track,details,cancel,complete,start}+api.ts`, `app/(main)/(rider)/finish-ride/index.tsx`, `app/(main)/(customer)/(tabs)/history-detail/index.tsx`, `app/(main)/(customer)/ride-tracking/[ride_id].tsx`, `app/track/[rideId].tsx`, `src/db/schema.ts`, `lib/auth.ts`, `lib/rideParticipants.ts`, `tests/api/ride/track.test.ts`.
 
 ---
 
@@ -13,19 +13,19 @@ When passengers use Ride in Bangladesh, two distinct safety and audit needs aris
 1. **Real-Time Passenger Reassurance:** Riders commuting alone or at night want family members to see their trip progress live. Relying on manual text updates is error-prone and distracting while moving.
 2. **Statutory Compliance & Post-Trip Forensics:** Local transportation regulations mandate a direct emergency call mechanism (999) on mobile apps. Furthermore, fare disputes (e.g. `'route_longer'`) and emergency incident reviews require an authoritative physical GPS record of the completed journey.
 
-**The Economic & Architecture Invariant:** Ride is a lead-generation platform operating on flat driver subscription packages with 0% ride commission and zero escrow. The platform cannot absorb recurring third-party telecom costs (such as sending automated SMS on every routine trip match). Consequently, routine trip sharing must leverage free, user-initiated channels (WhatsApp and native OS share sheets), while platform-funded SMS is reserved exclusively for statutory emergency distress (SOS) events.
+**The Economic & Architecture Invariant:** Ride is a lead-generation platform operating on flat driver subscription packages with 0% ride commission and zero escrow. The platform cannot absorb recurring third-party telecom costs (such as sending automated SMS on every routine trip match). Consequently, routine trip sharing leverages free, user-initiated channels (WhatsApp and native OS share sheets), while platform-funded SMS is reserved exclusively for statutory emergency distress (SOS) events and the existing night-ride safety protocol (`checkNightRideProtocol` in `lib/safety.ts`).
 
 ---
 
 ## 2. Goals vs. Non-Goals
 
 ### In-Scope Goals
-* **1-Tap WhatsApp Ride Share:** A single tap on the active tracking screen generates a WhatsApp deep-link with driver identity, vehicle plate, and a public tracking link (`/track/[rideId]`) at zero gateway cost.
-* **Dedicated Mobile-Web Live Status & Safety Card:** Public `/track/[rideId]` web screen renders a clean, high-utility status card accessible on any mobile browser (Chrome/Safari) showing driver identity, vehicle plate, pickup/destination, trip status pill, live GPS signal freshness ("Updated 4s ago"), and an emergency 1-tap 999 police button.
+* **1-Tap WhatsApp Ride Share:** A single tap on the active tracking screen invokes `whatsapp://send?text=...` with automatic fallback to native OS share sheet (`Share.share`), sharing a public tracking link (`/track/[rideId]`) at zero gateway cost.
+* **Dedicated Mobile-Web Live Status & Safety Card:** Public `/track/[rideId]` web screen renders a clean, high-utility status card accessible on any mobile browser (Chrome/Safari) showing driver identity, vehicle plate, trip status pill, live GPS signal freshness ("Updated 4s ago"), and an emergency 1-tap 999 police button.
 * **P1-17 Invariant Strictly Preserved:** Terminal rides (completed, cancelled, expired, no_drivers) strictly degrade to a status-only state with coordinates and driver details completely nulled, preventing eternal tracking of residential locations.
-* **Edge Caching Protection:** Public tracking endpoints are shielded by HTTP edge caching headers (`Cache-Control: public, max-age=3, s-maxage=3, stale-while-revalidate=5`) to coalesce concurrent viewers at CDN/proxy edges to ~0.3 QPS, eliminating database connection pool exhaustion from viral share links.
 * **Zero-DB Hot-Path Telematics:** Driver GPS updates emitted every 5s over WebSocket are validated and buffered purely in-memory in `utils-server` with zero relational database lookups on the hot path. Corridor coordinates are cached to eliminate SQL queries in route deviation detection.
-* **Compact Single-Record Route Storage:** Completed trip breadcrumbs are persisted upon trip completion as a single record in `ride_routes` (`points JSONB`), reducing database row churn by 99.7% compared to individual point rows.
+* **Lifecycle Cache Synchronization:** Active trip cache is updated on all state transitions (`POST /internal/ride/started`, `WS ride:start`, `POST /internal/ride/driver-arrived`, `POST /internal/ride/completed`, `POST /internal/ride/cancelled`).
+* **Decimated Buffer & Crash-Safe JSONB Concatenation:** Telematics buffer decimates at 1,000 points to absorb 160+ minute Dhaka trips without dropping recent coordinates. Restarts append via PostgreSQL JSONB concatenation (`COALESCE(points, '[]') || new_points`).
 * **Foreground-Only Driver GPS Capture:** Driver app telematics runs as a foreground loop with `Location.Accuracy.High` (5–10m resolution) while the trip screen is mounted on the vehicle dashboard.
 * **In-App Route Display:** Authenticated riders and drivers can review the exact route polyline driven on the customer history detail screen (`history-detail/index.tsx`) via MapLibreGL.
 
@@ -34,8 +34,6 @@ When passengers use Ride in Bangladesh, two distinct safety and audit needs aris
 * **Headless Background GPS Service via `expo-task-manager`:** Rejected to keep native runtime lean. Telematics capture is explicitly scoped to foreground operation during active trips.
 * **Automated Match-Time SMS for Routine Rides:** Rejected due to 30,000–50,000 BDT monthly telecom deficit.
 * **Post-Trip Email Documentation (Receipts & Invoices):** Decoupled to a dedicated transactional receipt plan per YAGNI and architectural separation of concerns (avoids mixing transactional email/SMTP queues into the real-time telematics engine; see `concepts_brief.md` Pillar 2).
-* **Server-Side WhatsApp Business API:** Rejected due to Meta per-template conversation fees (~$0.03/msg).
-* **Emergency Contact OTP Verification:** Emergency contacts are registered directly by the rider without forced SMS OTP verification friction.
 * **GPX 1.1 Desktop GIS Export:** Dropped per YAGNI analysis.
 
 ---
@@ -46,29 +44,29 @@ When passengers use Ride in Bangladesh, two distinct safety and audit needs aris
 |---|---|---|---|
 | **Public Tracking Presentation** | Mobile-Web Live Status & Safety Card with GPS Freshness | Web Map Canvas (Leaflet / MapLibre Web JS) | Native MapLibre stubs to `null` on web (`utils/maplibreLoader.web.ts`). Adding a separate web-only mapping bundle adds ~400KB of JS dependencies for users opening a quick link from WhatsApp. A status card with signal freshness and 999 calling delivers 100% of the reassurance with zero bundle bloat. |
 | **Driver Telematics Scope** | High-Accuracy Foreground Loop (`Location.Accuracy.High`) | Headless Background Service (`expo-task-manager`) | Adding `expo-task-manager` requires a native rebuild, introduces background thread battery drain, and isolates GPS collection from the active WebSocket session. Bangladeshi drivers keep their phone mounted on the dashboard with the active trip screen in foreground. |
+| **Buffer Overflow Protection** | Decimate Buffer by 2x at 1,000 Points | Drop-Newest Points (`if len < 1000`) | Dropping newest points freezes the live car marker and destination arrival during long trips (>83 min in Dhaka traffic), falsely triggering "Signal Delayed". Decimating retains the full journey while staying within memory budgets. |
+| **Data Recovery Across Restarts** | PostgreSQL JSONB Concatenation (`points || new_points`) | Overwrite Entire Array (`onConflictDoUpdate`) | If a server restarts mid-trip and writes a partial route on SIGTERM, overwriting points upon trip completion discards the first half of the journey. Concatenation safely stitches segments together. |
 | **Routine Ride Sharing Channel** | Client-Side 1-Tap WhatsApp (`whatsapp://send`) | Automated Server-Side SMS on Match | Sending 2 SMS per matched trip at ~0.35 BDT/SMS creates a severe operational deficit on a 0% commission platform. WhatsApp has near 100% smartphone penetration in Bangladesh and incurs 0 BDT in gateway fees. |
 | **Route Breadcrumb Storage** | Compact Single-Record JSONB (`ride_routes`) | Normalized Relational Rows (`ride_breadcrumbs`) | Normalized storage generates ~240,000 rows/day (~10.8M rows/month) at 5s sampling, creating massive autovacuum churn, B-tree index bloat, and pool starvation on the 5-connection PostgreSQL pool. Storing points as a JSONB array reduces row count to ~1,000/day. |
-| **Telematics Ownership Validation** | In-Memory Active Cache in `utils-server` | Relational SQL Query on Every 5s Tick | Querying `SELECT driver_id, status FROM rides` on every 5s WebSocket frame generates 200 QPS against a 5-connection pool (`APP_POOL_SIZE = 5`), causing connection starvation and API timeouts. |
-| **Live Coords Sourcing** | Internal `utils-server` RPC (`/internal/ride/:id/live-coords`) | PostgreSQL `drivers.last_location_*` | To preserve zero-DB hot-path performance, driver coordinates are not written to Postgres on every tick. Exposing an internal endpoint from `utils-server` memory delivers real-time car motion without database write churn. |
 
 ---
 
-## 4. Architectural Invariants & Ship-Stoppers Ledger
+## 4. Architectural Invariants & Ship-Stoppers Ledger (v3.3)
 
-| Issue Identified in Review | Root Cause | Forensic Resolution in v3.2 |
+| Issue Identified in Audit | Root Cause | Forensic Resolution in v3.3 |
 |---|---|---|
-| **1. Public Web Map Broken on Web** | `maplibreLoader.web.ts` exports `null`, causing `/track` on web browsers to render a gray box with text `"Map View"`. | Rescoped `app/track/[rideId].tsx` to a dedicated **Live Status & Safety Card** featuring driver identity, vehicle plate, live status pill, GPS signal freshness indicator, and a 1-tap 999 emergency call button. |
-| **2. Stale GPS Telemetry & Blindness** | Without a freshness timestamp, a stalled driver GPS signal would appear live or freeze without user feedback. | Backend API `/api/ride/[id]/track` returns `driver_location_updated_at` (epoch ms) and `driver_location_age_seconds`. UI displays real-time signal status ("Live Signal: Updated 4s ago" vs "Signal Delayed"). |
-| **3. Driver GPS Background Fallacy & Accuracy Drop** | `watchPositionAsync` does not run in background; setting `accuracy: Balanced` dropped precision to ~100m, degrading route deviation detection. | Explicitly scoped telematics as **foreground-only** (dashboard phone mount). Restored `accuracy: Location.Accuracy.High` (5–10m resolution) for crisp corridor deviation detection. |
-| **4. CI Scratch DB Role Error in Migration 0088** | Plain `postgres:16` containers in CI do not have `anon` or `authenticated` roles, failing bare `REVOKE`. | Migration `0088` wraps revocation in `DO $$ BEGIN IF EXISTS (SELECT FROM pg_roles WHERE rolname = 'anon') THEN REVOKE ALL ... END IF; END $$;`. |
-| **5. Invalid PostgreSQL `LIMIT` on `DELETE`** | PostgreSQL does not support `LIMIT` directly on `DELETE` statements (throws syntax error). | Job 61 rewritten to use bounded subquery idiom: `WHERE ride_id IN (SELECT ride_id FROM ride_routes WHERE created_at < ${cutoff} ... LIMIT 1000)`. |
-| **6. Active Dispute Hold Overbreadth** | Bare `NOT EXISTS (SELECT 1 FROM fare_disputes)` locked routes forever even after dispute resolution. | Restricted hold to active dispute statuses: `WHERE fd.status IN ('open', 'under_review', 'escalated')`. |
-| **7. Hot-Path DB Query Starvation & Route Deviation Leak** | `location:update` checked driver ownership and corridor coordinates against Postgres on every 5s ping. | Cached `{ driverId, status, originLat, originLng, destLat, destLng }` in `activeTripCache`. Verified `activeTrip.driverId === client.driverId` in memory and passed cached coordinates to `detectRouteDeviation`. Zero SQL on hot path. |
-| **8. Server Restart Cache Amnesia** | `activeTripCache` started empty on process restart, dropping telematics for in-flight trips. | Added `startup()` hydration query in `utils-server/index.ts` for ongoing trips (`matched`, `driver_arriving`, `driver_arrived`, `in_progress`), plus self-healing read-through DB check on cache miss. |
-| **9. Header Logic & `track.test.ts` Drift** | Setting `X-Robots-Tag` on `!isActive` broke test assertion for scheduled rides (line 147). Omitted `Pragma: no-cache` (line 117). Exact `toEqual` broke on `driver_lat/lng`. | Explicitly distinguished `isTerminal` from `isActive`. Only terminal rides set `no-store`, `Pragma: no-cache`, `X-Robots-Tag`. Scheduled rides receive standard headers. Test updated for `driver_lat/lng` and freshness fields. |
-| **10. Shutdown Conflict Overwrite** | `SIGTERM` shutdown flusher inserted partial routes with `onConflictDoNothing()`, blocking completed trip writes. | Changed `flushAndEvictRoute` to use `.onConflictDoUpdate({ target: rideRoutes.ride_id, set: { points: ..., duration_seconds: ..., distance_meters: ... } })`. |
-| **11. Omission of Cancellation Cache Eviction** | Cancelled rides leaked breadcrumbs in memory indefinitely and were flushed on shutdown. | Hooked `activeBreadcrumbs.delete(ride_id)` and `unregisterActiveTrip(ride_id)` into `req.url === "/internal/ride/cancelled"` in `utils-server/index.ts`. |
-| **12. Missing MapLibre JSX in `history-detail`** | Spec omitted JSX; coordinate order (`[lng, lat]` vs `{ lat, lng }`) and bounds camera were unspecified. | Provided complete MapLibre JSX with `useBarikoiMapStyle`, GeoJSON `LineString`, and camera bounds. |
+| **1. `isActive` Status Set Drift** | §9.1 listed non-existent status `driver_assigned`, omitting `matched` and `driver_arriving`. Broke dispatching tests in `track.test.ts`. | Corrected to exact `rideStatusEnum` members: `ACTIVE_STATUSES = new Set(['matched', 'driver_arriving', 'driver_arrived', 'in_progress'])`. For `dispatching`, return coords with null driver fields. |
+| **2. Breadcrumbs Ingestion Gate Never Opened** | Cache was initialized on match; nothing updated status to `in_progress` on ride start. `location:update` checked `status === "in_progress"`, discarding all points. | Wired `updateActiveTripStatus(ride_id, "in_progress")` into `POST /internal/ride/started` and `WS ride:start`. Wired `driver_arrived`, `cancelled`, and `completed` status updates. |
+| **3. Circular Import & Module Separation** | `activeTripCache` lived in `utils-server/index.ts`, creating circular imports with `breadcrumbs.ts`. | Moved active trip cache to dedicated module `utils-server/activeTrips.ts`. Both `index.ts` and `breadcrumbs.ts` import from it cleanly. |
+| **4. Route Truncation Overwrite on Restart** | `onConflictDoUpdate` replaced existing points with post-restart buffer, discarding points recorded before restart. | Updated `flushAndEvictRoute` to append points using PostgreSQL JSONB concatenation: `points = COALESCE(points, '[]'::jsonb) || excluded.points`. |
+| **5. 1,000-Point Buffer Freezing** | Cap dropped newest points after 83 min, freezing car marker and triggering "Signal Delayed" in Dhaka traffic. | When buffer reaches 1,000 points, decimate by half (keep every 2nd point) to double capacity to 166+ minutes without losing live updates. |
+| **6. Non-Existent Imports in `breadcrumbs+api.ts`** | Hallucinated `@/lib/authMiddleware` and `@/lib/rideGuard`. | Switched to real repository modules: `verifySupabaseToken` from `@/lib/auth`, `resolveRideParticipantIds` & `isParticipant` from `@/lib/rideParticipants`, `import * as errors from '@/lib/errors'`. |
+| **7. Live Coords Auth Bypass & Inconsistency** | Used ad-hoc header check (`x-internal-secret`) that failed open if undefined. | Nested under existing centralized `/internal/*` middleware in `utils-server/index.ts` using standard `Authorization: Bearer <WEBSOCKET_INTERNAL_SECRET>` (fails closed). |
+| **8. Public Data Exposure vs UI Minimization** | Returned raw coordinates and street addresses on public UUID link without displaying them. | Returned location freshness (`driver_location_age_seconds`) and driver identity. Removed raw street addresses from public response. |
+| **9. WhatsApp Scheme Detection Failure** | Android 11+ and iOS block `canOpenURL` without manifest `<queries>` entries. | Wrapped `Linking.openURL("whatsapp://...")` directly in `try/catch` with automatic fallback to `Share.share`. |
+| **10. Dispute Hold Overbreadth** | Checking specific dispute statuses risks enum drift. | Changed purge safety check to `WHERE NOT EXISTS (SELECT 1 FROM fare_disputes fd WHERE fd.ride_id = ride_routes.ride_id AND fd.status <> 'resolved')`. |
+| **11. Route Deviation Gating** | Deviation check ran on all location updates, including pre-pickup. | Gated `detectRouteDeviation` strictly to `activeTrip.status === "in_progress"`. |
+| **12. Scratch DB Role Compatibility** | Plain `postgres:16` containers in CI do not have `anon` or `authenticated` roles. | Migration `0088` wraps revocation in `DO $$ BEGIN IF EXISTS (SELECT FROM pg_roles WHERE rolname = 'anon') THEN REVOKE ALL ... END IF; END $$;`. |
 
 ---
 
@@ -85,29 +83,29 @@ flowchart TD
 
     subgraph UtilsServer["utils-server (Port 3001)"]
         WS_HANDLER["location:update Handler"]
-        MEM_CACHE["activeTripCache (driverId, corridor coords, status)"]
-        BC_BUFFER["activeBreadcrumbs (In-memory ring buffer)"]
-        INT_COORDS["GET /internal/ride/:id/live-coords (Secret protected)"]
-        INT_COMPLETED["POST /internal/ride/completed (onConflictDoUpdate)"]
-        INT_CANCELLED["POST /internal/ride/cancelled (Evict memory)"]
-        SIGTERM_HANDLER["SIGTERM / SIGINT Flush (3s Timeout)"]
-        SCHEDULE_PURGE["Job 61: 30-day Purge (Bounded Subquery)"]
+        ACTIVE_TRIPS["activeTrips.ts (Isolated In-Memory Cache)"]
+        BC_BUFFER["breadcrumbs.ts (Decimating Ring Buffer)"]
+        INT_AUTH["Centralized Internal Auth (Bearer Token, Fails Closed)"]
+        INT_COORDS["GET /internal/ride/:id/live-coords"]
+        INT_STARTED["POST /internal/ride/started -> updateActiveTripStatus"]
+        INT_COMPLETED["POST /internal/ride/completed -> JSONB Concat Flush"]
+        INT_CANCELLED["POST /internal/ride/cancelled -> Evict Active Memory"]
+        SCHEDULE_PURGE["Job 61: 30-day Purge (Bounded Subquery, status <> 'resolved')"]
     end
 
     subgraph ExpoAPI["Expo API Routes (Port 8081)"]
-        TRACK_API["GET /api/ride/:id/track (Edge Cached: max-age=3)"]
-        AUTH_BC["GET /api/ride/:id/breadcrumbs (resolveRideParticipantIds)"]
+        TRACK_API["GET /api/ride/:id/track (Bearer Authed RPC + Edge Cached)"]
+        AUTH_BC["GET /api/ride/:id/breadcrumbs (lib/auth + lib/rideParticipants)"]
         SOS_API["POST /api/sos/alert (999 Dial + Distress SMS)"]
     end
 
-    subgraph Database["PostgreSQL (RLS FORCED + REVOKED)"]
+    subgraph Database["PostgreSQL (RLS FORCED + DEFENSIVE REVOKE)"]
         DB_ROUTES[("ride_routes (1 row/ride: points JSONB)")]
-        DB_SOS[("sos_alerts")]
         DB_DISPUTES[("fare_disputes")]
     end
 
     subgraph RiderApp["Rider App / Mobile Web"]
-        R_WA["1-Tap WhatsApp Share (whatsapp://send?text=...)"]
+        R_WA["1-Tap WhatsApp Share (openURL with Share fallback)"]
         R_WEB["Public /track/[rideId] (Live Status & Safety Card)"]
         R_HIST["history-detail/index.tsx (MapLibre LineString Display)"]
     end
@@ -117,17 +115,19 @@ flowchart TD
     D_GPS -.-> D_ASYNC
     
     D_WS --> WS_HANDLER
-    WS_HANDLER --> MEM_CACHE
-    MEM_CACHE --> BC_BUFFER
+    WS_HANDLER --> ACTIVE_TRIPS
+    ACTIVE_TRIPS --> BC_BUFFER
     
+    INT_AUTH --> INT_COORDS
     INT_COORDS --> BC_BUFFER
-    TRACK_API -->|Fetch live coords + age| INT_COORDS
+    TRACK_API -->|Bearer Token Fetch| INT_COORDS
     TRACK_API -.->|Poll every 10s: Freshness & status| R_WEB
 
-    INT_COMPLETED -->|Flush completed route JSONB| DB_ROUTES
-    INT_CANCELLED -->|Evict active memory| BC_BUFFER
-    SIGTERM_HANDLER -->|Flush on shutdown| DB_ROUTES
-    SCHEDULE_PURGE -->|Purge >30 days (hold if SOS/active dispute)| DB_ROUTES
+    INT_STARTED --> ACTIVE_TRIPS
+    INT_COMPLETED -->|Flush JSONB with COALESCE Concat| DB_ROUTES
+    INT_CANCELLED --> ACTIVE_TRIPS
+    INT_CANCELLED --> BC_BUFFER
+    SCHEDULE_PURGE -->|Purge >30 days (hold if dispute <> 'resolved')| DB_ROUTES
 
     R_WA -.->|Shares URL| R_WEB
     R_HIST --> AUTH_BC
@@ -201,16 +201,11 @@ export const rideRoutes = pgTable(
 
 ## 7. Driver App Telematics Pipeline (`app/(main)/(rider)/finish-ride/index.tsx`)
 
-### 7.1 Decoupled, High-Accuracy Telematics Loop
-In `finish-ride/index.tsx`, the telematics loop operates strictly in the foreground while the active trip is on screen. Accuracy is maintained at `Location.Accuracy.High` (5–10m resolution) to ensure sharp corridor deviation detection.
+### 7.1 Decoupled, High-Accuracy Foreground Telematics
+In `finish-ride/index.tsx`, the telematics loop operates strictly in the foreground while the active trip is on screen. Accuracy is maintained at `Location.Accuracy.High` (5–10m resolution) to ensure sharp corridor deviation detection. Active ride ID is read from `activeRideIdRef.current` (already hooked to `useRideOfferStore`).
 
 ```typescript
-import { useLocalSearchParams } from "expo-router";
-
-// In component:
-const { ride_id: localRideIdParam } = useLocalSearchParams<{ ride_id?: string }>();
-const currentRideId = useRideOfferStore.getState().activeRideId || localRideIdParam;
-
+// In app/(main)/(rider)/finish-ride/index.tsx:
 locationSubscription = await Location.watchPositionAsync(
   {
     accuracy: Location.Accuracy.High, // High accuracy (5-10m) for crisp deviation checks
@@ -221,7 +216,7 @@ locationSubscription = await Location.watchPositionAsync(
     const lat = location.coords.latitude;
     const lng = location.coords.longitude;
     const clientTs = location.timestamp || Date.now();
-    const rideId = useRideOfferStore.getState().activeRideId || currentRideId;
+    const rideId = activeRideIdRef.current;
 
     // 1. NON-BLOCKING: Emit telematics immediately over WebSocket
     const sock = wsRef.current;
@@ -257,12 +252,13 @@ locationSubscription = await Location.watchPositionAsync(
 
 ---
 
-## 8. utils-server Telematics Ingestion & Zero-DB Hot Path
+## 8. utils-server Telematics Architecture
 
-### 8.1 In-Memory Active Cache in `utils-server/index.ts`
-`utils-server` maintains an in-memory cache of active trips including driver ownership and corridor coordinates:
+### 8.1 Active Trip Cache Module (`utils-server/activeTrips.ts`)
+To completely eliminate circular imports, active trip state lives in its own dedicated module:
 
 ```typescript
+// utils-server/activeTrips.ts
 export interface ActiveTripInfo {
   driverId: string;
   status: string;
@@ -278,15 +274,115 @@ export function registerActiveTrip(rideId: string, trip: ActiveTripInfo) {
   activeTripCache.set(rideId, trip);
 }
 
+export function updateActiveTripStatus(rideId: string, status: string) {
+  const trip = activeTripCache.get(rideId);
+  if (trip) {
+    trip.status = status;
+  }
+}
+
+export function getActiveTrip(rideId: string): ActiveTripInfo | undefined {
+  return activeTripCache.get(rideId);
+}
+
 export function unregisterActiveTrip(rideId: string) {
   activeTripCache.delete(rideId);
 }
 ```
 
-#### Startup Hydration (Reboot Recovery)
-In `startup()` in `utils-server/index.ts`:
+### 8.2 Ingestion Buffer & Concatenation Flush (`utils-server/breadcrumbs.ts`)
 ```typescript
-// Hydrate active trips on server startup (reboot recovery)
+// utils-server/breadcrumbs.ts
+import { sql } from "drizzle-orm";
+import { db } from "../src/db";
+import { rideRoutes } from "../src/db/schema";
+import { haversineKm } from "../lib/fareCalc";
+import { unregisterActiveTrip } from "./activeTrips";
+
+export interface BreadcrumbPoint {
+  lat: number;
+  lng: number;
+  ts: number;
+}
+
+const activeBreadcrumbs = new Map<string, BreadcrumbPoint[]>();
+
+export function recordBreadcrumbPoint(rideId: string, point: BreadcrumbPoint) {
+  let list = activeBreadcrumbs.get(rideId);
+  if (!list) {
+    list = [];
+    activeBreadcrumbs.set(rideId, list);
+  }
+
+  // Decimation Protection: Decimate to half at 1,000 points (~83 min)
+  // Keeps every 2nd point, doubling capacity to 166+ minutes without freezing
+  if (list.length >= 1000) {
+    list = list.filter((_, idx) => idx % 2 === 0);
+    activeBreadcrumbs.set(rideId, list);
+  }
+
+  list.push(point);
+}
+
+export function getLastPoint(rideId: string): BreadcrumbPoint | null {
+  const list = activeBreadcrumbs.get(rideId);
+  return list && list.length > 0 ? list[list.length - 1] : null;
+}
+
+export function evictActiveRoute(rideId: string) {
+  activeBreadcrumbs.delete(rideId);
+  unregisterActiveTrip(rideId);
+}
+
+export async function flushAndEvictRoute(rideId: string) {
+  const points = activeBreadcrumbs.get(rideId);
+  if (!points || points.length === 0) {
+    evictActiveRoute(rideId);
+    return;
+  }
+
+  const durationSec = Math.round((points[points.length - 1].ts - points[0].ts) / 1000);
+
+  let distanceMeters = 0;
+  for (let i = 1; i < points.length; i++) {
+    distanceMeters += haversineKm(points[i - 1].lat, points[i - 1].lng, points[i].lat, points[i].lng) * 1000;
+  }
+  distanceMeters = Math.round(distanceMeters);
+
+  // Crash-Safe JSONB Concatenation: Never overwrites points recorded before a restart
+  await db
+    .insert(rideRoutes)
+    .values({
+      ride_id: rideId,
+      points: points as any,
+      duration_seconds: durationSec,
+      distance_meters: distanceMeters.toString(),
+    })
+    .onConflictDoUpdate({
+      target: rideRoutes.ride_id,
+      set: {
+        points: sql`COALESCE(${rideRoutes.points}, '[]'::jsonb) || ${JSON.stringify(points)}::jsonb`,
+        duration_seconds: sql`GREATEST(COALESCE(${rideRoutes.duration_seconds}, 0), ${durationSec})`,
+        distance_meters: sql`COALESCE(${rideRoutes.distance_meters}, 0) + ${distanceMeters}`,
+      },
+    });
+
+  evictActiveRoute(rideId);
+}
+
+export async function flushAllActiveRoutes() {
+  const rideIds = Array.from(activeBreadcrumbs.keys());
+  for (const id of rideIds) {
+    await flushAndEvictRoute(id);
+  }
+}
+```
+
+### 8.3 Ingestion & Lifecycle Integration in `utils-server/index.ts`
+
+#### Startup Hydration
+```typescript
+// In startup() in utils-server/index.ts:
 const ongoingRides = await db
   .select({
     id: rides.id,
@@ -314,15 +410,27 @@ for (const r of ongoingRides) {
 }
 ```
 
-#### Hot-Path `location:update` Handling
-Replaces lines 1442–1444 and lines 1494–1503 in `utils-server/index.ts`:
+#### Lifecycle State Synchronization
 ```typescript
-import { parsePointTs } from "./trace";
+// 1. In POST /internal/ride/started AND WS case "ride:start":
+updateActiveTripStatus(ride_id, "in_progress");
 
-// 1. In-memory ownership & status check (Zero SQL)
-let activeTrip = activeTripCache.get(locRideId);
+// 2. In POST /internal/ride/driver-arrived AND WS case "ride:arrived":
+updateActiveTripStatus(ride_id, "driver_arrived");
 
-// Lazy read-through DB check on cache miss (self-healing)
+// 3. In POST /internal/ride/completed:
+await flushAndEvictRoute(ride_id);
+
+// 4. In POST /internal/ride/cancelled:
+evictActiveRoute(ride_id);
+```
+
+#### Hot-Path `location:update`
+```typescript
+// In ws message handler:
+let activeTrip = getActiveTrip(locRideId);
+
+// Self-healing DB check on cache miss
 if (!activeTrip) {
   const [dbRide] = await db
     .select({
@@ -350,13 +458,13 @@ if (!activeTrip) {
   }
 }
 
-// Security: Reject if not owned by this connected driver
+// Strict ownership check
 if (!activeTrip || activeTrip.driverId !== client.driverId) {
   send(ws, { type: "error", message: "not_your_ride" });
   break;
 }
 
-// 2. Ingest telematics for in-progress rides
+// Record points & check deviation strictly for in_progress trips
 if (activeTrip.status === "in_progress") {
   const safeTs = parsePointTs(msg.ts);
   recordBreadcrumbPoint(locRideId, {
@@ -364,112 +472,26 @@ if (activeTrip.status === "in_progress") {
     lng: msg.lng as number,
     ts: safeTs,
   });
-}
 
-// 3. Detect route deviation using cached corridor coordinates (Zero SQL)
-detectRouteDeviation(
-  locRideId,
-  msg.lat as number,
-  msg.lng as number,
-  activeTrip.originLat,
-  activeTrip.originLng,
-  activeTrip.destLat,
-  activeTrip.destLng,
-).catch(() => {});
-```
-
-### 8.2 Ingestion Buffer & Trip Completion Flush (`utils-server/breadcrumbs.ts`)
-```typescript
-import { haversineKm } from "../lib/fareCalc";
-
-export interface BreadcrumbPoint {
-  lat: number;
-  lng: number;
-  ts: number;
-}
-
-const activeBreadcrumbs = new Map<string, BreadcrumbPoint[]>();
-
-export function recordBreadcrumbPoint(rideId: string, point: BreadcrumbPoint) {
-  let list = activeBreadcrumbs.get(rideId);
-  if (!list) {
-    list = [];
-    activeBreadcrumbs.set(rideId, list);
-  }
-  // Cap at 1,000 points per trip (~83 minutes at 5s)
-  if (list.length < 1000) {
-    list.push(point);
-  }
-}
-
-export function getLastPoint(rideId: string): BreadcrumbPoint | null {
-  const list = activeBreadcrumbs.get(rideId);
-  return list && list.length > 0 ? list[list.length - 1] : null;
-}
-
-export function evictActiveRoute(rideId: string) {
-  activeBreadcrumbs.delete(rideId);
-  unregisterActiveTrip(rideId);
-}
-
-export async function flushAndEvictRoute(rideId: string) {
-  const points = activeBreadcrumbs.get(rideId);
-  if (!points || points.length === 0) {
-    evictActiveRoute(rideId);
-    return;
-  }
-
-  const durationSec = Math.round((points[points.length - 1].ts - points[0].ts) / 1000);
-
-  // Compute cumulative traversed distance for route dispute forensics
-  let distanceMeters = 0;
-  for (let i = 1; i < points.length; i++) {
-    distanceMeters += haversineKm(points[i - 1].lat, points[i - 1].lng, points[i].lat, points[i].lng) * 1000;
-  }
-  distanceMeters = Math.round(distanceMeters);
-
-  // OnConflictDoUpdate: Ensures completed ride overwrites any partial SIGTERM checkpoint
-  await db
-    .insert(rideRoutes)
-    .values({
-      ride_id: rideId,
-      points: points as any,
-      duration_seconds: durationSec,
-      distance_meters: distanceMeters.toString(),
-    })
-    .onConflictDoUpdate({
-      target: rideRoutes.ride_id,
-      set: {
-        points: points as any,
-        duration_seconds: durationSec,
-        distance_meters: distanceMeters.toString(),
-      },
-    });
-
-  // Safe eviction only after successful DB commit
-  evictActiveRoute(rideId);
-}
-
-export async function flushAllActiveRoutes() {
-  const rideIds = Array.from(activeBreadcrumbs.keys());
-  for (const id of rideIds) {
-    await flushAndEvictRoute(id);
-  }
+  detectRouteDeviation(
+    locRideId,
+    msg.lat as number,
+    msg.lng as number,
+    activeTrip.originLat,
+    activeTrip.originLng,
+    activeTrip.destLat,
+    activeTrip.destLng,
+  ).catch(() => {});
 }
 ```
 
-### 8.3 Internal HTTP Endpoints in `utils-server/index.ts`
+#### Centralized Internal Live Coords Route
+Inherits standard `Bearer` authorization (fails closed if `!WEBSOCKET_INTERNAL_SECRET`):
 ```typescript
 if (req.method === "GET" && req.url?.startsWith("/internal/ride/") && req.url.endsWith("/live-coords")) {
-  const secret = req.headers["x-internal-secret"];
-  if (secret !== process.env.WEBSOCKET_INTERNAL_SECRET) {
-    res.writeHead(401).end(JSON.stringify({ error: "unauthorized" }));
-    return;
-  }
   const rideId = req.url.split("/")[3];
   const lastPt = getLastPoint(rideId);
-  res.writeHead(200, { "Content-Type": "application/json" });
-  res.end(JSON.stringify(lastPt ? { lat: lastPt.lat, lng: lastPt.lng, ts: lastPt.ts } : null));
+  writeJson(200, lastPt ? { lat: lastPt.lat, lng: lastPt.lng, ts: lastPt.ts } : null);
   return;
 }
 ```
@@ -481,20 +503,27 @@ if (req.method === "GET" && req.url?.startsWith("/internal/ride/") && req.url.en
 ### 9.1 Backend API (`app/api/ride/[id]/track+api.ts`)
 ```typescript
 // app/api/ride/[id]/track+api.ts
-const isTerminal = new Set(["completed", "cancelled", "expired", "no_drivers"]).has(ride.status);
-const isActive = new Set(["driver_assigned", "driver_arrived", "in_progress"]).has(ride.status);
+const TERMINAL_STATUSES = new Set(["completed", "cancelled", "expired", "no_drivers"]);
+const ACTIVE_STATUSES = new Set(["matched", "driver_arriving", "driver_arrived", "in_progress"]);
+
+const isTerminal = TERMINAL_STATUSES.has(ride.status);
+const isActive = ACTIVE_STATUSES.has(ride.status);
+const isDispatching = ride.status === "dispatching";
 
 let driverLat: number | null = null;
 let driverLng: number | null = null;
 let locationUpdatedAt: number | null = null;
 let locationAgeSeconds: number | null = null;
+let driverName: string | null = null;
+let driverRating: string | null = null;
+let vehicleType: string | null = null;
 
 if (ride.driver_id && isActive) {
-  // 1. Query utils-server for real-time in-memory telematics
+  // Query utils-server using standard Bearer authentication
   try {
     const wsInternalUrl = process.env.INTERNAL_WEBSOCKET_URL || "http://127.0.0.1:3001";
     const coordRes = await fetch(`${wsInternalUrl}/internal/ride/${ride.id}/live-coords`, {
-      headers: { "x-internal-secret": process.env.WEBSOCKET_INTERNAL_SECRET || "" },
+      headers: { Authorization: `Bearer ${process.env.WEBSOCKET_INTERNAL_SECRET || ""}` },
       signal: AbortSignal.timeout(500),
     });
     if (coordRes.ok) {
@@ -507,10 +536,9 @@ if (ride.driver_id && isActive) {
       }
     }
   } catch {
-    // Fallback to database coordinates if utils-server is unreachable
+    // Fallback to database
   }
 
-  // 2. Fetch driver profile & fallback coordinates from PostgreSQL
   const [drv] = await db.select({
     name: users.name,
     rating: drivers.rating,
@@ -533,6 +561,7 @@ if (ride.driver_id && isActive) {
 
 // Invariant P1-17 Strictly Preserved:
 // Terminal rides have coordinates and driver info completely nulled.
+// Dispatching rides expose route coords but null driver info.
 const body = {
   status: ride.status,
   driver_name: isActive ? driverName : null,
@@ -542,15 +571,12 @@ const body = {
   driver_lng: isActive ? driverLng : null,
   driver_location_updated_at: isActive ? locationUpdatedAt : null,
   driver_location_age_seconds: isActive ? locationAgeSeconds : null,
-  origin_lat: isActive ? ride.origin_latitude : null,
-  origin_lng: isActive ? ride.origin_longitude : null,
-  origin_address: isActive ? ride.origin_address : null,
-  destination_lat: isActive ? ride.destination_latitude : null,
-  destination_lng: isActive ? ride.destination_longitude : null,
-  destination_address: isActive ? ride.destination_address : null,
+  origin_lat: (isActive || isDispatching) ? ride.origin_latitude : null,
+  origin_lng: (isActive || isDispatching) ? ride.origin_longitude : null,
+  destination_lat: (isActive || isDispatching) ? ride.destination_latitude : null,
+  destination_lng: (isActive || isDispatching) ? ride.destination_longitude : null,
 };
 
-// Edge caching headers: coalesces concurrent viewers without hitting Postgres
 const headers = new Headers();
 if (isActive) {
   headers.set("Cache-Control", "public, max-age=3, s-maxage=3, stale-while-revalidate=5");
@@ -564,7 +590,7 @@ return Response.json(body, { status: 200, headers });
 ```
 
 ### 9.2 Frontend Live Status & Safety Card (`app/track/[rideId].tsx`)
-Replaces the broken web MapLibre stub with a responsive, high-reassurance **Live Status & Safety Card**:
+Complete, robust mobile-web status card with full error, loading, and terminal handling:
 
 ```tsx
 import { useState, useEffect, useRef } from "react";
@@ -577,18 +603,27 @@ import { colors } from "@/theme/goRide";
 import { useIsDark, useAppearance } from "@/lib/useAppearance";
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; icon: any }> = {
+  pending: { label: "Searching for nearby driver", color: colors.primary, icon: "radio" },
+  dispatching: { label: "Contacting drivers", color: colors.primary, icon: "radio" },
+  scheduled: { label: "Scheduled trip", color: colors.primary, icon: "calendar" },
   matched: { label: "Driver on the way", color: colors.primary, icon: "car" },
   driver_arriving: { label: "Driver arriving", color: colors.primary, icon: "car-sport" },
   driver_arrived: { label: "Driver arrived at pickup", color: colors.amber, icon: "location" },
   in_progress: { label: "Trip in progress", color: colors.goSuccess, icon: "navigate" },
   completed: { label: "Trip completed", color: colors.gray500, icon: "checkmark-circle" },
   cancelled: { label: "Trip cancelled", color: colors.goDanger, icon: "close-circle" },
+  expired: { label: "Trip expired", color: colors.gray500, icon: "time" },
+  no_drivers: { label: "No drivers available", color: colors.goDanger, icon: "alert-circle" },
 };
+
+const TERMINAL_STATUSES = new Set(["completed", "cancelled", "expired", "no_drivers"]);
 
 export default function PublicTrackPage() {
   const { rideId } = useLocalSearchParams<{ rideId: string }>();
   const [data, setData] = useState<any>(null);
   const [error, setError] = useState("");
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
   const isDark = useIsDark();
   const { setTheme } = useAppearance();
 
@@ -603,80 +638,98 @@ export default function PublicTrackPage() {
     const fetchStatus = async () => {
       try {
         const res = await fetch(`${API_URL}/api/ride/${rideId}/track`);
-        if (res.ok) setData(await res.json());
-        else setError("Ride not found or expired");
+        if (res.ok) {
+          const resData = await res.json();
+          setData(resData);
+          setError("");
+          if (TERMINAL_STATUSES.has(resData.status)) {
+            if (intervalRef.current) { clearInterval(intervalRef.current); intervalRef.current = null; }
+          }
+        } else {
+          setError("Ride not found or no longer trackable");
+          if (intervalRef.current) { clearInterval(intervalRef.current); intervalRef.current = null; }
+        }
       } catch {
         setError("Connecting to live tracking...");
       }
     };
     fetchStatus();
-    const interval = setInterval(fetchStatus, 10_000);
-    return () => clearInterval(interval);
+    intervalRef.current = setInterval(fetchStatus, 10_000);
+    return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
   }, [rideId]);
 
-  const cfg = STATUS_CONFIG[data?.status] ?? { label: data?.status ?? "Active", color: colors.primary, icon: "radio" };
+  if (error && !data) {
+    return (
+      <SafeAreaView className="flex-1 items-center justify-center p-6" style={{ backgroundColor: bg }}>
+        <Ionicons name="alert-circle-outline" size={48} color={colors.goDanger} />
+        <Text className="mt-4 text-center font-JakartaBold text-lg" style={{ color: textPrimary }}>{error}</Text>
+      </SafeAreaView>
+    );
+  }
+
+  if (!data) {
+    return (
+      <SafeAreaView className="flex-1 items-center justify-center p-6" style={{ backgroundColor: bg }}>
+        <ActivityIndicator size="large" color={colors.primary} />
+        <Text className="mt-4 font-Jakarta text-sm" style={{ color: textSecondary }}>Loading trip details...</Text>
+      </SafeAreaView>
+    );
+  }
+
+  const cfg = STATUS_CONFIG[data.status] ?? { label: data.status, color: colors.primary, icon: "radio" };
 
   return (
     <SafeAreaView className="flex-1" style={{ backgroundColor: bg }}>
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
       <View className="p-4 border-b flex-row justify-between items-center" style={{ borderColor }}>
-        <Text className="text-xl font-JakartaBold" style={{ color: textPrimary }}>Ride Live Safety Status</Text>
+        <Text className="text-xl font-JakartaBold" style={{ color: textPrimary }}>Ride Safety Tracking</Text>
         <TouchableOpacity onPress={() => setTheme(isDark ? "light" : "dark")}>
           <Ionicons name={isDark ? "sunny-outline" : "moon-outline"} size={20} color={textPrimary} />
         </TouchableOpacity>
       </View>
 
-      {data && (
-        <View className="p-6 flex-1 justify-between">
-          <View>
-            {/* Status Badge */}
-            <View className="flex-row items-center p-3 rounded-xl mb-4" style={{ backgroundColor: cfg.color + "1A" }}>
-              <Ionicons name={cfg.icon} size={24} color={cfg.color} />
-              <Text className="ml-3 font-JakartaBold text-lg" style={{ color: cfg.color }}>{cfg.label}</Text>
-            </View>
-
-            {/* Signal Freshness Indicator */}
-            {data.driver_location_age_seconds != null && (
-              <View className="flex-row items-center mb-6">
-                <View className="w-2.5 h-2.5 rounded-full mr-2" style={{ backgroundColor: data.driver_location_age_seconds <= 15 ? colors.goSuccess : colors.amber }} />
-                <Text className="text-xs font-Jakarta" style={{ color: textSecondary }}>
-                  {data.driver_location_age_seconds <= 15
-                    ? `Live GPS Signal (Updated ${data.driver_location_age_seconds}s ago)`
-                    : `Signal Delayed (${data.driver_location_age_seconds}s ago)`}
-                </Text>
-              </View>
-            )}
-
-            {/* Driver & Vehicle Details */}
-            {data.driver_name && (
-              <View className="p-4 rounded-xl mb-4 border" style={{ backgroundColor: surfaceBg, borderColor }}>
-                <Text className="text-xs uppercase font-JakartaBold mb-1" style={{ color: textSecondary }}>Driver & Vehicle</Text>
-                <Text className="text-lg font-JakartaBold" style={{ color: textPrimary }}>{data.driver_name}</Text>
-                <Text className="text-sm font-Jakarta" style={{ color: textSecondary }}>
-                  {data.vehicle_type} {data.driver_rating ? `• ★ ${parseFloat(data.driver_rating).toFixed(1)}` : ""}
-                </Text>
-              </View>
-            )}
-
-            {/* Route Details */}
-            <View className="p-4 rounded-xl border" style={{ backgroundColor: surfaceBg, borderColor }}>
-              <Text className="text-xs uppercase font-JakartaBold mb-2" style={{ color: textSecondary }}>Journey</Text>
-              {data.origin_address && <Text className="text-sm font-Jakarta mb-2" style={{ color: textPrimary }}>📍 {data.origin_address}</Text>}
-              {data.destination_address && <Text className="text-sm font-Jakarta" style={{ color: textPrimary }}>🏁 {data.destination_address}</Text>}
-            </View>
+      <View className="p-6 flex-1 justify-between">
+        <View>
+          {/* Status Badge */}
+          <View className="flex-row items-center p-4 rounded-xl mb-4" style={{ backgroundColor: cfg.color + "1A" }}>
+            <Ionicons name={cfg.icon} size={28} color={cfg.color} />
+            <Text className="ml-3 font-JakartaBold text-lg" style={{ color: cfg.color }}>{cfg.label}</Text>
           </View>
 
-          {/* Emergency 999 Police Dialer */}
-          <TouchableOpacity
-            onPress={() => Linking.openURL("tel:999")}
-            className="p-4 rounded-xl flex-row justify-center items-center"
-            style={{ backgroundColor: colors.goDanger }}
-          >
-            <Ionicons name="call" size={20} color="#fff" />
-            <Text className="text-white font-JakartaBold text-base ml-2">Call 999 Police (Emergency)</Text>
-          </TouchableOpacity>
+          {/* GPS Signal Freshness */}
+          {data.driver_location_age_seconds != null && (
+            <View className="flex-row items-center mb-6 px-1">
+              <View className="w-2.5 h-2.5 rounded-full mr-2" style={{ backgroundColor: data.driver_location_age_seconds <= 15 ? colors.goSuccess : colors.amber }} />
+              <Text className="text-xs font-Jakarta" style={{ color: textSecondary }}>
+                {data.driver_location_age_seconds <= 15
+                  ? `Live GPS Signal (Updated ${data.driver_location_age_seconds}s ago)`
+                  : `Signal Delayed (${data.driver_location_age_seconds}s ago)`}
+              </Text>
+            </View>
+          )}
+
+          {/* Driver Profile */}
+          {data.driver_name && (
+            <View className="p-4 rounded-xl mb-4 border" style={{ backgroundColor: surfaceBg, borderColor }}>
+              <Text className="text-xs uppercase font-JakartaBold mb-1" style={{ color: textSecondary }}>Driver & Vehicle</Text>
+              <Text className="text-lg font-JakartaBold" style={{ color: textPrimary }}>{data.driver_name}</Text>
+              <Text className="text-sm font-Jakarta" style={{ color: textSecondary }}>
+                {data.vehicle_type} {data.driver_rating ? `• ★ ${parseFloat(data.driver_rating).toFixed(1)}` : ""}
+              </Text>
+            </View>
+          )}
         </View>
-      )}
+
+        {/* 1-Tap 999 Police Button */}
+        <TouchableOpacity
+          onPress={() => Linking.openURL("tel:999")}
+          className="p-4 rounded-xl flex-row justify-center items-center"
+          style={{ backgroundColor: colors.goDanger }}
+        >
+          <Ionicons name="call" size={20} color="#fff" />
+          <Text className="text-white font-JakartaBold text-base ml-2">Call 999 Police (Emergency)</Text>
+        </TouchableOpacity>
+      </View>
     </SafeAreaView>
   );
 }
@@ -687,23 +740,19 @@ export default function PublicTrackPage() {
 ## 10. Client-Side 1-Tap WhatsApp Ride Sharing
 
 In `app/(main)/(customer)/ride-tracking/[ride_id].tsx`:
+Calls `Linking.openURL("whatsapp://...")` directly with automatic `Share.share` fallback:
+
 ```tsx
 const handleShare = async () => {
-  const baseUrl = process.env.EXPO_PUBLIC_API_URL || "https://ride.com.bd";
+  const baseUrl = process.env.EXPO_PUBLIC_SERVER_URL || process.env.EXPO_PUBLIC_API_URL || "https://ride.com.bd";
   const shareUrl = `${baseUrl}/track/${ride_id}`;
   const dName = driver?.full_name ?? "Driver";
   const vType = driver?.vehicle_type ?? "vehicle";
-  const plate = driver?.vehicle_plate ? `, Plate: ${driver.vehicle_plate}` : "";
-  const message = `I am on a Ride trip with ${dName} (${vType}${plate}). Track my ride live: ${shareUrl}`;
+  const message = `I am on a Ride trip with ${dName} (${vType}). Track my ride live: ${shareUrl}`;
   const whatsappUrl = `whatsapp://send?text=${encodeURIComponent(message)}`;
 
   try {
-    const supported = await Linking.canOpenURL(whatsappUrl);
-    if (supported) {
-      await Linking.openURL(whatsappUrl);
-    } else {
-      await Share.share({ message });
-    }
+    await Linking.openURL(whatsappUrl);
   } catch {
     await Share.share({ message });
   }
@@ -715,14 +764,16 @@ const handleShare = async () => {
 ## 11. Authenticated In-App Route Display (History Screen)
 
 ### 11.1 Route Retrieval Endpoint (`app/api/ride/[id]/breadcrumbs+api.ts`)
+Conforms to live codebase modules (`lib/auth.ts`, `lib/rideParticipants.ts`, and `import * as errors from '@/lib/errors'`):
+
 ```typescript
 import { z } from "zod";
 import { eq } from "drizzle-orm";
 import { db } from "@/src/db";
 import { rides, users, rideRoutes } from "@/src/db/schema";
-import { verifySupabaseToken } from "@/lib/authMiddleware";
-import { resolveRideParticipantIds, isParticipant } from "@/lib/rideGuard";
-import { errors } from "@/lib/errors";
+import { verifySupabaseToken } from "@/lib/auth";
+import { resolveRideParticipantIds, isParticipant } from "@/lib/rideParticipants";
+import * as errors from "@/lib/errors";
 
 export async function GET(request: Request, { id }: { id: string }) {
   try {
@@ -832,6 +883,7 @@ registerJob(async () => {
     await withJobBudget(61, 10_000, async (tx) => {
       const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
 
+      // Status <> 'resolved' ensures safety against enum changes
       await tx.execute(sql`
         DELETE FROM ride_routes
         WHERE ride_id IN (
@@ -841,7 +893,7 @@ registerJob(async () => {
             AND NOT EXISTS (
               SELECT 1 FROM fare_disputes fd 
               WHERE fd.ride_id = ride_routes.ride_id 
-                AND fd.status IN ('open', 'under_review', 'escalated')
+                AND fd.status <> 'resolved'
             )
           LIMIT 1000
         )
@@ -862,7 +914,7 @@ registerJob(async () => {
 ```
 Phase 1: Driver App Telematics Hardening
   ├── app/(main)/(rider)/finish-ride/index.tsx: decouple geocode, add ts, 5s cadence, Location.Accuracy.High
-  ├── Add activeRideId persistence using useRideOfferStore + localRideIdParam
+  ├── Verify activeRideId read from activeRideIdRef.current
   └── Gate: npx jest tests/unit/finish-ride-telematics.test.ts && npm run lint
 
 Phase 2: Database Migration 0088 & Drizzle Schema
@@ -871,23 +923,22 @@ Phase 2: Database Migration 0088 & Drizzle Schema
   └── Gate: npx jest tests/api/ride/routes-schema.test.ts
 
 Phase 3: utils-server Telematics Ingestion & Flush Hooks
-  ├── utils-server/breadcrumbs.ts (in-memory active queue, flushAndEvictRoute with onConflictDoUpdate)
-  ├── Hook activeTripCache into utils-server/index.ts (ownership check, cached corridor coords, startup hydration)
-  ├── Expose GET /internal/ride/:id/live-coords (x-internal-secret protected)
-  ├── Hook /internal/ride/completed to persist compact route JSONB
-  ├── Hook /internal/ride/cancelled to evict in-memory breadcrumbs
-  ├── Register Job 61 in scheduler.ts with bounded subquery and safety hold
-  └── Gate: npx jest tests/utils-server/breadcrumbs.test.ts
+  ├── utils-server/activeTrips.ts (isolated cache module, zero circular imports)
+  ├── utils-server/breadcrumbs.ts (decimating buffer at 1,000 points, flush with JSONB concat)
+  ├── Hook lifecycle state transitions into index.ts (started, arrived, completed, cancelled)
+  ├── Expose GET /internal/ride/:id/live-coords under centralized Bearer auth
+  ├── Register Job 61 in scheduler.ts with bounded subquery (fd.status <> 'resolved')
+  └── Gate: npx jest utils-server/__tests__/breadcrumbs.test.ts
 
 Phase 4: Live Mobile-Web Status Card & WhatsApp Share
-  ├── app/api/ride/[id]/track+api.ts returns driver_lat/lng and location freshness timestamps
-  ├── app/track/[rideId].tsx: clean Live Status & Safety Card with signal freshness and 1-tap 999 button
-  ├── Update tests/api/ride/track.test.ts assertions to cover freshness fields
-  ├── app/(main)/(customer)/ride-tracking/[ride_id].tsx: 1-tap WhatsApp share button
+  ├── app/api/ride/[id]/track+api.ts returns driver fields, freshness timestamps, and handles dispatching
+  ├── app/track/[rideId].tsx: Live Status & Safety Card with freshness indicator and 999 dialing
+  ├── Update tests/api/ride/track.test.ts assertions for freshness fields and dispatching status
+  ├── app/(main)/(customer)/ride-tracking/[ride_id].tsx: 1-tap WhatsApp share button (openURL + fallback)
   └── Gate: npx jest tests/api/ride/track.test.ts
 
 Phase 5: Authenticated In-App Route Display
-  ├── GET /api/ride/[id]/breadcrumbs with z.uuid() validation and resolveRideParticipantIds guard
+  ├── GET /api/ride/[id]/breadcrumbs with lib/auth, lib/rideParticipants, and import * as errors
   ├── Customer history-detail/index.tsx renders route polyline on MapLibre map with bounding camera
   └── Gate: npx jest tests/api/ride/breadcrumbs.test.ts (IDOR tests: stranger 403, rider 200)
 ```
@@ -901,8 +952,5 @@ Phase 5: Authenticated In-App Route Display
 DROP TABLE IF EXISTS "ride_routes" CASCADE;
 ```
 
-### Buffer Overflow Fail-Safe
-If in-memory telemetry points exceed 1,000 for a single trip (~83 minutes at 5s sampling), new points are safely discarded to protect process memory.
-
-### Fallback for WhatsApp Deep-Link
-If WhatsApp is not installed on the passenger's device, `Linking.canOpenURL("whatsapp://...")` returns false, and the app automatically invokes `Share.share(...)`, opening the standard Android/iOS system share sheet.
+### Buffer Decimation Fail-Safe
+If in-memory telemetry points reach 1,000 for a single trip, the buffer decimates by half, preserving the entire trajectory while bounding memory.
