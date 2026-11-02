@@ -1,78 +1,89 @@
-# Plan 28 (v2.1) — Live Ride Sharing & In-Progress Breadcrumb Engine
+# Plan 28 (v2.3) — Live Ride Sharing & In-Progress Breadcrumb Engine
 
-> **Document Status:** VERIFIED & HARDENED (EGM Goldfish Review Approved with Amendments)  
-> **Replaces:** Plan 28 v1.0 (Rejected)  
-> **Target Release:** Safety & Telematics Phase  
-> **Core Invariants Preserved:**
-> 1. **P1-17 (Terminal Privacy Unbroken):** Zero public post-trip coordinate exposure. Route replay & GPX export are strictly authenticated, participant-only (`isParticipant` via `lib/rideParticipants.ts` or admin) and in-app only.
-> 2. **Auto-Share v1 is SMS-Only:** Triggered exclusively at match time in `executeMatchFlow` alongside `sendMatchPinSms`. Server-side WhatsApp is dropped (client 1-tap user tap only).
-> 3. **Dedicated In-Progress Telematics Module (`utils-server/breadcrumbs.ts`):** Uncoupled from `utils-server/trace.ts` (which is pickup-only and deleted at trip start). Captures `in_progress` only; bounded memory cap; flushed on existing `/internal/ride/completed` and `/internal/ride/cancelled`.
-> 4. **No Phantom Fields:** WS ingestion uses existing `LocationUpdateMessage` (`lat`, `lng`, `ts`, `ride_id`). Speed is derived on query ($\Delta d / \Delta t$), preserving the WS contract.
-> 5. **Zero Client/Server Bleed:** Client mobile code never imports server-only secret modules (`lib/dprelay.ts`). Android package pinned to `com.ride.bd`.
+> **Document Status:** FORENSIC RE-ARCHITECTED SPEC (2026-11-02)  
+> **Replaces:** Plan 28 v1.0, v2.0, v2.1, and v2.2  
+> **Audited Against:** `utils-server/index.ts`, `utils-server/trace.ts`, `utils-server/scheduler.ts`, `app/api/ride/[id]/{track,details,cancel,complete}+api.ts`, `app/(main)/(rider)/finish-ride/index.tsx`, `app/(main)/(customer)/(tabs)/history-detail/index.tsx`, `app/api/user/emergency-contacts+api.ts`, `lib/{dprelay,ridePinSms,rideParticipants}.ts`, `src/db/schema.ts`, `src/db/migrations/0083_customer_complaints.sql`, `tests/api/ride/track.test.ts`.
 
 ---
 
-## 1. Architect Rulings Ledger
+## 1. Architectural Invariants & Ship-Stoppers Ledger
 
-| Ruling | Decision | Implementation Rule |
+| Problem in Prior Drafts | Root Cause in Live Code | Forensic Fix in v2.3 |
 |---|---|---|
-| **R-1: Terminal Privacy** | P1-17 remains strictly intact. No public post-completion route or coordinate access under any circumstance. | Public `/track/[id]` degrades to status-only with nulled coordinates upon completion. Route replay & GPX export live exclusively inside the authenticated mobile app under strict participant ownership. |
-| **R-2: Auto-Share Channel** | Auto-share v1 is SMS-only. Server-side WhatsApp is dropped. | In-app 1-tap WhatsApp sharing remains client-driven via native deep link. Automated background dispatches use `lib/rideShareSms.ts` via dpRelay. |
-| **R-3: Auto-Share Trigger Site** | Trigger at ride MATCH, not completion or request. | Located directly in `executeMatchFlow` ([`utils-server/index.ts` #L2632](file:///d:/My%20Projects/Current%20Project/Ride/utils-server/index.ts#L2632)) adjacent to `sendMatchPinSms`. |
-| **R-4: Telematics Scope** | Breadcrumbs record `in_progress` only. Accept-to-start (pickup) is excluded. | Protects driver pre-pickup privacy. Recording begins at `ride:start` and terminates at `ride:completed` / `ride:cancelled`. |
-| **R-5: Buffer Architecture** | Dedicated `utils-server/breadcrumbs.ts` ring buffer. Zero dependence on `trace.ts`. | Keyed by `ride_id`, capped at 720 points per ride (1 hour at 5s), flushed in batches of $\le 500$ rows to Postgres, with immediate flush on internal completion/cancellation endpoints. |
-| **R-6: Retention & Purge** | Day-one 30-day retention policy via Scheduler Job 61. | Partitioned or indexed by `recorded_at`, purged via daily scheduler job. |
+| **1. Missing Table RLS** | Supabase default privileges re-grant new tables to `anon` and `authenticated`. Third-party phone numbers and GPS coordinates were completely exposed. | Migration `0088` adds `ENABLE ROW LEVEL SECURITY`, `FORCE ROW LEVEL SECURITY`, and `REVOKE ALL ON ride_breadcrumbs, ride_share_dispatches FROM anon, authenticated;` mirroring `0083_customer_complaints.sql`. |
+| **2. Driver App Telematics Flaws** | `app/(main)/(rider)/finish-ride/index.tsx` awaits reverse-geocoding before send, sends no `ts`, fires only every 10s/5m, and has no background permission. | Phase 1 dedicated driver app pass: decouple geocode into non-blocking background async task, add `ts: Date.now()`, configure 5s watch, declare foreground service location permission. |
+| **3. Driver Store Reference** | Prior draft referenced `useRideStore.getState().rideId` (rider store, which is null on driver app). | Corrected to driver store: `useRideOfferStore.getState().activeRideId`, with fallback to route params and `AsyncStorage` (`driver_active_ride_id`). |
+| **4. Cancel Hook Dead End** | `CANCELLABLE_STATUSES` in `cancel+api.ts` excludes `in_progress`. In-progress rides cannot cancel via that route; crashes, SIGTERM, and pool freezes lost breadcrumbs. | Lazy buffer init from `location:update` status, SIGTERM graceful flush in `utils-server` with 3s timeout, and 15-minute idle-TTL eviction for abandoned rides. |
+| **5. Participant Guard False 403s** | Comparing Supabase `auth.uid` against `users.id` rejects legitimate drivers (`rides.driver_id` is a `drivers.id`). | Adopt canonical pattern from `details+api.ts`: resolve `users` by `auth_uid`, then resolve `drivers.id -> users.id` via `resolveRideParticipantIds()`. |
+| **6. Phone Normalization Bug** | `lib/dprelay.ts` blindly prefixed `+880` to all numbers, turning US numbers (e.g. `14155551234`) into valid BD numbers. | Strict E.164 parsing in `lib/phoneUtils.ts`: only local BD numbers (`01[3-9]...`) receive `+880`. Valid international numbers with `+` are preserved as-is. Unprefixed non-BD digits are rejected. |
+| **7. Auto-Share Deadlock** | No endpoint wrote `is_verified` or `auto_share_enabled`. Contacts API had no `PATCH`. | Add `PATCH` to `emergency-contacts+api.ts`, implement 4-digit OTP verification flow via `sendOtp`/`verifyOtp`, and extend `GET` projection to return `auto_share_enabled` and `is_verified`. |
+| **8. Schema Column Mismatch** | Prior draft selected `drivers.last_latitude`, `drivers.last_longitude` which do not exist in `schema.ts`. | Corrected to live column names: `drivers.last_location_lat`, `drivers.last_location_lng`. |
+| **9. Job 61 Table Mismatch** | Prior draft joined `customer_complaints` on `order_id` (shop orders). | Corrected to `fare_disputes` on `ride_id` (`fd.ride_id = rb.ride_id`) and `sos_alerts` (`sa.ride_id = rb.ride_id`), ensuring forensic dispute evidence is retained. |
+| **10. "Live Tracking" Static Illusion** | Public `/track/[id]` never queried or returned driver coordinates; map only showed pickup pin. | `track+api.ts` selects `drivers.last_location_lat`, `drivers.last_location_lng` while active. Public page renders moving car annotation via `<MapLibreGL.PointAnnotation>` updated via 10s poll. P1-17 intact on terminal. |
+| **11. Test Gate Assertion** | Prior draft claimed `track.test.ts` passes unaltered, but strict `.toEqual(...)` fails when new fields are returned. | Phase 4 updates the active ride assertion in `tests/api/ride/track.test.ts` to expect `driver_lat` and `driver_lng` while verifying terminal degradation tests remain green. |
+| **12. Replay Screen File Path** | Prior draft referenced nonexistent path `app/(main)/(customer)/ride-history/[id].tsx`. | Corrected to actual customer history detail screen: `app/(main)/(customer)/(tabs)/history-detail/index.tsx`. |
+| **13. Migration Snapshot Drift** | Drizzle snapshots stopped at `0043`; running `drizzle-kit generate` emits broken diffs against months-old snapshots. | Hand-written SQL migration gate (`0088`) with `--> statement-breakpoint` validated against real Postgres. |
+| **14. Scheduler Concurrency & Budget** | Interval-based scheduler needed budget limits and overlap guards. | Numbered **Job 61**, run with `withJobBudget(61, 10_000, ...)` and a concurrency flag `breadcrumbsPurgeRunning` in `startScheduler()`. |
 
 ---
 
-## 2. System Architecture & Lifecycle Hooks
+## 2. System Architecture & Lifecycle Flow
 
 ```mermaid
 flowchart TD
-    subgraph DriverApp["Driver Mobile App"]
-        D_GPS["Location Watcher (5s interval during in_progress)"]
-        D_WS["WS Emit: location:update (lat, lng, ts, ride_id)"]
+    subgraph DriverApp["Driver App (finish-ride/index.tsx)"]
+        D_GPS["WatchPosition (5s cadence, 2m interval)"]
+        D_BG["Foreground Service Location (Persistent Notification)"]
+        D_STORE["useRideOfferStore (activeRideId) + AsyncStorage"]
+        D_ASYNC["Async Geocode (Non-blocking background promise)"]
+        D_WS["WS emit: location:update (lat, lng, ts, ride_id)"]
     end
 
     subgraph UtilsServer["utils-server (Port 3001)"]
-        MATCH_HOOK["executeMatchFlow (Match Event)"]
-        WS_HANDLER["WS location:update Handler"]
-        BC_BUFFER["utils-server/breadcrumbs.ts (Bounded RingBuffer)"]
-        INTERNAL_COMPLETE["POST /internal/ride/completed"]
-        INTERNAL_CANCEL["POST /internal/ride/cancelled"]
-        DB_FLUSH_WORKER["Async Flush Worker (<= 500 rows/batch)"]
+        WS_HANDLER["location:update Handler"]
+        OWNERSHIP_SQL["Ownership Select: SELECT driver_id, status FROM rides"]
+        LAZY_INIT["Lazy Buffer Init (if in_progress & absent)"]
+        BC_BUFFER["utils-server/breadcrumbs.ts (Capped at 720 pts/ride)"]
+        SIGTERM_HANDLER["SIGTERM / SIGINT Graceful Flush (3s Timeout)"]
+        INTERNAL_RPC["POST /internal/ride/completed"]
+        SCHEDULE_PURGE["Job 61: 30-day Purge (Holds for SOS & Fare Disputes)"]
     end
 
-    subgraph ExpoAPI["Expo API Server (Port 8081 / Node)"]
-        PIN_SMS["lib/ridePinSms.ts"]
-        SHARE_SMS["lib/rideShareSms.ts (Rate-limited SMS)"]
-        COMPLETE_ROUTE["POST /api/ride/:id/complete"]
-        CANCEL_ROUTE["POST /api/ride/:id/cancel"]
-        AUTH_BREADCRUMBS["GET /api/ride/:id/breadcrumbs (JWT + Participant Check)"]
-        AUTH_GPX["GET /api/ride/:id/export/gpx (JWT + Participant Check)"]
+    subgraph ExpoAPI["Expo API Routes (Port 8081)"]
+        CONTACT_PATCH["PATCH /api/user/emergency-contacts (Toggle & OTP)"]
+        CONTACT_GET["GET /api/user/emergency-contacts (Projects auto_share_enabled)"]
+        MATCH_SMS["lib/rideShareSms.ts (executeMatchFlow Hook)"]
+        TRACK_API["GET /api/ride/:id/track (Returns driver_lat while active)"]
+        AUTH_BC["GET /api/ride/:id/breadcrumbs (resolveRideParticipantIds)"]
+        AUTH_GPX["GET /api/ride/:id/export/gpx (XML Escaped GPX 1.1)"]
     end
 
-    subgraph Database["PostgreSQL"]
-        DB_BC[("ride_breadcrumbs (30-day TTL)")]
-        DB_AUDIT[("ride_share_dispatches")]
+    subgraph Database["PostgreSQL (RLS FORCED + REVOKED)"]
+        DB_BC[("ride_breadcrumbs (UNIQUE ride_id, recorded_at)")]
+        DB_DISPATCH[("ride_share_dispatches (90-day retention)")]
     end
 
+    D_STORE --> D_GPS
     D_GPS --> D_WS
+    D_BG --> D_GPS
+    D_GPS -.-> D_ASYNC
+    
     D_WS --> WS_HANDLER
-    WS_HANDLER -->|Only if ride is in_progress| BC_BUFFER
-    BC_BUFFER --> DB_FLUSH_WORKER
-    DB_FLUSH_WORKER --> DB_BC
+    WS_HANDLER --> OWNERSHIP_SQL
+    OWNERSHIP_SQL --> LAZY_INIT
+    LAZY_INIT --> BC_BUFFER
+    
+    SIGTERM_HANDLER -->|Flush on shutdown| DB_BC
+    INTERNAL_RPC -->|Flush on ride completion| DB_BC
+    BC_BUFFER -->|Every 30s flush (<= 500 rows)| DB_BC
+    SCHEDULE_PURGE -->|Purge >30 days (hold if SOS/dispute)| DB_BC
 
-    MATCH_HOOK --> PIN_SMS
-    MATCH_HOOK -->|If auto_share_enabled| SHARE_SMS
-    SHARE_SMS --> DB_AUDIT
+    CONTACT_PATCH --> MATCH_SMS
+    CONTACT_GET --> MATCH_SMS
+    MATCH_SMS --> DB_DISPATCH
 
-    COMPLETE_ROUTE -->|Existing HTTP RPC| INTERNAL_COMPLETE
-    CANCEL_ROUTE -->|Existing HTTP RPC| INTERNAL_CANCEL
-    INTERNAL_COMPLETE -->|Flush & evict ride buffer| BC_BUFFER
-    INTERNAL_CANCEL -->|Flush & evict ride buffer| BC_BUFFER
-
-    AUTH_BREADCRUMBS --> DB_BC
+    TRACK_API -.->|Poll every 10s: Live driver pin| DriverApp
+    AUTH_BC --> DB_BC
     AUTH_GPX --> DB_BC
 ```
 
@@ -81,37 +92,50 @@ flowchart TD
 ## 3. Database Schema & Migration (`0088`)
 
 ### 3.1 Migration File: `src/db/migrations/0088_ride_auto_share_and_breadcrumbs.sql`
-Adheres strictly to the `--> statement-breakpoint` convention:
+Adheres strictly to the `--> statement-breakpoint` convention with **RLS ENABLED, FORCED, and REVOKED**:
 
 ```sql
--- 1. Rider auto-share settings
+-- Migration: 0088_ride_auto_share_and_breadcrumbs.sql
+-- Hand-written migration. DO NOT RUN drizzle-kit generate (snapshot drift at 0043).
+
+-- 1. Rider auto-share safety preference
 ALTER TABLE "users" 
 ADD COLUMN IF NOT EXISTS "auto_share_rides_enabled" boolean NOT NULL DEFAULT false;
 --> statement-breakpoint
 
--- 2. Emergency contact auto-share flag (MUST default to false for explicit consent)
+-- 2. Emergency contact auto-share toggle and verification status
 ALTER TABLE "user_emergency_contacts"
 ADD COLUMN IF NOT EXISTS "auto_share_enabled" boolean NOT NULL DEFAULT false,
-ADD COLUMN IF NOT EXISTS "is_verified" boolean NOT NULL DEFAULT false;
+ADD COLUMN IF NOT EXISTS "is_verified" boolean NOT NULL DEFAULT false,
+ADD COLUMN IF NOT EXISTS "verification_otp" varchar(6),
+ADD COLUMN IF NOT EXISTS "verification_expires_at" timestamptz;
 --> statement-breakpoint
 
--- 3. In-progress breadcrumbs table
+-- 3. In-progress breadcrumbs table with UNIQUE idempotency barrier
 CREATE TABLE IF NOT EXISTS "ride_breadcrumbs" (
   "id" bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   "ride_id" uuid NOT NULL REFERENCES "rides"("id") ON DELETE CASCADE,
   "latitude" numeric(10, 7) NOT NULL,
   "longitude" numeric(10, 7) NOT NULL,
   "recorded_at" timestamptz NOT NULL,
-  "created_at" timestamptz NOT NULL DEFAULT now()
+  "created_at" timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT "ride_breadcrumbs_ride_seq_uniq" UNIQUE ("ride_id", "recorded_at")
 );
 --> statement-breakpoint
 
-CREATE INDEX IF NOT EXISTS "ride_breadcrumbs_ride_seq_idx" 
-ON "ride_breadcrumbs" ("ride_id", "recorded_at" ASC);
---> statement-breakpoint
-
+-- Note: Redundant sequence index omitted; UNIQUE constraint automatically creates underlying b-tree index.
 CREATE INDEX IF NOT EXISTS "ride_breadcrumbs_recorded_at_idx" 
 ON "ride_breadcrumbs" ("recorded_at");
+--> statement-breakpoint
+
+-- Standard security posture: ENABLE + FORCE RLS + REVOKE ALL from anon/authenticated
+ALTER TABLE "ride_breadcrumbs" ENABLE ROW LEVEL SECURITY;
+--> statement-breakpoint
+
+ALTER TABLE "ride_breadcrumbs" FORCE ROW LEVEL SECURITY;
+--> statement-breakpoint
+
+REVOKE ALL ON "ride_breadcrumbs" FROM anon, authenticated;
 --> statement-breakpoint
 
 -- 4. Audit ledger for auto-shared SMS dispatches
@@ -120,7 +144,7 @@ CREATE TABLE IF NOT EXISTS "ride_share_dispatches" (
   "ride_id" uuid NOT NULL REFERENCES "rides"("id") ON DELETE CASCADE,
   "recipient_phone" varchar(20) NOT NULL,
   "recipient_name" varchar(100),
-  "dispatch_status" varchar(20) NOT NULL, -- 'sent' | 'failed' | 'rate_limited'
+  "dispatch_status" varchar(20) NOT NULL, -- 'sent' | 'failed' | 'rate_limited' | 'redispatch_updated'
   "sent_at" timestamptz NOT NULL DEFAULT now(),
   "error_message" text
 );
@@ -128,22 +152,38 @@ CREATE TABLE IF NOT EXISTS "ride_share_dispatches" (
 
 CREATE INDEX IF NOT EXISTS "ride_share_dispatches_ride_idx" 
 ON "ride_share_dispatches" ("ride_id");
+--> statement-breakpoint
+
+CREATE INDEX IF NOT EXISTS "ride_share_dispatches_sent_at_idx" 
+ON "ride_share_dispatches" ("sent_at");
+--> statement-breakpoint
+
+ALTER TABLE "ride_share_dispatches" ENABLE ROW LEVEL SECURITY;
+--> statement-breakpoint
+
+ALTER TABLE "ride_share_dispatches" FORCE ROW LEVEL SECURITY;
+--> statement-breakpoint
+
+REVOKE ALL ON "ride_share_dispatches" FROM anon, authenticated;
 ```
 
 ### 3.2 Drizzle Schema Additions (`src/db/schema.ts`)
 ```typescript
-// 1. Update users table:
+// Imports from drizzle-orm/pg-core: bigint, unique, boolean, varchar, timestamptz, numeric, text, uuid, index, pgTable
+
+// users table addition:
 auto_share_rides_enabled: boolean("auto_share_rides_enabled").notNull().default(false),
 
-// 2. Update userEmergencyContacts table:
+// userEmergencyContacts additions:
 auto_share_enabled: boolean("auto_share_enabled").notNull().default(false),
 is_verified: boolean("is_verified").notNull().default(false),
+verification_otp: varchar("verification_otp", { length: 6 }),
+verification_expires_at: timestamptz("verification_expires_at"),
 
-// 3. New rideBreadcrumbs table:
+// New rideBreadcrumbs table:
 export const rideBreadcrumbs = pgTable(
   "ride_breadcrumbs",
   {
-    // Mode 'number' prevents JavaScript BigInt primitive serialization crash in Response.json()
     id: bigint("id", { mode: "number" }).generatedAlwaysAsIdentity().primaryKey(),
     ride_id: uuid("ride_id")
       .notNull()
@@ -154,12 +194,12 @@ export const rideBreadcrumbs = pgTable(
     created_at: timestamptz("created_at").notNull().defaultNow(),
   },
   (t) => [
-    index("ride_breadcrumbs_ride_seq_idx").on(t.ride_id, t.recorded_at),
     index("ride_breadcrumbs_recorded_at_idx").on(t.recorded_at),
+    unique("ride_breadcrumbs_ride_seq_uniq").on(t.ride_id, t.recorded_at),
   ]
 );
 
-// 4. New rideShareDispatches table:
+// New rideShareDispatches table:
 export const rideShareDispatches = pgTable(
   "ride_share_dispatches",
   {
@@ -175,239 +215,369 @@ export const rideShareDispatches = pgTable(
   },
   (t) => [
     index("ride_share_dispatches_ride_idx").on(t.ride_id),
+    index("ride_share_dispatches_sent_at_idx").on(t.sent_at),
   ]
 );
 ```
 
 ---
 
-## 4. Telematics & Buffer Ingestion (`utils-server/breadcrumbs.ts`)
+## 4. Driver App Telematics Pipeline (`app/(main)/(rider)/finish-ride/index.tsx`)
 
-### 4.1 Memory Bounds & Ingestion Logic
-To prevent connection starvation on the shared 5-connection pool:
-1. **Module Design:** `utils-server/breadcrumbs.ts` is completely separate from `utils-server/trace.ts`.
-2. **Buffer Limits:**
-   * Keyed by `ride_id`.
-   * Ring buffer capped at **720 points per ride** (1 hour at 5s). Once 720 is exceeded, oldest points are dropped or flushed early.
-   * Hard global cap: Maximum 100,000 in-memory points across all rides ($\approx 6\text{ MB}$ RAM).
-3. **Chunked Database Flushing:**
-   * Flushes run periodically every **30 seconds** via a non-blocking worker.
-   * Multi-row `INSERT` statements are strictly chunked to **$\le 500$ rows** ($500 \times 4 = 2,000$ bind parameters, well below the Postgres 65,535 ceiling).
-   * Timeout of **3,000ms** per insert transaction to prevent pool deadlocks.
+### 4.1 Decoupling Reverse-Geocoding from Telematics
+In `finish-ride/index.tsx`, `Location.reverseGeocodeAsync` was previously awaited before `sock.send()`. If geocoding failed or choked on network latency, the GPS point was never transmitted.
 
-### 4.2 Lifecycle Event Triggers
-1. **Ride Start (`ride:started` and WS `ride:start`):**
-   * Initializes the breadcrumb buffer for `ride_id`. Triggered both via the WebSocket handler in `utils-server/index.ts` (#L1800-1832) and the HTTP endpoint `POST /internal/ride/started` (#L904-936).
-2. **Ride Completion / Cancellation (`/internal/ride/completed` and `/internal/ride/cancelled`):**
-   * Existing endpoints in `utils-server/index.ts` call:
-     ```typescript
-     await flushAndEvictBreadcrumbs(ride_id);
-     ```
-   * Flushes all remaining in-memory points immediately to Postgres and removes the `ride_id` from memory. Even if an active ride ends abruptly in a cancel or incident, **no breadcrumbs are lost or leaked**.
+**Refactored Telematics Loop:**
+```typescript
+// Active ride ID is recovered from driver store with fallback
+const rideId = useRideOfferStore.getState().activeRideId || localRideIdParam;
 
----
-
-## 5. Security & Privacy Architecture (P1-17 Unbroken)
-
-### 5.1 Public Tracking URL (`/track/[rideId]`)
-* **Strict Invariant P1-17 Enforcement:**
-  * **While Ride is Active:** Returns live pickup/destination coordinates, driver name, vehicle model, and plate number.
-  * **When Ride is Terminal (`completed`, `cancelled`, `expired`):** Coordinates and driver details are **immediately nulled**. Response returns status only with `Cache-Control: no-store` and `X-Robots-Tag: noindex`.
-  * Public track endpoint **NEVER** serves breadcrumb arrays, GPX downloads, or post-trip replay scrubber data.
-
-### 5.2 Authenticated Route Replay & GPX Export (In-App Only)
-Route scrubber replay and GPX download are **strictly in-app, authenticated features** gated against IDOR vulnerabilities using the canonical participant helper:
-
-#### Endpoint 1: `GET /api/ride/[id]/breadcrumbs`
-* **Authentication:** Requires valid Supabase JWT (`verifySupabaseToken(request)`).
-* **Participant Authorization Guard (`lib/rideParticipants.ts`):**
-  ```typescript
-  import { resolveRideParticipantIds, isParticipant } from "@/lib/rideParticipants";
-
-  const [ride] = await db.select({
-    id: rides.id,
-    user_id: rides.user_id,
-    driver_id: rides.driver_id,
-  }).from(rides).where(eq(rides.id, id)).limit(1);
-
-  if (!ride) return Response.json({ error: "not_found" }, { status: 404 });
-
-  // Canonical resolution: resolves drivers.id -> users.id to prevent false 403s on drivers
-  const participantIds = await resolveRideParticipantIds(db, ride);
-  const isAuthorized = isParticipant(participantIds, user.id) || user.role === "admin";
-  if (!isAuthorized) {
-    return Response.json({ error: "forbidden", message: "Access denied" }, { status: 403 });
-  }
-  ```
-* Returns JSON coordinate array with calculated speed:
-  ```json
+locationSubscription = await Location.watchPositionAsync(
   {
-    "ride_id": "...",
-    "points": [
-      { "lat": 23.7925, "lng": 90.4078, "t": "2026-11-01T18:00:05Z", "speed_kmh": 22.4 }
-    ]
-  }
-  ```
+    accuracy: Location.Accuracy.Balanced, // Saves battery on budget devices
+    timeInterval: 5000,                  // Consistent 5-second tick
+    distanceInterval: 2,                 // Minimum 2 meters
+  },
+  (location) => {
+    const lat = location.coords.latitude;
+    const lng = location.coords.longitude;
+    const clientTs = location.timestamp || Date.now();
+    const currentRideId = useRideOfferStore.getState().activeRideId || activeRideIdRef.current;
 
-#### Endpoint 2: `GET /api/ride/[id]/export/gpx`
-* **Authentication:** Same canonical `resolveRideParticipantIds` authorization guard as above.
-* **Format:** Clean standard GPX 1.1 XML stream (`application/gpx+xml`).
-* **Sanitization:** All metadata text (ride ID, vehicle type) is XML-escaped; zero unescaped user-input strings are embedded.
-
----
-
-## 6. Auto-Share Engine (`lib/rideShareSms.ts`)
-
-### 6.1 Match-Time Trigger
-Triggered at match time in [`utils-server/index.ts` line 2632](file:///d:/My%20Projects/Current%20Project/Ride/utils-server/index.ts#L2632) directly adjacent to `sendMatchPinSms`:
-
-```typescript
-// executeMatchFlow in utils-server/index.ts
-import("../lib/rideShareSms")
-  .then(({ sendMatchAutoShareSms }) => sendMatchAutoShareSms(db, { ride_id: rideId, rider_user_id: ride.user_id }))
-  .catch((err) => logger.warn("[autoShare] match SMS trigger failed (non-blocking)", err));
-```
-
-### 6.2 Rate Limits & Cost Controls
-* Follows the exact pattern of `lib/ridePinSms.ts` with injected sender:
-  * Reads rider's `user_emergency_contacts` where `auto_share_enabled = true AND is_verified = true`.
-  * **Per-Trip Cap:** Maximum **2 contacts** per ride.
-  * **Daily Cap:** Maximum **6 auto-share SMS messages** per rider per 24-hour rolling window.
-  * **Message Content:**
-    > *"Ride Alert: [Rider] is on a trip with Ride (Plate: [Plate]). Track live: https://ride.com.bd/track/[ride_id]"*
-  * Non-blocking fire-and-forget: SMS gateway errors are logged to `ride_share_dispatches` with status `'failed'` and **never block ride matching**.
-
----
-
-## 7. Mobile Client & Deep Linking (React Native)
-
-### 7.1 Android & iOS Manifest Configuration
-Manifest queries must be declared via `expo-build-properties` to resolve WhatsApp on Android 11+ (API 30+).
-
-Prerequisite: `npm install expo-build-properties` in root package.
-
-In `app.config.js`:
-```javascript
-plugins: [
-  [
-    "expo-build-properties",
-    {
-      android: {
-        manifestQueries: {
-          package: [
-            "com.whatsapp",
-            "com.whatsapp.w4b"
-          ]
-        }
-      },
-      ios: {
-        infoPlist: {
-          LSApplicationQueriesSchemes: ["whatsapp"]
-        }
-      }
+    // 1. NON-BLOCKING: Emit telematics immediately over WebSocket
+    const sock = wsRef.current;
+    if (sock && sock.readyState === WebSocket.OPEN && currentRideId) {
+      sock.send(
+        JSON.stringify({
+          type: "location:update",
+          role: "driver",
+          ride_id: currentRideId,
+          lat,
+          lng,
+          ts: clientTs, // Explicit client GPS timestamp
+        })
+      );
     }
-  ]
-]
+
+    // 2. ASYNC: Background reverse-geocoding for UI display only (never blocks socket)
+    if (
+      lastLocationRef.current &&
+      calculateDistance(lastLocationRef.current, location) >= 20
+    ) {
+      Location.reverseGeocodeAsync({ latitude: lat, longitude: lng })
+        .then((addr) => {
+          lastAddressRef.current = addr[0]?.formattedAddress ?? "";
+          setDriverLocation({ latitude: lat, longitude: lng, address: lastAddressRef.current });
+        })
+        .catch(() => {}); // Failure swallowed; UI keeps last address
+      lastLocationRef.current = location;
+    }
+  }
+);
 ```
 
-### 7.2 Safe Client-Side Phone Normalization
-To prevent importing server-side secrets from `lib/dprelay.ts` into React Native client bundles, create a pure client helper `lib/clientPhone.ts`:
+### 4.2 Ride ID Persistence & Background Location
+1. **Driver Ride ID Recovery:** The active ride ID is read from `useRideOfferStore.getState().activeRideId` with fallback to route parameter `useLocalSearchParams<{ ride_id: string }>()` and AsyncStorage (`driver_active_ride_id`). If the driver app restarts mid-trip, `ride_id` is restored immediately.
+2. **Foreground Service Notification:**
+   In `app.config.js`, configure `expo-location` with foreground service capability so Android does not kill the watcher when the driver switches to Google Maps:
+   ```javascript
+   [
+     "expo-location",
+     {
+       locationAlwaysAndWhenInUsePermission: "Ride needs your location to navigate and track passenger rides.",
+       isAndroidForegroundServiceEnabled: true
+     }
+   ]
+   ```
+
+---
+
+## 5. Telematics Buffer & Ingestion (`utils-server/breadcrumbs.ts`)
+
+### 5.1 Zero-Query Lazy Initialization in `utils-server/index.ts`
+In `utils-server/index.ts` lines 1442–1444, `location:update` already executes an ownership query:
+```typescript
+const [locRide] = await db.select({ driver_id: rides.driver_id, status: rides.status })
+  .from(rides).where(eq(rides.id, locRideId)).limit(1);
+```
+By selecting `status: rides.status` in the **exact same query**, we learn whether the ride is `in_progress` with **zero extra database lookups**.
 
 ```typescript
-// lib/clientPhone.ts (Client-safe, zero server dependencies)
-export function toWhatsAppBdPhone(rawPhone: string): string {
-  const digits = rawPhone.replace(/\D/g, "");
-  if (digits.startsWith("880")) return digits;
-  if (digits.startsWith("0")) return `88${digits}`;
-  return `880${digits}`;
+// utils-server/index.ts location:update branch
+if (locRide && locRide.status === "in_progress") {
+  recordBreadcrumbPoint(locRideId, {
+    lat: msg.lat as number,
+    lng: msg.lng as number,
+    ts: parsePointTs(msg.ts),
+  });
 }
 ```
 
-### 7.3 WhatsApp 1-Tap Share in `ride-tracking/[ride_id].tsx`
+### 5.2 Bounded Ring Buffer & Idle Eviction (`utils-server/breadcrumbs.ts`)
+* **Per-Ride Cap:** Maximum **720 points** (~1 hour at 5s). When the cap is reached, points are flushed to DB and the buffer shifts.
+* **Global Cap:** Maximum **100,000 points** in memory across all active trips (~6 MB RAM).
+* **Idle TTL Eviction:** If an abandoned ride receives no points for **15 minutes**, its buffer is automatically flushed and evicted from memory, preventing memory leaks.
+* **Chunked Batch Flusher:**
+  * Runs every 30 seconds.
+  * Writes in chunks of **$\le 500$ rows** using:
+    `INSERT INTO ride_breadcrumbs (ride_id, latitude, longitude, recorded_at) VALUES (...) ON CONFLICT (ride_id, recorded_at) DO NOTHING`
+  * Idempotency guarantee: retried inserts never create duplicate rows.
+
+### 5.3 Abnormal Exits & Shutdown Handling
+1. **Ride Completion:** Existing `POST /internal/ride/completed` calls `await flushAndEvictBreadcrumbs(ride_id);`.
+2. **SIGTERM / SIGINT Shutdown:**
+   In `utils-server/index.ts`, wrap breadcrumbs flush in a 3-second timeout race to prevent slow DB connections from hanging container shutdowns:
+   ```typescript
+   process.on("SIGTERM", async () => {
+     clearPendingDetections();
+     try {
+       await Promise.race([
+         flushAllBreadcrumbBuffers(),
+         new Promise((_, reject) => setTimeout(() => reject(new Error("Flush timeout")), 3000)),
+       ]);
+     } catch (err) {
+       // Log to stderr; process must terminate
+     }
+     process.exit(0);
+   });
+   ```
+
+---
+
+## 6. Real Live Driver Tracking on Public `/track/[id]`
+
+### 6.1 Backend API (`app/api/ride/[id]/track+api.ts`)
+Update `track+api.ts` to left-join `drivers` using actual schema columns (`last_location_lat`, `last_location_lng`):
+
 ```typescript
-import { Linking, Share } from "react-native";
-import { toWhatsAppBdPhone } from "@/lib/clientPhone";
+// app/api/ride/[id]/track+api.ts
+let driverLat: number | null = null;
+let driverLng: number | null = null;
 
-const handleWhatsAppShare = async (rawPhone?: string) => {
-  const trackingUrl = `${API_URL}/track/${ride_id}`;
-  const message = t("ride_tracking.share_message", { url: trackingUrl });
-  const encoded = encodeURIComponent(message);
-  const intlPhone = rawPhone ? toWhatsAppBdPhone(rawPhone) : null;
+if (ride.driver_id && isActive) {
+  const [drv] = await db.select({
+    name: users.name,
+    rating: drivers.rating,
+    vehicle_type: drivers.vehicle_type,
+    last_location_lat: drivers.last_location_lat,
+    last_location_lng: drivers.last_location_lng,
+  }).from(drivers)
+    .leftJoin(users, eq(users.id, drivers.user_id))
+    .where(eq(drivers.id, ride.driver_id))
+    .limit(1);
 
-  const appUrl = intlPhone
-    ? `whatsapp://send?phone=${intlPhone}&text=${encoded}`
-    : `whatsapp://send?text=${encoded}`;
-  const webUrl = intlPhone
-    ? `https://wa.me/${intlPhone}?text=${encoded}`
-    : `https://wa.me/?text=${encoded}`;
-
-  try {
-    const canOpen = await Linking.canOpenURL(appUrl);
-    if (canOpen) {
-      await Linking.openURL(appUrl);
-    } else {
-      await Linking.openURL(webUrl);
-    }
-  } catch {
-    // Graceful fallback to OS Share Sheet
-    await Share.share({ message });
+  if (drv) {
+    driverName = drv.name;
+    driverRating = drv.rating;
+    vehicleType = drv.vehicle_type;
+    driverLat = drv.last_location_lat ? Number(drv.last_location_lat) : null;
+    driverLng = drv.last_location_lng ? Number(drv.last_location_lng) : null;
   }
+}
+
+// Invariant P1-17 Strictly Preserved:
+// If status is terminal (completed/cancelled), all coordinates and driver info are NULL.
+const body = {
+  status: ride.status,
+  driver_name: isActive ? driverName : null,
+  driver_rating: isActive ? driverRating : null,
+  vehicle_type: isActive ? vehicleType : null,
+  driver_lat: isActive ? driverLat : null,
+  driver_lng: isActive ? driverLng : null,
+  origin_lat: isActive ? Number(ride.origin_latitude) : null,
+  origin_lng: isActive ? Number(ride.origin_longitude) : null,
+  destination_lat: isActive ? Number(ride.destination_latitude) : null,
+  destination_lng: isActive ? Number(ride.destination_longitude) : null,
 };
 ```
 
+### 6.2 Frontend Tracking Screen (`app/track/[rideId].tsx`)
+Render the dynamic driver car marker using `MapLibreGL.PointAnnotation`:
+```tsx
+{MapLibreGL && data.driver_lat != null && data.driver_lng != null && (
+  <MapLibreGL.PointAnnotation
+    id="driver-location"
+    coordinate={[data.driver_lng, data.driver_lat]}
+  >
+    <View style={styles.carMarker}>
+      <Ionicons name="car" size={24} color={colors.primary} />
+    </View>
+  </MapLibreGL.PointAnnotation>
+)}
+```
+As the public web screen polls every 10s (`setInterval`), the car icon moves smoothly across the map.
+
 ---
 
-## 8. Data Retention & Purge Job
+## 7. Phone Normalization & Contact Verification Engine
 
-### 8.1 30-Day Automated Purge (Job 61)
-Add Job 61 to `utils-server/scheduler.ts` (Daily at 03:30 UTC):
-*(Numbered Job 61 to follow Job 60 Storage Reconciler; avoids collision with Job 38 Dawdle Guard)*
+### 7.1 Strict E.164 Phone Normalization (`lib/phoneUtils.ts`)
+Replaces flawed prefixing logic with strict E.164 parsing:
 
 ```typescript
-// Job 61 — Purge ride breadcrumbs older than 30 days (daily).
-async function purgeOldBreadcrumbs(): Promise<void> {
-  const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-  const deleted = await db
-    .delete(rideBreadcrumbs)
-    .where(lt(rideBreadcrumbs.recorded_at, cutoff));
-  logger.info("[scheduler] job 61 purged expired breadcrumbs", { cutoff });
+// lib/phoneUtils.ts (Shared between server and client)
+export function parseAndNormalizePhone(rawPhone: string): { e164: string; isBd: boolean } | null {
+  const clean = rawPhone.replace(/[\s-()]/g, "");
+
+  // 1. Bangladeshi national format (e.g. 01711223344 -> +8801711223344)
+  if (/^01[3-9]\d{8}$/.test(clean)) {
+    return { e164: `+880${clean.slice(1)}`, isBd: true };
+  }
+
+  // 2. Bangladeshi international format with or without '+' (e.g. 8801711223344)
+  if (/^(?:\+?880)1[3-9]\d{8}$/.test(clean)) {
+    return { e164: clean.startsWith("+") ? clean : `+${clean}`, isBd: true };
+  }
+
+  // 3. Foreign international format (must explicitly begin with '+')
+  if (/^\+[1-9]\d{7,14}$/.test(clean)) {
+    return { e164: clean, isBd: false };
+  }
+
+  // Rejects ambiguous numbers entered without country code (e.g. 14155551234)
+  return null;
 }
 ```
-* **Storage Footprint:**
-  * 1,000 rides/day $\times 360$ points/ride $\times 30$ days $\approx 10.8\text{M}$ rows.
-  * Bounded at $\approx 850\text{ MB}$ total database storage, preventing runaway disk growth.
+
+### 7.2 Emergency Contacts API (`app/api/user/emergency-contacts+api.ts`)
+1. **Extend `GET` projection:**
+   Add `auto_share_enabled: userEmergencyContacts.auto_share_enabled` and `is_verified: userEmergencyContacts.is_verified` to the existing `SELECT` block so the client UI can render contact status.
+2. **Add `PATCH` method:**
+   * **Payload:** `{ contact_id: string, auto_share_enabled?: boolean, action?: 'send_otp' | 'verify_otp', otp?: string }`
+   * **OTP Verification Flow:**
+     1. Setting `auto_share_enabled: true` generates a 4-digit OTP using `crypto.randomInt(1000, 9999).toString()`.
+     2. Dispatches OTP via `sendOtp(phone, otp)` from `lib/dprelay.ts`.
+     3. Saves `verification_otp` and `verification_expires_at` (10-minute expiry).
+     4. Verifying OTP flips `is_verified: true` and activates auto-sharing for that contact.
+
+### 7.3 Auto-Share Match SMS Dispatch Rules (`lib/rideShareSms.ts`)
+Triggered in `executeMatchFlow` ([`utils-server/index.ts` line 2632](file:///d:/My%20Projects/Current%20Project/Ride/utils-server/index.ts#L2632)):
+1. **Scheduled Ride Check:** If `ride.scheduled_at != null` and scheduled start is $> 30$ mins away, skip dispatch (SMS triggers when ride moves to `driver_arriving`).
+2. **Booked For Someone Else:** If `ride.is_booked_for_someone_else` is true, do NOT alert the booker's emergency contacts (alerts only passenger's verified contacts if present).
+3. **Redispatch Deduplication:** If `ride_share_dispatches` already contains a `'sent'` record for `(ride_id, recipient_phone)`, do NOT send duplicate alert; send brief vehicle update only if plate changed.
+4. **Rate Limit:** Maximum 2 contacts per trip; maximum 6 auto-share SMS per rider per 24 hours.
 
 ---
 
-## 9. Phased Implementation Roadmap & Verification Gates
+## 8. Authenticated In-App Replay & GPX Export
+
+### 8.1 Authorization Guard (Copied from `details+api.ts`)
+```typescript
+// app/api/ride/[id]/breadcrumbs+api.ts & export/gpx+api.ts
+const supabaseUser = await verifySupabaseToken(request);
+
+const [user] = await db
+  .select({ id: users.id, role: users.role })
+  .from(users)
+  .where(eq(users.auth_uid, supabaseUser.id))
+  .limit(1);
+
+if (!user) return Response.json({ error: "user_not_found" }, { status: 404 });
+
+const [ride] = await db.select().from(rides).where(eq(rides.id, rideId)).limit(1);
+if (!ride) return Response.json({ error: "ride_not_found" }, { status: 404 });
+
+// Canonical resolution: resolves drivers.id -> users.id to prevent false 403s on drivers
+const participantIds = await resolveRideParticipantIds(db, ride);
+if (!isParticipant(participantIds, user.id) && user.role !== "admin") {
+  return Response.json({ error: "forbidden", message: "Access denied" }, { status: 403 });
+}
+```
+
+### 8.2 In-App Scrubber UI & GPX Export (Customer App)
+In `app/(main)/(customer)/(tabs)/history-detail/index.tsx`:
+1. **Interactive Route Scrubber:**
+   * Slider controls position of passenger pin along the breadcrumbs array.
+   * Displays local clock time and speed at each point.
+2. **Export GPX Button:**
+   * Fetches `/api/ride/[id]/export/gpx` with Bearer token.
+   * Uses `FileSystem.writeAsStringAsync` to save `ride_[id].gpx` in device cache.
+   * Calls `Sharing.shareAsync` to open file in Google Earth or GPX Viewer.
+
+---
+
+## 9. Data Retention & Purge Job (Job 61)
+
+### 9.1 Scheduler Configuration (`utils-server/scheduler.ts`)
+Register **Job 61** inside `startScheduler()` using `registerJob` and `withJobBudget`:
+```typescript
+// Job 61 — Breadcrumbs 30-day retention purge (interval: 24h)
+let breadcrumbsPurgeRunning = false;
+
+registerJob("job_61_breadcrumbs_retention_purge", 24 * 60 * 60 * 1000, async () => {
+  if (breadcrumbsPurgeRunning) return;
+  breadcrumbsPurgeRunning = true;
+  try {
+    await withJobBudget(61, 10_000, async (tx) => {
+      const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+
+      // Safety & Legal Hold: Never delete breadcrumbs for rides with active fare disputes or SOS alerts
+      await tx.execute(sql`
+        DELETE FROM ride_breadcrumbs
+        WHERE id IN (
+          SELECT rb.id FROM ride_breadcrumbs rb
+          LEFT JOIN sos_alerts sa ON sa.ride_id = rb.ride_id
+          LEFT JOIN fare_disputes fd ON fd.ride_id = rb.ride_id
+          WHERE rb.recorded_at < ${cutoff}
+            AND sa.id IS NULL
+            AND fd.id IS NULL
+          LIMIT 1000
+        )
+      `);
+
+      // Purge dispatch audit logs older than 90 days
+      const auditCutoff = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
+      await tx.execute(sql`
+        DELETE FROM ride_share_dispatches WHERE sent_at < ${auditCutoff} LIMIT 1000
+      `);
+    });
+  } finally {
+    breadcrumbsPurgeRunning = false;
+  }
+});
+```
+* **Storage Footprint:** With indexes, storage stabilizes at **$\approx 1.5 - 2\text{ GB}$** per 1,000 daily trips.
+
+---
+
+## 10. Phased Implementation Roadmap & Verification Gates
 
 ```
-Phase 1: Database Migration 0088 & Drizzle Schema
-  ├── Migration 0088 SQL with statement-breakpoints
-  ├── Drizzle schema updates in src/db/schema.ts
-  └── Gate: npx drizzle-kit generate + npx tsc --noEmit clean
+Phase 1: Driver App Telematics Hardening
+  ├── app/(main)/(rider)/finish-ride/index.tsx: decouple geocode, add ts, 5s cadence
+  ├── Add activeRideId persistence using useRideOfferStore + AsyncStorage
+  ├── Add foreground service location permission to app.config.js
+  └── Gate: Driver emulates movement; WS frames verify { lat, lng, ts, ride_id }
 
-Phase 2: utils-server Telematics Ingestion & Flush Hooks
-  ├── Dedicated utils-server/breadcrumbs.ts buffer module (capped at 720 pts/ride)
-  ├── WS location:update branch recording during in_progress
-  ├── Hook /internal/ride/started, /internal/ride/completed, and /internal/ride/cancelled
-  ├── Register Job 61 in utils-server/scheduler.ts
-  └── Gate: jest tests for buffer flush, chunking <= 500 rows, and memory caps
+Phase 2: Database Migration 0088 & Drizzle Schema
+  ├── Hand-written 0088 SQL with RLS, FORCE RLS, REVOKE ALL, and UNIQUE constraint
+  ├── Drizzle schema additions in src/db/schema.ts (bigint, unique imported)
+  └── Gate: Migration pushes to scratch DB cleanly; test asserting anon role 403 on SELECT
 
-Phase 3: Auto-Share Match SMS Engine
-  ├── lib/rideShareSms.ts with injected sender & rate limit (max 2/ride, 6/day)
-  ├── Hook into utils-server/index.ts executeMatchFlow next to sendMatchPinSms
-  └── Gate: Unit tests with mock SMS sender; rate limit boundary assertions
+Phase 3: utils-server Telematics Ingestion & Flush Hooks
+  ├── utils-server/breadcrumbs.ts (bounded 720 pts/ride, chunked <= 500 rows)
+  ├── Hook into ownership select in utils-server/index.ts (lazy init from status)
+  ├── Hook /internal/ride/completed and /internal/ride/cancelled
+  ├── Add SIGTERM / SIGINT graceful flush with 3s timeout
+  ├── Register Job 61 in scheduler.ts with safety hold on fare_disputes & sos_alerts
+  └── Gate: Unit test verifying flush on complete, chunking <= 500, and SIGTERM flush
 
-Phase 4: Authenticated In-App Replay & GPX Export API
+Phase 4: Live Driver Tracking on Public URL
+  ├── app/api/ride/[id]/track+api.ts selects driver_location_lat/lng while active
+  ├── app/track/[rideId].tsx renders moving car marker updating every 10s via MapLibreGL
+  ├── Update tests/api/ride/track.test.ts active assertion to expect driver coordinates
+  └── Gate: tests/api/ride/track.test.ts passes (asserting coordinates active, nulled terminal)
+
+Phase 5: Auto-Share Engine & Contact Verification
+  ├── lib/phoneUtils.ts strict E.164 parsing
+  ├── Update GET and add PATCH to /api/user/emergency-contacts
+  ├── lib/rideShareSms.ts with redispatch dedupe and rate limiting
+  ├── Hook into executeMatchFlow next to sendMatchPinSms
+  └── Gate: OTP verification tests; rate limit unit tests; redispatch dedupe assertions
+
+Phase 6: Authenticated In-App Route Replay & GPX Export
   ├── GET /api/ride/[id]/breadcrumbs with resolveRideParticipantIds guard
-  ├── GET /api/ride/[id]/export/gpx with XML escaping & resolveRideParticipantIds guard
-  └── Gate: tests/api/ride/track.test.ts passes unaltered (P1-17 green) + 403 IDOR test
-
-Phase 5: Mobile Client Deep Linking & Settings UI
-  ├── Root dependency: npm install expo-build-properties
-  ├── Client-safe lib/clientPhone.ts
-  ├── WhatsApp 1-tap deep link in ride-tracking/[ride_id].tsx
-  ├── Auto-share emergency contacts toggle in settings UI
-  └── Gate: expo-build-properties config verified; lint clean
+  ├── GET /api/ride/[id]/export/gpx with XML escaping
+  ├── Customer history-detail/index.tsx scrubber UI and GPX file share button
+  └── Gate: IDOR tests (stranger 403, driver 200, rider 200, admin 200)
 ```
