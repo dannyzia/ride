@@ -160,42 +160,55 @@ const FinishRide = () => {
       if (status !== "granted") return;
       locationSubscription = await Location.watchPositionAsync(
         {
-          accuracy: Location.Accuracy.Highest,
-          timeInterval: 10000,
-          distanceInterval: 2,
+          accuracy: Location.Accuracy.High, // High accuracy (5-10m) for crisp deviation checks
+          timeInterval: 5000, // 5-second sampling cadence
+          distanceInterval: 2, // 2-meter movement filter
         },
-        async (location) => {
+        (location) => {
+          const lat = location.coords.latitude;
+          const lng = location.coords.longitude;
+          const clientTs = location.timestamp || Date.now();
+          const rideId = activeRideIdRef.current;
+
+          // 1. NON-BLOCKING: Emit telematics immediately over WebSocket on every interval
+          const sock = wsRef.current;
+          if (sock && sock.readyState === WebSocket.OPEN && rideId) {
+            sock.send(
+              JSON.stringify({
+                type: "location:update",
+                role: "driver",
+                ride_id: rideId,
+                lat,
+                lng,
+                ts: clientTs,
+              }),
+            );
+          }
+
+          // 2. ASYNC: Background reverse-geocoding for driver UI only (never blocks socket)
           if (
             lastLocationRef.current &&
-            calculateDistance(lastLocationRef.current, location) >= 5
+            calculateDistance(lastLocationRef.current, location) >= 20
           ) {
-            const address = await Location.reverseGeocodeAsync({
-              latitude: location.coords.latitude,
-              longitude: location.coords.longitude,
-            });
-            lastAddressRef.current = address[0]?.formattedAddress ?? "";
-            const sock = wsRef.current;
-            if (sock && sock.readyState === WebSocket.OPEN) {
-              sock.send(
-                JSON.stringify({
-                  type: "location:update",
-                  role: "driver",
-                  ride_id: activeRideIdRef.current,
-                  lat: location.coords.latitude,
-                  lng: location.coords.longitude,
-                }),
-              );
-            }
+            Location.reverseGeocodeAsync({ latitude: lat, longitude: lng })
+              .then((addr) => {
+                lastAddressRef.current = addr[0]?.formattedAddress ?? "";
+                setDriverLocation({
+                  latitude: lat,
+                  longitude: lng,
+                  address: lastAddressRef.current,
+                });
+              })
+              .catch(() => {}); // Failure swallowed; UI retains last valid address
             lastLocationRef.current = location;
           } else if (!lastLocationRef.current) {
             lastLocationRef.current = location;
           }
-          // LOW-8: only the ≥5m branch reverse-geocodes; ticks that barely
-          // moved reuse the last resolved address instead of firing a second
-          // reverseGeocodeAsync on every watch callback.
+
+          // Update coordinates immediately for UI map marker
           setDriverLocation({
-            latitude: location.coords.latitude,
-            longitude: location.coords.longitude,
+            latitude: lat,
+            longitude: lng,
             address: lastAddressRef.current,
           });
         },
