@@ -133,6 +133,19 @@ import {
   DRIVER_FIX_STALE_MS,
   type TracePoint,
 } from "./trace";
+import {
+  registerActiveTrip,
+  updateActiveTripStatus,
+  getActiveTrip,
+  unregisterActiveTrip,
+} from "./activeTrips";
+import {
+  recordBreadcrumbPoint,
+  getLastPoint,
+  evictActiveRoute,
+  flushAndEvictRoute,
+  flushAllActiveRoutes,
+} from "./breadcrumbs";
 import { decodePolyline } from "./polyline";
 import {
   computeOverlap,
@@ -679,6 +692,9 @@ const server = http.createServer(async (req, res) => {
           ride_id,
           arrived_at: arrived_at ?? new Date().toISOString(),
         });
+        // Plan 28: driver-arrived advances the cached trip (same transition
+        // as the WS ride:arrived handler below).
+        updateActiveTripStatus(ride_id, "driver_arrived");
         writeJson(200, { ok: true });
       } catch {
         writeJson(400, { error: "invalid_body" });
@@ -787,6 +803,13 @@ const server = http.createServer(async (req, res) => {
           });
         }
 
+        // Plan 28: completion flushes the breadcrumb buffer into
+        // ride_routes (crash-safe append) and drops the cached trip.
+        // flushAndEvictRoute swallows DB errors internally (buffer kept
+        // for a later retry); the response must still succeed.
+        await flushAndEvictRoute(ride_id);
+        unregisterActiveTrip(ride_id);
+
         writeJson(200, { ok: true });
       } catch {
         writeJson(400, { error: "invalid_body" });
@@ -840,6 +863,10 @@ const server = http.createServer(async (req, res) => {
         // Phase F quote state 3: cancel drops the accept→start trace
         // without persisting a realized distance.
         unregisterRideTrace(ride_id);
+        // Plan 28: a cancelled ride has no route to persist — drop the
+        // breadcrumb buffer and the cached trip.
+        evictActiveRoute(ride_id);
+        unregisterActiveTrip(ride_id);
 
         // Phase G: proximity driver-cancel → off-platform completion
         // detection at cancel + 30 min. `within_200m` is an optional body
@@ -933,11 +960,35 @@ const server = http.createServer(async (req, res) => {
             error: e instanceof Error ? e.message : String(e),
           });
         }
+        // Plan 28: ride start opens the telematics leg.
+        updateActiveTripStatus(ride_id, "in_progress");
         writeJson(200, { ok: true });
       } catch {
         writeJson(400, { error: "invalid_body" });
       }
     });
+    return;
+  }
+
+  // Plan 28: live last-known position for a ride's in-progress leg.
+  // Protected by the centralized Bearer check above (same as every
+  // /internal/* route). 404s when the ride has no buffered fix.
+  if (
+    req.method === "GET" &&
+    req.url?.startsWith("/internal/ride/") &&
+    req.url.endsWith("/live-coords")
+  ) {
+    const rideId = req.url.slice("/internal/ride/".length, -"/live-coords".length);
+    if (!rideId) {
+      writeJson(400, { error: "missing_ride_id" });
+      return;
+    }
+    const point = getLastPoint(rideId);
+    if (!point) {
+      writeJson(404, { error: "no_live_coords" });
+      return;
+    }
+    writeJson(200, { lat: point.lat, lng: point.lng, ts: point.ts });
     return;
   }
 
@@ -1445,6 +1496,26 @@ wss.on("connection", (ws: WebSocket) => {
             send(ws, { type: "error", message: "not_your_ride" });
             break;
           }
+          // Plan 28: in-memory trip gate (defense-in-depth behind the DB
+          // ownership check above) + telematics status source. A missing
+          // record means the ride predates trip tracking — the DB check
+          // already proved ownership, so ingestion falls back to the
+          // trace/ring systems only (no breadcrumb without a status).
+          const activeTrip = getActiveTrip(locRideId);
+          if (activeTrip && activeTrip.driverId !== client.driverId) {
+            send(ws, { type: "error", message: "not_your_ride" });
+            break;
+          }
+          // Telematics ingest ONLY for the in-progress leg: pickup-approach
+          // fixes stay in the trace/ring systems, never in ride_routes.
+          const tripInProgress = activeTrip?.status === "in_progress";
+          if (tripInProgress) {
+            recordBreadcrumbPoint(locRideId, {
+              lat: msg.lat as number,
+              lng: msg.lng as number,
+              ts: parsePointTs(msg.ts),
+            });
+          }
           // Phase F/G: ring buffer + active accept→start trace (same feed
           // as heartbeats — a driver has at most one traced ride).
           recordDriverPoint(
@@ -1490,6 +1561,8 @@ wss.on("connection", (ws: WebSocket) => {
             // Detect route deviation (non-blocking). T-2: the deviation is
             // measured against the pickup→dropoff corridor (origin + dest),
             // and lib/safety dedupes to once per ride per cooldown window.
+            // Plan 28: deviation only matters for the in-progress leg —
+            // the spec gates both ingest and deviation on trip status.
             try {
               const [ride] = await db
                 .select({
@@ -1502,6 +1575,7 @@ wss.on("connection", (ws: WebSocket) => {
                 .where(eq(rides.id, rideId))
                 .limit(1);
               if (
+                tripInProgress &&
                 ride?.origin_latitude != null &&
                 ride?.origin_longitude != null &&
                 ride?.destination_latitude != null &&
@@ -1736,6 +1810,8 @@ wss.on("connection", (ws: WebSocket) => {
             }),
           );
           send(ws, { type: "ride:arrived", ride_id: rideId });
+          // Plan 28: driver-arrived advances the cached trip.
+          updateActiveTripStatus(rideId, "driver_arrived");
         } else if (
           action === "start" &&
           client.role === "driver" &&
@@ -1770,6 +1846,8 @@ wss.on("connection", (ws: WebSocket) => {
           }
           if (startRide.status === "in_progress") {
             // Already started — reply ride:started idempotently
+            // Plan 28: keep the cached trip in sync on the idempotent path.
+            updateActiveTripStatus(rideId, "in_progress");
             send(ws, { type: "ride:started", ride_id: rideId });
             break;
           }
@@ -1828,6 +1906,8 @@ wss.on("connection", (ws: WebSocket) => {
             ride_id: rideId,
             status: "in_progress",
           });
+          // Plan 28: ride start opens the telematics leg.
+          updateActiveTripStatus(rideId, "in_progress");
           send(ws, { type: "ride:started", ride_id: rideId });
         }
         // NOTE: there is deliberately NO WS "complete" action. Completing a
@@ -2570,6 +2650,20 @@ async function executeMatchFlow(
     registerRideTrace(rideId, driverId, firm.maxSegmentSpeedKmh, seed);
   }
 
+  // Plan 28: register the active trip at match commit so location:update
+  // telematics and live-coords have a trip record for the whole live ride.
+  // The ride row (read above for the firm quote) carries the corridor.
+  if (ride) {
+    registerActiveTrip(rideId, {
+      driverId,
+      status: "matched",
+      originLat: Number(ride.origin_latitude ?? 0),
+      originLng: Number(ride.origin_longitude ?? 0),
+      destLat: Number(ride.destination_latitude ?? 0),
+      destLng: Number(ride.destination_longitude ?? 0),
+    });
+  }
+
   // Notify rider — includes the EXACT dropoff reveal (post-accept only,
   // Stage 2 destination-reveal rule).
   if (ride) {
@@ -3276,6 +3370,42 @@ async function startup() {
     logger.error("[startup] recovery query failed", { error: e.message });
   }
 
+  // Plan 28: hydrate the active-trip cache — rides already live when the
+  // process (re)starts. A map miss would silently disable telematics for
+  // the whole ride, so a hydration failure is logged loudly (not fatal).
+  try {
+    const ongoing = await db
+      .select({
+        id: rides.id,
+        driver_id: rides.driver_id,
+        status: rides.status,
+        origin_latitude: rides.origin_latitude,
+        origin_longitude: rides.origin_longitude,
+        destination_latitude: rides.destination_latitude,
+        destination_longitude: rides.destination_longitude,
+      })
+      .from(rides)
+      .where(
+        inArray(rides.status, ["matched", "driver_arriving", "driver_arrived", "in_progress"]),
+      );
+    let hydrated = 0;
+    for (const row of ongoing) {
+      if (!row.driver_id) continue;
+      registerActiveTrip(row.id, {
+        driverId: row.driver_id,
+        status: row.status,
+        originLat: Number(row.origin_latitude ?? 0),
+        originLng: Number(row.origin_longitude ?? 0),
+        destLat: Number(row.destination_latitude ?? 0),
+        destLng: Number(row.destination_longitude ?? 0),
+      });
+      hydrated += 1;
+    }
+    logger.info("[startup] hydrated active trips", { count: hydrated });
+  } catch (e: any) {
+    logger.error("[startup] active-trip hydration failed", { error: e.message });
+  }
+
   // Periodic cleanup: expired offer locks + stale driver connections
   setInterval(() => {
     const now = Date.now();
@@ -3358,11 +3488,25 @@ function clearPendingDetections(): void {
 }
 process.on("SIGTERM", () => {
   clearPendingDetections();
-  process.exit(0);
+  // Plan 28: flush breadcrumb buffers before exit — an unflushed tail is
+  // lost telematics. flushAllActiveRoutes never throws; exit either way.
+  flushAllActiveRoutes()
+    .catch((e: unknown) =>
+      logger.error("[telematics] shutdown flush failed", {
+        error: e instanceof Error ? e.message : String(e),
+      }),
+    )
+    .finally(() => process.exit(0));
 });
 process.on("SIGINT", () => {
   clearPendingDetections();
-  process.exit(0);
+  flushAllActiveRoutes()
+    .catch((e: unknown) =>
+      logger.error("[telematics] shutdown flush failed", {
+        error: e instanceof Error ? e.message : String(e),
+      }),
+    )
+    .finally(() => process.exit(0));
 });
 
 startup().catch((e) => {

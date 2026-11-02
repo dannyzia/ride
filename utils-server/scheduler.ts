@@ -2853,5 +2853,36 @@ export function startScheduler(deps: SchedulerDeps = {}): void {
     }
   }, 86_400_000); // daily
 
+  // Job 61 — ride_routes 30-day purge (daily). Plan 28 telematics
+  // retention: route rows older than 30 days are deleted in bounded
+  // 1,000-row batches (one batch per tick — the next tick takes the next
+  // batch). Safety holds, both as NOT EXISTS subqueries so a held route
+  // is never touched:
+  //   - any SOS alert on the ride (open or not — the alert is evidence),
+  //   - any fare dispute on the ride whose status is not 'resolved'
+  //     (the route is the arbitration evidence).
+  // Runs inside withJobBudget(61, 10s) like every other DB-touching job.
+  let routePurgeRunning = false;
+  registerJob(async () => {
+    if (routePurgeRunning) return;
+    routePurgeRunning = true;
+    try {
+      const deleted =
+        (await withJobBudget(61, 10_000, async (tx) => {
+          const rows = await tx.execute(
+            sql`DELETE FROM "ride_routes" WHERE "ride_id" IN (SELECT "ride_id" FROM "ride_routes" WHERE "created_at" < now() - interval '30 days' AND NOT EXISTS (SELECT 1 FROM "sos_alerts" "sa" WHERE "sa"."ride_id" = "ride_routes"."ride_id") AND NOT EXISTS (SELECT 1 FROM "fare_disputes" "fd" WHERE "fd"."ride_id" = "ride_routes"."ride_id" AND "fd"."status" <> 'resolved') LIMIT 1000) RETURNING "ride_id"`,
+          );
+          return Array.isArray(rows) ? rows.length : 0;
+        })) ?? 0;
+      if (deleted > 0) {
+        logger.info('[scheduler] job 61 ride_routes purge', { deleted });
+      }
+    } catch (e) {
+      logger.error('[scheduler] job 61 ride_routes purge error', e);
+    } finally {
+      routePurgeRunning = false;
+    }
+  }, 86_400_000); // daily
+
   logger.info(`[scheduler] started (${registeredJobs} jobs)`);
 }
