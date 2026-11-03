@@ -950,19 +950,19 @@
     "(main)/(customer)/(tabs)/history-detail/index.tsx": [
       {
         "id": "customer.history-detail.el-1",
-        "line": 82
+        "line": 115
       },
       {
         "id": "customer.history-detail.push-share-receipt",
-        "line": 126
+        "line": 193
       },
       {
         "id": "customer.history-detail.push-report-issue",
-        "line": 133
+        "line": 200
       },
       {
         "id": "customer.history-detail.set-theme",
-        "line": 147
+        "line": 214
       }
     ],
     "(main)/(customer)/(tabs)/home/index.tsx": [

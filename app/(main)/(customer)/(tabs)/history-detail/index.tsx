@@ -9,6 +9,13 @@ import { colors } from "@/theme/goRide";
 import { useIsDark, useAppearance } from "@/lib/useAppearance";
 import { useTranslation } from "react-i18next";
 import { formatBDT } from "@/lib/format";
+import MapLibreGL from "@/utils/maplibreLoader";
+import { useBarikoiMapStyle } from "@/utils/mapUtils";
+
+const MapViewLib = MapLibreGL?.MapView ?? null;
+const Camera = MapLibreGL?.Camera ?? null;
+const ShapeSource = MapLibreGL?.ShapeSource ?? null;
+const LineLayer = MapLibreGL?.LineLayer ?? null;
 
 interface RideDetail {
   id: string;
@@ -38,6 +45,8 @@ export default function RideHistoryDetail() {
   const [ride, setRide] = useState<RideDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [routeCoords, setRouteCoords] = useState<[number, number][]>([]);
+  const barikoiStyle = useBarikoiMapStyle();
 
 useEffect(() => {
      let cancelled = false;
@@ -61,6 +70,30 @@ useEffect(() => {
      })();
      return () => { cancelled = true; };
    }, [id, t]);
+
+  useEffect(() => {
+    if (!id) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const token = session?.access_token;
+        if (!token) return;
+        const res = await fetch(`${API_URL}/api/ride/${id}/breadcrumbs`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (!cancelled && Array.isArray(data.points) && data.points.length > 1) {
+            setRouteCoords(data.points.map((p: { lat: number; lng: number }) => [p.lng, p.lat]));
+          }
+        }
+      } catch {
+        // Non-blocking: route failure doesn't block summary details
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [id]);
 
   const formatDate = (iso: string) => {
     try {
@@ -119,6 +152,40 @@ useEffect(() => {
               </Text>
             </View>
           </View>
+          {routeCoords.length > 1 && MapViewLib && (
+            <View style={{ height: 200, borderRadius: 12, overflow: "hidden", marginBottom: 16 }}>
+              <MapViewLib style={{ flex: 1 }} mapStyle={barikoiStyle}>
+                {Camera && (
+                  <Camera
+                    bounds={{
+                      ne: [Math.max(...routeCoords.map((c) => c[0])), Math.max(...routeCoords.map((c) => c[1]))],
+                      sw: [Math.min(...routeCoords.map((c) => c[0])), Math.min(...routeCoords.map((c) => c[1]))],
+                      paddingLeft: 24,
+                      paddingRight: 24,
+                      paddingTop: 24,
+                      paddingBottom: 24,
+                    }}
+                    animationDuration={0}
+                  />
+                )}
+                {ShapeSource && LineLayer && (
+                  <ShapeSource
+                    id="historyRouteSource"
+                    shape={{
+                      type: "Feature",
+                      geometry: { type: "LineString", coordinates: routeCoords },
+                      properties: {},
+                    }}
+                  >
+                    <LineLayer
+                      id="historyRouteLine"
+                      style={{ lineColor: colors.primary, lineWidth: 4, lineCap: "round", lineJoin: "round" }}
+                    />
+                  </ShapeSource>
+                )}
+              </MapViewLib>
+            </View>
+          )}
           <TouchableOpacity
             className="border rounded-[12px] py-[14px] items-center mb-3"
             style={{ backgroundColor: surfaceBg, borderColor }}
