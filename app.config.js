@@ -53,6 +53,8 @@ export default {
       infoPlist: {
         NSLocationWhenInUseUsageDescription:
           "We need your location to show it on the map",
+        // Plan 29 (F3): iOS LSApplicationQueriesSchemes for canOpenURL support
+        LSApplicationQueriesSchemes: ["bkash", "nagad"],
       },
     },
     android: {
@@ -69,7 +71,8 @@ export default {
         "WRITE_EXTERNAL_STORAGE",
       ],
     },
-plugins: [
+    plugins: [
+      "./plugins/withMfsPackageQueries.js",
       "expo-secure-store",
       [
         "expo-notifications",

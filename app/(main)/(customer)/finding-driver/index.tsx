@@ -54,7 +54,7 @@ export default function FindingDriver() {
   const borderColor = isDark ? colors.borderDark : colors.borderLight;
 
   const { ride_id: rideIdParam } = useLocalSearchParams<{ ride_id?: string }>();
-  const { pickupLat, pickupLng, selectedVehicleType, clearRoute, setSearchingRideId, setRideStatus, setSelectedVehicleType, setPickup, setDropoff, setPickupCoords, setDropoffCoords } = useRiderStore();
+  const { pickupLat, pickupLng, pickupAddress, selectedVehicleType, clearRoute, setSearchingRideId, setRideStatus, setSelectedVehicleType, setPickup, setDropoff, setPickupCoords, setDropoffCoords } = useRiderStore();
   // S8 §4.3: honest no-fallback state — set on ride:expired with
   // reason 'no_women_only_drivers' (never a silent mixed-ride fallback).
   const [noWomenOnly, setNoWomenOnly] = useState<{ rideId: string } | null>(null);
@@ -65,9 +65,36 @@ export default function FindingDriver() {
   const [count, setCount] = useState<number | null>(null);
   const [eta, setEta] = useState<number | null>(null);
   const [error, setError] = useState(false);
-  const [prolongedEmpty, setProlongedEmpty] = useState(false);
+  const [_prolongedEmpty, setProlongedEmpty] = useState(false);
   const [alternatives, setAlternatives] = useState<Alternative[] | null>(null);
   const [findingState, setFindingState] = useState<FindingState>('searching');
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+
+  useEffect(() => {
+    if (findingState !== 'searching') return;
+    setElapsedSeconds(0);
+    const interval = setInterval(() => {
+      setElapsedSeconds((prev) => prev + 1);
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [findingState]);
+
+  const dispatchStage =
+    elapsedSeconds < 15 ? 1
+    : elapsedSeconds < 45 ? 2
+    : elapsedSeconds < 90 ? 3
+    : 4;
+
+  const shortZone = pickupAddress ? pickupAddress.split(',')[0].trim() : t('finding_driver.your_area');
+
+  const stageMessage =
+    dispatchStage === 1
+      ? t('finding_driver.stage_1', { zone: shortZone })
+      : dispatchStage === 2
+      ? t('finding_driver.stage_2')
+      : dispatchStage === 3
+      ? t('finding_driver.stage_3')
+      : t('finding_driver.stage_4');
   const driverFound = useRef(false);
   const emptyPollCount = useRef(0);
   // Latest successful /api/ride/nearby-drivers count, or null when the HTTP
@@ -205,6 +232,7 @@ export default function FindingDriver() {
     const data = await res.json().catch(() => null);
     if (res.ok && data?.ride_id) {
       setNoWomenOnly(null);
+      setElapsedSeconds(0);
       setFindingState("searching");
       driverFound.current = false;
       setSearchingRideId(data.ride_id);
@@ -523,13 +551,27 @@ export default function FindingDriver() {
               >
                 {t('finding_driver.finding')}
               </Text>
+
+              {/* 4-Stage Progress Bars */}
+              <View className="flex-row items-center justify-center gap-1.5 mt-3 mb-2 w-48" testID="customer.finding-driver.progress-bars">
+                {[1, 2, 3, 4].map((step) => (
+                  <View
+                    key={step}
+                    className="h-1.5 flex-1 rounded-full"
+                    style={{
+                      backgroundColor: dispatchStage >= step ? colors.primary : borderColor,
+                      opacity: dispatchStage === step ? 1 : dispatchStage > step ? 0.75 : 0.3,
+                    }}
+                    testID={`customer.finding-driver.progress-step-${step}`}
+                  />
+                ))}
+              </View>
+
               <Text
-                className="text-sm font-Jakarta text-center mt-2"
+                className="text-sm font-Jakarta text-center mt-2 px-4"
                 style={{ color: textSecondary }}
               >
-                {prolongedEmpty
-                  ? t('finding_driver.drivers_busy')
-                  : t('finding_driver.searching')}
+                {stageMessage}
               </Text>
             </View>
 
@@ -573,10 +615,11 @@ export default function FindingDriver() {
               className="rounded-full py-3 px-8 mt-4"
               style={{ backgroundColor: colors.primary }}
               onPress={() => {
+                setElapsedSeconds(0);
                 setFindingState('searching');
                 driverFound.current = false;
               }}
-             testID="customer.finding-driver.set-finding-state">
+             testID="customer.finding-driver.set-elapsed-seconds">
               <Text className="text-base font-JakartaBold" style={{ color: colors.white }}>
                 {t('common.retry')}
               </Text>
@@ -601,10 +644,11 @@ export default function FindingDriver() {
               className="rounded-full py-3 px-8 mt-4"
               style={{ backgroundColor: colors.primary }}
               onPress={() => {
+                setElapsedSeconds(0);
                 setFindingState('searching');
                 driverFound.current = false;
               }}
-             testID="customer.finding-driver.set-finding-state-2">
+             testID="customer.finding-driver.set-elapsed-seconds-2">
               <Text className="text-base font-JakartaBold" style={{ color: colors.white }}>
                 {t('finding_driver.try_again')}
               </Text>

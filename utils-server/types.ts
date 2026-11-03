@@ -242,6 +242,7 @@ export type OutboundMessage =
       driver_net_bdt: number;
       ride_time_min: number;
       fare_breakdown: FareBreakdown;
+      payment_method?: 'cash' | 'mfs_p2p';
     }
   | { type: "ride:arrived"; ride_id: string }
   | { type: "ride:cancelled"; ride_id: string; cancelled_by?: "rider" | "driver" | "system" }

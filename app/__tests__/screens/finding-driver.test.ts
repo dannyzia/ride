@@ -89,4 +89,33 @@ describe("finding-driver cancel (M-2)", () => {
     expect(clearRoute).toHaveBeenCalled();
     expect(routerBack).toHaveBeenCalled();
   });
+
+  describe("transparent dispatch stages (Plan 29)", () => {
+    const calculateStage = (elapsedSeconds: number) => {
+      return elapsedSeconds < 15 ? 1
+        : elapsedSeconds < 45 ? 2
+        : elapsedSeconds < 90 ? 3
+        : 4;
+    };
+
+    it("maps 0-14 seconds to Stage 1", () => {
+      expect(calculateStage(0)).toBe(1);
+      expect(calculateStage(14)).toBe(1);
+    });
+
+    it("maps 15-44 seconds to Stage 2", () => {
+      expect(calculateStage(15)).toBe(2);
+      expect(calculateStage(44)).toBe(2);
+    });
+
+    it("maps 45-89 seconds to Stage 3", () => {
+      expect(calculateStage(45)).toBe(3);
+      expect(calculateStage(89)).toBe(3);
+    });
+
+    it("maps 90+ seconds to Stage 4", () => {
+      expect(calculateStage(90)).toBe(4);
+      expect(calculateStage(120)).toBe(4);
+    });
+  });
 });

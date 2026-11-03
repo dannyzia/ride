@@ -717,6 +717,7 @@ const server = http.createServer(async (req, res) => {
           driver_net_bdt,
           ride_time_min,
           fare_breakdown,
+          payment_method,
         } = JSON.parse(body);
         if (!ride_id || !rider_user_id) {
           writeJson(400, { error: "missing_fields" });
@@ -729,6 +730,7 @@ const server = http.createServer(async (req, res) => {
           driver_net_bdt,
           ride_time_min,
           fare_breakdown,
+          payment_method,
         });
 
         // Phase D Lever 2: refresh the cold-drop cache when a ride completes

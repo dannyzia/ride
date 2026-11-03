@@ -695,7 +695,12 @@
     "cash_received_placeholder": "e.g. 250",
     "cash_settled": "Cash settled — amounts match.",
     "return_change": "Return {{amount}} change to the rider.",
-    "cash_mismatch": "Received {{received}} vs rider tendered {{tendered}} — verify before closing."
+    "cash_mismatch": "Received {{received}} vs rider tendered {{tendered}} — verify before closing.",
+    "slide_to_confirm_mfs": "Slide to Confirm MFS Received ({{amount}})",
+    "mfs_reassurance_tip": "SMS delayed? Check your MFS app statement for instant confirmation.",
+    "mfs_confirmed": "MFS Payment Confirmed",
+    "settlement_mode_cash": "Cash",
+    "settlement_mode_mfs": "bKash / Nagad"
   },
   "enter_otp": {
     "title": "Ride Pin",
@@ -972,7 +977,7 @@
     "pin_mismatch": "PIN doesn't match — ask the driver to re-enter it",
     "pin_hint": "Share this PIN with your driver to start the trip",
     "copy_pin": "Copy PIN",
-    "copied": "Copied!",
+    "copied": "Copied! ✓",
     "share": "Share",
     "ride_complete": "Ride complete",
     "pay_driver_cash": "Please pay the driver in cash",
@@ -981,7 +986,15 @@
     "ride_was_cancelled": "This ride was cancelled.",
     "could_not_cancel": "Couldn't cancel the ride",
     "network_error": "Network error — reconnecting...",
-    "eta_minutes": "{{minutes}} min"
+    "eta_minutes": "{{minutes}} min",
+    "cash": "Cash",
+    "mfs": "bKash / Nagad",
+    "copy_number": "Copy Number",
+    "open_app": "Open App",
+    "mfs_subtext": "Send exact fare to driver's personal wallet. The driver will confirm receipt directly in their app statement.",
+    "mfs_copied_title": "Number Copied",
+    "mfs_copied_body": "Driver wallet number {{number}} copied to clipboard.",
+    "paid_via_mfs": "Paid via {{provider}}"
   },
   "emergency_contacts": {
     "not_authenticated": "Please log in to manage emergency contacts",
@@ -1348,16 +1361,19 @@
   },
   "finding_driver": {
     "finding": "Finding your driver",
-    "searching": "Searching nearby drivers...",
     "nearby_driver": "{{count}} driver nearby",
     "estimated_wait": "Estimated wait: ~{{minutes}} min",
-    "drivers_busy": "Drivers are busy right now",
     "no_drivers": "No drivers available",
     "no_drivers_message": "Try again in a moment — drivers may come online nearby.",
     "connection_issue": "Connection issue",
     "connection_message": "We lost contact with the dispatch server. Please check your internet.",
     "try_again": "Try Again",
-    "cancel_booking": "Cancel Booking"
+    "cancel_booking": "Cancel Booking",
+    "your_area": "your area",
+    "stage_1": "Searching for nearby drivers near {{zone}}...",
+    "stage_2": "Looking for available drivers in your area...",
+    "stage_3": "Continuing search for available drivers...",
+    "stage_4": "Search is taking longer than usual. Still searching..."
   },
   "loyalty": {
     "title": "Loyalty Rewards",

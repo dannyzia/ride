@@ -38,6 +38,7 @@ interface CompletionSummary {
   rider_payable_bdt?: number;
   wallet_debit_bdt?: number;
   cash_to_collect_bdt?: number;
+  payment_method?: 'cash' | 'mfs_p2p';
   // v6 Phase F: additional fare components
   zone_fee_bdt?: number;
   waiting_charge_bdt?: number;
@@ -64,6 +65,8 @@ const FinishRide = () => {
   const { ws } = useWSStore();
   const [showModal, setShowModal] = useState<boolean>(false);
   const [showTollModal, setShowTollModal] = useState(false);
+  const [settlementMode, setSettlementMode] = useState<'cash' | 'mfs_p2p'>('cash');
+  const [hasMfsMethod, setHasMfsMethod] = useState<boolean>(false);
   // C4-6: cash the driver actually received, in taka (optional — empty
   // keeps the bodyless complete the server already tolerates).
   const [cashReceivedTaka, setCashReceivedTaka] = useState("");
@@ -78,6 +81,31 @@ const FinishRide = () => {
   activeRideIdRef.current = activeRideId;
   const wsRef = useRef(ws);
   wsRef.current = ws;
+
+  // Plan 29 (F9): Check whether driver has an active bKash/Nagad payout method
+  useEffect(() => {
+    let mounted = true;
+    async function checkMfs() {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.access_token) return;
+        const res = await fetch(`${API_URL}/api/driver/payout-method`, {
+          headers: { Authorization: `Bearer ${session.access_token}` },
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        const eligible = (data.payout_methods ?? []).some(
+          (m: { method_type: string; is_active: boolean }) =>
+            (m.method_type === 'bkash' || m.method_type === 'nagad') && m.is_active,
+        );
+        if (mounted) setHasMfsMethod(eligible);
+      } catch {
+        // Non-blocking: defaults to false (cash only)
+      }
+    }
+    checkMfs();
+    return () => { mounted = false; };
+  }, []);
 
   // Only the driver Home screen creates the WebSocket. If we got here without
   // one the connection is dead — the ride can still complete over HTTP, but
@@ -262,13 +290,19 @@ const FinishRide = () => {
         trimmedCash !== "" && Number.isFinite(cashTaka) && cashTaka >= 0
           ? Math.round(cashTaka * 100)
           : null;
+      const payload: Record<string, unknown> = {
+        payment_method: settlementMode,
+      };
+      if (settlementMode === 'cash' && cashReceivedBdt != null) {
+        payload.cash_received_bdt = cashReceivedBdt;
+      }
       const res = await fetch(`${API_URL}/api/ride/${activeRideId}/complete`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        ...(cashReceivedBdt != null ? { body: JSON.stringify({ cash_received_bdt: cashReceivedBdt }) } : {}),
+        body: JSON.stringify(payload),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
@@ -287,6 +321,7 @@ const FinishRide = () => {
         wallet_debit_bdt?: number;
         cash_to_collect_bdt?: number;
         cash_handshake?: CashHandshakeView | null;
+        payment_method?: 'cash' | 'mfs_p2p';
       } = await res.json().catch(() => ({}));
       const fb = data.fare_breakdown ?? {};
       setCompletion({
@@ -297,6 +332,7 @@ const FinishRide = () => {
         rider_payable_bdt: data.rider_payable_bdt ?? undefined,
         wallet_debit_bdt: data.wallet_debit_bdt ?? undefined,
         cash_to_collect_bdt: data.cash_to_collect_bdt ?? undefined,
+        payment_method: (data.payment_method as 'cash' | 'mfs_p2p') ?? settlementMode,
         // v6 Phase F
         zone_fee_bdt: fb.zone_fee_bdt ?? undefined,
         waiting_charge_bdt: fb.waiting_charge_bdt ?? undefined,
@@ -424,39 +460,123 @@ const FinishRide = () => {
 
         {/* Slide */}
         <View style={{ marginTop: spacing["3xl"] }}>
-          {/* C4-6: cash actually received (taka) — sent as cash_received_bdt. */}
-          <View style={{ marginBottom: spacing.md }}>
-            <Text
+          {/* Settlement Mode Toggle: Cash vs MFS (F9: rendered only if driver has eligible MFS) */}
+          {hasMfsMethod && (
+            <View
               style={{
-                fontSize: 13,
-                color: textSecondary,
-                fontFamily: "Jakarta-SemiBold",
-                marginBottom: spacing.xs,
+                flexDirection: "row",
+                backgroundColor: isDark ? colors.surfaceElevatedDark : colors.gray100,
+                borderRadius: radii.md,
+                padding: 3,
+                marginBottom: spacing.md,
               }}
             >
-              {t('finish_ride.cash_received_label')}
-            </Text>
-            <TextInput
-              value={cashReceivedTaka}
-              onChangeText={setCashReceivedTaka}
-              keyboardType="numeric"
-              placeholder={t('finish_ride.cash_received_placeholder')}
-              placeholderTextColor={textSecondary}
-              accessibilityLabel={t('finish_ride.cash_received_label')}
+              <TouchableOpacity
+                onPress={() => setSettlementMode('cash')}
+                style={{
+                  flex: 1,
+                  paddingVertical: spacing.sm,
+                  alignItems: "center",
+                  borderRadius: radii.sm,
+                  backgroundColor: settlementMode === 'cash' ? (isDark ? colors.surfaceDark : colors.white) : "transparent",
+                }}
+               
+               testID="rider.finish-ride.set-settlement-mode">
+                <Text
+                  style={{
+                    fontFamily: "Jakarta-Bold",
+                    fontSize: 13,
+                    color: settlementMode === 'cash' ? colors.primary : textSecondary,
+                  }}
+                >
+                  {t('finish_ride.settlement_mode_cash')}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => setSettlementMode('mfs_p2p')}
+                style={{
+                  flex: 1,
+                  paddingVertical: spacing.sm,
+                  alignItems: "center",
+                  borderRadius: radii.sm,
+                  backgroundColor: settlementMode === 'mfs_p2p' ? (isDark ? colors.surfaceDark : colors.white) : "transparent",
+                }}
+               
+               testID="rider.finish-ride.set-settlement-mode-2">
+                <Text
+                  style={{
+                    fontFamily: "Jakarta-Bold",
+                    fontSize: 13,
+                    color: settlementMode === 'mfs_p2p' ? colors.primary : textSecondary,
+                  }}
+                >
+                  {t('finish_ride.settlement_mode_mfs')}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {settlementMode === 'mfs_p2p' && (
+            <View
               style={{
-                borderWidth: 1,
-                borderColor: isDark ? colors.borderDark : colors.borderLight,
+                flexDirection: "row",
+                alignItems: "center",
+                gap: spacing.xs,
+                backgroundColor: colors.primaryLight,
+                padding: spacing.sm,
                 borderRadius: radii.md,
-                paddingHorizontal: spacing.md,
-                paddingVertical: spacing.sm,
-                fontSize: 16,
-                fontFamily: "Jakarta-SemiBold",
-                color: textPrimary,
-                backgroundColor: isDark ? colors.surfaceElevatedDark : colors.surfaceLight,
-                fontVariant: ["tabular-nums"],
-              }}              
-              testID="rider.finish-ride.set-cash-received-taka"/>
-          </View>
+                marginBottom: spacing.md,
+              }}
+            >
+              <Ionicons name="information-circle-outline" size={16} color={colors.primary} />
+              <Text
+                style={{
+                  flex: 1,
+                  fontFamily: "Jakarta-Regular",
+                  fontSize: 12,
+                  color: colors.primary,
+                }}
+              >
+                {t('finish_ride.mfs_reassurance_tip')}
+              </Text>
+            </View>
+          )}
+
+          {/* C4-6: optional cash actually received in taka */}
+          {settlementMode === 'cash' && (
+            <View style={{ marginBottom: spacing.md }}>
+              <Text
+                style={{
+                  fontFamily: "Jakarta-SemiBold",
+                  fontSize: 13,
+                  color: textSecondary,
+                  marginBottom: spacing.xs,
+                }}
+              >
+                {t('finish_ride.cash_received_label')}
+              </Text>
+              <TextInput
+                value={cashReceivedTaka}
+                onChangeText={setCashReceivedTaka}
+                keyboardType="numeric"
+                placeholder={t('finish_ride.cash_received_placeholder')}
+                placeholderTextColor={textSecondary}
+                accessibilityLabel={t('finish_ride.cash_received_label')}
+                style={{
+                  borderWidth: 1,
+                  borderColor: isDark ? colors.borderDark : colors.borderLight,
+                  borderRadius: radii.md,
+                  paddingHorizontal: spacing.md,
+                  paddingVertical: spacing.sm,
+                  fontSize: 16,
+                  fontFamily: "Jakarta-SemiBold",
+                  color: textPrimary,
+                  backgroundColor: isDark ? colors.surfaceElevatedDark : colors.surfaceLight,
+                  fontVariant: ["tabular-nums"],
+                }}              
+                testID="rider.finish-ride.set-cash-received-taka"/>
+            </View>
+          )}
           <Text
             style={{
               textAlign: "center",
@@ -469,7 +589,11 @@ const FinishRide = () => {
             {t('finish_ride.slide_confirm_dropoff')}
           </Text>
           <SlideButton
-            title={t('finish_ride.slide_to_confirm_dropoff')}
+            title={
+              settlementMode === 'mfs_p2p'
+                ? t('finish_ride.slide_to_confirm_mfs', { amount: formatBDT(totalPaisa, { decimals: true }) })
+                : t('finish_ride.slide_to_confirm_dropoff')
+            }
             onComplete={handleSlideComplete}
             bgColor={colors.slideGreen}
             textColor={colors.white}
@@ -536,22 +660,54 @@ const FinishRide = () => {
             </Text>
           </View>
 
-          {/* Cash collection — dominant */}
-          <Text
-            style={{
-              fontSize: 28,
-              fontFamily: "Jakarta-Bold",
-              color: colors.accent,
-              textAlign: "center",
-              marginBottom: spacing.lg,
-              fontVariant: ["tabular-nums"],
-            }}
-          >
-            {t('finish_ride.collect_cash', { amount: formatBDT(cashPaisa, { decimals: true }) })}
-          </Text>
+          {/* Payment confirmed header */}
+          {completion?.payment_method === 'mfs_p2p' ? (
+            <View style={{ alignItems: "center", marginBottom: spacing.lg }}>
+              <View
+                style={{
+                  paddingHorizontal: spacing.md,
+                  paddingVertical: spacing.xs,
+                  borderRadius: radii.pill,
+                  backgroundColor: colors.primaryLight,
+                  marginBottom: spacing.xs,
+                }}
+              >
+                <Text style={{ fontFamily: "Jakarta-Bold", fontSize: 13, color: colors.primary }}>
+                  {t('finish_ride.mfs_confirmed')}
+                </Text>
+              </View>
+              <Text
+                style={{
+                  fontSize: 28,
+                  fontFamily: "Jakarta-Bold",
+                  color: colors.primary,
+                  textAlign: "center",
+                  fontVariant: ["tabular-nums"],
+                }}
+              >
+                {formatBDT(totalPaisa, { decimals: true })}
+              </Text>
+            </View>
+          ) : (
+            <>
+              {/* Cash collection — dominant */}
+              <Text
+                style={{
+                  fontSize: 28,
+                  fontFamily: "Jakarta-Bold",
+                  color: colors.accent,
+                  textAlign: "center",
+                  marginBottom: spacing.lg,
+                  fontVariant: ["tabular-nums"],
+                }}
+              >
+                {t('finish_ride.collect_cash', { amount: formatBDT(cashPaisa, { decimals: true }) })}
+              </Text>
 
-          {/* C4-6: handshake result — settled vs change_due from the server. */}
-          <CashHandshakeCard handshake={completion?.cash_handshake ?? null} />
+              {/* C4-6: handshake result — settled vs change_due from the server. */}
+              <CashHandshakeCard handshake={completion?.cash_handshake ?? null} />
+            </>
+          )}
 
           {/* N3: forfeited upfront tip — never let a promised tip vanish silently */}
           {(completion?.upfront_tip_forfeited_bdt ?? 0) > 0 && (

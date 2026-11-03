@@ -94,4 +94,20 @@ describe("B5-4 — WS contract sync (types.ts ↔ handlers)", () => {
     expect(TYPES).toContain("eta_minutes: number | null");
     expect(INDEX).toContain("eta_minutes: msg.eta_minutes");
   });
+
+  it("Plan 29 — /internal/ride/completed route relays payment_method to rider via sendToRider", () => {
+    // 1. types.ts wire contract
+    expect(TYPES).toContain('type: "ride:completed";');
+    expect(TYPES).toContain("payment_method?: 'cash' | 'mfs_p2p';");
+
+    // 2. index.ts route handler block extraction
+    const routeIndex = INDEX.indexOf('url === "/internal/ride/completed"');
+    expect(routeIndex).toBeGreaterThan(-1);
+    const routeBlock = INDEX.slice(routeIndex, routeIndex + 1200);
+
+    // Assert destructuring from parsed body
+    expect(routeBlock).toMatch(/const\s*\{[\s\S]*?payment_method[\s\S]*?\}\s*=\s*JSON\.parse\(body\)/);
+    // Assert forwarding inside sendToRider
+    expect(routeBlock).toMatch(/sendToRider\(rider_user_id,\s*\{[\s\S]*?type:\s*"ride:completed"[\s\S]*?payment_method[\s\S]*?\}\)/);
+  });
 });

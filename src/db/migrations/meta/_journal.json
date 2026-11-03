@@ -624,6 +624,13 @@
       "when": 1793620287350,
       "tag": "0088_ride_routes_and_telematics",
       "breakpoints": true
+    },
+    {
+      "idx": 89,
+      "version": "7",
+      "when": 1793620300000,
+      "tag": "0089_p2p_mfs_and_dispatch_messaging",
+      "breakpoints": true
     }
   ]
 }

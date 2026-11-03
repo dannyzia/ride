@@ -1,6 +1,6 @@
 // Auth: verifySupabaseToken via requireRole
 import { db } from '@/src/db';
-import { rides, drivers } from '@/src/db/schema';
+import { rides, drivers, driverPayoutMethods } from '@/src/db/schema';
 import { eq, and, inArray } from 'drizzle-orm';
 import { requireRole } from '@/lib/auth';
 import { isPinLocked, recordPinFailure, resetPinAttempts, PIN_MAX_ATTEMPTS } from '@/lib/ridePinLockout';
@@ -55,9 +55,33 @@ export async function POST(request: Request, { id }: { id: string }) {
     // between the read and an unguarded write would flip a CANCELLED ride to
     // in_progress — and complete+api only checks in_progress, so a cancelled
     // ride could finish for full fare on top of the cancellation fee.
+    // Plan 29 (F8): Snapshot driver's default active MFS wallet at ride start
+    // so mid-trip setting changes cannot desync what rider sees vs what is audited.
+    const [driverMfs] = await db
+      .select({
+        method_type: driverPayoutMethods.method_type,
+        account_number: driverPayoutMethods.account_number,
+      })
+      .from(driverPayoutMethods)
+      .where(
+        and(
+          eq(driverPayoutMethods.driver_id, driver.id),
+          eq(driverPayoutMethods.is_default, true),
+          eq(driverPayoutMethods.is_active, true),
+          inArray(driverPayoutMethods.method_type, ['bkash', 'nagad']),
+        ),
+      )
+      .limit(1);
+
     const now = new Date();
     const [claimed] = await db.update(rides)
-      .set({ status: 'in_progress', started_at: now, updated_at: now })
+      .set({
+        status: 'in_progress',
+        started_at: now,
+        updated_at: now,
+        mfs_provider: driverMfs?.method_type ?? null,
+        mfs_number: driverMfs?.account_number ?? null,
+      })
       .where(and(eq(rides.id, rideId), inArray(rides.status, ['driver_arrived', 'driver_arriving'])))
       .returning({ id: rides.id });
     if (!claimed) {

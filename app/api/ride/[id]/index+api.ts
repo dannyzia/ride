@@ -48,6 +48,20 @@ export async function GET(request: Request, { id: rawId }: { id: string }) {
       driverInfo = driver ?? null;
     }
 
+    // Rule C3-6 & Plan 29 (FLAW 2 & FLAW 6): Driver MFS details are only exposed
+    // during an active in_progress trip (for P2P settlement assistance) OR on completed
+    // rides if settled via mfs_p2p. On completed cash rides, MFS details are strictly NULL.
+    // Sole source of truth is the immutable snapshot taken at trip start. No live-query fallback.
+    let defaultMfs: { method_type: string; account_number: string } | null = null;
+    const isMfsExposed =
+      Boolean(ride.driver_id) &&
+      Boolean(ride.mfs_provider && ride.mfs_number) &&
+      (ride.status === 'in_progress' || (ride.status === 'completed' && ride.payment_method === 'mfs_p2p'));
+
+    if (isMfsExposed && ride.mfs_provider && ride.mfs_number) {
+      defaultMfs = { method_type: ride.mfs_provider, account_number: ride.mfs_number };
+    }
+
     // C4-5: the start PIN is rider-identity only. Driver-identity responses
     // strip start_pin / start_pin_attempts / start_pin_locked_at (and the
     // otp alias) — the driver proves arrival, never the secret.
@@ -91,6 +105,8 @@ export async function GET(request: Request, { id: rawId }: { id: string }) {
           vehicle_color: '',
           vehicle_plate: '',
           vehicle_type: driverInfo.vehicle_type ?? '',
+          mfs_provider: defaultMfs ? defaultMfs.method_type : null,
+          mfs_number: defaultMfs ? defaultMfs.account_number : null,
         }
       : null;
 

@@ -70,6 +70,7 @@ const rideId = segments[segments.indexOf("ride") + 1];
     // expose .text(); legacy test doubles may expose only .json() or
     // neither, which both mean "no body".
     let cashReceivedBdt: number | null = null;
+    let paymentMethod: 'cash' | 'mfs_p2p' = 'cash';
     let rawBody = "";
     try {
       if (typeof request.text === "function") {
@@ -91,13 +92,15 @@ const rideId = segments[segments.indexOf("ride") + 1];
       } catch {
         return Response.json({ error: 'invalid_body', message: 'Request body must be valid JSON' }, { status: 400 });
       }
-      const cashParsed = z.object({
+      const completeParsed = z.object({
         cash_received_bdt: z.number().int().min(0).max(10_000_000).optional(),
+        payment_method: z.enum(['cash', 'mfs_p2p']).optional().default('cash'),
       }).safeParse(parsedBody);
-      if (!cashParsed.success) {
-        return Response.json({ error: 'invalid_cash_amount', message: 'cash_received_bdt must be a non-negative integer (paisa)' }, { status: 400 });
+      if (!completeParsed.success) {
+        return Response.json({ error: 'invalid_request', message: 'Invalid completion parameters' }, { status: 400 });
       }
-      cashReceivedBdt = cashParsed.data.cash_received_bdt ?? null;
+      cashReceivedBdt = completeParsed.data.cash_received_bdt ?? null;
+      paymentMethod = completeParsed.data.payment_method ?? 'cash';
     }
 
     // Get pricing for fare calculation
@@ -418,6 +421,19 @@ const rideId = segments[segments.indexOf("ride") + 1];
         }
       }
 
+      let mfsSnapshot: { provider: string | null; number: string | null } = { provider: null, number: null };
+      if (paymentMethod === 'mfs_p2p') {
+        if (!ride.driver_id) {
+          throw Object.assign(new Error('Cannot complete MFS settlement without assigned driver'), { status: 400, code: 'driver_not_found' });
+        }
+        // F8 & FLAW 6: Sole source of truth is the immutable snapshot taken at trip start.
+        // If driver lacked an active MFS wallet at trip start, MFS settlement cannot be completed.
+        if (!ride.mfs_provider || !ride.mfs_number) {
+          throw Object.assign(new Error('Driver did not have an active MFS wallet snapshotted at trip start'), { status: 400, code: 'mfs_not_configured' });
+        }
+        mfsSnapshot = { provider: ride.mfs_provider, number: ride.mfs_number };
+      }
+
       const [updatedRide] = await tx
         .update(rides)
         .set({
@@ -443,9 +459,12 @@ const rideId = segments[segments.indexOf("ride") + 1];
           fare_v6_shadow_computed_at: completedAt,
           // v6 zone fee — 100% to driver, no commission
           zone_fee_bdt: zoneFeeBdt,
-          // C3-5 (F-05 cash handshake): driver-confirmed amount received,
-          // persisted in the same atomic completion write.
-          ...(cashReceivedBdt != null ? { driver_cash_received_bdt: cashReceivedBdt } : {}),
+          payment_method: paymentMethod,
+          mfs_provider: mfsSnapshot.provider,
+          mfs_number: mfsSnapshot.number,
+          // Plan 29: if MFS used, clear physical cash tendered so cash change is not computed
+          ...(paymentMethod === 'mfs_p2p' ? { rider_cash_tendered_bdt: null, driver_cash_received_bdt: null } : {}),
+          ...(paymentMethod === 'cash' && cashReceivedBdt != null ? { driver_cash_received_bdt: cashReceivedBdt } : {}),
         })
         .where(and(eq(rides.id, rideId), eq(rides.status, "in_progress")))
         .returning();
@@ -618,8 +637,9 @@ const rideId = segments[segments.indexOf("ride") + 1];
           driver_net_bdt: authoritative.driver_net_bdt,
           ride_time_min: rideTimeMin,
           fare_breakdown: authoritative,
-          rider_cash_tendered_bdt: ride.rider_cash_tendered_bdt ?? null,
-          driver_cash_received_bdt: cashReceivedBdt,
+          payment_method: paymentMethod,
+          rider_cash_tendered_bdt: paymentMethod === 'mfs_p2p' ? null : (ride.rider_cash_tendered_bdt ?? null),
+          driver_cash_received_bdt: paymentMethod === 'mfs_p2p' ? null : cashReceivedBdt,
         }),
       }).catch((e) =>
         logger.warn("[ride/complete] WS emit failed", { error: errors.getErrorMessage(e) }),
@@ -643,14 +663,18 @@ const rideId = segments[segments.indexOf("ride") + 1];
       // subtract it twice (H-B).
       rider_payable_bdt: finalRiderPayableBdt,
       wallet_debit_bdt: walletDebitBdt,
-      cash_to_collect_bdt: authoritative.total_bdt + storedPrefSurcharge - appliedDiscountBdt,
+      payment_method: paymentMethod,
+      cash_to_collect_bdt: paymentMethod === 'mfs_p2p' ? 0 : (authoritative.total_bdt + storedPrefSurcharge - appliedDiscountBdt),
       // C3-5 (F-05 cash handshake → receipt entry): shared builder with the
       // receipt route so both surfaces agree on change_due / amounts_match.
-      cash_handshake: buildCashHandshake(ride.rider_cash_tendered_bdt, cashReceivedBdt, finalRiderPayableBdt),
+      cash_handshake: paymentMethod === 'mfs_p2p' ? null : buildCashHandshake(ride.rider_cash_tendered_bdt, cashReceivedBdt, finalRiderPayableBdt),
     });
   } catch (err: unknown) {
     if (errors.getErrorStatus(err) === 401 || errors.getErrorStatus(err) === 403) {
       return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: errors.getErrorStatus(err) ?? 500 });
+    }
+    if (errors.getErrorStatus(err) === 400) {
+      return Response.json({ error: errors.getErrorCode(err) || 'bad_request', message: errors.getErrorMessage(err) }, { status: 400 });
     }
     logger.error("[ride/complete] error", err);
     return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });

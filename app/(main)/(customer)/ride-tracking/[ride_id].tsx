@@ -53,6 +53,8 @@ interface DriverInfo {
   vehicle_color: string;
   vehicle_plate: string;
   vehicle_type: string;
+  mfs_provider?: string | null;
+  mfs_number?: string | null;
 }
 
 interface RideDetails {
@@ -70,6 +72,9 @@ interface RideDetails {
   // S8 §4.4: arrives via GET /api/ride/[id] (full-row spread). Badge only —
   // never counterparty gender.
   women_only?: boolean;
+  payment_method?: string | null;
+  mfs_provider?: string | null;
+  mfs_number?: string | null;
 }
 
 export default function RideTrackingScreen() {
@@ -84,6 +89,9 @@ export default function RideTrackingScreen() {
   const [loading, setLoading] = useState(true);
   const [pinValue, setPinValue] = useState("");
   const [pinCopied, setPinCopied] = useState(false);
+  const [settlementMode, setSettlementMode] = useState<'cash' | 'mfs'>('cash');
+  const [mfsCopied, setMfsCopied] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<string>('cash');
   // Socket liveness + last-live-update for the "Reconnecting" banner — mirrors
   // the driver-home treatment. lastUpdateAt stamps whenever a ride message
   // arrives; socketLive tracks open/close on the store socket, which is
@@ -116,6 +124,9 @@ export default function RideTrackingScreen() {
       const data = await res.json();
       setRide(data.ride);
       setDriver(data.driver);
+      if (data.ride?.payment_method) {
+        setPaymentMethod(data.ride.payment_method);
+      }
       setTrackingState(mapStatusToTracking(data.ride.status));
       setEtaMinutes(data.ride.eta_minutes || 5);
       if (data.ride.driver_lat && data.ride.driver_lng) {
@@ -171,6 +182,46 @@ export default function RideTrackingScreen() {
       copyTimerRef.current = setTimeout(() => setPinCopied(false), 2000);
     } catch (e) {
       logger.error("[tracking] copy PIN failed", e);
+    }
+  };
+
+  const handleCopyMfsNumber = async () => {
+    if (!driver?.mfs_number) return;
+    try {
+      const Clipboard = await import("expo-clipboard");
+      await Clipboard.setStringAsync(driver.mfs_number);
+      setMfsCopied(true);
+      setTimeout(() => setMfsCopied(false), 2000);
+    } catch (e) {
+      logger.error("[tracking] copy MFS number failed", e);
+    }
+  };
+
+  const handleOpenMfsApp = async (provider: string, mfsNumber: string) => {
+    const schemeMap: Record<string, string> = {
+      bkash: "bkash://",
+      nagad: "nagad://",
+    };
+    const scheme = schemeMap[provider.toLowerCase()] || "bkash://";
+    try {
+      const canOpen = await Linking.canOpenURL(scheme);
+      if (canOpen) {
+        await Linking.openURL(scheme);
+      } else {
+        const Clipboard = await import("expo-clipboard");
+        await Clipboard.setStringAsync(mfsNumber);
+        Alert.alert(
+          t('ride_tracking.mfs_copied_title'),
+          t('ride_tracking.mfs_copied_body', { number: mfsNumber })
+        );
+      }
+    } catch {
+      const Clipboard = await import("expo-clipboard");
+      await Clipboard.setStringAsync(mfsNumber);
+      Alert.alert(
+        t('ride_tracking.mfs_copied_title'),
+        t('ride_tracking.mfs_copied_body', { number: mfsNumber })
+      );
     }
   };
 
@@ -250,6 +301,9 @@ export default function RideTrackingScreen() {
             break;
           case "ride:completed":
             setTrackingState("complete");
+            if (msg.payment_method) {
+              setPaymentMethod(msg.payment_method);
+            }
             if (typeof msg.total_bdt === "number") {
               setRide((prev) =>
                 prev ? { ...prev, fare_bdt: msg.total_bdt } : prev,
@@ -668,6 +722,69 @@ export default function RideTrackingScreen() {
               vehicleType={driver?.vehicle_type}
               nightActive={false}
             />
+            {/* P2P MFS Settlement Card */}
+            {driver?.mfs_provider && driver?.mfs_number && (
+              <View style={[styles.settlementCard, { backgroundColor: surfaceBg, borderColor }]} testID="customer.ride-tracking.settlement-card">
+                <View style={[styles.settlementTabs, { backgroundColor: isDark ? colors.darkSecondary : colors.gray100 }]}>
+                  <TouchableOpacity
+                    style={[styles.settlementTab, settlementMode === 'cash' && [styles.settlementTabActive, { backgroundColor: surfaceBg }]]}
+                    onPress={() => setSettlementMode('cash')}
+                   
+                   testID="customer.ride-tracking.ride_id.set-settlement-mode">
+                    <Text style={[styles.settlementTabText, { color: settlementMode === 'cash' ? colors.primary : textSecondary }]}>
+                      {t('ride_tracking.cash')}
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.settlementTab, settlementMode === 'mfs' && [styles.settlementTabActive, { backgroundColor: surfaceBg }]]}
+                    onPress={() => setSettlementMode('mfs')}
+                   
+                   testID="customer.ride-tracking.ride_id.set-settlement-mode-2">
+                    <Text style={[styles.settlementTabText, { color: settlementMode === 'mfs' ? colors.primary : textSecondary }]}>
+                      {t('ride_tracking.mfs')} ({driver.mfs_provider.toUpperCase()})
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+
+                {settlementMode === 'mfs' && (
+                  <View style={styles.mfsContent} testID="customer.ride-tracking.mfs-content">
+                    <View style={styles.mfsRow}>
+                      <View style={[styles.mfsBadge, { backgroundColor: driver.mfs_provider.toLowerCase() === 'bkash' ? '#E2136E' : '#F7941D' }]}>
+                        <Text style={styles.mfsBadgeText}>{driver.mfs_provider.toUpperCase()}</Text>
+                      </View>
+                      <Text style={[styles.mfsNumber, { color: textPrimary }]}>{driver.mfs_number}</Text>
+                    </View>
+
+                    <View style={styles.mfsActionButtons}>
+                      <TouchableOpacity
+                        style={[styles.mfsActionBtn, { backgroundColor: colors.primary }]}
+                        onPress={handleCopyMfsNumber}
+                       
+                       testID="customer.ride-tracking.ride_id.handle-copy-mfs-number">
+                        <Ionicons name={mfsCopied ? 'checkmark' : 'copy-outline'} size={16} color={colors.white} />
+                        <Text style={styles.mfsActionBtnText}>
+                          {mfsCopied ? t('ride_tracking.copied') : t('ride_tracking.copy_number')}
+                        </Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        style={[styles.mfsActionBtn, { backgroundColor: driver.mfs_provider.toLowerCase() === 'bkash' ? '#E2136E' : driver.mfs_provider.toLowerCase() === 'nagad' ? '#F7941D' : colors.primary }]}
+                        onPress={() => handleOpenMfsApp(driver.mfs_provider!, driver.mfs_number!)}
+                       
+                       testID="customer.ride-tracking.ride_id.handle-open-mfs-app">
+                        <Ionicons name="open-outline" size={16} color={colors.white} />
+                        <Text style={styles.mfsActionBtnText}>{t('ride_tracking.open_app')}</Text>
+                      </TouchableOpacity>
+                    </View>
+
+                    <Text style={[styles.mfsSubtext, { color: textSecondary }]}>
+                      {t('ride_tracking.mfs_subtext')}
+                    </Text>
+                  </View>
+                )}
+              </View>
+            )}
+
 
             <View style={[styles.addressRow, { borderColor: borderColor }]}>
               <View style={[styles.dot, { backgroundColor: colors.danger }]} />
@@ -697,7 +814,7 @@ export default function RideTrackingScreen() {
                 {formatBDT(ride.fare_bdt)}
               </Text>
               <Text style={[styles.fareLabel, { color: textSecondary }]}>
-                {t('ride_tracking.pay_driver_cash')}
+                {paymentMethod === 'mfs_p2p' ? t('ride_tracking.paid_via_mfs', { provider: (driver?.mfs_provider ?? ride.mfs_provider ?? 'MFS').toUpperCase() }) : t('ride_tracking.pay_driver_cash')}
               </Text>
             </View>
 
@@ -746,6 +863,84 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingHorizontal: 16,
     zIndex: 10,
+  },
+  settlementCard: {
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 12,
+    marginBottom: 12,
+  },
+  settlementTabs: {
+    flexDirection: "row",
+    borderRadius: 10,
+    padding: 3,
+    marginBottom: 8,
+  },
+  settlementTab: {
+    flex: 1,
+    paddingVertical: 8,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 8,
+  },
+  settlementTabActive: {
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  settlementTabText: {
+    fontFamily: "Jakarta-SemiBold",
+    fontSize: 13,
+  },
+  mfsContent: {
+    marginTop: 4,
+  },
+  mfsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 10,
+  },
+  mfsBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  mfsBadgeText: {
+    fontFamily: "Jakarta-Bold",
+    fontSize: 11,
+    color: colors.white,
+  },
+  mfsNumber: {
+    fontFamily: "Jakarta-Bold",
+    fontSize: 16,
+    letterSpacing: 0.5,
+  },
+  mfsActionButtons: {
+    flexDirection: "row",
+    gap: 8,
+    marginBottom: 8,
+  },
+  mfsActionBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 9,
+    borderRadius: 8,
+    gap: 6,
+  },
+  mfsActionBtnText: {
+    fontFamily: "Jakarta-SemiBold",
+    fontSize: 12,
+    color: colors.white,
+  },
+  mfsSubtext: {
+    fontFamily: "Jakarta-Regular",
+    fontSize: 11,
+    lineHeight: 15,
   },
   iconBtn: {
     width: 44,

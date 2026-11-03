@@ -1,5 +1,5 @@
 {
-  "total": 1309,
+  "total": 1318,
   "screens": {
     "(auth)/_layout.tsx": [
       {
@@ -1970,35 +1970,39 @@
     "(main)/(customer)/finding-driver/index.tsx": [
       {
         "id": "customer.finding-driver.set-theme",
-        "line": 481
+        "line": 509
       },
       {
-        "id": "customer.finding-driver.set-finding-state",
-        "line": 579
+        "id": "customer.finding-driver.progress-bars",
+        "line": 556
       },
       {
-        "id": "customer.finding-driver.set-finding-state-2",
-        "line": 607
+        "id": "customer.finding-driver.set-elapsed-seconds",
+        "line": 622
+      },
+      {
+        "id": "customer.finding-driver.set-elapsed-seconds-2",
+        "line": 651
       },
       {
         "id": "customer.finding-driver.no-women-only-sheet",
-        "line": 619
+        "line": 663
       },
       {
         "id": "customer.finding-driver.handle-book-mixed",
-        "line": 636
+        "line": 680
       },
       {
         "id": "customer.finding-driver.handle-try-women-only-again",
-        "line": 645
+        "line": 689
       },
       {
         "id": "customer.finding-driver.handle-no-women-only-done",
-        "line": 653
+        "line": 697
       },
       {
         "id": "customer.finding-driver.handle-cancel",
-        "line": 666
+        "line": 710
       }
     ],
     "(main)/(customer)/no-drivers-available/index.tsx": [
@@ -2174,47 +2178,71 @@
     "(main)/(customer)/ride-tracking/[ride_id].tsx": [
       {
         "id": "customer.ride-tracking.ride_id.replace-home",
-        "line": 408
+        "line": 462
       },
       {
         "id": "customer.ride-tracking.ride_id.el-1",
-        "line": 494
+        "line": 548
       },
       {
         "id": "customer.ride-tracking.ride_id.set-theme",
-        "line": 515
+        "line": 569
       },
       {
         "id": "customer.ride-tracking.ride_id.handle-share",
-        "line": 521
+        "line": 575
       },
       {
         "id": "customer.ride-tracking.ride_id.women-only-badge",
-        "line": 540
+        "line": 594
       },
       {
         "id": "customer.ride-tracking.ride_id.push-chat",
-        "line": 609
+        "line": 663
       },
       {
         "id": "customer.ride-tracking.ride_id.handle-cancel",
-        "line": 613
+        "line": 667
       },
       {
         "id": "customer.ride-tracking.ride_id.handle-copy-pin",
-        "line": 648
+        "line": 702
+      },
+      {
+        "id": "customer.ride-tracking.settlement-card",
+        "line": 727
+      },
+      {
+        "id": "customer.ride-tracking.ride_id.set-settlement-mode",
+        "line": 733
+      },
+      {
+        "id": "customer.ride-tracking.ride_id.set-settlement-mode-2",
+        "line": 742
+      },
+      {
+        "id": "customer.ride-tracking.mfs-content",
+        "line": 750
+      },
+      {
+        "id": "customer.ride-tracking.ride_id.handle-copy-mfs-number",
+        "line": 763
+      },
+      {
+        "id": "customer.ride-tracking.ride_id.handle-open-mfs-app",
+        "line": 774
       },
       {
         "id": "customer.ride-tracking.ride_id.push-chat-2",
-        "line": 678
+        "line": 795
       },
       {
         "id": "customer.ride-tracking.ride_id.handle-share-2",
-        "line": 682
+        "line": 799
       },
       {
         "id": "customer.ride-tracking.ride_id.push-rate-driver",
-        "line": 707
+        "line": 824
       }
     ],
     "(main)/(customer)/schedule-ride/index.tsx": [
@@ -3251,24 +3279,32 @@
     ],
     "(main)/(rider)/finish-ride/index.tsx": [
       {
+        "id": "rider.finish-ride.set-settlement-mode",
+        "line": 484
+      },
+      {
+        "id": "rider.finish-ride.set-settlement-mode-2",
+        "line": 505
+      },
+      {
         "id": "rider.finish-ride.set-cash-received-taka",
-        "line": 458
+        "line": 577
       },
       {
         "id": "rider.finish-ride.set-show-toll-modal",
-        "line": 490
+        "line": 614
       },
       {
         "id": "rider.finish-ride.push-rate-rider",
-        "line": 676
+        "line": 832
       },
       {
         "id": "rider.finish-ride.handle-go-home",
-        "line": 681
+        "line": 837
       },
       {
         "id": "rider.finish-ride.set-theme",
-        "line": 707
+        "line": 863
       }
     ],
     "(main)/(rider)/hotspot-map/index.tsx": [

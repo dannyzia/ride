@@ -863,6 +863,10 @@ export const rides = pgTable(
     // Monitoring/billing counter — how many leads consumed in current window.
     // Check-in trigger reads redispatch_started_at (time-based), NOT this counter.
     redispatch_attempts: integer("redispatch_attempts").notNull().default(0),
+    // Plan 29: Peer-to-Peer MFS Assistance at Drop-Off
+    payment_method: varchar("payment_method", { length: 20 }).default("cash"), // 'cash' | 'mfs_p2p'
+    mfs_provider: varchar("mfs_provider", { length: 20 }), // 'bkash' | 'nagad'
+    mfs_number: varchar("mfs_number", { length: 20 }), // '01XXXXXXXXX'
     created_at: timestamptz("created_at").notNull().defaultNow(),
     updated_at: timestamptz("updated_at").notNull().defaultNow(),
   },
