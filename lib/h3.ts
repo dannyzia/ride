@@ -12,6 +12,11 @@ export function getH3CellRes8(lat: number, lng: number): string {
   return latLngToCell(lat, lng, SERVICE_ZONE_RESOLUTION);
 }
 
+/** H3 cell at resolution 10 (~65m) for dpMaps micro-indexes. */
+export function getH3CellRes10(lat: number, lng: number): string {
+  return latLngToCell(lat, lng, 10);
+}
+
 export function getH3Ring(lat: number, lng: number, k: number): string[] {
   return gridDisk(latLngToCell(lat, lng, RESOLUTION), k);
 }

@@ -3,6 +3,7 @@ import { logger } from "@/lib/logger";
 import type { MapLibreModule } from "./maplibreLoader";
 
 const BARIKOI_API_KEY = process.env.EXPO_PUBLIC_BARIKOI_API_KEY ?? "";
+const DPMAPS_TILES_STYLE_URL = process.env.EXPO_PUBLIC_DPMAPS_TILES_STYLE_URL ?? "";
 
 // ── Map style presets ───────────────────────────────────────
 
@@ -25,6 +26,9 @@ export const MAP_STYLE_PRESETS: MapStylePreset = {
 // If GPS is unavailable, show a loading state or error, never fake coordinates.
 
 export function useBarikoiMapStyle(dark = false): string {
+  if (DPMAPS_TILES_STYLE_URL) {
+    return DPMAPS_TILES_STYLE_URL;
+  }
   return dark ? MAP_STYLE_PRESETS.dark : MAP_STYLE_PRESETS.light;
 }
 

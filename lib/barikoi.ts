@@ -11,6 +11,7 @@ import { systemConfig } from '@/src/db/schema';
 import { eq } from 'drizzle-orm';
 import { logger } from './logger';
 import { haversineKm } from './fareCalc';
+import { getDispatchRoute } from './dpmaps/mapsRouter';
 
 const BARIKOI_API_KEY = process.env.BARIKOI_API_KEY ?? '';
 const GOOGLE_MAPS_SERVER_API_KEY = process.env.GOOGLE_MAPS_SERVER_API_KEY ?? '';
@@ -18,7 +19,7 @@ const GOOGLE_MAPS_SERVER_API_KEY = process.env.GOOGLE_MAPS_SERVER_API_KEY ?? '';
 export interface RouteResult {
   distanceKm: number;
   durationMin: number;
-  provider: 'barikoi' | 'google' | 'haversine_fallback';
+  provider: 'barikoi' | 'google' | 'haversine_fallback' | 'osrm';
   /** Encoded route polyline (pickup→drop reference corridor). Null when no
    *  road-network route was available (haversine fallback) or the provider
    *  response omitted the geometry. */
@@ -139,54 +140,43 @@ export async function getMapsProvider(): Promise<'barikoi' | 'google'> {
 
 /**
  * Convenience wrapper: reads maps_provider toggle, then returns
- * route distance using the active provider's API.
+ * route distance using the active provider's API via dpMaps router.
  */
 export async function getRouteDistance(
   originLat: number, originLng: number,
   destLat: number, destLng: number,
+  vehicleType: 'car' | 'bike' | 'cng' = 'car',
 ): Promise<RouteResult> {
   const provider = await getMapsProvider();
-  return getRouteDistanceDuration(originLat, originLng, destLat, destLng, provider === 'barikoi');
+  return getRouteDistanceDuration(originLat, originLng, destLat, destLng, provider === 'barikoi', vehicleType);
 }
 
 /**
  * Get route distance and duration between two points.
+ * Dispatches via dpMaps router across off/shadow/primary/sole modes.
  *
- * Resolution order:
- *   1. Barikoi Directions (primary)
- *   2. Google Maps Directions (fallback 1)
- *   3. Haversine × 1.3 (final fallback)
- *
- * Coordinates are in (lat, lng) — converted to GeoJSON inside.
+ * Coordinates are in (lat, lng).
  */
 export async function getRouteDistanceDuration(
   originLat: number, originLng: number,
   destLat: number, destLng: number,
   preferBarikoi = true,
+  vehicleType: 'car' | 'bike' | 'cng' = 'car',
 ): Promise<RouteResult> {
-  // Primary: Barikoi
-  if (preferBarikoi) {
-    const barikoi = await barikoiRoute(originLng, originLat, destLng, destLat);
-    if (barikoi) return barikoi;
+  const dispatchResult = await getDispatchRoute(
+    originLat,
+    originLng,
+    destLat,
+    destLng,
+    vehicleType,
+    undefined,
+    preferBarikoi,
+  );
 
-    // Fallback 1: Google
-    const google = await googleRoute(originLat, originLng, destLat, destLng);
-    if (google) return google;
-  } else {
-    // Google preferred
-    const google = await googleRoute(originLat, originLng, destLat, destLng);
-    if (google) return google;
-
-    const barikoi = await barikoiRoute(originLng, originLat, destLng, destLat);
-    if (barikoi) return barikoi;
-  }
-
-  // Final fallback: Haversine × 1.3 (urban road factor)
-  const directKm = haversineKm(originLat, originLng, destLat, destLng);
-  const distanceKm = Math.round(directKm * 1.3 * 1000) / 1000;
-  // Assume 20 km/h average urban speed for ETA estimate
-  const durationMin = Math.round((distanceKm / 20) * 60 * 10) / 10;
-  // No road-network path exists to encode — callers persist route_polyline
-  // as null in this case (the rides.route_polyline column is nullable).
-  return { distanceKm, durationMin, provider: 'haversine_fallback', polyline: null };
+  return {
+    distanceKm: dispatchResult.distanceKm,
+    durationMin: dispatchResult.durationMin,
+    provider: dispatchResult.provider === 'haversine_floor' ? 'haversine_fallback' : dispatchResult.provider,
+    polyline: dispatchResult.polyline,
+  };
 }

@@ -20,6 +20,7 @@ import { PICKUP_TRUEUP_CONFIG_KEYS, computePickupTrueup, type PickupTrueupResult
 import { pickupFeeV6 } from '@/lib/pickupFee';
 import { buildCashHandshake } from '@/lib/cashHandshake';
 import { lookupZoneFee } from '@/lib/zoneFee';
+import { ingestCompletedTrip } from '@/lib/dpmaps/evidenceIngestor';
 import * as errors from '@/lib/errors';
 
 export async function POST(request: Request) {
@@ -619,6 +620,20 @@ const rideId = segments[segments.indexOf("ride") + 1];
       // D2-5: match-class key — one push per (ride, event), ever. D2-3 copyKey
       // resolves the body in the rider's stored locale.
       sendNotification(ride.user_id, 'ride:completed', 'Ride Complete', 'Thanks for riding with us! Rate your driver.', { ride_id: rideId }, { idempotencyKey: `ride:${rideId}:completed`, copyKey: 'ride_completed' }).catch(() => {});
+    }
+
+    // dpMaps continuous learning telemetry ingestion (fire-and-forget, clean-room)
+    if (ride.user_id && ride.driver_id && ride.destination_address) {
+      ingestCompletedTrip({
+        rider_user_id: ride.user_id,
+        driver_user_id: ride.driver_id,
+        typed_query: ride.destination_address,
+        driver_dropoff_gps: {
+          lat: Number(ride.destination_latitude),
+          lng: Number(ride.destination_longitude),
+        },
+        completed_at: completedAt,
+      }).catch((e) => logger.warn('[ride/complete] dpMaps telemetry ingestion skipped', { error: String(e) }));
     }
     const wsPort = process.env.UTILS_SERVER_PORT ?? "3001";
     const internalSecret = process.env.WEBSOCKET_INTERNAL_SECRET;
