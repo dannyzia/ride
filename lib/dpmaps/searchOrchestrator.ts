@@ -126,6 +126,7 @@ async function queryVendorAutocomplete(
         point_type: 'dropoff_point',
         source: 'vendor',
         session_token: sessionToken,
+        coords: Number.isFinite(lat) && Number.isFinite(lng) ? { lat, lng } : undefined,
       });
     }
 

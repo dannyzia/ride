@@ -49,6 +49,13 @@ export async function GET(request: Request) {
         point_type: item.point_type,
         category: item.category,
         session_token: item.session_token,
+        latitude: item.coords?.lat,
+        longitude: item.coords?.lng,
+        lat: item.coords?.lat,
+        lng: item.coords?.lng,
+        address: item.subtitle ? `${item.title}, ${item.subtitle}` : item.title,
+        display_name: item.title,
+        name: item.title,
       })),
     });
   } catch (err: unknown) {

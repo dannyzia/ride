@@ -18,6 +18,7 @@ import { icons } from "@/constants/data";
 import { useCustomer } from "@/store";
 import { router, useLocalSearchParams } from "expo-router";
 import { getBarikoiAutocompleteUrl } from "@/lib/useBarikoiMapStyle";
+import { API_URL } from "@/lib/config";
 import { logger } from "@/lib/logger";
 import { useIsDark, useAppearance } from "@/lib/useAppearance";
 import { useTranslation } from "react-i18next";
@@ -100,7 +101,26 @@ const AutocompletePage = () => {
     const timeoutId = setTimeout(async () => {
       setLoading(true);
       try {
-        // ── Try Barikoi first ──────────────────────────────
+        // ── Try dpMaps backend search first ────────────────
+        try {
+          const searchParams = new URLSearchParams({ q: query });
+          if (userLatitude != null && userLongitude != null) {
+            searchParams.set("lat", String(userLatitude));
+            searchParams.set("lng", String(userLongitude));
+          }
+          const backendRes = await fetch(`${API_URL}/api/search/autocomplete?${searchParams}`);
+          if (backendRes.ok) {
+            const data = await backendRes.json();
+            if (Array.isArray(data.suggestions) && data.suggestions.length > 0) {
+              setSuggestions(data.suggestions);
+              return;
+            }
+          }
+        } catch (_backendErr) {
+          // Fall through to vendor on error
+        }
+
+        // ── Fallback 1: Try Barikoi ────────────────────────
         const barikoiUrl = getBarikoiAutocompleteUrl(
           query,
           userLatitude ?? undefined,

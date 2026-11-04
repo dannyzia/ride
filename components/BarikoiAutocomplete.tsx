@@ -12,6 +12,7 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import { BarikoiInputProps } from "@/types/type";
 import { useCustomer } from "@/store";
 import { getBarikoiAutocompleteUrl } from "@/lib/useBarikoiMapStyle";
+import { API_URL } from "@/lib/config";
 import { logger } from "@/lib/logger";
 import { colors } from "@/theme/goRide";
 import { useIsDark } from "@/lib/useAppearance";
@@ -71,6 +72,29 @@ const BarikoiAutocomplete = ({
     const debounce = setTimeout(async () => {
       setLoading(true);
       try {
+        // ── Try dpMaps backend search first ────────────────
+        try {
+          const searchParams = new URLSearchParams({ q: query });
+          if (userLatitude != null && userLongitude != null) {
+            searchParams.set("lat", String(userLatitude));
+            searchParams.set("lng", String(userLongitude));
+          }
+          const backendRes = await fetch(`${API_URL}/api/search/autocomplete?${searchParams}`, {
+            signal: controller.signal,
+          });
+          if (backendRes.ok) {
+            const data = await backendRes.json();
+            if (Array.isArray(data.suggestions) && data.suggestions.length > 0) {
+              setSuggestions(data.suggestions);
+              setShowSuggestions(true);
+              return;
+            }
+          }
+        } catch (backendErr) {
+          if (backendErr instanceof Error && backendErr.name === "AbortError") return;
+          // Fall through to vendor on error
+        }
+
         const url = getBarikoiAutocompleteUrl(
           query,
           userLatitude ?? undefined,
