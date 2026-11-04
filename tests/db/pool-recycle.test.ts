@@ -106,6 +106,7 @@ function lastInstance(): {
 }
 
 beforeEach(() => {
+  delete (globalThis as any).__ride_db_pool;
   postgresMock.mockClear();
   drizzleMock.mockClear();
 });

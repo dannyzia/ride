@@ -152,7 +152,7 @@ describe('A8 — honest job counter', () => {
     // oversized-object reconciler added 2026-10-17 C8-FIX D5-2. Job 55
     // stays retired since 2026-10-16 B5-1 and its number is never reused —
     // cf. the scheduler.ts tombstone).
-    expect(logged).toBe(60);
+    expect(logged).toBe(61);
   });
 });
 
