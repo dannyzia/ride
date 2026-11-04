@@ -1,5 +1,5 @@
 {
-  "total": 1318,
+  "total": 1334,
   "screens": {
     "(auth)/_layout.tsx": [
       {
@@ -4791,6 +4791,72 @@
       {
         "id": "admin.lost-items.mediate",
         "line": 69
+      }
+    ],
+    "admin/maps-engine.tsx": [
+      {
+        "id": "admin.maps-engine.set-rollback-modal-visible",
+        "line": 230
+      },
+      {
+        "id": "admin.maps-engine.fetch-config",
+        "line": 246
+      },
+      {
+        "id": "admin.maps-engine.set-routing-mode",
+        "line": 277
+      },
+      {
+        "id": "admin.maps-engine.set-search-mode",
+        "line": 312
+      },
+      {
+        "id": "admin.maps-engine.set-osrm-car-url",
+        "line": 343
+      },
+      {
+        "id": "admin.maps-engine.set-osrm-bike-url",
+        "line": 354
+      },
+      {
+        "id": "admin.maps-engine.set-osrm-cng-url",
+        "line": 368
+      },
+      {
+        "id": "admin.maps-engine.set-meili-url",
+        "line": 379
+      },
+      {
+        "id": "admin.maps-engine.set-tiles-url",
+        "line": 393
+      },
+      {
+        "id": "admin.maps-engine.set-osrm-timeout",
+        "line": 406
+      },
+      {
+        "id": "admin.maps-engine.set-barikoi-timeout",
+        "line": 416
+      },
+      {
+        "id": "admin.maps-engine.set-google-spend-cap",
+        "line": 426
+      },
+      {
+        "id": "admin.maps-engine.set-learning-enabled",
+        "line": 449
+      },
+      {
+        "id": "admin.maps-engine.handle-save",
+        "line": 466
+      },
+      {
+        "id": "admin.maps-engine.set-rollback-modal-visible-2",
+        "line": 498
+      },
+      {
+        "id": "admin.maps-engine.handle-execute-rollback",
+        "line": 506
       }
     ],
     "admin/marketplace/certifications.tsx": [

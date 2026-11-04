@@ -196,6 +196,19 @@ const ALLOWED_KEYS = new Set([
   'joma_bike_prem_monthly_bdt',
   'joma_daily_bdt_cng',
   'joma_operating_days_per_month',
+
+  // dpMaps — in-house mapping & routing engine integration
+  'routing_provider_mode',
+  'search_provider_mode',
+  'dpmaps_osrm_car_url',
+  'dpmaps_osrm_bike_url',
+  'dpmaps_osrm_cng_url',
+  'dpmaps_meilisearch_url',
+  'dpmaps_tiles_style_url',
+  'dpmaps_osrm_timeout_ms',
+  'dpmaps_barikoi_timeout_ms',
+  'dpmaps_google_spend_cap_usd',
+  'dpmaps_learning_ingest_enabled',
 ]);
 
 const BOOLEAN_KEYS = new Set([
@@ -208,6 +221,7 @@ const BOOLEAN_KEYS = new Set([
   'pickup_low_confidence_never_bills_above_firm_quote',
   'cold_drop_boost_enabled',
   'zone_fee_enabled',
+  'dpmaps_learning_ingest_enabled',
 ]);
 
 const CSV_KEYS = new Set([
@@ -218,6 +232,8 @@ const CSV_KEYS = new Set([
 const ENUM_KEYS: Record<string, Set<string>> = {
   fare_framework_stage: new Set(['stage0', 'stage1', 'stage2', 'stage3']),
   night_schedule: new Set(['20:00-06:00']),
+  routing_provider_mode: new Set(['off', 'shadow', 'primary', 'sole', '0', '1', '2', '3']),
+  search_provider_mode: new Set(['vendor_only', 'mixed_shadow', 'dpmaps_primary', 'dpmaps_sole']),
 };
 
 function validateKeyValue(key: string, value: string): string | null {

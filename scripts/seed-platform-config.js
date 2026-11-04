@@ -60,10 +60,22 @@ async function seed() {
       -- launch. One flag (PATCH /api/admin/config) restores everything.
       ('payments_enabled',                     'false', now()),
       ('women_only_rides_enabled',             'false', now()),
-      ('scooter_vehicle_type_enabled',         'false', now())
+      ('scooter_vehicle_type_enabled',         'false', now()),
+      -- dpMaps in-house mapping & routing engine integration
+      ('routing_provider_mode',                'shadow', now()),
+      ('search_provider_mode',                 'mixed_shadow', now()),
+      ('dpmaps_osrm_car_url',                  'http://localhost:5001', now()),
+      ('dpmaps_osrm_bike_url',                 'http://localhost:5002', now()),
+      ('dpmaps_osrm_cng_url',                  'http://localhost:5003', now()),
+      ('dpmaps_meilisearch_url',               'http://localhost:7700', now()),
+      ('dpmaps_tiles_style_url',               'https://tiles.yourdomain.com/style.json', now()),
+      ('dpmaps_osrm_timeout_ms',               '300', now()),
+      ('dpmaps_barikoi_timeout_ms',            '400', now()),
+      ('dpmaps_google_spend_cap_usd',          '50.00', now()),
+      ('dpmaps_learning_ingest_enabled',       'true', now())
     ON CONFLICT (key) DO NOTHING;
   `);
-  console.log("platform_config seeded (24 keys)");
+  console.log("platform_config seeded (35 keys)");
   await client.end();
 }
 seed().catch(console.error);

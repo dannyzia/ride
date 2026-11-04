@@ -404,6 +404,13 @@ const NAV: NavItem[] = [
     roles: OWNER_ADMIN, // config.write
   },
   {
+    route: "/admin/maps-engine",
+    label: "Maps & Location Engine",
+    icon: "map-search",
+    group: "Config",
+    roles: OWNER_ADMIN, // config.write
+  },
+  {
     route: "/admin/cancellation-policies",
     label: "Cancellation Policies",
     icon: "calendar-remove",
