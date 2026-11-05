@@ -213,6 +213,9 @@ function findNodeOnlyImports() {
       "lib/auth.ts",
       "lib/idempotency.ts",
       "lib/integrations/webhookHandler.ts",
+      "lib/dpmaps/destSession.ts",
+      "lib/dpmaps/evidenceIngestor.ts",
+      "lib/dpmaps/mapsRouter.ts",
     ];
     if (SERVER_ONLY.includes(rel)) return;
 
