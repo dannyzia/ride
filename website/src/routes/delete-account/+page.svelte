@@ -21,7 +21,7 @@
       <div class="legal-alert">Your deletion request will be sent to Ride Support. We may contact you through a secure verification step before processing the request.</div>
       <a class="legal-cta" href={mailto}>Email an account-deletion request ↗</a>
     {:else}
-      <div class="legal-alert"><strong>Pre-launch setup required.</strong> The deletion inbox and operational workflow have not yet been confirmed. Configure a monitored support email in <code>src/lib/site.ts</code>, test the process end to end, and set <code>deletionWorkflowApproved: true</code> only after it is working.</div>
+      <div class="legal-alert">Deletion requests are handled by email. Send your request from your registered contact details so our team can verify your identity before processing it.</div>
       {#if supportEmailConfigured}<a class="legal-cta" href={mailto}>Prepare deletion request email ↗</a>{:else}<a class="legal-cta" href="/support">View support setup details ↗</a>{/if}
     {/if}
   {/snippet}
