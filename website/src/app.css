@@ -23,6 +23,8 @@ button { font: inherit; }
 .section-wrap { width: min(1180px, calc(100% - 64px)); margin: 0 auto; }
 .site-header { width: min(1320px, calc(100% - 64px)); height: 88px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 28px; position: relative; z-index: 20; }
 .brand { display: inline-flex; align-items: center; gap: 10px; flex-shrink: 0; }
+.brand-mark-img { height: 38px; width: 38px; border-radius: 10px; display: block; }
+.brand-footer .brand-mark-img { height: 33px; width: 33px; }
 .brand-mark { height: 38px; width: 38px; display: grid; place-items: center; border-radius: 12px 12px 12px 4px; background: var(--teal); color: #fff; font-family: 'Segoe UI', system-ui, sans-serif; font-size: 23px; font-weight: 800; box-shadow: 0 7px 18px #0b837926; }
 .brand-name { font-family: 'Segoe UI', system-ui, sans-serif; font-size: 24px; font-weight: 800; letter-spacing: -1.5px; }
 .brand-period { color: var(--orange); }

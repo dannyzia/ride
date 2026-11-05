@@ -109,7 +109,7 @@
 
   const current = $derived(copy[lang]);
   const supportHref = supportEmailConfigured ? `mailto:${site.supportEmail}` : '/support';
-  const ogImage = `${site.siteUrl}/og-ride.svg`;
+  const ogImage = `${site.siteUrl}/logo.png`;
 
   $effect(() => {
     document.documentElement.lang = lang === 'bn' ? 'bn' : 'en';
@@ -133,13 +133,15 @@
   <meta property="og:title" content="Ride — Everyday mobility, local commerce and delivery" />
   <meta property="og:description" content="Rides, local shopping and delivery in one Bangladesh-focused app. Check service availability in your area." />
   <meta property="og:image" content={ogImage} />
+  <meta property="og:image:width" content="469" />
+  <meta property="og:image:height" content="469" />
   <meta name="twitter:card" content="summary_large_image" />
 </svelte:head>
 
 <div class="site-shell" class:bn={lang === 'bn'}>
   <header class="site-header">
     <a class="brand" href="/" aria-label="Ride home">
-      <span class="brand-mark">R</span>
+      <img class="brand-mark-img" src="/logo.png" alt="" width="38" height="38" />
       <span class="brand-name">Ride<span class="brand-period">.</span></span>
     </a>
 
@@ -268,7 +270,7 @@
   </main>
 
   <footer class="site-footer">
-    <div class="footer-main section-wrap"><div class="footer-brand"><a class="brand brand-footer" href="/"><span class="brand-mark">R</span><span class="brand-name">Ride<span class="brand-period">.</span></span></a><p>{current.footerLine}</p></div><div class="footer-links"><div><span class="footer-label">EXPLORE</span><a href="#services">{current.navServices}</a><a href="#partners">{current.navPartners}</a><a href="#safety">{current.navSafety}</a></div><div><span class="footer-label">INFORMATION</span><a href="/privacy">Privacy policy</a><a href="/delete-account">Delete account</a><a href="/support">Support</a></div></div></div>
+    <div class="footer-main section-wrap"><div class="footer-brand"><a class="brand brand-footer" href="/"><img class="brand-mark-img" src="/logo.png" alt="" width="33" height="33" /><span class="brand-name">Ride<span class="brand-period">.</span></span></a><p>{current.footerLine}</p></div><div class="footer-links"><div><span class="footer-label">EXPLORE</span><a href="#services">{current.navServices}</a><a href="#partners">{current.navPartners}</a><a href="#safety">{current.navSafety}</a></div><div><span class="footer-label">INFORMATION</span><a href="/privacy">Privacy policy</a><a href="/delete-account">Delete account</a><a href="/support">Support</a></div></div></div>
     <div class="footer-prelaunch section-wrap"><span>Pre-launch preview</span><span>{site.legalEntity} · Powered by {site.poweredBy} · {site.businessAddress}</span></div>
     <div class="footer-bottom section-wrap"><span>© {new Date().getFullYear()} {site.brand}. All rights reserved.</span><span>{current.footerNotice}</span><span>Bangladesh</span></div>
   </footer>

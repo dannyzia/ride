@@ -11,7 +11,7 @@
 </svelte:head>
 
 <div class="legal-shell">
-  <header class="legal-top"><a class="brand" href="/"><span class="brand-mark">R</span><span class="brand-name">Ride<span class="brand-period">.</span></span></a><a class="text-link" href="/">Back to website ↗</a></header>
+  <header class="legal-top"><a class="brand" href="/"><img class="brand-mark-img" src="/logo.png" alt="" width="38" height="38" /><span class="brand-name">Ride<span class="brand-period">.</span></span></a><a class="text-link" href="/">Back to website ↗</a></header>
   <main class="legal-main">
     <div class="eyebrow"><span class="eyebrow-dot"></span>YOUR DATA, YOUR CHOICE</div>
     <h1>Request account deletion</h1>

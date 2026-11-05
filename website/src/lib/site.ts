@@ -12,7 +12,7 @@ export const site = {
   legalEntity: 'Ride Digital Services',
   poweredBy: 'Digital-Papyrus',
   businessAddress: '7/1-D, R.K. Mission Road, Dhaka - 1203',
-  playStoreUrl: '',
+  playStoreUrl: 'https://play.google.com/store/apps/details?id=com.ride.bd',
   appStoreUrl: '',
   lastUpdated: '5 November 2026',
   /** Set true only after the live app, SDKs, backend and retention rules are audited. */
