@@ -118,6 +118,28 @@ button { font: inherit; }
 .site-footer { background: #e9eee7; }.footer-main { padding-top: 48px; padding-bottom: 42px; display: flex; justify-content: space-between; gap: 40px; }.brand-footer .brand-mark { height: 33px; width: 33px; font-size: 20px; }.brand-footer .brand-name { font-size: 21px; }.footer-brand p { color: #798780; font-size: 11px; margin: 14px 0 0; max-width: 300px; }.footer-links { display: flex; gap: 84px; }.footer-links > div { display: grid; align-content: start; gap: 11px; }.footer-label { color: #94a099; font-size: 8px; font-weight: 800; letter-spacing: 1.2px; margin-bottom: 5px; }.footer-links a { color: #64746d; font-size: 10px; font-weight: 600; }.footer-prelaunch { border-top: 1px solid #d8e0d7; display: flex; align-items: center; justify-content: space-between; gap: 20px; color: #96a099; font-size: 8px; padding-top: 14px; padding-bottom: 14px; }
 .footer-bottom { border-top: 1px solid #d8e0d7; min-height: 53px; display: flex; align-items: center; justify-content: space-between; gap: 20px; color: #96a099; font-size: 8px; }
 .bn { font-family: 'Noto Sans Bengali', 'Segoe UI', system-ui, sans-serif; }.bn h1, .bn h2, .bn h3, .bn .brand-name { font-family: 'Noto Sans Bengali', 'Segoe UI', system-ui, sans-serif; letter-spacing: -.4px; }.bn .eyebrow { letter-spacing: .5px; }
+/* Draft document rendering */
+.draft-ph { background: #fdf0d5; border: 1px dashed #c98a2d; border-radius: 5px; padding: 0 5px; font-weight: 700; color: #8b512f; white-space: nowrap; }
+.legal-alert .draft-ph { background: #fff; }
+.legal-md { color: #4c5b55; font-size: 13.5px; line-height: 1.85; }
+.legal-md h2 { font-family: 'Segoe UI', system-ui, sans-serif; font-size: 20px; color: var(--ink); margin: 0; padding: 34px 0 10px; border-top: 1px solid var(--line); }
+.legal-md h2:first-child { padding-top: 6px; border-top: 0; }
+.legal-md h3 { font-size: 15px; color: var(--ink); margin: 22px 0 8px; }
+.legal-md p, .legal-md li { margin: 0 0 10px; }
+.legal-md ul, .legal-md ol { padding-left: 22px; }
+.legal-md blockquote { border-left: 3px solid var(--teal); margin: 16px 0; padding: 4px 16px; color: #5c6e67; background: #eef4ef; border-radius: 0 8px 8px 0; }
+.legal-md blockquote p { margin: 6px 0; }
+.legal-md hr { border: 0; border-top: 1px solid var(--line); margin: 26px 0; }
+.legal-md code { font-size: 12px; background: #eef2ee; padding: 1px 6px; border-radius: 5px; }
+.legal-md table { width: 100%; border-collapse: collapse; font-size: 12px; margin: 14px 0; display: block; overflow-x: auto; }
+.legal-md th, .legal-md td { border: 1px solid var(--line); padding: 8px 10px; text-align: left; vertical-align: top; }
+.legal-md th { background: #e9f1ea; }
+.doc-index { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 14px; }
+.doc-index a { border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; display: grid; gap: 3px; background: #fff; }
+.doc-index a b { font-size: 13px; color: var(--ink); }
+.doc-index a small { font-size: 10px; color: #7c8982; text-transform: uppercase; letter-spacing: .8px; }
+.doc-index a.active { border-color: var(--teal); background: #e9f4ee; }
+.doc-index a:hover { border-color: var(--teal); }
 /* Supporting pages */
 .legal-shell { min-height: 100vh; background: var(--paper); }.legal-top { height: 76px; border-bottom: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; width: min(1050px, calc(100% - 48px)); margin: auto; }.legal-main { width: min(820px, calc(100% - 48px)); margin: 0 auto; padding: 76px 0 100px; }.legal-main h1 { font-family: 'Segoe UI', system-ui, sans-serif; font-size: clamp(36px, 5vw, 54px); letter-spacing: -2px; line-height: 1.1; margin: 17px 0; }.legal-intro { color: #64756e; font-size: 15px; line-height: 1.8; max-width: 690px; }.legal-alert { background: #fff2e8; border: 1px solid #f0d4c0; border-radius: 8px 16px 16px 16px; padding: 17px 19px; color: #8b512f; font-size: 12px; line-height: 1.7; margin: 28px 0; }.legal-block { border-top: 1px solid var(--line); padding: 24px 0; }.legal-block h2 { font-family: 'Segoe UI', system-ui, sans-serif; font-size: 19px; margin: 0 0 10px; }.legal-block p, .legal-block li { color: #687871; font-size: 13px; line-height: 1.85; }.legal-block ul { padding-left: 20px; }.legal-cta { display: inline-flex; padding: 13px 18px; background: var(--teal); color: white; border-radius: 5px 14px 14px 14px; font-weight: 700; font-size: 12px; margin-top: 10px; }.legal-prelaunch { width: min(1050px, calc(100% - 48px)); margin: 0 auto; padding: 14px 0 0; color: #7c8982; font-size: 11px; }
 .legal-footer { border-top: 1px solid var(--line); width: min(1050px, calc(100% - 48px)); padding: 22px 0; margin: 0 auto; display: flex; justify-content: space-between; color: #7c8982; font-size: 11px; }.legal-footer a { color: var(--teal); font-weight: 700; }
@@ -134,6 +156,7 @@ button { font: inherit; }
   .partner-section { grid-template-columns: 1fr; padding-top: 72px; padding-bottom: 72px; gap: 35px; }.partner-cards { gap: 9px; }.partner-card { padding: 18px 14px; min-height: 300px; }.partner-card h3 { font-size: 16px; }.partner-card p { font-size: 10px; }.partner-label { font-size: 7px; }
   .safety-inner { grid-template-columns: 1fr; gap: 28px; padding-top: 68px; padding-bottom: 68px; }.safety-panel { padding: 20px; }.faq-section { grid-template-columns: 1fr; gap: 28px; padding-top: 72px; padding-bottom: 75px; }.faq-heading h2 { max-width: none; }.faq-question { font-size: 12px; }.faq-answer { font-size: 11px; }
   .contact-section { padding-bottom: 50px; }.contact-card { padding: 40px 28px; min-height: 380px; align-items: flex-start; }.contact-content { max-width: 100%; }.contact-content h2 { font-size: 36px; }.contact-art { opacity: .26; right: -65px; top: 68%; transform: translateY(-50%) scale(.8); }.launch-line { flex-wrap: wrap; line-height: 1.5; }.launch-line a { margin-left: auto; }
+  .doc-index { grid-template-columns: 1fr; }
   .footer-main { flex-direction: column; padding-top: 35px; gap: 30px; }.footer-links { gap: 48px; }.footer-bottom { flex-wrap: wrap; justify-content: flex-start; padding-top: 15px; padding-bottom: 15px; gap: 8px 20px; }.footer-bottom span:nth-child(2) { width: 100%; order: 3; }
 }
 @media (max-width: 390px) { .service-grid { grid-template-columns: 1fr; }.service-card { min-height: 205px; }.partner-cards { grid-template-columns: 1fr; }.partner-card { min-height: 235px; }.hero-actions { gap: 4px; }.button { padding: 14px 15px; gap: 12px; }.floating-note { padding: 10px; }.note-one { left: -19px; }.note-two { right: -18px; } }
