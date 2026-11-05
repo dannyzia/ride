@@ -147,7 +147,7 @@ export const shadows = {
   },
 } as const;
 
-export const goRideTheme = {
+export const rideTheme = {
   colors,
   fonts,
   typography,
@@ -155,3 +155,5 @@ export const goRideTheme = {
   spacing,
   shadows,
 };
+
+export const goRideTheme = rideTheme;

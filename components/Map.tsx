@@ -9,8 +9,8 @@ import {
 import MapLibreGL, { type MapLibreModule } from "@/utils/maplibreLoader";
 import type { ComponentRef } from "react";
 
-const MARKER_USER = require("@/assets/icons/marker-goride-Marker Navigation.png");
-const MARKER_DESTINATION = require("@/assets/icons/marker-goride-Marker Navigation-1.png");
+const MARKER_USER = require("@/assets/icons/marker-user.png");
+const MARKER_DESTINATION = require("@/assets/icons/marker-destination.png");
 
 const MapViewLib = MapLibreGL?.MapView ?? null;
 const PointAnnotation = MapLibreGL?.PointAnnotation ?? null;

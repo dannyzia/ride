@@ -19,7 +19,7 @@ const FETCH_ERROR_MESSAGES: Record<string, string> = {
   offer_expired: "Offer expired",
 };
 
-// Drop-zone heat chip (Phase D / Stage 2 reveal): existing goRide tokens only
+// Drop-zone heat chip (Phase D / Stage 2 reveal): existing theme tokens only
 // — hot = warm amber, cold = cool blue, neutral = default gray.
 const HEAT_CHIP: Record<
   "hot" | "neutral" | "cold",
