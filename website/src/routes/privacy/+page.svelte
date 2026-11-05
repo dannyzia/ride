@@ -29,6 +29,6 @@
 
     <div class="legal-alert"><strong>Publication gate:</strong> this page is currently marked no-index and is not a final legal policy. Have the data inventory and final language reviewed by the responsible privacy/legal owner. Google Play requires a public, active, non-PDF privacy-policy webpage that accurately describes the app's actual data practices.</div>
   </main>
-  <p class="legal-prelaunch">Pre-launch preview — {site.legalEntity} · {site.businessAddress}</p>
+  <p class="legal-prelaunch">Pre-launch preview — {site.legalEntity} · Powered by {site.poweredBy} · {site.businessAddress}</p>
   <footer class="legal-footer"><span>© {new Date().getFullYear()} Ride</span><span><a href="/delete-account">Delete account</a> · <a href="/support">Support</a></span></footer>
 </div>

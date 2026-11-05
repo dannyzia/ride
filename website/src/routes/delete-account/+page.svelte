@@ -28,6 +28,6 @@
     <section class="legal-block"><h2>Data that may need limited retention</h2><p>The final policy must identify exact categories and legal or legitimate reasons for any retained records, such as transaction, payment, safety or fraud-prevention records. Do not use this statement as a blanket reason to keep all account data. The retention period and access restrictions must be documented.</p></section>
     <section class="legal-block"><h2>Need help?</h2><p>{#if supportEmailConfigured}Contact <a href={`mailto:${site.supportEmail}`}>{site.supportEmail}</a>.{:else}The support email has not been configured yet. Set the real monitored mailbox in <code>src/lib/site.ts</code> before launch.{/if}</p><p>See the <a href="/privacy">Ride privacy policy</a> for the data-handling and retention details.</p></section>
   </main>
-  <p class="legal-prelaunch">Pre-launch preview — {site.legalEntity} · {site.businessAddress}</p>
+  <p class="legal-prelaunch">Pre-launch preview — {site.legalEntity} · Powered by {site.poweredBy} · {site.businessAddress}</p>
   <footer class="legal-footer"><span>© {new Date().getFullYear()} Ride</span><span><a href="/privacy">Privacy policy</a> · <a href="/support">Support</a></span></footer>
 </div>

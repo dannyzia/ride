@@ -19,6 +19,6 @@
     <section class="legal-block"><h2>Privacy and data requests</h2>{#if privacyEmailConfigured}<p>Email: <a href={`mailto:${site.privacyEmail}`}>{site.privacyEmail}</a></p>{:else}<p>Set a dedicated privacy contact or designate a monitored support inbox for privacy requests before publication.</p>{/if}<p>To request account deletion, use the <a href="/delete-account">account deletion page</a>.</p></section>
     <section class="legal-block"><h2>Emergency situations</h2><p>Do not use ordinary app support for a life-threatening emergency. Ride is not an emergency-response service. In Bangladesh, contact the national emergency service at 999.</p></section>
   </main>
-  <p class="legal-prelaunch">Pre-launch preview — {site.legalEntity} · {site.businessAddress}</p>
+  <p class="legal-prelaunch">Pre-launch preview — {site.legalEntity} · Powered by {site.poweredBy} · {site.businessAddress}</p>
   <footer class="legal-footer"><span>© {new Date().getFullYear()} Ride</span><span><a href="/privacy">Privacy policy</a> · <a href="/delete-account">Delete account</a></span></footer>
 </div>
