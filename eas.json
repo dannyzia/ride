@@ -38,7 +38,7 @@
         "EAS_BUILD_PROFILE": "production",
         "EXPO_WEB_OUTPUT": "single",
         "NODE_OPTIONS": "--max-old-space-size=8192",
-        "EXPO_PUBLIC_SERVER_URL": "https://api.digital-papyrus.com",
+        "EXPO_PUBLIC_SERVER_URL": "https://ride-api.digital-papyrus.com",
         "EXPO_PUBLIC_WEB_SOCKET_SERVER_URL": "wss://ride-utils-server.digital-papyrus.com",
         "EXPO_PUBLIC_R2_DOMAIN": "https://ridestorage.digital-papyrus.com"
       },
