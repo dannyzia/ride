@@ -9,6 +9,11 @@ services:
     buildCommand: bash build.sh
     startCommand: node server.js
     autoDeploy: true
+    # The standalone marketing site lives in ./website and deploys elsewhere.
+    # Changes that only touch it must not trigger a ride-api rebuild.
+    buildFilter:
+      ignoredPaths:
+        - website/**
     # ───────────────────────────────────────────────────────────
     # ENVIRONMENT VARIABLES
     #

@@ -98,7 +98,7 @@
   } as const;
 
   const serviceCards = [
-    { icon: '↗', className: 'mobility', title: { en: 'Everyday rides', bn: 'দৈনন্দিন যাতায়াত' }, desc: { en: 'Choose from bike, scooter, CNG and car options for the journey ahead.', bn: 'যাত্রার জন্য বাইক, স্কুটার, সিএনজি ও কারের বিকল্প বেছে নিন।' }, tags: { en: 'Bike · Scooter · CNG · Car', bn: 'বাইক · স্কুটার · সিএনজি · কার' } },
+    { icon: '↗', className: 'mobility', title: { en: 'Everyday rides', bn: 'দৈনন্দিন যাতায়াত' }, desc: { en: 'Choose from bike, scooter, CNG and car options, with Women-Only matching for verified female riders.', bn: 'বাইক, স্কুটার, সিএনজি ও কারের পাশাপাশি নারী রাইডারদের জন্য রয়েছে উইমেন-অনলি রাইড।' }, tags: { en: 'Bike · Scooter · CNG · Car · Women-Only', bn: 'বাইক · স্কুটার · সিএনজি · কার · উইমেন-অনলি' } },
     { icon: '⌁', className: 'rental', title: { en: 'Car rental & intercity', bn: 'কার ভাড়া ও আন্তঃজেলা' }, desc: { en: 'Arrange hourly, daily or supported-route travel with participating fleets.', bn: 'অংশগ্রহণকারী ফ্লিটের মাধ্যমে ঘণ্টা, দিন বা নির্দিষ্ট রুটে গাড়ি ভাড়ার অনুরোধ করুন।' }, tags: { en: 'Hourly · Daily · Outstation', bn: 'ঘণ্টা · দিন · আন্তঃজেলা' } },
     { icon: '▰', className: 'cargo', title: { en: 'Truck & shifting', bn: 'ট্রাক ও বাসা বদল' }, desc: { en: 'Find pickup, covered van and truck options for moving goods where available.', bn: 'প্রাপ্যতা অনুযায়ী মালামাল পরিবহনে পিকআপ, কাভার্ড ভ্যান ও ট্রাকের ব্যবস্থা করুন।' }, tags: { en: 'Pickup · Covered van · Cargo', bn: 'পিকআপ · কাভার্ড ভ্যান · পণ্য' } },
     { icon: '✚', className: 'medical', title: { en: 'Ambulance requests', bn: 'অ্যাম্বুলেন্স অনুরোধ' }, desc: { en: 'Request participating ambulance transport in areas where the service is active.', bn: 'সেবা চালু থাকা এলাকায় অংশগ্রহণকারী অ্যাম্বুলেন্সের জন্য অনুরোধ করুন।' }, tags: { en: 'Provider availability applies', bn: 'সেবাদাতার প্রাপ্যতা প্রযোজ্য' } },
@@ -192,7 +192,7 @@
 
       <div class="hero-visual" aria-label="Illustrative Ride app interface" role="img">
         <div class="visual-orbit orbit-one"></div><div class="visual-orbit orbit-two"></div>
-        <div class="floating-note note-one"><span class="note-icon">↗</span><span><b>Everyday rides</b><small>Bike · CNG · Car</small></span></div>
+        <div class="floating-note note-one"><span class="note-icon">↗</span><span><b>Everyday rides</b><small>Bike · CNG · Car · Women-Only</small></span></div>
         <div class="floating-note note-two"><span class="note-icon note-orange">▣</span><span><b>Local delivery</b><small>Food · Shops · Parcel</small></span></div>
         <div class="phone-frame">
           <div class="phone-top"><span class="phone-brand"><span class="mini-mark">R</span> Ride</span><span class="phone-avatar">You</span></div>

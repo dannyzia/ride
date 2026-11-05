@@ -52,10 +52,16 @@ const NODE_BLOCKLIST = [
     /\/node_modules\/node:cluster\//,
     /\/node_modules\/node:worker_threads\//,
 ];
+// The standalone marketing site in ./website has its own node_modules and
+// .svelte-kit output. Metro must never crawl or bundle it. Anchored to the
+// real absolute path so it cannot match unrelated files.
+const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+const WEBSITE_BLOCK = new RegExp("^" + escapeRe(path.resolve(__dirname, "website")) + "[\\\\/].*");
 const existing = config.resolver.blockList;
 config.resolver.blockList = [
     ...(Array.isArray(existing) ? existing : existing ? Array.from(existing) : []),
     ...NODE_BLOCKLIST,
+    WEBSITE_BLOCK,
     // Exclude test files — Jest runs them in Node, but Metro should never
     // bundle them into the client. __tests__ dirs contain Node-only imports
     // (fs, path, jest mocks) that would break the React Native bundle.

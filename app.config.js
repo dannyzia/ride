@@ -67,12 +67,11 @@ export default {
       permissions: [
         "ACCESS_FINE_LOCATION",
         "ACCESS_COARSE_LOCATION",
-        "READ_EXTERNAL_STORAGE",
-        "WRITE_EXTERNAL_STORAGE",
       ],
     },
     plugins: [
       "./plugins/withMfsPackageQueries.js",
+      "./plugins/withTargetSdk36.js",
       "expo-secure-store",
       [
         "expo-notifications",

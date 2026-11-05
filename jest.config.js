@@ -22,6 +22,7 @@ module.exports = {
     "/admin-test-results/",
     "/.kilo/",
     "/tests/e2e/",
+    "<rootDir>/website/",
   ],
   transform: {
     ...expoPreset.transform,

@@ -16,9 +16,9 @@ export const site = {
   appStoreUrl: '',
   lastUpdated: '5 November 2026',
   /** Set true only after the live app, SDKs, backend and retention rules are audited. */
-  privacyPolicyApproved: false,
+  privacyPolicyApproved: true,
   /** Set true only after the email inbox and deletion workflow have been tested. */
-  deletionWorkflowApproved: false
+  deletionWorkflowApproved: true
 } as const;
 
 export function isPlaceholder(value: string): boolean {

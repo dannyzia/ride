@@ -29,7 +29,7 @@
 <svelte:head>
   <title>{title} — Ride</title>
   <meta name="description" content={intro} />
-  <meta name="robots" content="noindex,nofollow" />
+  <meta name="robots" content={site.privacyPolicyApproved ? "index,follow" : "noindex,nofollow"} />
 </svelte:head>
 
 <div class="legal-shell">
@@ -38,7 +38,9 @@
     <div class="eyebrow"><span class="eyebrow-dot"></span>{eyebrow}</div>
     <h1>{title}</h1>
     <p class="legal-intro">{intro}</p>
-    <div class="legal-alert"><strong>Working draft v0.1 — not approved, not binding.</strong> This page renders the internal legal working draft dated 5&nbsp;November&nbsp;2026. Every <span class="draft-ph">[BRACKETED]</span> item is an unresolved placeholder. Do not rely on this text until the placeholders are completed and Bangladesh-qualified counsel approves the final version.</div>
+    {#if !site.privacyPolicyApproved}
+      <div class="legal-alert"><strong>Working draft v0.1 — not approved, not binding.</strong> This page renders the internal legal working draft dated 5&nbsp;November&nbsp;2026. Every <span class="draft-ph">[BRACKETED]</span> item is an unresolved placeholder. Do not rely on this text until the placeholders are completed and Bangladesh-qualified counsel approves the final version.</div>
+    {/if}
     {#if action}{@render action()}{/if}
     <div class="legal-md">{@html html}</div>
     {#if after}{@render after()}{/if}
