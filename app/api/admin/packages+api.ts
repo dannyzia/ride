@@ -11,13 +11,17 @@ import * as errors from "@/lib/errors";
 
 const createSchema = z.object({
   name: z.string().min(1).max(100),
-  call_count: z.number().int().positive(),
+  call_count: z
+    .number()
+    .int()
+    .refine((n) => n === -1 || n > 0, "Must be positive or -1 for unlimited"),
   duration_days: z.number().int().positive(),
   price_bdt: z.number().int().nonnegative(),
   is_trial: z.boolean().optional().default(false),
   daily_cap: z.number().int().positive().optional().default(200),
   is_active: z.boolean().optional().default(true),
   vehicle_type: VEHICLE_TYPE_ZOD_ENUM.nullable().optional().default(null),
+  roles: z.array(z.string()).optional().default(["driver"]),
 });
 
 const updateSchema = createSchema.partial().extend({

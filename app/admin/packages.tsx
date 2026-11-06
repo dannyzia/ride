@@ -29,6 +29,7 @@ interface Package {
   daily_cap: number;
   is_active: boolean;
   vehicle_type: VehicleTypeEnum | null;
+  roles: string[];
   created_at: string;
   updated_at: string;
 }
@@ -43,8 +44,49 @@ interface PackageResponse {
 
 type Mode = "create" | "edit";
 
+const TARGET_ROLE_OPTIONS = [
+  { label: "Drivers (Rides, Rentals, Ambulances, Trucks)", value: "driver" },
+  { label: "Delivery (Food & Parcels)", value: "delivery_man" },
+  { label: "Shops & Merchants", value: "shop_owner" },
+  { label: "All Providers (Universal)", value: "all" },
+];
+
+function rolesToTargetRole(roles?: string[] | null): string {
+  if (!roles || roles.length === 0) return "driver";
+  if (
+    roles.includes("driver") &&
+    roles.includes("delivery_man") &&
+    roles.includes("shop_owner")
+  ) {
+    return "all";
+  }
+  if (roles.includes("delivery_man")) return "delivery_man";
+  if (roles.includes("shop_owner")) return "shop_owner";
+  return "driver";
+}
+
+function targetRoleToRoles(targetRole: string): string[] {
+  if (targetRole === "all") return ["driver", "delivery_man", "shop_owner"];
+  return [targetRole];
+}
+
+function rolesLabel(roles?: string[] | null): string {
+  if (!roles || roles.length === 0) return "Drivers";
+  if (
+    roles.includes("driver") &&
+    roles.includes("delivery_man") &&
+    roles.includes("shop_owner")
+  ) {
+    return "All Providers";
+  }
+  if (roles.includes("delivery_man")) return "Delivery";
+  if (roles.includes("shop_owner")) return "Shops";
+  return "Drivers";
+}
+
 const EMPTY_FORM: Record<string, unknown> = {
   name: "",
+  target_role: "driver",
   call_count: 100,
   duration_days: 30,
   price_bdt_taka: 100, // taka (×100 → paisa on save)
@@ -112,6 +154,7 @@ export default function PackagesScreen() {
     setEditingId(pkg.id);
     setForm({
       name: pkg.name,
+      target_role: rolesToTargetRole(pkg.roles),
       call_count: pkg.call_count,
       duration_days: pkg.duration_days,
       price_bdt_taka: pkg.price_bdt / 100, // paisa → taka
@@ -139,8 +182,8 @@ export default function PackagesScreen() {
     const price_bdt_taka = Number(form.price_bdt_taka);
     const daily_cap = Number(form.daily_cap);
 
-    if (!Number.isFinite(call_count) || call_count <= 0) {
-      toast.show("Calls must be a positive integer", "error");
+    if (!Number.isFinite(call_count) || (call_count <= 0 && call_count !== -1)) {
+      toast.show("Calls must be a positive integer or -1 for Unlimited", "error");
       return;
     }
     if (!Number.isFinite(duration_days) || duration_days <= 0) {
@@ -165,6 +208,7 @@ export default function PackagesScreen() {
       is_trial: Boolean(form.is_trial),
       is_active: Boolean(form.is_active),
       vehicle_type: form.vehicle_type || null, // "" → null (universal)
+      roles: targetRoleToRoles(String(form.target_role || "driver")),
     };
 
     setSubmitting(true);
@@ -250,13 +294,27 @@ export default function PackagesScreen() {
 
   const fields: AdminField[] = [
     {
+      name: "target_role",
+      label: "Target Role / Vertical",
+      type: "select",
+      options: TARGET_ROLE_OPTIONS,
+      helpText: "Select which provider category this package is for.",
+    },
+    {
       name: "name",
       label: "Name",
       type: "text",
       required: true,
-      placeholder: "e.g. Starter 100",
+      placeholder: "e.g. Starter 100 or Unlimited",
     },
-    { name: "call_count", label: "Calls", type: "number", required: true },
+    {
+      name: "call_count",
+      label: "Calls (Leads)",
+      type: "number",
+      required: true,
+      placeholder: "e.g. 100 or -1",
+      helpText: "Enter number of leads, or -1 for Unlimited calls.",
+    },
     {
       name: "duration_days",
       label: "Duration (days)",
@@ -283,7 +341,7 @@ export default function PackagesScreen() {
       label: "Vehicle Type",
       type: "select",
       options: VEHICLE_TYPE_OPTIONS,
-      helpText: "All Types = available to every vehicle type.",
+      helpText: "Applies to Drivers. Leave 'All Types' for universal or non-driver roles.",
     },
   ];
 
@@ -294,7 +352,34 @@ export default function PackagesScreen() {
       sortable: true,
       render: (p) => <Text style={styles.cellPrimary}>{p.name}</Text>,
     },
-    { key: "call_count", header: "Calls", sortable: true, width: 90 },
+    {
+      key: "target_role",
+      header: "Role / Vertical",
+      width: 130,
+      render: (p) => (
+        <Text
+          style={[styles.cellText, { color: colors.primary, fontWeight: "600" }]}
+        >
+          {rolesLabel(p.roles)}
+        </Text>
+      ),
+    },
+    {
+      key: "call_count",
+      header: "Calls",
+      sortable: true,
+      width: 120,
+      render: (p) => (
+        <Text
+          style={[
+            styles.cellText,
+            p.call_count === -1 && { color: colors.success, fontWeight: "bold" },
+          ]}
+        >
+          {p.call_count === -1 ? "Unlimited (∞)" : p.call_count}
+        </Text>
+      ),
+    },
     { key: "duration_days", header: "Days", sortable: true, width: 80 },
     {
       key: "price_bdt",

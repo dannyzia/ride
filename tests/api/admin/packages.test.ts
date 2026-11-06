@@ -119,6 +119,36 @@ describe("POST /api/admin/packages", () => {
     expect((await getJson(res)).package).toMatchObject({ id: PKG_ID });
   });
 
+  test("accepts -1 for unlimited call_count and custom roles", async () => {
+    let insertedValues: unknown;
+    (db.insert as jest.Mock).mockImplementation(() => ({
+      values: jest.fn((vals) => {
+        insertedValues = vals;
+        return { returning: jest.fn(async () => [{ id: PKG_ID, ...vals }]) };
+      }),
+    }));
+    const res = await POST(
+      jsonRequest({
+        ...VALID,
+        call_count: -1,
+        roles: ["delivery_man", "shop_owner"],
+      }),
+    );
+    expect(res.status).toBe(201);
+    expect(insertedValues).toMatchObject({
+      call_count: -1,
+      roles: ["delivery_man", "shop_owner"],
+    });
+  });
+
+  test("rejects invalid call_count (0 or negative other than -1)", async () => {
+    const resZero = await POST(jsonRequest({ ...VALID, call_count: 0 }));
+    expect(resZero.status).toBe(400);
+
+    const resNeg = await POST(jsonRequest({ ...VALID, call_count: -5 }));
+    expect(resNeg.status).toBe(400);
+  });
+
   test("401 without price.write", async () => {
     grant("price.write", false);
     const res = await POST(jsonRequest(VALID));

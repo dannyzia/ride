@@ -107,6 +107,9 @@ export function AdminForm({ fields, values, onChange }: AdminFormProps) {
                   );
                 })}
               </View>
+              {field.helpText ? (
+                <Text style={styles.help}>{field.helpText}</Text>
+              ) : null}
             </View>
           );
         }
@@ -172,7 +175,7 @@ export function AdminForm({ fields, values, onChange }: AdminFormProps) {
               onChangeText={(v) =>
                 setField(
                   field.name,
-                  field.type === "number" && v !== "" ? Number(v) : v,
+                  field.type === "number" && v !== "" && v !== "-" ? Number(v) : v,
                 )
               }
               keyboardType={field.type === "number" ? "numeric" : "default"}
