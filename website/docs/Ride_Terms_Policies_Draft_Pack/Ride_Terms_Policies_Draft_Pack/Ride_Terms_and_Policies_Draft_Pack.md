@@ -370,51 +370,93 @@ In the event of any disagreement or dispute, you and Ride agree to first seek an
 
 ---
 
-# PART D — MERCHANT TERMS
+# PART D — Merchant Terms
 
-These terms apply to restaurants, grocery stores, general shops, automotive workshops and other businesses that list products or services on Ride. A signed merchant agreement and a service-specific settlement schedule should supplement these public terms.
+Merchant Terms
 
-## 1. Merchant eligibility
+Merchant Terms
 
-The merchant must be a legally operating business and maintain all trade licences, tax registrations, food-safety approvals, pharmacy / medicine permissions, workshop permits and other approvals required for the products or services it lists. Do not list regulated products or services until Ride has completed the applicable legal and operational review.
 
-The merchant must provide truthful business identity, branch address, staff details, product descriptions, photos, prices, stock status, opening hours, fulfilment capacity and contact information.
+## Merchant Terms
 
-## 2. Listings and prices
+These terms govern the access to and use of the Ride platform by restaurants, retail shops, grocery vendors, pharmacies, automotive workshops, and commercial businesses offering goods or services.
 
-The merchant is responsible for the accuracy and legality of its listings, product descriptions, ingredient / allergen disclosures where required, quantity, price, taxes, availability and fulfilment instructions. Prices and mandatory charges must be visible before a customer confirms an order.
+**Document Status:** Official Platform Terms
 
-Do not upload misleading photos, counterfeit listings, unlawful products, unsafe products or content that infringes third-party rights. Do not manipulate ratings, fabricate orders or contact customers for unrelated marketing.
+**Last Updated:** 1 November 2026
 
-## 3. Order acceptance and fulfilment
+**Effective Date:** 1 November 2026
 
-An order is confirmed when the merchant accepts it through the approved interface or the system otherwise confirms it. The merchant must promptly accept or reject incoming orders and keep stock and operating status current.
-
-The merchant must prepare and hand over the correct products in suitable packaging and within the estimated time. The merchant must notify Ride promptly about unavailable items, substitutions, price changes, safety concerns or delays. No substitution or price increase may be imposed without the customer's approval where required.
-
-## 4. Food and product safety
-
-The merchant is responsible for lawful sourcing, storage, preparation, hygiene, packaging, labelling, expiry dates, authenticity and quality of the goods it supplies. Food merchants must maintain the licences and hygiene standards applicable to their business. Shops selling medicines or regulated goods must hold all required authorisations and follow applicable prescription / sales restrictions.
-
-## 5. Staff and access security
-
-The merchant is responsible for staff accounts, access permissions, password security and the actions of its authorised staff. Remove access promptly when a staff member leaves or changes role. Do not share customer data outside order fulfilment or another disclosed lawful purpose.
-
-## 6. Merchant fees and settlement
-
-Merchant commissions, listing fees, delivery charges, payment processing charges, settlement cycles, deductions, taxes, reserve / dispute procedures and bank / MFS details must be set out in the signed merchant agreement or a separate fee schedule. Do not infer a commission rate from this public draft.
-
-The merchant must reconcile order records, cash-on-delivery collections, returns, refunds and settlement statements and promptly raise discrepancies through `support@ride.digital-papyrus.com or WhatsApp +880171324950`.
-
-## 7. Customer complaints and refunds
-
-The merchant must cooperate with investigations into missing, wrong, damaged, unsafe, expired or materially misdescribed products. The merchant must not obstruct a customer from using Ride's complaint or refund process or from exercising statutory consumer rights.
-
-## 8. Suspension
-
-Ride may suspend a listing or merchant access where licences expire, products are unsafe or unlawful, repeated fulfilment failures occur, customer information is misused, fraudulent activity is suspected or the merchant materially breaches its agreement. Where appropriate, Ride will provide reasons and an appeal route.
+**Applies to:** Restaurants, food outlets, grocery stores, pharmacies, general retail shops, automotive workshops, and other independent merchants that list products or services on the Ride platform. A separate executed B2B merchant agreement or service schedule may establish additional commercial terms.
 
 ---
+
+### 1. Platform Nature and Merchant Eligibility
+
+Ride operates strictly as an independent software infrastructure and technology intermediary—comparable to e-commerce and website hosting platforms such as Shopify, WordPress, or Wix. Ride provides the digital storefront, listing tools, and dispatch communication software; Ride is not a seller, retailer, grocer, food operator, or pharmacy, and exercises no operational ownership or control over the goods or services listed by merchants.
+
+The merchant must be a legally established and operating commercial entity. The merchant warrants that it maintains in full force and effect all trade licences, tax identification certificates (TIN), VAT registrations, food-safety certifications, municipal permits, and any specific regulatory authorizations required for the products or services it offers.
+
+The merchant must provide true, complete, and updated information regarding its legal business identity, branch locations, authorized managers, product descriptions, photographs, prices, inventory availability, operating hours, and customer contact details.
+
+### 2. Listings, Prices, and Commercial Representations
+
+The merchant retains sole and exclusive responsibility for the accuracy, completeness, and legality of its listings, including product descriptions, pricing, mandatory ingredient and allergen disclosures, net weights, warranty conditions, applicable statutory taxes, real-time stock availability, and fulfillment instructions. All prices, packaging fees, and mandatory charges must be transparently displayed to the customer prior to order confirmation.
+
+The merchant agrees not to:
+
+* Publish misleading, exaggerated, or deceptive product descriptions or photographs;
+* List counterfeit, stolen, unauthorized, or defective merchandise;
+* Offer unlawful, hazardous, restricted, or contaminated products;
+* Publish content that infringes upon third-party intellectual property, trademark, or proprietary rights; or
+* Manipulate customer reviews, fabricate fictitious orders, or contact customers for unsolicited marketing outside legitimate order fulfillment.
+
+### 3. Order Acceptance and Fulfilment
+
+An order is deemed confirmed once the merchant formally accepts it through the partner dashboard or app interface. The merchant must promptly accept or decline incoming orders and maintain its operating status and inventory levels in real time.
+
+The merchant must prepare, package, and hand over the correct items in secure, hygienic, and tamper-evident packaging within the estimated preparation window. The merchant must notify Ride immediately of any sudden stock depletion, operational delay, or safety concern.
+
+No product substitution, brand variation, quantity adjustment, or price increase may be made without the customer’s prior express consent. If the customer declines a proposed substitution, the unavailable item must be canceled without penalty or charge.
+
+### 4. Food Safety, Product Quality, and Pharmacy Disclaimer
+
+The merchant assumes full, non-delegable legal liability for the lawful sourcing, storage, preparation, hygiene, packaging, labeling, expiration dates, authenticity, and overall safety of all goods it supplies. Food and beverage merchants must strictly comply with the *Safe Food Act, 2013* and all applicable public health and food safety standards.
+
+**Pharmacy and Regulated Products Disclaimer:**
+
+Ride is exclusively a software host and does not operate as a chemist, druggist, or healthcare facility. Any merchant offering pharmaceutical products, over-the-counter medications, or healthcare supplies represents and warrants that it holds an active, valid Retail Drug Licence issued by the Directorate General of Drug Administration (DGDA) of Bangladesh, operates under the supervision of a certified pharmacist on premises, and complies fully with the *Drugs Act, 1940*, the *Drugs (Control) Ordinance, 1982*, and related statutory rules. The merchant is solely and exclusively responsible for verifying medical prescriptions, dispensing genuine drugs, maintaining temperature-controlled storage, and preventing the distribution of banned, restricted, or expired substances. Ride disclaims all liability arising from the sale, dispensing, or consumption of medicines or healthcare products listed by the merchant.
+
+### 5. Staff Accounts and Access Security
+
+The merchant is fully responsible for all activity conducted through its administrator and staff accounts, including configuring access privileges, safeguarding login credentials, and supervising the conduct of its personnel. The merchant must immediately revoke access permissions when an employee departs or changes roles.
+
+The merchant and its employees must maintain the strict confidentiality of customer personal data and must never copy, sell, disclose, or use customer information for any purpose outside the legitimate fulfillment of the specific order.
+
+### 6. Platform Fees and Direct Settlement Model
+
+- **Direct Customer-to-Merchant Settlement:** Ride operates as a software intermediary and does not collect, receive, hold, or escrow customer funds for goods or food ordered through the Platform. All payments—including product prices, packaging charges, and applicable local delivery fees—are settled directly by the customer with the supplying merchant (or delivery partner) using their mutually agreed payment method (such as Cash on Delivery or direct Mobile Financial Services [MFS] transfer to the merchant’s account). Ride is not involved in customer fund collection or retail payout settlements.
+- **Software Licensing and Platform Fees:** Ride charges merchants strictly for access to its software platform, digital storefront infrastructure, and automated dispatch tools. These fees are billed directly to the merchant under a separate B2B merchant agreement or fee schedule, structured as recurring subscription passes, listing fees, and/or software lead-generation fees.
+- **Accounting and Reconciliations:** The merchant is solely responsible for tracking its own order receipts, Cash on Delivery collections, tax liabilities, and sales ledgers. Any billing or technical discrepancies regarding Ride’s software access fees must be reported promptly to Ride Support via email at support@ride.digital-papyrus.com or via WhatsApp at +8801713249520.
+
+### 7. Customer Complaints, Returns, and Refunds
+
+The merchant is solely responsible for addressing and resolving customer claims regarding missing items, wrong items, damaged packaging, food contamination, expired dates, or products that materially deviate from their listing description.
+
+Because customer payments are settled directly with the merchant, any approved monetary refund, price reduction, return, or product replacement must be issued directly by the merchant to the customer. The merchant must not obstruct, discourage, or prevent a customer from seeking dispute mediation through Ride Support or from exercising their non-waivable statutory rights under the *Consumer Rights Protection Act, 2009*.
+
+### 8. Suspension and Termination
+
+Ride reserves the right to suspend, restrict, or permanently terminate a merchant’s storefront listing or platform access if:
+
+- The merchant fails to maintain valid trade licences, drug licences, or statutory permits;
+- The merchant lists unsafe, counterfeit, contaminated, or prohibited products;
+- The merchant experiences repeated order fulfillment failures or unaddressed customer grievances;
+- The merchant misuses customer personal data or engages in off-platform solicitation;
+- Fraudulent transactions, fake orders, or review manipulation are identified; or
+- The merchant materially breaches these terms or any executed B2B merchant agreement.
+
+Where legally and operationally feasible, Ride will provide written notice of suspension alongside the underlying grounds and an administrative review channel.
 
 # PART E — FOOD, GROCERY AND GENERAL SHOP ORDER POLICY
 
