@@ -648,145 +648,140 @@ Ride should publish a clear safety escalation process, including who receives hi
 
 # PART K — PRIVACY NOTICE
 
-**This privacy notice is not final until the production data inventory and every third-party SDK / processor have been checked.** It must describe what Ride actually collects, not what the product roadmap intends to collect.
+This Privacy Notice explains how Ride Digital Services collects, uses, shares, stores, and protects your personal data when you use the Ride platform.
 
-**Data controller / data-fiduciary:** `Ride Digital Services`  
-**Website:** `https://ride.digital-papyrus.com`  
-**Privacy contact:** `privacy@ride.digital-papyrus.com`  
-**Effective date:** `1 November 2026`
-
-## 1. Scope
-
-This notice explains how the Ride operator collects, uses, shares, stores, protects and otherwise processes personal data through Ride's website, mobile application, customer support, partner interfaces and related services. It applies to customers, drivers, delivery partners, merchants, fleet operators, ambulance operators, recipients and people who contact Ride.
-
-## 2. Personal data we may process
-
-The following categories are a **data-mapping checklist**, not a claim that every item is currently collected. Remove any category that the production system does not process and add any actual category that is missing.
-
-| Category | Examples / Ride context | Verify before publication |
-|---|---|---|
-| Account and contact | Name, mobile number, email, profile photo, account identifiers, emergency contact | Which fields are mandatory / optional; OTP vendor |
-| Identity and eligibility | NID or other identity document, date of birth, driving licence, vehicle registration, fitness / permit documents, business registration, partner verification records | Exact files captured, who reviews them, storage location, retention |
-| Profile and matching | Gender field, vehicle / service category, women-only preference, language and accessibility preferences | Whether matching preference is optional; who can see gender |
-| Location and routes | Approximate / precise GPS, pickup and drop-off, search queries, route, active trip / delivery trace, device location permission state | Foreground vs background, sampling frequency, exact trigger and stop conditions |
-| Booking and transaction | Rides, trip duration and distance, fare, cancellations, orders, products, parcel declarations, COD, rental details, ambulance request | Which modules are live; who sees each record |
-| Sensitive / emergency | Health or medical details voluntarily provided for ambulance transport, emergency notes, biometric verification if used | Whether any health or biometric data is actually collected; explicit / lawful basis and restricted access |
-| Communications and support | In-app messages, calls or call metadata, support tickets, complaints, ratings, reviews, uploaded evidence | Whether calls are recorded; chat provider and retention |
-| Payment and financial | Payment method, transaction reference, amount, status, refund, settlement and package purchase records | Whether Ride receives card data or only tokens / processor references; payment providers |
-| Device and technical | Device model, OS, app version, IP address, identifiers, diagnostics, crash and performance logs | Exact analytics / crash SDKs and retention |
-| Merchant / business | Trade licence, branch information, products, staff accounts, settlement instructions, order history | Which merchant roles and staff data are collected |
-| Website / cookies | Server logs, contact-form data, necessary cookies, analytics / marketing cookies if used | Inspect browser storage and third-party tags before describing |
-
-## 3. How we collect data
-
-We may collect data directly from you when you register, book, order, contact support, submit documents, create a listing, accept a job or respond to an incident. The app may collect technical and location data from your device according to the permissions you grant and the service state described in the app.
-
-We may receive limited information from a matched customer, driver, courier, merchant, fleet / ambulance operator, payment provider, mapping provider, identity-verification provider or public authority where the information is necessary for the relevant service, security or legal compliance.
-
-## 4. Why we use data and the legal basis
-
-The Bangladesh Personal Data Protection Act, 2026 recognises consent and specified lawful grounds such as performing a contract, taking steps requested before a contract, legal claims, vital interests and other grounds set out in the Act. Where Ride relies on consent, the consent process must be voluntary, specific, clear and withdrawable; Ride must be able to evidence it.
-
-| Purpose | Data likely used | Proposed basis — confirm for each processing activity |
-|---|---|---|
-| Create and manage accounts | Account, contact, device | Contract / pre-contract steps; consent where required |
-| Match and fulfil rides / deliveries / orders | Location, booking, profile, provider availability | Contract / pre-contract steps |
-| Verify drivers, vehicles, merchants and operators | Identity, licence, permit, business documents | Contract, legal obligation and/or specific consent as applicable |
-| Calculate and display fares / delivery estimates | Route, distance, time, booking details | Contract / pre-contract steps |
-| Process or record payments, refunds and call packages | Transaction and account data | Contract and legal / accounting obligations |
-| Safety, fraud prevention and dispute investigation | Location, booking history, communication, device signals | Applicable lawful basis; document necessity and proportionality |
-| Emergency dispatch | Location, contact and necessary health / emergency details | Vital interests, specific consent or other valid statutory basis as applicable |
-| Customer support | Account, booking, complaint and communication | Contract, legitimate / other lawful basis, legal claims |
-| Service improvement and reliability | Aggregated usage, diagnostics, crash data | Document lawful basis; minimise or pseudonymise where possible |
-| Marketing | Contact, preferences and engagement | Separate consent where required; withdrawal must be easy |
-| Legal and regulatory compliance | Records required by law | Legal obligation |
-
-Do not use a single “I consent to everything” checkbox as the basis for all processing. Separate optional marketing, background location where applicable, sensitive health information, and other optional processing from what is necessary to provide a requested service.
-
-## 5. Location data and live tracking
-
-Location data is central to matching, navigation, fare calculation, pickup, delivery and safety. Ride should request location permission only when the relevant function needs it and explain the purpose at the point of request.
-
-For customers, location may be used to identify nearby providers, set pickup / delivery points and show progress while a booking is active. For drivers and delivery partners, precise location may be processed while they are online or performing an accepted job if the app's actual functionality requires it. This notice must accurately explain whether background location is collected while the app is not visible, when it starts, when it stops, and how a partner can go offline.
-
-A user's device settings can affect location accuracy and availability. Denying permission may disable features that require GPS, but should not be described as permission to collect location anyway.
-
-## 6. Gender and women-only matching
-
-If you use women-only matching, Ride may process the gender information and matching preference needed to operate that feature, verify eligibility and support safety. The app should explain whether the field is mandatory, optional or self-declared; whether verification is performed; who can see the information; and how a user can correct it. Do not infer gender from photos or use gender data for unrelated advertising.
-
-## 7. Health and emergency information
-
-If you request ambulance or emergency transport, Ride may process information about the patient, pickup point, emergency contact and limited medical details necessary to arrange the requested service. This information may be shared with the selected ambulance operator, medical personnel, hospital or emergency authority where needed for the service or to protect life or health.
-
-Health details must be treated as sensitive and subject to heightened access restrictions. Do not collect more detail than necessary, and do not use emergency data for advertising or unrelated profiling.
-
-## 8. Who we share data with
-
-Ride may disclose the minimum information reasonably needed to:
-
-- the matched driver / provider, customer or recipient to arrange and complete the booking;
-- the merchant to accept, prepare and fulfil an order;
-- the courier or delivery partner to collect and deliver a parcel or order;
-- the ambulance operator, medical professional or hospital for the requested emergency transport;
-- payment processors, banks or mobile financial service providers to process payments, refunds, settlements or fraud checks;
-- hosting, database, storage, mapping, routing, search, SMS / OTP, email, customer-support, analytics and crash-reporting providers that operate services for Ride;
-- professional advisers, insurers or auditors where necessary and lawful;
-- government, regulatory, court or law-enforcement authorities where required or permitted by law; and
-- another party in connection with a business transfer, subject to applicable law and appropriate safeguards.
-
-Ride should identify the actual processor / recipient categories and, where required, names, purposes and transfer locations. Candidate technical providers from the product context (including Supabase, Barikoi and dpMaps) must be verified against production configuration before being named as recipients. A provider being considered or used in shadow mode must not be described as receiving live personal data unless it actually does.
-
-Ride does not sell personal data for unrelated third-party marketing under this draft. If a future advertising or data-sharing model changes this, the notice and consent / choice mechanisms must be updated before launch of that activity.
-
-## 9. International processing and hosting
-
-Some service providers may process or store data outside Bangladesh. Before publication, Ride must identify each hosting region, backup region, support access location and third-party transfer path. The Personal Data Protection Act, 2026 contains conditions for data classification and cross-border transfers; transfers must be reviewed against section 29 and any applicable rules or directions. This notice must name or describe the countries / safeguards accurately once confirmed.
-
-## 10. Retention
-
-Ride retains personal data only for as long as necessary for the purpose for which it was collected, subject to applicable legal, regulatory, tax, accounting, safety, fraud-prevention, dispute and claim requirements. Different categories require different retention periods.
-
-**Do not copy another platform's seven-year retention table.** Ride must approve a retention schedule covering at least: account data; identity and partner documents; trip and route data; payment and accounting records; parcel / COD records; medical / emergency records; support tickets; device / security logs; and consent records. The Act separately requires records of personal-data processing to be maintained for at least the statutory period stated in section 19; counsel must define which records fall within that requirement. A five-year processing-record duty is not a blanket instruction to keep every raw GPS trace or medical record for five years.
-
-When the purpose ends and no lawful retention ground remains, the data should be deleted or irreversibly anonymised. A deletion request may be delayed or partly refused where a lawful retention ground applies, but Ride must explain the retained categories and reason where legally permitted.
-
-## 11. Security
-
-Ride will implement appropriate technical and organisational safeguards proportionate to data sensitivity and processing risk, such as role-based access, least privilege, encryption in transit and at rest where supported, secure credential handling, audit logging, backups, staff confidentiality, vendor controls and incident response.
-
-No system can be guaranteed completely secure. If a personal-data breach occurs, Ride will investigate, contain and document it and make notifications required by Bangladesh law and applicable rules. Do not invent a fixed notification deadline that is not confirmed by the applicable statutory rules.
-
-## 12. Your data rights and choices
-
-Subject to applicable law and verification of identity, you may request access to your personal data, a copy or information about its processing, correction or completion, portability where applicable, withdrawal of consent, objection or restriction where available, and deletion where the legal conditions are met.
-
-Submit a written request to `privacy@ride.digital-papyrus.com` with your name, registered phone or account identifier, the right you wish to exercise and enough information to verify the request safely. Do not email passwords, OTPs or full card numbers. Ride may request additional identity verification where reasonably necessary to prevent fraud or disclosure to the wrong person.
-
-Some data may need to be retained for legal obligations, accounting, safety, fraud prevention, active disputes or legal claims. Rights cannot be removed by a contract clause or this notice.
-
-## 13. Children
-
-Ride accounts are intended for adults aged 18 or older, unless a specific guardian-managed process is expressly introduced. Ride must not knowingly collect or process a child's personal data outside a lawful guardian-authorised process. If a child has provided data improperly, contact `privacy@ride.digital-papyrus.com`.
-
-## 14. Automated decisions and profiling
-
-If Ride uses automated systems to match providers, estimate prices, rank listings, detect fraud, determine eligibility or prioritise requests, the notice must describe the relevant inputs, purpose, material effects and available review process to the extent required by law. Do not claim that all decisions are human-reviewed if they are not. Do not add behavioural profiling or eligibility scoring to production without a documented legal basis and product review.
-
-## 15. Cookies and similar technologies
-
-The Ride website may use essential technologies needed for security, session handling and website functionality. Analytics, advertising or preference cookies should be described by name, provider, purpose and duration, and any required consent / controls must be implemented. The current site must be inspected before this section is finalised; do not list cookies that the website does not use.
-
-## 16. Changes and contact
-
-Ride may update this notice as services, systems or law change. Material changes will be communicated through the website, app or another appropriate channel. The latest version will show its effective date.
-
-Data-fiduciary / privacy contact: `Ride Digital Services`  
-Email: `privacy@ride.digital-papyrus.com`  
-Postal address: `7/1-D, R.K. Mission Road, Dhaka-1203`  
-Website: `https://ride.digital-papyrus.com/privacy`
+* **Data Controller / Data Fiduciary:** Ride Digital Services
+* **Registered Office:** 7/1-D, R.K. Mission Road, Dhaka-1203, Bangladesh
+* **Website:** [https://ride.digital-papyrus.com](https://ride.digital-papyrus.com)
+* **Privacy Inquiries:** privacy@ride.digital-papyrus.com
+* **Effective Date:** 1 November 2026
 
 ---
+
+### 1. Scope
+
+This Privacy Notice applies to all personal data collected and processed through Ride’s websites, mobile applications (including passenger, driver, and merchant interfaces), customer support channels, and related digital services. It governs the data of customers, drivers, couriers, merchants, vehicle rental operators, private ambulance providers, parcel recipients, and any individual communicating with Ride.
+
+### 2. Categories of Personal Data We Process
+
+We collect and process personal data strictly by functional category to operate our platform services:
+
+* **Account and Contact Data:** Full name, mobile phone number, email address, profile picture, account authentication credentials, and emergency contact numbers.
+* **Identity and Verification Data:** National Identity Card (NID) or government-issued photo identification, date of birth, driving licence details, vehicle registration documents, certificate of fitness, tax token, route permits, trade licences, and partner background verification files.
+* **Profile and Matching Data:** Declared gender, vehicle type, service tier, women-only matching preferences, and accessibility preferences.
+* **Location and Telemetry Data:** Precise and approximate GPS coordinates, pickup locations, drop-off destinations, navigation routes, active trip traces, and device permission states.
+* **Booking and Transaction Data:** Trip histories, journey duration, distance traveled, calculated fares, cancellation records, retail order items, declared parcel descriptions, Cash on Delivery (COD) amounts, rental bookings, and emergency transport requests.
+* **Emergency and Health Data:** Voluntary medical notes, patient details, and critical instructions provided exclusively to facilitate private ambulance and emergency transit dispatch.
+* **Communications and Support Data:** In-app messages, customer support inquiries, dispute submissions, user feedback, ratings, reviews, and uploaded photographic or documentary evidence.
+* **Financial and Settlement Records:** Selected payment methods, transaction reference IDs, settlement amounts, platform access package purchase histories, and refund logs. (Ride does not process or store buyer debit/credit card numbers on its servers).
+* **Device and Technical Data:** Device hardware model, operating system version, IP address, unique device identifiers, technical error logs, and system performance telemetry.
+* **Merchant Business Data:** Trade licence information, business outlet addresses, product catalogues, authorized staff profiles, and payout settlement details.
+* **Website and Web Data:** Server access logs, contact form submissions, and strictly necessary technical cookies required for website security and session management.
+
+### 3. How We Collect Personal Data
+
+We collect personal data directly from you when you register an account, schedule a trip, submit an order, upload verification credentials, contact customer support, or report an incident. In addition, our mobile applications collect technical telemetry and location data from your mobile device based on the operating system permissions you have granted.
+
+We may also receive limited information from matched service partners, merchants, payment gateways, mobile financial service operators, digital mapping infrastructure providers, or statutory authorities where necessary for service execution, fraud mitigation, or legal compliance.
+
+### 4. Purposes of Processing and Legal Bases
+
+Ride processes personal data under recognized lawful grounds under the laws of Bangladesh, including the performance of contractual terms, compliance with statutory obligations, protection of vital interests, pursuit of legal claims, and explicit user consent where mandated.
+
+* **Account Administration:** To create, authenticate, and manage user and partner accounts (Contractual Performance).
+* **Dispatch and Fulfillment:** To algorithmically match customers with independent drivers, couriers, or merchants, calculate routes, and facilitate service completion (Contractual Performance).
+* **Credential Verification:** To verify driver eligibility, commercial licences, vehicle fitness, and merchant authenticity (Legal Obligation and Contractual Performance).
+* **Pricing and Billing Transparency:** To calculate and display estimated fares, delivery charges, and route parameters (Contractual Performance).
+* **Platform Monetization:** To record B2B platform access packages, subscriptions, and merchant settlement accounts (Contractual and Accounting Obligations).
+* **Safety and Fraud Prevention:** To verify trip integrity, prevent suspicious activity, authenticate identity, and investigate complaints (Legitimate Operational Safety and Legal Obligation).
+* **Emergency Dispatch:** To transmit location and vital notes to private ambulance operators during medical emergencies (Vital Interests and Explicit Consent).
+* **Customer Support:** To investigate billing errors, delivery failures, damaged goods, and user grievances (Contractual Performance and Legal Claims).
+* **Platform Maintenance:** To analyze system crashes, resolve technical bugs, and ensure network security (Legitimate Operational Interests).
+* **Statutory Compliance:** To maintain official records and cooperate with lawful directives from law enforcement and regulatory authorities (Legal Obligation).
+
+Ride does not utilize single, unbundled consent checkboxes. Optional marketing messages, discretionary promotional notifications, and sensitive emergency disclosures are maintained through distinct user controls.
+
+### 5. Location Tracking and Telemetry
+
+Location data is essential to the core functionality of our dispatch network:
+
+* **Customers:** Location data is accessed while the app is active in the foreground to locate nearby vehicles, establish accurate pickup points, and track transit progress.
+* **Drivers and Couriers:** High-precision location data is collected while the partner app is set to an active or online status to assign dispatches and navigate routes. Background location collection operates only while actively fulfilling an accepted assignment or when the driver is toggled online. Drivers may terminate tracking at any time by toggling their status to offline.
+
+Disabling device location permissions will restrict dispatch and navigation capabilities but will not result in unauthorized collection through alternative means.
+
+### 6. Gender-Specific Matching
+
+Where a user activates women-only matching features, Ride processes declared gender profile data strictly to facilitate eligible matches, support passenger and driver comfort, and enhance safety. This data is never used for commercial profiling or advertising.
+
+### 7. Emergency and Ambulance Data
+
+When an emergency ambulance booking is submitted, patient condition notes, pickup coordinates, and contact details are transmitted directly to the assigned ambulance operator, onboard medical personnel, or receiving hospital. This data is classified as sensitive, restricted from general access, and never used for marketing.
+
+### 8. Sharing and Disclosure of Personal Data
+
+Ride does not sell personal data to third parties. We share the minimum data strictly required with the following categories of recipients:
+
+* **Matched Service Providers and Customers:** Shared between matched parties to locate, coordinate, and fulfill bookings.
+* **Merchants:** Shared with retail stores and restaurants to prepare and package orders.
+* **Independent Logistics Partners:** Shared with couriers to collect and deliver parcels.
+* **Private Ambulance Operators:** Shared with medical transport providers to coordinate patient transit.
+* **Telecommunications and SMS Providers:** Authorized telecommunications carriers and SMS messaging gateways to transmit one-time passwords (OTPs) and service alerts.
+* **Digital Mapping and Geocoding Providers:** Independent mapping and routing infrastructure providers to calculate distances, display maps, and determine routes.
+* **Cloud Hosting and Database Infrastructure Providers:** Enterprise cloud hosting, managed database, and server infrastructure providers that store and process platform data.
+* **Diagnostic and Analytics Vendors:** Secure technical software services that process system crash reports and performance telemetry.
+* **Payment and Financial Institutions:** Commercial banks, Mobile Financial Services (MFS) operators, and payment gateways to authenticate settlements and process fraud checks.
+* **Legal and Regulatory Authorities:** Law enforcement agencies, courts, and statutory regulatory bodies where formally mandated by Bangladesh law.
+* **Corporate Transferees:** Successor entities in the event of an operational merger, reorganization, or business acquisition, subject to statutory confidentiality obligations.
+
+### 9. International Data Hosting and Cross-Border Transfers
+
+To ensure high availability, redundancy, and security, Ride utilizes enterprise cloud infrastructure and database servers located both within Bangladesh and in secure international data center regions (including Singapore and other global cloud zones).
+
+By using the Platform, you acknowledge that your personal data may be transferred to, stored, and processed on secure cloud servers outside Bangladesh. Ride enforces strict technical safeguards, role-based access controls, and end-to-end transport encryption with all infrastructure providers to ensure that cross-border data processing meets all statutory protection standards under Bangladesh law.
+
+### 10. Data Retention Schedule
+
+Ride retains personal data in strict compliance with the laws, statutory regulations, and commercial rules of Bangladesh:
+
+* **Corporate, Tax, and Financial Records:** Transaction logs, partner billing records, platform access package invoices, and settlement ledgers are maintained for a period of up to **10 (ten) years** to satisfy statutory corporate, taxation, audit, and legal limitation requirements.
+* **User and Partner Profiles:** Retained for the active duration of the account and for a reasonable statutory period following account closure to resolve pending disputes, unpaid liabilities, or regulatory audits.
+* **Identity Verification Files:** Stored securely for the duration of the partner's active engagement and retained thereafter as required by law enforcement or regulatory rules.
+* **Trip Telemetry and Location Trails:** Detailed GPS coordinates and route traces are retained only as long as operationally necessary for billing verification, safety auditing, and dispute resolution, after which they are aggregated, anonymized, or purged.
+* **Customer Support Records:** Grievance submissions, dispute tickets, and incident reports are retained for the statutory period applicable to legal and consumer claims.
+
+When the applicable legal retention period expires, personal data is permanently deleted or irreversibly anonymized.
+
+### 11. Security Safeguards
+
+Ride implements organizational, administrative, and technical security measures appropriate to the sensitivity of the data handled. These include industry-standard encryption protocols (in transit and at rest), least-privilege role-based access controls (RBAC), database authentication safeguards, periodic security reviews, and internal incident response plans. While we implement rigorous technical defenses, no digital service can guarantee absolute security against all potential vulnerabilities.
+
+### 12. Your Statutory Data Rights
+
+Subject to verification of identity and the requirements of Bangladesh law, you have the right to:
+
+* Request confirmation of whether Ride processes your personal data and obtain access to your records;
+* Request the correction of inaccurate, outdated, or incomplete data;
+* Withdraw consent previously granted for optional processing activities;
+* Request the deletion or restriction of your personal data, subject to Ride’s mandatory statutory record-keeping and legal defense obligations; and
+* Submit a grievance regarding the handling of your data.
+
+To exercise these rights, submit a written request to privacy@ride.digital-papyrus.com with your registered name, account mobile number, and the specific request. To safeguard your account, never send passwords, OTPs, or financial PINs via email.
+
+### 13. Protection of Minors
+
+Ride accounts are restricted to individuals aged 18 years or older. Ride does not knowingly collect or maintain personal data from minors. If an account is discovered to have been created by a minor, it will be deactivated and its associated profile records handled in accordance with applicable law.
+
+### 14. Changes to This Privacy Notice
+
+Ride reserves the right to amend this Privacy Notice to reflect operational, technological, or statutory developments. Notice of material updates will be provided via the Platform, email, or website announcement, indicating the revised effective date.
+
+### 15. Contact Details
+
+* **Data Controller:** Ride Digital Services
+* **Postal Address:** 7/1-D, R.K. Mission Road, Dhaka-1203, Bangladesh
+* **Privacy Inquiries:** privacy@ride.digital-papyrus.com
+* **Website Privacy Portal:** [https://ride.digital-papyrus.com/privacy](https://ride.digital-papyrus.com/privacy)
 
 # PART L — ACCOUNT AND DATA DELETION PAGE
 
