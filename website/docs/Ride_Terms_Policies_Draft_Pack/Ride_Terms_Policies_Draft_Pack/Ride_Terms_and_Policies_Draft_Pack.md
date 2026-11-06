@@ -249,74 +249,108 @@ Report lost property, accidents, safety concerns or fare issues through `support
 
 # PART C — DRIVER AND SERVICE PARTNER TERMS
 
-**Applies to:** ride drivers, scooter / bike / CNG / car providers, rental and truck operators, couriers, delivery persons, ambulance operators and other approved service partners, as applicable to their role. A separate signed partner agreement or service addendum may impose additional requirements.
+These terms govern the access to and use of the Ride platform by independent drivers, couriers, vehicle operators, and commercial service partners.
 
-## 1. Eligibility and onboarding
+**Document Status:** Official Terms of Service
 
-You may provide a service only after Ride has approved your profile for the relevant category. You must provide accurate identity, contact, payment and role-specific details and keep them current.
+**Last Updated:** 1 November 2026
 
-For motor-vehicle services, you must hold a valid driving licence, registration, fitness, tax token, route permit, enlistment / fitness documents and other approvals required for the vehicle and service. Where applicable, you and the vehicle owner must obtain the BRTA ridesharing enlistment certificates and enter the required tripartite or other written agreement. The exact current requirements must be checked against the applicable BRTA rules and any amendments before activation.
+**Effective Date:** 1 November 2026
 
-For ambulance, medical transport, freight, rental or delivery services, provide all permits, professional credentials, operating permissions, insurance and equipment records required for that service. Ride may reject or pause activation where evidence is missing, expired or inconsistent.
+**Applies to:** Ride drivers, motorcycle/scooter/CNG auto-rickshaw/car operators, rental and truck operators, couriers, delivery personnel, private ambulance operators, and other authorized service partners. A separate executed partner agreement or role-specific service addendum may impose additional operational conditions.
 
-## 2. Partner account and use
+---
 
-You must personally control and use your approved partner account unless Ride has expressly enabled named staff accounts for your business. Do not lend, rent or transfer access. Protect customer information and use it only to fulfil the accepted booking, resolve a legitimate service issue or comply with law.
+### 1. Eligibility, Onboarding, and Vehicle Approvals
 
-Do not discriminate, harass, threaten, solicit unrelated business, divert bookings deceptively, manipulate location, fake completion, request off-platform payments beyond the agreed method, or pressure customers to change a confirmed fare.
+You may provide services through the Platform only after Ride has verified and approved your partner profile for the designated service category. You must provide authentic, valid, and up-to-date identification, contact, payment, and role-specific documentation, and maintain their validity throughout your use of the Platform.
 
-## 3. Ride fares and Ride call packages
+Ride is strictly a technology software intermediary and does not operate as a transport owner, carrier, or motor vehicle authority. Ride assumes no legal or operational liability for obtaining, maintaining, or verifying municipal route permits, commercial fitness, or regulatory approvals for any vehicle.
 
-**Current intended commercial model — verify against the live package screen and signed partner agreement:**
+Each driver and registered vehicle owner represents and warrants that their vehicle holds an active registration certificate, valid certificate of fitness, updated tax token, Regional Transport Committee (RTC) route permit, appropriate driving licence, and all individual ridesharing enlistments required by the Bangladesh Road Transport Authority (BRTA) under prevailing laws. Any administrative fines, legal notices, vehicle impoundments, or financial penalties imposed by law enforcement or BRTA mobile courts arising from missing, invalid, or expired vehicle documentation are the sole legal and financial responsibility of the driver and vehicle owner. The driver and vehicle owner agree to indemnify and hold harmless Ride Digital Services against all related claims, losses, and proceedings.
 
-- Ride does not deduct a percentage commission from a completed ride fare.
-- The driver retains 100% of the agreed ride fare, which the customer pays directly to the driver using the payment method agreed for that trip.
-- A driver may purchase a weekly prepaid call package to access ride leads / calls through Ride.
-- The call package is a separate platform-access charge; it is not a percentage of the fare and does not guarantee any minimum number of bookings, completed trips, income or earnings.
-- Package price, start time, validity, included calls / leads, lead qualification, rollover, expiry, pause rules, failed-call treatment, duplicate payment treatment and refund conditions must be displayed before purchase and set out in a current package schedule.
+For private ambulance, medical transit, freight, commercial rental, and logistics delivery services, you must provide all specialized regulatory permits, professional certifications, commercial vehicle insurance, and equipment maintenance records mandated by Bangladesh law. Ride reserves the right to reject an onboarding application or pause an active profile if any credential is missing, expired, altered, or unverified.
 
-**Package schedule required before publication:**
+### 2. Partner Account and Platform Use
 
-| Item | Must be specified |
-|---|---|
-| Package name and price | `[INSERT BDT PRICE AND TAX TREATMENT]` |
-| Validity | `[EXACT START / END RULE]` |
-| Included leads / calls | `[COUNT OR ACCESS DEFINITION]` |
-| What counts as a delivered lead | `[OBJECTIVE DEFINITION]` |
-| Invalid / duplicate / unreachable lead remedy | `[REPLACEMENT / CREDIT RULE]` |
-| Unused-lead rollover | `[ELIGIBILITY, CAP, PERIOD, EXPIRY]` |
-| Pause / suspension treatment | `[RULE]` |
-| Auto-renewal | `[OFF UNLESS EXPRESSLY ENABLED AND CONSENTED]` |
-| Refund conditions | `[DUPLICATE CHARGE, SYSTEM FAILURE, UNUSED ACCESS, OTHER RULES]` |
-| Support and dispute window | `[CHANNEL AND TIME LIMIT]` |
+You must personally operate and maintain control over your approved partner account, unless Ride has explicitly authorized designated, named staff accounts for your registered fleet or business entity. You may not lend, lease, sub-license, assign, or transfer account access to any third party.
 
-Do not advertise “free leads”, “guaranteed bookings”, guaranteed earnings or unlimited rollover unless the package actually delivers those terms. The legal and Google Play Billing classification of the call package must be reviewed separately; this agreement does not determine the correct in-app payment method.
+You must maintain the strict confidentiality of customer personal data and use such information solely to fulfill an accepted booking, resolve an active service issue, or comply with statutory legal duties.
 
-## 4. Service standards
+You agree not to:
 
-Accept only requests you can fulfil safely and lawfully. Keep the assigned vehicle, equipment and documents in good condition. Do not substitute a different vehicle, driver or operator without customer consent and Ride's approval where required.
+* Discriminate against, harass, stalk, threaten, or intimidate any customer or member of the public;
+* Solicit off-platform commercial business or deceptively divert bookings;
+* Manipulate GPS telemetry, simulate geographic coordinates, or falsify booking completion;
+* Demand payments outside the Platform beyond the mutually agreed settlement method; or
+* Coerce, solicit, or pressure a customer to alter a confirmed fare, route, or payment arrangement.
 
-Complete the service as agreed, update the app accurately, protect any items handled, and report incidents immediately. Do not mark a trip, order or delivery complete before actual completion.
+### 3. Platform Access Packages, Ride Leads, and Commercial Model
 
-## 5. Location and background operation
+* **Commercial Model:** Ride operates as a software provider and does not deduct a percentage-based commission from completed trip fares. The driver retains 100% of the agreed trip fare, which the customer settles directly with the driver using the payment method mutually agreed for that booking.
+* **Platform Access Packages:** To receive customer dispatch requests ("leads" or "calls") through the Platform, independent service partners purchase prepaid platform access packages (such as weekly or monthly dispatch passes) through authorized payment channels, including integrated Mobile Financial Services (MFS) and local digital gateways.
+* **Dynamic Package Terms:** Specific package tiers, subscription fees, validity windows, lead quotas, rollover rules, and failed-dispatch credits are established by Ride and displayed dynamically within the Partner App prior to purchase. The package specifications shown on the checkout screen at the time of purchase govern that specific transaction. Ride reserves the right to introduce, adjust, or discontinue packages prospectively; provided that such revisions will not alter the terms of an active, paid-up package during its ongoing validity period.
+* **No Income or Volume Guarantee:** Platform access packages constitute a service fee for accessing Ride’s software infrastructure and matching algorithms. Purchasing an access package does not guarantee any minimum number of ride requests, customer acceptances, completed trips, or revenue benchmarks. Payments for access packages are non-refundable once activated, except where a verified technical failure on the Platform prevents software access.
 
-If your role requires live availability or active trip / delivery tracking, enable the app permissions explained in the partner app. Background location may be processed only for the disclosed operational purposes and within the permission and service state actually required. Turn off availability when you are not accepting work. Ride must not describe continuous background tracking unless the app actually performs it and the required notice / permission is in place.
+### 4. Operational and Service Standards
 
-## 6. Payment records and taxes
+Accept only dispatch requests that you are legally authorized, equipped, and physically able to fulfill safely. Maintain the assigned vehicle, safety equipment, cargo fixtures, and statutory documents in clean, roadworthy, and fully compliant condition. Do not substitute an unverified vehicle, unauthorized replacement driver, or third-party operator without the customer's prior consent and Ride’s formal authorization, where required.
 
-Keep accurate records of fares, package payments, cash collection, COD, expenses and taxes. You are responsible for your own applicable tax and licensing obligations, subject to any statutory withholding or reporting duty imposed on Ride. Do not misrepresent a payment as settled when it is not.
+You must fulfill each accepted service in accordance with agreed specifications, update progress milestones in the partner app promptly and accurately, exercise reasonable care over all handled goods and passenger property, and report safety, road, or security incidents immediately. You must never mark a trip, order, or delivery as completed prior to actual physical fulfillment.
 
-## 7. Reviews, complaints and investigations
+### 5. Location Services and Telemetry
 
-Cooperate with reasonable safety, payment, fraud and service-quality investigations. Ride may temporarily limit access while investigating a credible safety or fraud concern. Ride should communicate the basis where legally and operationally possible and provide a review / appeal channel.
+If your service category requires live availability broadcasting or active in-transit tracking, you must enable the requisite device permissions outlined in the partner app. Background location data may be collected and processed only for disclosed operational purposes and strictly within the scope and operational status required for that service.
 
-## 8. Suspension and deactivation
+You must switch your status to offline or unavailable whenever you are not actively seeking or fulfilling work. Ride does not conduct continuous background location monitoring when you are offline or outside an active service session.
 
-A partner account may be suspended or deactivated for expired licences, unsafe conduct, fraud, misuse of customer data, repeated service failures, serious complaints supported by evidence, unlawful activity or breach of the partner agreement. Any process must be consistent with applicable law and the signed agreement. Outstanding balances and legal recordkeeping duties do not automatically disappear on deactivation.
+### 6. Payment Records, Accounting, and Taxes
 
-## 9. No employment-status shortcut
+You must maintain accurate, contemporaneous records of trip fares, package purchases, cash collections, Cash on Delivery (COD) proceeds, operational expenses, and applicable tax receipts.
 
-The parties' legal relationship must be determined by the actual contract, conduct and applicable Bangladesh law. A statement that a partner is an independent provider does not conclusively determine employment or worker status where mandatory law says otherwise.
+You are solely responsible for calculating, filing, and remitting your personal and commercial tax liabilities and maintaining statutory trade licences, subject only to any mandatory tax withholding or regulatory reporting obligations imposed on Ride by Bangladesh law. You must not falsely record an unsettled or disputed payment as completed.
+
+### 7. Reviews, Complaints, and Investigations
+
+You agree to cooperate fully with Ride in all reasonable investigations concerning passenger safety, payment disputes, alleged fraud, and service quality failures.
+
+Ride reserves the right to restrict or suspend your account access temporarily while investigating a credible safety, security, or financial fraud allegation. Where legally permissible and operationally feasible, Ride will disclose the underlying grounds for the restriction and provide an accessible administrative review and appeal channel.
+
+### 8. Suspension and Deactivation
+
+Ride may suspend or permanently deactivate your partner account for:
+
+* Operating with expired, suspended, or forged driving licences, vehicle fitness certificates, or permits;
+* Engaging in reckless driving, violent conduct, or unsafe practices;
+* Committing financial, billing, or identity fraud;
+* Misappropriating or misusing customer personal data;
+* Incurring repeated, verified service delivery failures;
+* Accumulating serious, substantiated customer complaints;
+* Violating any applicable law or statutory regulation; or
+* Breaching these terms or any executed partner agreement.
+
+Any suspension or deactivation will be conducted in accordance with applicable law and the relevant signed agreement. Account deactivation does not extinguish outstanding financial liabilities, unpaid obligations, or statutory recordkeeping duties.
+
+### 9. Commercial Relationship and Disclaimer of Employment
+
+The legal relationship between Ride and each service partner or merchant is strictly that of an independent commercial software vendor and business client. By purchasing platform access, the partner acts as an independent business entity subscribing to Ride’s software dispatch and matching technology.
+
+Nothing in these terms, in the operation of the Platform, or in the communications between the parties shall be construed as creating an employment relationship, worker status, joint venture, partnership, or agency under the *Bangladesh Labour Act, 2006* or any other enactment.
+
+Partners exercise absolute discretion regarding when, where, and for how long they connect to the Platform; maintain absolute freedom to accept or reject any dispatch request; provide their own operational tools and vehicles; and retain the unrestricted right to engage in other businesses and provide services across competing digital platforms.
+
+### 10. Governing Law and Dispute Resolution
+
+These terms, their interpretation, and any claims or disputes arising out of or in connection with them or the use of the Platform are governed by and construed in accordance with the substantive laws of Bangladesh.
+
+In the event of any disagreement or dispute, you and Ride agree to first seek an informal, amicable resolution by lodging a formal complaint through Ride Partner Support. If the dispute is not resolved amicably within 30 days of submission, either party may submit the dispute to the non-exclusive jurisdiction of the competent civil courts located in Dhaka, Bangladesh.
+
+### 11. Contact Details
+
+* **Contracting Entity:** Ride Digital Services
+* **Registered Address:** 7/1-D, R.K. Mission Road, Dhaka-1203, Bangladesh
+* **Partner Support:** support@ride.digital-papyrus.com
+* **Legal Inquiries:** legal@ride.digital-papyrus.com
 
 ---
 
