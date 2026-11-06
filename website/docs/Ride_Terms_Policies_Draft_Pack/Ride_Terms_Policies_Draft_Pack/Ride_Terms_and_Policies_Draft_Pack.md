@@ -483,42 +483,77 @@ Because Ride operates as a software intermediary and does not collect, hold, or 
 
 # PART F — PARCEL, COURIER AND STORE DELIVERY POLICY
 
-## 1. Scope
+This policy governs all on-demand point-to-point parcel logistics, personal package deliveries, document transit, and merchant store deliveries arranged through the Ride platform.
 
-This policy applies to point-to-point parcels, documents, packages and merchant deliveries arranged through Ride. Delivery availability, service level, price and estimated time must be shown for the selected route before confirmation.
+**Document Status:** Official Platform Policy
 
-## 2. Sender duties
+**Last Updated:** 1 November 2026
 
-The sender must:
-
-- provide accurate sender, recipient, pickup and drop-off information;
-- accurately describe the parcel's contents, quantity, value and handling needs where requested;
-- use suitable packaging and secure fragile or liquid items;
-- make the parcel available at the agreed pickup point;
-- ensure the parcel may lawfully be possessed, carried and delivered; and
-- provide lawful instructions for COD, recipient verification or return delivery where those features are enabled.
-
-## 3. Prohibited and restricted items
-
-Ride or its delivery partners may refuse items that are unlawful, dangerous, hazardous, explosive, flammable, corrosive, infectious, controlled, stolen, counterfeit, improperly packaged or otherwise prohibited by applicable law or the service rules. This may include weapons, ammunition, narcotics, illegal medicines, cash or negotiable instruments, live animals, human remains, hazardous chemicals and other restricted items.
-
-The list is not exhaustive. A sender must not conceal or misdeclare contents. If a parcel appears suspicious or unsafe, Ride or the delivery partner may stop handling it and contact the relevant authority where required by law.
-
-## 4. Delivery and proof
-
-Delivery is complete when the parcel is handed to the intended recipient or an authorised person using the proof-of-delivery method shown in the app. A PIN, signature, photo or other proof may be required. Do not share delivery PINs before the parcel is physically received.
-
-## 5. Cash on delivery (COD)
-
-COD is available only when the service and route support it. The sender must specify the collection amount and any return instructions accurately. The delivery partner must collect only the amount shown in the order and record collection through the approved workflow. Settlement, reconciliation, failed collection and remittance terms must be specified in the relevant merchant / delivery-partner schedule.
-
-## 6. Failed delivery, returns and claims
-
-If a recipient is unavailable, refuses the parcel, provides an incorrect address or cannot be contacted, Ride may attempt to contact the sender and follow the return instruction displayed at booking. Any second-attempt, waiting, return or storage fee must be disclosed in advance where practicable.
-
-Report loss, damage, tampering or non-delivery through `support@ride.digital-papyrus.com or WhatsApp +880171324950` within `[CLAIM WINDOW]`. The claim process must state the required evidence, review period and any lawful liability limits. Do not publish a blanket exclusion for all loss or damage without legal review.
+**Effective Date:** 1 November 2026
 
 ---
+
+### 1. Scope and Platform Nature
+
+This policy applies to all on-demand point-to-point parcels, personal packages, commercial packages, and merchant store deliveries arranged through the Ride platform. Service availability, delivery tier, transparent pricing, and estimated transit times are displayed for the chosen route prior to booking confirmation.
+
+Ride operates strictly as an independent technology platform and dispatch software intermediary. Ride is not a common carrier, freight forwarder, postal operator, or licensed courier service under the *Post Office Act, 1898* or the *Mailing Operator and Courier Service Development and Regulatory Authority Rules* of Bangladesh. Ride provides the digital interface connecting independent senders with independent delivery partners; Ride does not physically handle, inspect, sort, transport, or deliver any package.
+
+### 2. Sender Duties and Legal Warranties
+
+The sender assumes primary responsibility for the parcel dispatch and must:
+
+* Provide true, complete, and verifiable details for the sender, recipient, pickup location, and drop-off destination;
+* Accurately declare and describe the parcel’s contents, item count, declared monetary value, and any special handling needs;
+* Package all goods securely using durable, tamper-evident materials, ensuring that fragile, breakable, or liquid items are cushioned, sealed, and protected against transit vibrations;
+* Have the parcel ready for physical handover at the agreed pickup location upon the delivery partner's arrival;
+* Represent and warrant that the parcel and its contents are lawful to possess, carry, transport, and transfer under all applicable laws of Bangladesh; and
+* Provide clear, lawful instructions regarding Cash on Delivery (COD) collection amounts, recipient verification, or return delivery protocols.
+
+It is the sender's sole responsibility to ensure that no prohibited or restricted goods are tendered for delivery. Senders must never attempt to use Ride to transport items outside the platform’s permitted scope.
+
+### 3. Prohibited and Restricted Items
+
+Ride and its independent delivery partners strictly refuse and prohibit the carriage of items that are unlawful, hazardous, combustible, or legally controlled. Senders must never dispatch or ask Ride or its delivery partners to handle:
+
+* Sealed personal letters, postal mail, and items reserved exclusively for the national postal service under the *Post Office Act, 1898*;
+* Physical currency, banknotes, coins, bullion, precious metals, and negotiable financial instruments (including signed cheques, bank drafts, bearer bonds, or promissory notes);
+* Firearms, weapons, ammunition, fireworks, and explosive substances;
+* Illegal narcotics, intoxicating drugs, contraband, and prescription medicines lacking authorized medical documentation;
+* Live animals, biological cultures, animal carcasses, human remains, or bodily specimens;
+* Hazardous chemicals, toxic industrial agents, radioactive materials, corrosive acids, and compressed flammable gases;
+* Stolen property, counterfeit goods, or smuggled merchandise; and
+* Any item whose domestic transport is restricted or prohibited by statutory authorities.
+
+This list is non-exhaustive. Senders must not conceal, misdeclare, or disguise parcel contents. If a delivery partner or Ride suspects that a package contains prohibited, dangerous, or illegal goods, the delivery partner has the absolute right to refuse or immediately suspend carriage. Ride and the delivery partner reserve the right to surrender suspicious packages to law enforcement agencies and statutory regulators without prior notice.
+
+The sender assumes full civil, administrative, and criminal liability for any attempt to ship prohibited items and agrees to defend, indemnify, and hold harmless Ride and the delivery partner against any fines, legal proceedings, vehicle seizures, or damages arising from misdeclared or unlawful parcels.
+
+### 4. Delivery and Proof of Delivery
+
+Delivery is deemed legally complete once the parcel is physically handed over to the intended recipient or an authorized representative at the designated drop-off address using the verification method designated in the app.
+
+Proof of delivery may require an authenticated in-app One-Time Password (OTP/PIN), a digital recipient signature, or a photographic capture of the handed-over package. Recipients must never disclose, transmit, or confirm the delivery OTP/PIN until they have physically received, inspected, and taken custody of the package.
+
+### 5. Cash on Delivery (COD) and Direct Remittance
+
+Cash on Delivery (COD) is available only where supported by the specific service tier and active delivery route. The sender must specify the exact cash collection amount and any mandatory return instructions prior to dispatch.
+
+* **Platform Intermediary Disclaimer:** Ride operates solely as a software intermediary and does not collect, receive, hold, or escrow cash on delivery funds. Ride is not a financial custodian, payment processor, or guarantor of cash in transit.
+* **Direct Partner-to-Sender Remittance:** The delivery partner acts as an independent courier collecting cash directly from the recipient on behalf of the sender or merchant. All collected cash must be remitted directly by the delivery partner to the sender or merchant via their mutually agreed settlement method (such as hand-to-hand cash transfer or direct Mobile Financial Services [MFS] payment to the merchant's wallet).
+* **Collection Rules:** The delivery partner must collect strictly the amount displayed in the order details and record the collection promptly within the partner app. The sender and delivery partner are solely responsible for reconciling collections and resolving any direct remittance discrepancies between themselves.
+
+### 6. Failed Deliveries, Returns, and Strict Claim Windows
+
+If a delivery cannot be completed because the recipient is unavailable, refuses acceptance, provides an inaccurate address, or cannot be contacted after reasonable attempts, the delivery partner will execute the return instructions confirmed at booking. Any applicable charges for secondary delivery attempts, extended driver waiting time, or return transit must be settled directly with the delivery partner as disclosed in the app.
+
+**Strict Claim Reporting Window:**
+
+Any claim regarding parcel loss, physical damage, package tampering, pilferage, missing contents, or delivery failure must be reported to Ride Support via email at support@ride.digital-papyrus.com or via WhatsApp at +8801713249520 **within 6 (six) hours of physical delivery** (or within 6 hours of the scheduled delivery timestamp in the event of total non-delivery).
+
+Due to the on-demand, point-to-point nature of local deliveries, timely reporting is required to verify physical custody and inspect evidence. Any claim, complaint, or dispute submitted after the expiration of this 6-hour window will not be eligible for platform mediation or investigation.
+
+Every claim must include the relevant Booking/Order ID, description of the damage or loss, declared commercial value with receipt, and clear, timestamped photographs of the exterior packaging, internal cushioning, damaged goods, and delivery handover location. Ride acts strictly as an informal dispute mediator and does not act as an insurer or underwriter of third-party goods.
 
 # PART G — CAR RENTAL, INTERCITY, TRUCK AND SHIFTING POLICY
 
