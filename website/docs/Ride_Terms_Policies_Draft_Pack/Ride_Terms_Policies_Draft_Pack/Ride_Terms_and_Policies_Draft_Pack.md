@@ -506,37 +506,67 @@ Report loss, damage, tampering or non-delivery through `support@ride.digital-pap
 
 # PART G — CAR RENTAL, INTERCITY, TRUCK AND SHIFTING POLICY
 
-## 1. Scope
+This policy governs hourly and daily car rentals, chauffeur-driven passenger vehicles, intercity travel, and pickup/truck rental services arranged through the Platform.
 
-This policy applies to hourly / daily car rental, chauffeur-driven vehicles, intercity travel, pickup / truck booking, household shifting and commercial cargo services arranged through Ride.
+**Document Status:** Official Platform Policy
 
-## 2. Quote and booking scope
+**Last Updated:** 1 November 2026
 
-Before confirmation, the quote or provider offer should describe:
-
-- vehicle type, capacity and relevant registration / provider details;
-- pickup, destination, route, date, start time and expected duration;
-- included distance / hours and any overtime rule;
-- whether fuel, tolls, parking, driver allowance, loading / unloading, helpers, stairs, waiting, return journey and taxes are included or excluded;
-- cargo type, approximate weight / volume and special handling requirements, where relevant;
-- cancellation, deposit, damage and rescheduling terms; and
-- the total price or the method used to calculate variable charges.
-
-A quote should not be treated as accepted until the customer and provider have accepted it through the app or another documented method specified by Ride.
-
-## 3. Customer obligations
-
-Provide accurate passenger, luggage, cargo, weight, access and route details. Do not exceed vehicle capacity, request unlawful transport or conceal hazardous cargo. Secure fragile goods and arrange any special loading equipment or helpers in advance.
-
-## 4. Provider obligations
-
-Provide the agreed vehicle and qualified driver / crew, maintain vehicle fitness and required permits, arrive at the agreed time where reasonably possible, and disclose any change before proceeding. A substitute vehicle or increased charge requires the customer's approval except for an emergency safety alternative permitted by law.
-
-## 5. Damage, delay and cancellation
-
-The booking-specific offer and cancellation schedule govern cancellation charges, waiting, delay, rescheduling and damage claims. Take reasonable pre-service and post-service records where needed. Any deposit and deduction must be supported by the disclosed terms and evidence.
+**Effective Date:** 1 November 2026
 
 ---
+
+### 1. Scope and Platform Nature
+
+This policy applies to all hourly and daily car rentals, chauffeur-driven private vehicles, intercity passenger journeys, and pickup or commercial truck rentals arranged through the Ride platform.
+
+Ride operates strictly as an independent technology intermediary connecting customers with independent vehicle owners, transport operators, and commercial drivers. Ride does not own, lease, operate, or maintain any vehicles, nor does Ride provide full-service packing, moving, or logistics management. The service offered through the Platform is strictly vehicle and transport rental.
+
+### 2. Quotation, Booking Scope, and Direct Settlement
+
+Before a booking is confirmed, the written quotation or provider offer displayed on the Platform must clearly specify:
+
+* **Vehicle & Provider Details:** Vehicle make, model, class, certified payload or passenger seating capacity, registration number, and relevant provider details;
+* **Trip Specifications:** Exact pickup location, drop-off destination, proposed route, travel date, scheduled reporting time, and estimated duration;
+* **Distance & Time Allowances:** Allocated mileage (distance allowance in kilometers), allocated service duration (hours), and applicable overtime or excess-mileage billing rates;
+* **Cost Inclusions and Exclusions:** Explicit disclosure of whether fuel, CNG, highway tolls, bridge tolls, parking fees, driver food/overnight allowances, vehicle waiting time, empty return trip charges, helper/labor fees (if offered directly by the provider), and statutory taxes are included in or excluded from the quote;
+* **Cargo Description:** General nature of goods, approximate weight, volume, and special handling instructions (where applicable);
+* **Operational Conditions:** Trip cancellation terms, advance payment requirements, transit delay rules, and rescheduling conditions; and
+* **Pricing Structure:** The final fixed rate or the objective calculation formula used to determine variable charges.
+
+**Direct Payment Settlement:** Ride does not collect, receive, process, or hold passenger fares, freight charges, advances, or security deposits. All payments—including advance trip commitments, final trip charges, waiting surcharges, and highway tolls—are settled directly between the customer and the vehicle provider using their agreed settlement method (such as cash or direct Mobile Financial Services [MFS] transfer). Ride is not a financial custodian, escrow agent, or guarantor of transaction deposits.
+
+A quotation is not deemed accepted or binding until both the customer and the provider have explicitly confirmed it through the Ride app or another formal procedure recognized by Ride.
+
+### 3. Customer Obligations
+
+Customers must provide accurate, complete, and honest information regarding passenger count, luggage volume, cargo descriptions, approximate weight, and site access conditions (such as low overhead bridge clearances, narrow approach roads, or municipal truck entry restrictions).
+
+Customers agree not to:
+
+* Demand or pressure the driver to violate traffic regulations, speed limits, or route restrictions;
+* Conceal, transport, or attempt to transport hazardous chemicals, inflammable substances, explosives, toxic cargo, illegal narcotics, unregistered animal carcasses, contraband, or undeclared dangerous goods; or
+* Instruct the driver to load cargo in a manner that obstructs vehicle visibility or safe mechanical operation.
+
+Where a truck is hired to transport personal or commercial goods, the customer is solely responsible for packaging, cushioning, boxing, and securing all fragile, high-value, or sensitive items prior to loading.
+
+### 4. Provider Obligations and Overloading Liability
+
+Vehicle providers must supply the exact vehicle agreed upon, operated by a qualified, properly licensed, and sober driver. Providers must maintain a valid certificate of fitness, vehicle registration, road tax token, Regional Transport Committee (RTC) route permit, and commercial insurance throughout the journey. Providers must arrive at the designated pickup location at the agreed time, subject to reasonable operational conditions, and disclose any unexpected delays to the customer in advance.
+
+**Complete Provider Liability for Overloading:**
+
+Under the *Road Transport Act, 2018*, the compliance of a vehicle with maximum gross weight, certified payload capacity, and axle load limits is the sole and complete legal liability of the truck owner and driver. The provider/driver retains the absolute legal right and statutory obligation to inspect the weight and physical dimensions of any cargo prior to loading. If the customer's cargo exceeds the certified legal capacity of the vehicle, the driver must refuse to load the excess weight. Any criminal prosecution, statutory fines, axle-load penalties, unloading expenses, or vehicle impoundment resulting from operating an overloaded vehicle are the sole legal and financial responsibility of the provider and driver.
+
+Providers may not substitute an unapproved vehicle or demand an increased fare or surcharge after booking confirmation without the customer's prior express consent, except where deploying an alternative vehicle is strictly necessary as an emergency safety replacement permitted by law.
+
+### 5. Delays, Cancellations, and Damage Claims
+
+Trip cancellations, waiting charges, transit delays, and rescheduling terms are governed strictly by the specific terms disclosed in the booking quotation and the provider's cancellation schedule.
+
+Both parties are advised to inspect the vehicle and cargo before departure and immediately upon arrival, recording contemporaneous, date-stamped photographic evidence to verify baseline condition.
+
+Because Ride does not hold client funds or deposits, any claim regarding retained advances, property damage, transit delays, or disputed deductions must be pursued and settled directly between the customer and the provider. Ride provides in-app customer support solely to facilitate communication, review reported infractions, and enforce administrative sanctions against non-compliant accounts on the Platform.
 
 # PART H — AMBULANCE BOOKING POLICY AND EMERGENCY NOTICE
 
