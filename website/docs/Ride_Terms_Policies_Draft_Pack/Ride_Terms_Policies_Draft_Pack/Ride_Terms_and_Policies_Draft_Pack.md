@@ -402,31 +402,68 @@ Ride may suspend a listing or merchant access where licences expire, products ar
 
 # PART E — FOOD, GROCERY AND GENERAL SHOP ORDER POLICY
 
-## 1. Scope and seller identity
+This policy governs all food, grocery, and general retail orders placed through the Ride platform, including order acceptance, product substitutions, preparation standards, complaints, returns, and dispute handling.
 
-This policy applies to food, grocery and other shop orders placed through Ride. The order page must identify the merchant / seller and show the goods, quantity, price and applicable delivery / other charges. The merchant identified on the order page is responsible for selling and supplying the goods, except where the transaction clearly identifies Ride as the seller.
+**Document Status:** Working Draft — Subject to Final Approval
 
-## 2. Order confirmation and substitutions
+**Last Updated:** 1 November 2026
 
-An order is not final until the merchant accepts it or the app displays a confirmed state. If an item is unavailable, the merchant may reject the order or propose a substitution. The customer must approve a material substitution or additional charge before fulfilment.
-
-## 3. Preparation and delivery
-
-Food is prepared and packed by the merchant unless the app says otherwise. The delivery partner is responsible for collecting and transporting the sealed order with reasonable care. Estimated delivery times are estimates and may be affected by preparation, traffic, weather, access restrictions or other circumstances.
-
-## 4. Allergens, dietary and product information
-
-Customers should review ingredient, allergen, dietary, quantity and product information displayed by the merchant. Ride cannot independently verify every merchant statement. Customers with serious allergies or medical dietary requirements should contact the merchant before ordering and should not rely on an incomplete listing.
-
-## 5. Complaints
-
-Report missing, incorrect, damaged, contaminated, expired or materially misdescribed items through `support@ride.digital-papyrus.com or WhatsApp +880171324950` within `[REVIEWED CLAIM WINDOW]`. Include order ID, photos where appropriate and a description of the issue. Ride may contact the merchant and delivery partner to investigate.
-
-## 6. Returns and refunds
-
-Food and perishable items may not be suitable for ordinary change-of-mind return, but this does not remove the customer's rights where goods are unsafe, defective, incorrect, missing or not as described. Non-perishable goods follow the applicable seller return terms and mandatory consumer law. Any exclusions must be clearly shown before checkout and legally reviewed.
+**Effective Date:** 1 November 2026
 
 ---
+
+### 1. Scope, Seller Identity, and Direct Settlement
+
+This policy applies to all orders for food, beverages, groceries, daily essentials, and general retail merchandise placed through the Ride platform. The checkout screen and order summary must clearly identify the independent merchant or retail seller, itemized list of goods, quantities, unit and total prices, delivery charges, and any other applicable mandatory fees.
+
+Ride operates strictly as an independent technology platform and software intermediary. Ride is not a seller, merchant of record, food business operator, caterer, or grocer. Ride never collects, receives, holds, or escrows customer funds for merchandise or food purchases.
+
+The merchant identified on the order screen is solely responsible for selling, preparing, packaging, verifying quality, and supplying the goods in compliance with applicable food safety, health, and consumer standards. All payments for goods and delivery are settled directly between the customer and the supplying merchant or designated delivery partner via the payment method agreed for that order (such as cash on delivery or direct Mobile Financial Services transfer).
+
+### 2. Order Confirmation and Substitutions
+
+Submitting an order constitutes a request to purchase and is neither final nor binding until the designated merchant formally accepts it or the app displays an explicit confirmed status.
+
+If an ordered item is out of stock, unavailable, or cannot be prepared, the merchant may decline the item/order or propose a suitable substitution. Any material product substitution, brand alteration, quantity variation, or associated price adjustment requires the customer’s explicit confirmation before the order may be dispatched. If the customer declines the substitution, the unavailable item must be canceled without charge to the customer.
+
+### 3. Preparation, Packaging, and Delivery
+
+All food, beverage, and grocery items are prepared, handled, packed, and sealed exclusively by the merchant. The merchant must ensure that items are safely packed in tamper-evident or sealed packaging suitable for transit.
+
+The assigned delivery partner is an independent logistics provider responsible solely for collecting the sealed package from the merchant and transporting it to the customer’s designated drop-off location with reasonable care.
+
+Estimated delivery times displayed in the app are non-binding estimates only. Actual delivery times may vary due to merchant preparation delays, kitchen volume, real-time traffic conditions, severe weather, public access restrictions, or other operational factors.
+
+### 4. Allergens, Dietary Information, and Product Descriptions
+
+Merchants are solely responsible for the accuracy of all product titles, ingredients, allergen warnings, nutritional claims, halal certifications, net weights, expiry dates, and dietary disclosures displayed on their store listings. Ride does not independently verify or guarantee merchant product descriptions.
+
+Customers with severe food allergies, medical dietary requirements, or specific religious dietary obligations must contact the merchant directly through in-app communication channels or listed contact details prior to placing an order. Customers should not rely on incomplete, generic, or summary menu listings for medical or allergen safety.
+
+### 5. Complaints and Claim Reporting Windows
+
+If an order arrives with missing items, incorrect items, physical damage, contamination, broken seals, expired dates, or material discrepancies from the listing description, the customer must submit a formal complaint through Ride Support via email at support@ride.digital-papyrus.com or via WhatsApp at +8801713249520.
+
+**Applicable Claim Reporting Windows:**
+
+* **Merchant’s Declared Window:** The specific claim window declared and displayed by the individual merchant on their store or product listing page governs the order.
+* **Platform Fallback Window:** If an individual merchant has not specified an applicable claim window, Ride’s standard fallback timelines apply:
+* *Hot food, prepared meals, and perishable groceries:* The complaint must be reported within **2 hours** of physical delivery.
+* *Packaged, non-perishable goods and general retail items:* The complaint must be reported within **24 hours** of physical delivery.
+
+All complaints must include the relevant Order ID, clear descriptive details of the defect, and contemporaneous photographic evidence of the defective goods, packaging, receipt, and merchant seal. Ride coordinates with the customer, merchant, and delivery partner to investigate the issue and facilitate an equitable resolution.
+
+### 6. Returns, Replacements, and Refunds
+
+Due to public health, hygiene, and food safety regulations under Bangladesh law, prepared meals, fresh produce, opened beverages, and perishable groceries are strictly non-returnable and non-refundable based on a simple change of mind.
+
+However, this restriction does not limit, waive, or diminish any statutory consumer rights guaranteed under the *Consumer Rights Protection Act, 2009* or the *Safe Food Act, 2013* where goods delivered are unsafe, contaminated, adulterated, damaged, expired, defective, or materially non-compliant with the confirmed order.
+
+Non-perishable retail items are governed by the individual merchant’s disclosed return and replacement policy, subject to mandatory consumer laws.
+
+**Refund Settlement Mechanics:**
+
+Because Ride operates as a software intermediary and does not collect, hold, or process buyer payments, Ride does not issue direct monetary refunds from its own accounts. Any approved financial reimbursement, cash refund, price adjustment, or replacement must be issued and settled directly by the supplying merchant (or delivery partner, where the damage occurred in transit). Ride assists solely by verifying documentation, facilitating communication, and logging disciplinary actions against non-compliant merchants or delivery partners on the Platform.
 
 # PART F — PARCEL, COURIER AND STORE DELIVERY POLICY
 
