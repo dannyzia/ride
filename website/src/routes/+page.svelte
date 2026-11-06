@@ -42,6 +42,21 @@
       getApp: 'Google Play link coming soon',
       footerLine: 'Mobility, local commerce and delivery — connected for Bangladesh.',
       footerNotice: 'Services and payment methods vary by location and provider.',
+      proofA: 'Mobility', proofB: 'Local commerce', proofC: 'Delivery',
+      mockRides: 'Everyday rides', mockRidesTags: 'Bike · CNG · Car · Women-Only',
+      mockDelivery: 'Local delivery', mockDeliveryTags: 'Food · Shops · Parcel',
+      mockGreeting: 'Where are we going?', mockPickup: 'YOUR PICKUP', mockChoose: 'Choose a location',
+      mockAround: 'GET AROUND', mockBike: 'Bike', mockCng: 'CNG', mockCar: 'Car',
+      mockMore: 'MORE FROM RIDE', mockFood: 'Food', mockShops: 'Shops', mockParcel: 'Parcel', mockRentals: 'Rentals',
+      mockOneApp: 'One app for everyday needs', mockCheck: "Check what's available near you",
+      mockYou: 'You', mockCaption: 'A connected local experience',
+      partnerLabelA: 'PARTNER NETWORK / 01', partnerOrgA: 'Ride partners', partnerCountA: '01 / 02',
+      partnerLabelB: 'PARTNER NETWORK / 02', partnerOrgB: 'Local businesses', partnerCountB: '02 / 02',
+      importantKicker: 'IMPORTANT',
+      listedOnPlay: 'Ride is listed on Google Play.', openPlay: 'Open Google Play ↗', stayConnected: 'Stay connected',
+      footerExplore: 'EXPLORE', footerInfo: 'INFORMATION', footerTerms: 'Terms of use', footerPrivacy: 'Privacy policy',
+      footerDelete: 'Delete account', footerSupport: 'Support', footerPrelaunch: 'Pre-launch preview',
+      footerRights: 'All rights reserved.', footerCountry: 'Bangladesh',
       navServices: 'Services', navPartners: 'Partners', navSafety: 'Safety', navFaq: 'FAQ', navContact: 'Contact',
       faqs: [
         { q: 'Where is Ride available?', a: 'Service coverage is being rolled out by area and provider. Check the app or contact support for the latest local availability. We do not claim that every service is available in every district.' },
@@ -86,6 +101,21 @@
       getApp: 'Google Play লিংক শিগগিরই আসছে',
       footerLine: 'যাতায়াত, স্থানীয় কেনাকাটা ও ডেলিভারি—বাংলাদেশের জন্য একসাথে।',
       footerNotice: 'এলাকা ও সেবাদাতা অনুযায়ী সেবা এবং পেমেন্ট পদ্ধতি ভিন্ন হতে পারে।',
+      proofA: 'যাতায়াত', proofB: 'স্থানীয় বাণিজ্য', proofC: 'ডেলিভারি',
+      mockRides: 'দৈনন্দিন রাইড', mockRidesTags: 'বাইক · সিএনজি · কার · উইমেন-অনলি',
+      mockDelivery: 'স্থানীয় ডেলিভারি', mockDeliveryTags: 'খাবার · দোকান · পার্সেল',
+      mockGreeting: 'কোথায় যাবেন?', mockPickup: 'আপনার পিকআপ', mockChoose: 'অবস্থান বেছে নিন',
+      mockAround: 'চলাচল করুন', mockBike: 'বাইক', mockCng: 'সিএনজি', mockCar: 'কার',
+      mockMore: 'RIDE থেকে আরও', mockFood: 'খাবার', mockShops: 'দোকান', mockParcel: 'পার্সেল', mockRentals: 'ভাড়া',
+      mockOneApp: 'দৈনন্দিন প্রয়োজনে এক অ্যাপ', mockCheck: 'আপনার কাছে কী পাওয়া যায় দেখুন',
+      mockYou: 'আপনি', mockCaption: 'সংযুক্ত স্থানীয় অভিজ্ঞতা',
+      partnerLabelA: 'পার্টনার নেটওয়ার্ক / ০১', partnerOrgA: 'Ride পার্টনার', partnerCountA: '০১ / ০২',
+      partnerLabelB: 'পার্টনার নেটওয়ার্ক / ০২', partnerOrgB: 'স্থানীয় ব্যবসা', partnerCountB: '০২ / ০২',
+      importantKicker: 'গুরুত্বপূর্ণ',
+      listedOnPlay: 'Ride Google Play-এ তালিকাভুক্ত।', openPlay: 'Google Play খুলুন ↗', stayConnected: 'সংযুক্ত থাকুন',
+      footerExplore: 'ঘুরে দেখুন', footerInfo: 'তথ্য', footerTerms: 'ব্যবহারের শর্তাবলি', footerPrivacy: 'প্রাইভেসি নীতি',
+      footerDelete: 'অ্যাকাউন্ট মুছুন', footerSupport: 'সাপোর্ট', footerPrelaunch: 'প্রি-লঞ্চ প্রিভিউ',
+      footerRights: 'সর্বস্বত্ব সংরক্ষিত।', footerCountry: 'বাংলাদেশ',
       navServices: 'সেবাসমূহ', navPartners: 'পার্টনার', navSafety: 'নিরাপত্তা', navFaq: 'প্রশ্নোত্তর', navContact: 'যোগাযোগ',
       faqs: [
         { q: 'Ride কোথায় পাওয়া যাবে?', a: 'এলাকা ও সেবাদাতা অনুযায়ী ধাপে ধাপে সেবা চালু হচ্ছে। সর্বশেষ তথ্যের জন্য অ্যাপ বা সাপোর্টে যোগাযোগ করুন। প্রতিটি জেলায় সব সেবা চালু আছে—এমন দাবি করা হচ্ছে না।' },
@@ -186,25 +216,25 @@
         </div>
         <div class="hero-footnote"><span class="pin-dot"></span>{current.availability}</div>
         <div class="hero-proof-row">
-          <span><b>01</b> Mobility</span><i></i><span><b>02</b> Local commerce</span><i></i><span><b>03</b> Delivery</span>
+          <span><b>01</b> {current.proofA}</span><i></i><span><b>02</b> {current.proofB}</span><i></i><span><b>03</b> {current.proofC}</span>
         </div>
       </div>
 
       <div class="hero-visual" aria-label="Illustrative Ride app interface" role="img">
         <div class="visual-orbit orbit-one"></div><div class="visual-orbit orbit-two"></div>
-        <div class="floating-note note-one"><span class="note-icon">↗</span><span><b>Everyday rides</b><small>Bike · CNG · Car · Women-Only</small></span></div>
-        <div class="floating-note note-two"><span class="note-icon note-orange">▣</span><span><b>Local delivery</b><small>Food · Shops · Parcel</small></span></div>
+        <div class="floating-note note-one"><span class="note-icon">↗</span><span><b>{current.mockRides}</b><small>{current.mockRidesTags}</small></span></div>
+        <div class="floating-note note-two"><span class="note-icon note-orange">▣</span><span><b>{current.mockDelivery}</b><small>{current.mockDeliveryTags}</small></span></div>
         <div class="phone-frame">
-          <div class="phone-top"><span class="phone-brand"><span class="mini-mark">R</span> Ride</span><span class="phone-avatar">You</span></div>
-          <div class="phone-greeting">Where are we going?</div>
-          <div class="location-search"><span>⌖</span><div><small>YOUR PICKUP</small><b>Choose a location</b></div><span class="search-arrow">↗</span></div>
-          <div class="phone-label">GET AROUND</div>
-          <div class="ride-options"><div><span class="ride-symbol">🏍</span><small>Bike</small></div><div><span class="ride-symbol">🛺</span><small>CNG</small></div><div><span class="ride-symbol">🚘</span><small>Car</small></div></div>
-          <div class="phone-label label-spaced">MORE FROM RIDE</div>
-          <div class="mini-services"><div><span class="mini-service-icon food-icon">✳</span><span>Food</span></div><div><span class="mini-service-icon shop-icon">▦</span><span>Shops</span></div><div><span class="mini-service-icon parcel-icon">▣</span><span>Parcel</span></div><div><span class="mini-service-icon truck-icon">▰</span><span>Rentals</span></div></div>
-          <div class="phone-bottom"><span class="bottom-avatar">R</span><span><b>One app for everyday needs</b><small>Check what's available near you</small></span><span class="bottom-arrow">→</span></div>
+          <div class="phone-top"><span class="phone-brand"><span class="mini-mark">R</span> Ride</span><span class="phone-avatar">{current.mockYou}</span></div>
+          <div class="phone-greeting">{current.mockGreeting}</div>
+          <div class="location-search"><span>⌖</span><div><small>{current.mockPickup}</small><b>{current.mockChoose}</b></div><span class="search-arrow">↗</span></div>
+          <div class="phone-label">{current.mockAround}</div>
+          <div class="ride-options"><div><span class="ride-symbol">🏍</span><small>{current.mockBike}</small></div><div><span class="ride-symbol">🛺</span><small>{current.mockCng}</small></div><div><span class="ride-symbol">🚘</span><small>{current.mockCar}</small></div></div>
+          <div class="phone-label label-spaced">{current.mockMore}</div>
+          <div class="mini-services"><div><span class="mini-service-icon food-icon">✳</span><span>{current.mockFood}</span></div><div><span class="mini-service-icon shop-icon">▦</span><span>{current.mockShops}</span></div><div><span class="mini-service-icon parcel-icon">▣</span><span>{current.mockParcel}</span></div><div><span class="mini-service-icon truck-icon">▰</span><span>{current.mockRentals}</span></div></div>
+          <div class="phone-bottom"><span class="bottom-avatar">R</span><span><b>{current.mockOneApp}</b><small>{current.mockCheck}</small></span><span class="bottom-arrow">→</span></div>
         </div>
-        <div class="visual-caption"><span class="caption-line"></span> A connected local experience</div>
+        <div class="visual-caption"><span class="caption-line"></span> {current.mockCaption}</div>
       </div>
     </section>
 
@@ -239,15 +269,15 @@
     <section class="partner-section section-wrap" id="partners">
       <div class="partner-intro"><div class="eyebrow"><span class="eyebrow-dot"></span>{current.partnerEyebrow}</div><h2>{current.partnerTitle}</h2><p>{current.partnerText}</p><a class="text-link" href={supportHref}>{current.partnerCta}<span>↗</span></a></div>
       <div class="partner-cards">
-        <article class="partner-card driver-card"><span class="partner-symbol">↗</span><span class="partner-label">PARTNER NETWORK / 01</span><h3>{current.driverTitle}</h3><p>{current.driverText}</p><div class="partner-bottom"><span>Ride partners</span><span>01 / 02</span></div></article>
-        <article class="partner-card merchant-card"><span class="partner-symbol">▦</span><span class="partner-label">PARTNER NETWORK / 02</span><h3>{current.merchantTitle}</h3><p>{current.merchantText}</p><div class="partner-bottom"><span>Local businesses</span><span>02 / 02</span></div></article>
+        <article class="partner-card driver-card"><span class="partner-symbol">↗</span><span class="partner-label">{current.partnerLabelA}</span><h3>{current.driverTitle}</h3><p>{current.driverText}</p><div class="partner-bottom"><span>{current.partnerOrgA}</span><span>{current.partnerCountA}</span></div></article>
+        <article class="partner-card merchant-card"><span class="partner-symbol">▦</span><span class="partner-label">{current.partnerLabelB}</span><h3>{current.merchantTitle}</h3><p>{current.merchantText}</p><div class="partner-bottom"><span>{current.partnerOrgB}</span><span>{current.partnerCountB}</span></div></article>
       </div>
     </section>
 
     <section class="safety-section" id="safety">
       <div class="section-wrap safety-inner">
         <div class="safety-copy"><div class="eyebrow eyebrow-light"><span class="eyebrow-dot"></span>{current.safetyEyebrow}</div><h2>{current.safetyTitle}</h2><p>{current.safetyText}</p></div>
-        <div class="safety-panel"><div class="safety-mark">!</div><div><span class="safety-kicker">IMPORTANT</span><h3>{current.emergencyTitle}</h3><p>{current.emergencyText}</p></div></div>
+        <div class="safety-panel"><div class="safety-mark">!</div><div><span class="safety-kicker">{current.importantKicker}</span><h3>{current.emergencyTitle}</h3><p>{current.emergencyText}</p></div></div>
       </div>
     </section>
 
@@ -265,13 +295,13 @@
 
     <section class="contact-section section-wrap" id="contact">
       <div class="contact-card"><div class="contact-content"><div class="eyebrow eyebrow-light"><span class="eyebrow-dot"></span>{current.contactEyebrow}</div><h2>{current.contactTitle}</h2><p>{current.contactText}</p><a class="button button-light" href={supportHref}>{current.contactCta}<span>↗</span></a></div><div class="contact-art" aria-hidden="true"><div class="contact-ring ring-a"></div><div class="contact-ring ring-b"></div><div class="contact-r">R</div><span class="art-spark spark-a">✳</span><span class="art-spark spark-b">+</span></div></div>
-      <div class="launch-line"><span class="launch-dot"></span><span>{playStoreConfigured ? 'Ride is listed on Google Play.' : current.getApp}</span><a href={playStoreConfigured ? site.playStoreUrl : '#contact'}>{playStoreConfigured ? 'Open Google Play ↗' : 'Stay connected'}</a></div>
+      <div class="launch-line"><span class="launch-dot"></span><span>{playStoreConfigured ? current.listedOnPlay : current.getApp}</span><a href={playStoreConfigured ? site.playStoreUrl : '#contact'}>{playStoreConfigured ? current.openPlay : current.stayConnected}</a></div>
     </section>
   </main>
 
   <footer class="site-footer">
-    <div class="footer-main section-wrap"><div class="footer-brand"><a class="brand brand-footer" href="/"><img class="brand-mark-img" src="/logo.png" alt="" width="33" height="33" /><span class="brand-name">Ride<span class="brand-period">.</span></span></a><p>{current.footerLine}</p></div><div class="footer-links"><div><span class="footer-label">EXPLORE</span><a href="#services">{current.navServices}</a><a href="#partners">{current.navPartners}</a><a href="#safety">{current.navSafety}</a></div><div><span class="footer-label">INFORMATION</span><a href="/terms">Terms of use</a><a href="/privacy">Privacy policy</a><a href="/delete-account">Delete account</a><a href="/support">Support</a></div></div></div>
-    <div class="footer-prelaunch section-wrap"><span>Pre-launch preview</span><span>{site.legalEntity} · Powered by {site.poweredBy} · {site.businessAddress}</span></div>
-    <div class="footer-bottom section-wrap"><span>© {new Date().getFullYear()} {site.brand}. All rights reserved.</span><span>{current.footerNotice}</span><span>Bangladesh</span></div>
+    <div class="footer-main section-wrap"><div class="footer-brand"><a class="brand brand-footer" href="/"><img class="brand-mark-img" src="/logo.png" alt="" width="33" height="33" /><span class="brand-name">Ride<span class="brand-period">.</span></span></a><p>{current.footerLine}</p></div><div class="footer-links"><div><span class="footer-label">{current.footerExplore}</span><a href="#services">{current.navServices}</a><a href="#partners">{current.navPartners}</a><a href="#safety">{current.navSafety}</a></div><div><span class="footer-label">{current.footerInfo}</span><a href="/terms">{current.footerTerms}</a><a href="/privacy">{current.footerPrivacy}</a><a href="/delete-account">{current.footerDelete}</a><a href="/support">{current.footerSupport}</a></div></div></div>
+    <div class="footer-prelaunch section-wrap"><span>{current.footerPrelaunch}</span><span>{site.legalEntity} · Powered by {site.poweredBy} · {site.businessAddress}</span></div>
+    <div class="footer-bottom section-wrap"><span>© {new Date().getFullYear()} {site.brand}. {current.footerRights}</span><span>{current.footerNotice}</span><span>{current.footerCountry}</span></div>
   </footer>
 </div>
