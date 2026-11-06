@@ -66,151 +66,151 @@ At minimum, publish the General Terms, Privacy Notice and Account Deletion page 
 
 # PART A — GENERAL TERMS OF USE
 
-**Document status:** Draft. Apply these terms to the Ride website, Android application, related interfaces and platform services operated by `Ride Digital Services` ("Ride", "we", "us" or "our").
+These Terms of Use govern the access to and use of the Ride website, mobile applications, APIs, and associated platform services.
 
-**Last updated:** `1 November 2026`  
-**Effective:** `1 November 2026`
+**Document Status:** Working Draft — Subject to Final Approval
 
-## 1. Who we are and what these terms cover
+**Last Updated:** 1 November 2026
 
-Ride is a technology platform that helps customers discover, request, arrange and manage certain transport, delivery, shopping, rental and emergency-transport services through one application and related digital services.
+**Effective Date:** 1 November 2026
 
-These Terms of Use form an agreement between you and `Ride Digital Services`, a `[ENTITY TYPE]` registered in Bangladesh under number `[REGISTRATION NUMBER]`, with its registered office at `7/1-D, R.K. Mission Road, Dhaka-1203`.
+---
 
-These terms apply when you access or use Ride's website, application, APIs, partner tools or customer-support channels. Service-specific policies and partner agreements may also apply. By creating an account, placing a booking, accepting a request or otherwise using a service, you agree to the terms that apply to that activity.
+### 1. Who We Are and What These Terms Cover
 
-If you do not agree, do not create an account or use the relevant service.
+Ride is a technology platform that connects customers with independent service providers and merchants to discover, request, arrange, and manage transportation, logistics, delivery, shopping, rental, and emergency transport services through a unified digital interface.
 
-## 2. Definitions
+These Terms of Use constitute a legally binding agreement between you and Ride Digital Services, a [ENTITY TYPE] registered in Bangladesh under registration number [REGISTRATION NUMBER], having its registered office at 7/1-D, R.K. Mission Road, Dhaka-1203 ("Ride", "we", "us", or "our").
 
-- **Customer / User:** a person who uses Ride to request, book, buy, send or receive a service.
-- **Provider / Partner:** a driver, rider, courier, delivery person, fleet owner, rental operator, ambulance operator or other provider who offers a service through Ride.
-- **Merchant:** a restaurant, shop, grocery seller, workshop or other business listing goods or services through Ride.
-- **Booking / Order:** a request submitted through Ride for a ride, rental, delivery, ambulance or purchase.
-- **Platform:** the Ride app, website, software, APIs and related operational systems.
-- **Service provider:** the person or business that actually supplies the transport, goods, medical transport, rental or delivery service identified in the booking.
+These terms apply whenever you access or use Ride’s website, mobile applications, application programming interfaces (APIs), merchant or provider interfaces, or customer support channels. By creating an account, submitting a booking or order, accepting a service request, or otherwise using the Platform, you agree to be bound by these Terms of Use and any applicable service-specific policies.
 
-## 3. Ride's role and the service provider's role
+If you do not agree to these terms, do not create an account or use the Platform.
 
-Ride provides technology and related platform functions. Depending on the service, these may include account creation, provider discovery, matching, booking requests, fare or price display, routing, order updates, communications, payment facilitation, tracking, support and dispute intake.
+### 2. Definitions
 
-The provider or merchant identified in the booking is responsible for the service, vehicle, goods, preparation, professional qualifications, licences, permits, staffing and fulfilment that it supplies, subject to Ride's own obligations under applicable law and any separate agreement.
+* **Customer / User:** Any individual who accesses or uses Ride to search for, request, book, purchase, send, or receive services or goods.
+* **Provider / Partner:** An independent driver, vehicle owner, courier, delivery person, fleet operator, vehicle rental operator, private ambulance provider, or other professional service supplier offering services via the Platform.
+* **Merchant:** A restaurant, grocery store, pharmacy, retail shop, commercial workshop, or business entity listing products or services on the Platform.
+* **Booking / Order:** A formal request submitted through the Platform for transportation, rental, courier delivery, ambulance dispatch, or merchandise purchase.
+* **Platform:** The Ride mobile applications (including Android), websites, software modules, backend algorithms, APIs, and associated operational systems.
+* **Service Provider:** The independent individual or corporate entity that physically fulfills the transport, rental, medical transit, delivery, or retail service specified in a Booking.
 
-The legal character of each service may differ. Ride does not use this clause to exclude liability that cannot lawfully be excluded, or to avoid obligations imposed on Ride as a platform operator, technology institution, marketplace, payment facilitator, data fiduciary or contracting party.
+### 3. Roles and Operational Boundaries
 
-Before accepting a booking, review the provider, merchant, service description, price, limitations and applicable service policy shown in the app.
+Ride is a technology provider. Depending on the specific service, the Platform provides account onboarding, digital matching, provider discovery, dispatch coordination, estimated route calculation, pricing display, real-time tracking, in-app communications, dispute intake, and customer support.
 
-## 4. Eligibility and account security
+The physical transportation, delivery, rental, medical transport, or retail products ordered via the Platform are provided exclusively by independent Providers or Merchants. Each Provider and Merchant is solely responsible for its own services, road safety, vehicle roadworthiness, product quality, food hygiene, regulatory licensing, operational permits, and statutory compliance.
 
-You must be at least 18 years old to create and operate a Ride account, unless Ride has expressly enabled a legally compliant guardian-managed process for a particular service. An adult may arrange a service for another person where the app permits it and the adult has authority to provide the required information.
+Nothing in these terms limits or diminishes any statutory obligations imposed upon Ride as a technology intermediary, marketplace platform, data fiduciary, or contracting party under mandatory Bangladesh law.
 
-You must provide accurate and current information, keep your credentials secure, promptly update incorrect account details and notify Ride if you suspect unauthorised access. You are responsible for activity carried out through your account unless applicable law provides otherwise.
+Before confirming any request, you must review the designated Provider or Merchant, service description, estimated delivery time, route specifications, total price, and applicable cancellation terms displayed on the Platform.
 
-Do not create duplicate, false, misleading or impersonation accounts; share an account with an unauthorised person; or use another person's identity documents.
+### 4. Eligibility and Account Security
 
-## 5. Bookings, availability and service areas
+You must be at least 18 years of age to register an account, execute these terms, or request services through the Platform. Contracts entered into by minors are void under the Contract Act, 1872; consequently, individuals under the age of 18 are prohibited from creating or holding an account.
 
-A request is not necessarily a confirmed booking. A booking becomes confirmed only when the app displays confirmation or the relevant provider / merchant accepts it, as applicable to that service.
+An adult account holder may book a ride, delivery, or service on behalf of an unaccompanied minor where Platform features permit. In such circumstances, the adult account holder remains the sole contracting party, assumes full legal and financial responsibility for the booking and the minor’s conduct, and warrants that they possess lawful custody or authority to arrange the service.
 
-Availability depends on provider capacity, service area, operating hours, vehicle / equipment availability, merchant stock, road conditions, weather, public safety and other operational constraints. Ride may show estimated arrival times or prices, which are estimates unless expressly labelled as fixed or confirmed.
+You agree to provide true, current, and complete details during registration, safeguard your login credentials, update inaccurate profile information promptly, and notify Ride immediately of any suspected unauthorized account activity. You are legally responsible for all transactions and activities conducted through your account. You must not register duplicate or misleading accounts, impersonate another person, share account credentials, or upload falsified identity documents.
 
-Ride may refuse or cancel a request where it reasonably suspects fraud, unsafe conduct, unlawful activity, inaccurate information, provider unavailability or a technical / operational issue. Where possible, Ride will communicate the reason and any refund or alternative process.
+### 5. Bookings, Availability, and Service Areas
 
-Service coverage is location-specific. A service being shown in the app or described on a general marketing page does not guarantee that it is available at every address or in every district.
+Submitting a request on the Platform constitutes an offer to book and does not guarantee confirmation. A booking is confirmed only when the Platform generates an explicit confirmation screen or when a Provider or Merchant affirmatively accepts the request.
 
-## 6. Prices, fares and charges
+Service availability depends on active provider capacity, localized operating hours, vehicle availability, merchant stock, real-time traffic, weather conditions, public order, and operational variables. All transit times and arrival schedules displayed by Ride are non-binding estimates, unless expressly marked as guaranteed.
 
-Before you confirm a booking or order, the app should display the applicable fare, item price, provider offer, delivery charge, platform charge, waiting charge, toll / parking charge, taxes or other mandatory charges that Ride knows and is able to calculate at that point.
+Ride reserves the right to decline, cancel, or suspend any booking request where it reasonably identifies fraud, security threats, illegal conduct, inaccurate user information, provider unavailability, or system errors. Where feasible, Ride will inform you of the reason for cancellation and advise on available alternatives.
 
-The final amount may change only where the booking terms disclose a legitimate reason, such as a route or scope change requested by the customer, additional waiting, additional stops, quantity changes, tolls / parking, loading / unloading or other expressly disclosed charges. Ride must not add an undisclosed charge after confirmation except where permitted by law and agreed by the customer.
+Service coverage is location-specific. Availability of a service category on marketing channels or general application screens does not guarantee active coverage across every geographic coordinate or district.
 
-Where a provider proposes a quote or bid, the customer is responsible for reviewing the scope and total price before accepting it.
+### 6. Fares, Item Pricing, and Charges
 
-## 7. Payments
+Prior to confirming a booking or checkout, the Platform displays the applicable trip fare, merchandise price, provider bid/quote, delivery charge, platform access charge, estimated waiting surcharge, road tolls, parking fees, and statutory taxes known and calculable at that time.
 
-The payment methods available for a booking are those displayed in the app before confirmation. These may include cash, direct mobile financial service payment, card or another payment method where operationally enabled.
+The final payable amount may be adjusted only where the booking terms explicitly provide for legitimate variations, such as customer-directed route changes, intermediate stops, excess waiting time, order quantity adjustments, loading/unloading fees, or incurred road tolls. Ride does not impose hidden or undisclosed platform surcharges after a booking has been confirmed.
 
-**Ride-hailing fare model:** Under Ride's intended current model, the customer pays the agreed ride fare directly to the driver using the method agreed for that trip. Ride does not deduct a percentage commission from the completed ride fare. The driver retains the full agreed fare, subject to lawful taxes or other charges separately applicable to the driver. This clause must be changed if the actual payment flow differs.
+Where a service operates on a bidding or customized quotation basis, the customer is responsible for reviewing the proposed scope of work and total price before accepting the offer.
 
-**Other services:** Food, shop, parcel, rental, truck and ambulance payments may follow different collection and settlement arrangements. The checkout screen and the applicable service / merchant agreement must identify who collects the payment, who supplies the service, and how refunds are processed. Do not represent Ride as an escrow holder or payment recipient unless that is legally and operationally accurate.
+### 7. Pricing, Monetization Model, and Payments
 
-You must not submit payment credentials that you are not authorised to use. Payment providers may apply their own terms, verification procedures and processing times.
+* **Direct Customer-to-Provider Settlement:** Ride operates as a software intermediary and does not collect, hold, process, or escrow funds payable by customers to Providers or Merchants. The total trip fare, delivery charge, rental fee, or product price displayed on the Platform is settled directly by the customer with the designated Provider or Merchant using the payment method mutually agreed for that transaction (such as cash, direct peer-to-peer Mobile Financial Services [MFS] transfer to the provider’s account, or merchant-integrated point-of-sale). Ride is not a payment collector, escrow agent, or banking institution for customer transactions.
+* **Platform Monetization Model:** Ride licenses its software and dispatch platform to independent Providers and commercial Merchants. Platform fees are collected exclusively from Providers and Merchants under separate partner agreements, structured through recurring periodic subscriptions (such as software access passes) and/or platform lead-generation fees or dispatch commissions. Customers are not billed platform access subscription fees by Ride for requesting or booking services, unless an explicit customer-facing convenience fee is transparently disclosed prior to booking confirmation.
+* **Payment Lawfulness:** You must not utilize any payment credentials, cards, or digital wallets that you are not legally authorized to operate. Third-party MFS operators and payment processing institutions apply their own independent terms, transaction limits, identity verifications, and processing times.
 
-## 8. Cancellations, refunds and complaints
+### 8. Cancellations, Refunds, and Service Complaints
 
-Cancellation eligibility, cancellation charges, refund method and refund timing differ by service. The applicable policy and the in-app booking screen govern, subject to mandatory consumer rights and law.
+Cancellation eligibility, applicable cancellation fees, and refund mechanisms vary by service type and are governed by the specific cancellation terms displayed prior to booking confirmation, subject to statutory consumer protection laws.
 
-Ride will provide a route for reporting a duplicate charge, incorrect fare, missing item, damaged item, failed delivery, no-show, safety incident or other service issue. A complaint should include the booking / order ID and relevant supporting details. Do not send full payment-card credentials, passwords or OTPs to support.
+Because transaction payments are settled directly between customers and Providers or Merchants, monetary refunds for deficient goods, order cancellations, or service failures must be coordinated directly with the supplying Provider or Merchant. Ride provides in-app dispute intake channels to help mediate claims regarding incorrect billing, missing items, damaged goods, failed delivery, provider no-shows, or safety concerns.
 
-Ride will review complaints fairly and may request information from the relevant provider, merchant or payment processor. A customer is not required to waive statutory rights as a condition of using the complaint process.
+When filing a complaint, provide the relevant Booking ID along with contemporaneous documentation. For security reasons, never share full credit/debit card numbers, banking PINs, account passwords, or One-Time Passwords (OTPs) with customer support representatives. Ride reviews dispute submissions impartially but does not act as an insurer or financial guarantor of third-party transactions. Using Ride's support service does not affect your right to seek legal remedies under applicable law.
 
-## 9. User conduct and prohibited activity
+### 9. User Conduct and Prohibited Activities
 
-You must not:
+You agree not to:
 
-- use Ride for an unlawful purpose, fraud, harassment, threats, discrimination, violence, stalking or intimidation;
-- submit false bookings, false reports, forged identity documents or manipulated delivery / payment evidence;
-- ask a provider to violate traffic, transport, food-safety, medical, consumer or other applicable laws;
-- send prohibited, dangerous, illegal or undeclared items through parcel or freight services;
-- misuse emergency, ambulance, SOS or safety features;
-- attempt to access another account, interfere with the Platform, reverse engineer or introduce malicious code;
-- scrape, harvest or misuse personal information obtained through Ride; or
-- contact another user for unrelated marketing, harassment or conduct outside the legitimate service purpose.
+* Use the Platform for any unlawful purpose, fraud, extortion, harassment, stalking, violence, or discrimination;
+* Generate fictitious bookings, file false safety incidents, submit forged identification documents, or manipulate transaction confirmations;
+* Solicit or instruct a Provider to violate traffic rules, road safety regulations, transport laws, food safety standards, or criminal statutes;
+* Ship, transport, or request delivery of hazardous chemicals, illegal narcotics, contraband, uninspected biological agents, firearms, explosives, or undeclared restricted goods;
+* Trigger emergency, SOS, or ambulance features for non-emergency or fraudulent purposes;
+* Bypass Platform security, reverse engineer source code, scrape platform databases, harvest user information, or inject malicious code; or
+* Contact other users, drivers, or merchants for unsolicited marketing, personal harassment, or any purpose outside the legitimate fulfillment of the booked service.
 
-## 10. Safety and emergency matters
+### 10. Safety and Emergency Protocols
 
-Follow all in-app safety instructions and applicable law. Do not use a ride, delivery or rental booking as a substitute for a police, fire, medical or other emergency response service.
+Users must comply with all in-app safety directives, vehicle safety protocols, and statutory rules. Standard ride-hailing, courier, and rental services must never be used as a substitute for official emergency response services, including state police, fire rescue, or specialized advanced life support ambulances.
 
-Where the Ride emergency feature is available, its scope and operation will be described in the app. A button, call, message, alert or location share may depend on device permissions, mobile coverage, correct device settings and third-party networks. Ride does not guarantee that an emergency authority, family contact, hospital or provider will receive or respond to a notification.
+Where the Platform includes in-app safety features, SOS alerts, or automated emergency messaging, their operational integrity depends on active mobile data coverage, cellular transmission, correct device permissions, and the functioning of third-party telecommunications networks. Ride cannot warrant that private contacts, medical institutions, or public authorities will instantly receive or act upon automated alerts.
 
-For immediate danger or a life-threatening emergency in Bangladesh, contact the appropriate emergency service directly, including National Emergency Service 999 where applicable.
+In any situation involving imminent bodily harm, physical assault, severe medical crisis, or life-threatening emergency in Bangladesh, contact local law enforcement and national emergency response services directly, including the National Emergency Service at 999.
 
-## 11. Ratings, reviews and user content
+### 11. Ratings, Reviews, and User Content
 
-You may submit accurate ratings, reviews, photographs or support information relating to a genuine service experience. Do not post personal data about another person, unlawful material, threats, deceptive reviews or content that infringes third-party rights.
+You may submit reviews, star ratings, service feedback, and support inquiries reflecting genuine personal experiences. You must not post defamatory statements, profane language, commercial advertisements, deceptive reviews, personal identifying details of third parties, or content that infringes third-party privacy or intellectual property rights.
 
-You retain ownership of content you submit. You grant Ride a limited, non-exclusive permission to host, display and use it to operate, secure, support and improve the relevant service. This permission ends when the content is deleted, except for copies retained lawfully for records, dispute handling, security or backups.
+You retain ownership of the text, images, and content you submit. However, you grant Ride a worldwide, non-exclusive, royalty-free license to host, display, reproduce, and process that content solely to operate, secure, evaluate, and enhance Platform services. This license terminates upon the deletion of your content, except where copies must be maintained for lawful audit compliance, dispute resolution, platform safety, or system backups.
 
-## 12. Suspension and termination
+### 12. Account Suspension and Termination
 
-Ride may restrict, suspend or close access where reasonably necessary to protect users, investigate fraud or safety incidents, enforce these terms, comply with law or address a material platform risk. Where appropriate, Ride will give notice and an opportunity to appeal or provide an explanation. Immediate temporary action may be taken where delay would create a safety, fraud or legal risk.
+Ride may restrict, suspend, or terminate your access to the Platform where reasonably warranted to protect platform safety, investigate fraud or security incidents, enforce these terms, comply with a judicial or statutory directive, or mitigate severe operational exposure. Except where immediate intervention is required to address imminent safety, fraud, or legal risks, Ride will provide notice and an opportunity to appeal or submit an explanation.
 
-You may stop using Ride and request account deletion under the Account Deletion Policy. Outstanding payments, active bookings, refunds, complaints and legal record-retention duties may need to be resolved or preserved before all associated records can be erased.
+You may stop using the Platform and request account deletion at any time in accordance with our Account Deletion Policy. Final deletion may be deferred until all pending bookings are completed, direct payment disputes are settled, and mandatory statutory record-retention requirements are fulfilled.
 
-## 13. Intellectual property
+### 13. Intellectual Property Rights
 
-Ride and its licensors own or control the Platform software, brand, design, text, graphics and other materials, except for third-party materials and user content. You receive a limited, revocable, non-transferable right to use the app for its intended purpose. You may not copy, sell, modify, reverse engineer or commercially exploit the Platform except where applicable law permits.
+Ride and its licensors retain all right, title, and interest in and to the Platform, including proprietary software code, interface designs, trademarks, domain names, and commercial branding. You are granted a limited, personal, revocable, non-transferable, and non-exclusive license to use the Platform application strictly for its intended functional purposes. You must not copy, modify, distribute, sell, lease, reverse engineer, or decompile any Platform software, except to the extent permitted by mandatory law.
 
-## 14. Third-party providers and external services
+### 14. Third-Party Integrations and External Services
 
-A service may involve a provider, merchant, ambulance operator, fleet operator, payment processor, mapping provider, telecom provider or another third party. Their own service terms may apply. Ride will identify the relevant provider or merchant in the booking flow where practicable.
+The Platform integrates services operated by independent third parties, including digital map providers, telecommunications networks, cloud hosting infrastructure, and merchant point-of-sale systems. Such external services are subject to their respective terms and conditions.
 
-A third-party link or integration does not mean Ride controls the third party's independent systems or policies. Ride remains responsible for its own obligations under applicable law and the agreements it has made.
+The integration or hyperlinking of external services does not imply that Ride endorses, guarantees, or assumes operating control over third-party systems. Ride remains accountable strictly for its own direct operational commitments and statutory duties.
 
-## 15. Liability and consumer rights
+### 15. Liability Boundaries and Consumer Rights
 
-Nothing in these terms excludes or limits liability that cannot lawfully be excluded, including liability arising from fraud, wilful misconduct, or any mandatory consumer, transport, privacy or safety obligation.
+Nothing in these Terms of Use excludes, restricts, or modifies any statutory rights, guarantees, or remedies available to consumers under the *Consumer Rights Protection Act, 2009*, the *Road Transport Act, 2018*, or any other mandatory enactment of Bangladesh that cannot lawfully be contracted out of.
 
-To the extent permitted by law, Ride is not responsible for a provider's independent act or omission merely because the booking was arranged through the Platform. This does not remove Ride's responsibility for its own platform functions, representations, negligent conduct, data processing, payment handling or other legal duties.
+Ride remains responsible for the core technological availability, software security, and explicit contractual commitments of the Platform. Because transportation, delivery, rental, private ambulance services, and retail items are supplied directly by independent third parties, Ride is not liable for vehicle accidents, traffic offenses, transit delays, bodily injury, loss of life, property damage, food hygiene issues, or product defects caused by independent Providers or Merchants, except where such damage is directly caused by Ride’s gross negligence, willful misconduct, or breach of statutory obligation.
 
-Any limitation of liability, cap, exclusion of indirect loss or indemnity must be reviewed by Bangladesh counsel and must not contradict mandatory law or consumer rights.
+### 16. Modifications to These Terms
 
-## 16. Changes to these terms
+Ride may update or revise these Terms of Use from time to time to accommodate technical developments, operational adjustments, or changes in applicable legislation. Material revisions will be notified through the mobile application, website announcements, email, or other reasonable communication channels, stating the effective date of the amendments. Continued access to or use of the Platform following the effective date constitutes acceptance of the modified terms. Where required by law, your express consent will be obtained.
 
-Ride may update these terms to reflect service changes, operational requirements or legal obligations. Material changes will be notified through the app, website, email or another reasonable channel. The updated terms will state their effective date. Where required, Ride will obtain fresh acceptance before the change applies to an existing user or service.
+### 17. Governing Law and Dispute Resolution
 
-## 17. Governing law and disputes
+These Terms of Use, their interpretation, and any claims or disputes arising out of or in connection with them or the use of the Platform are governed by and construed in accordance with the substantive laws of Bangladesh.
 
-These terms are governed by the laws of Bangladesh, without removing any mandatory rights or remedies available to a consumer. The parties should first attempt to resolve a complaint through Ride Support. Nothing prevents a user from approaching a competent court, regulator or consumer-protection authority.
+In the event of any disagreement or dispute, you and Ride agree to first seek an informal, amicable resolution by lodging a formal complaint through Ride Customer Support. If the dispute is not resolved amicably within 30 days of submission, either party may pursue statutory remedies before the National Directorate of Consumer Rights Protection (DNCRP) or submit the dispute to the non-exclusive jurisdiction of the competent civil courts located in Dhaka, Bangladesh. Nothing in this clause prevents a consumer from pursuing mandatory legal remedies before competent statutory authorities.
 
-**Courts / venue:** `[INSERT VENUE AFTER LEGAL REVIEW; DO NOT INSERT AN EXCLUSIVE JURISDICTION CLAUSE WITHOUT COUNSEL]`.
+* **Courts / Venue:** Non-exclusive jurisdiction of the competent courts of Dhaka, Bangladesh.
 
-## 18. Contact
+### 18. Contact Details
 
-Contracting entity: `Ride Digital Services`  
-Address: `7/1-D, R.K. Mission Road, Dhaka-1203`  
-Support: `support@ride.digital-papyrus.com`  
-Legal notices: `[LEGAL EMAIL / ADDRESS]`
+* **Contracting Entity:** Ride Digital Services
+* **Registered Address:** 7/1-D, R.K. Mission Road, Dhaka-1203, Bangladesh
+* **Customer Support Email:** support@ride.digital-papyrus.com
+* **Legal Notices:** [LEGAL EMAIL / ADDRESS]
 
 ---
 
