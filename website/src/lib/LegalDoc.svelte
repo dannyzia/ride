@@ -66,7 +66,7 @@
         <div class="doc-index">
           {#each LEGAL_DOCS as d (d.letter)}
             {@const bn = getLegalMetaBn(d.letter)}
-            <a href={d.route} class:active={d.route === meta.route}><b>{d.title}</b><small>{d.eyebrow}</small><span class="doc-index-bn">{bn.title}</span></a>
+            <a href={d.route} class:active={d.route === meta.route}><b>{d.title}</b><small>{d.eyebrow}</small><span class="doc-index-bn">{bn.title}</span><span class="doc-index-bn-eyebrow">{bn.eyebrow}</span></a>
           {/each}
         </div>
       </section>

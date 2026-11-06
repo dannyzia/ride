@@ -141,6 +141,7 @@ button { font: inherit; }
 .doc-index a.active { border-color: var(--teal); background: #e9f4ee; }
 .doc-index a:hover { border-color: var(--teal); }
 .doc-index-bn { font-size: 12px; color: var(--ink); font-weight: 600; }
+.doc-index-bn-eyebrow { font-size: 10px; color: #7c8982; }
 /* Side-by-side English | Bangla legal columns — both always visible */
 .legal-main-wide { width: min(1180px, calc(100% - 48px)); }
 .legal-title-bn { font-size: clamp(20px, 2.6vw, 28px); font-weight: 700; color: var(--ink); margin: 0 0 14px; }
