@@ -663,37 +663,55 @@ Both parties are advised to inspect the vehicle and cargo before departure and i
 
 Because Ride does not hold client funds or deposits, any claim regarding retained advances, property damage, transit delays, or disputed deductions must be pursued and settled directly between the customer and the provider. Ride provides in-app customer support solely to facilitate communication, review reported infractions, and enforce administrative sanctions against non-compliant accounts on the Platform.
 
-# PART H — AMBULANCE BOOKING POLICY AND EMERGENCY NOTICE
+# PART H
 
-**This section must receive a separate review from a Bangladesh healthcare / transport lawyer and the ambulance operators before being activated.**
+Ambulance Booking & Emergency Notice
 
-## 1. What Ride provides
+This policy governs the terms, operational limitations, and medical disclaimers applicable when requesting private ambulance or patient medical transport services through the Ride platform.
 
-Ride may provide a technology interface for requesting an ambulance or medical transport from an identified third-party ambulance operator. The provider, not the app interface, supplies the vehicle, crew, equipment and transport service unless the booking expressly identifies Ride as the service provider.
+**CRITICAL EMERGENCY NOTICE:**
 
-The booking screen must identify the operator, the ambulance category and the equipment / personnel information that Ride has verified for that listing. Do not use terms such as BLS, ALS, ICU, ventilator, paramedic, doctor, 24/7 or hospital-priority routing unless the relevant provider and capability have been verified and are available for the particular booking.
+**Ride is strictly a technology software platform and is NOT an emergency response service, hospital, or clinical healthcare provider. In any life-threatening or time-critical medical emergency in Bangladesh, call the National Emergency Service at 999 or contact the nearest hospital directly. Do not wait for an app dispatch in a critical emergency.**
 
-## 2. Not a substitute for emergency response
+**Document Status:** Official Platform Policy
 
-A Ride booking is not a guarantee of ambulance availability, dispatch, arrival time, treatment, hospital admission or clinical outcome. Mobile coverage, provider capacity, traffic, road access and other events may delay or prevent a response.
+**Last Updated:** 1 November 2026
 
-For an immediate life-threatening emergency, contact Bangladesh National Emergency Service 999 or the relevant hospital / emergency provider directly. Do not wait for an app booking to be accepted before seeking emergency assistance.
-
-## 3. Medical information and consent
-
-Only provide medical information reasonably needed to arrange the requested transport or communicate an emergency. Where the app requests health information, the interface must provide a clear, separate explanation of the purpose and recipients. Such information may be sensitive personal data and must be access-restricted.
-
-Where necessary to protect life or health, information may be shared with the ambulance operator, treating medical professionals, hospital or emergency authority on an applicable lawful basis. Ride must document the applicable basis and must not use emergency or medical details for unrelated advertising.
-
-## 4. Charges and cancellations
-
-The booking must show the provider's base charge, distance / waiting charges, additional equipment or crew charges and other fees that can reasonably be disclosed. Cancellation charges, if any, must be shown before confirmation. Any emergency-specific exception must be explicit.
-
-## 5. Complaints and incidents
-
-Report a service incident through `support@ride.digital-papyrus.com or WhatsApp +880171324950`. The incident workflow should preserve relevant booking, dispatch, communications and location records subject to the privacy notice and lawful retention period.
+**Effective Date:** 1 November 2026
 
 ---
+
+### 1. Platform Nature and What Ride Provides
+
+Ride provides a technology software interface that enables users to connect with and request patient transport from independent, third-party private ambulance operators.
+
+Ride is solely a technology platform intermediary. Ride does not own, lease, operate, dispatch, or maintain any ambulance vehicles, nor does Ride employ medical doctors, paramedics, nurses, or emergency medical technicians. The independent third-party ambulance operator is solely and exclusively responsible for supplying the vehicle, qualified driver, medical crew, clinical equipment, oxygen, medications, and physical transport service.
+
+At the time of partner registration, Ride conducts a baseline documentary check to verify that the operator holds relevant statutory documents (such as vehicle registration, fitness certificates, and applicable commercial/health permissions). However, the ongoing maintenance, mechanical roadworthiness, clinical readiness, equipment functionality, and professional competence of onboard personnel remain the sole legal, operational, and clinical liability of the ambulance operator.
+
+### 2. Critical Disclaimer: Not a Substitute for Emergency Medical Response
+
+Submitting a booking request through Ride does not guarantee ambulance availability, instant dispatch, arrival time, road traffic clearance, medical treatment, hospital admission, or clinical outcome. Network signal availability, severe traffic congestion, road access limitations, weather conditions, and fleet capacity may delay or prevent a vehicle from arriving.
+
+For acute, life-threatening medical emergencies (including severe trauma, heart attacks, strokes, acute respiratory failure, or heavy hemorrhaging), immediately dial Bangladesh National Emergency Service 999 or transport the patient to the nearest hospital emergency department using the fastest available means. Never delay seeking urgent medical intervention while waiting for an app booking confirmation.
+
+### 3. Patient Health Information and Data Privacy
+
+Users should provide only such limited, essential health or medical details as are reasonably necessary to arrange the appropriate vehicle type (e.g., oxygen requirement, wheelchair access, or stretcher setup) or communicate critical patient status.
+
+All health and medical information submitted through the app constitutes sensitive personal data. Ride applies strict access controls to these records. Where necessary to protect life or health, relevant medical and pickup details are transmitted solely to the matched ambulance operator, onboard crew, or receiving hospital. Ride never sells, monetizes, or uses emergency health disclosures for marketing or commercial profiling.
+
+### 4. Direct Payment Settlement and Cancellation Terms
+
+* **Direct Settlement Model:** Ride never collects, receives, holds, or escrows customer funds for ambulance bookings. The entire trip fare—including the base charge, distance traveled, waiting time, oxygen usage, specialized equipment charges, and crew allowances—is settled 100% directly between the customer and the ambulance operator via their mutually agreed payment method (such as cash or direct Mobile Financial Services [MFS] transfer to the operator’s account).
+* **Pricing Transparency:** The booking screen displays the operator's quoted or estimated fare and applicable variable charges known at the time of dispatch. Ride imposes no hidden platform commissions or surcharges on the patient.
+* **Cancellations:** Applicable operator cancellation charges, if any, must be clearly displayed prior to booking confirmation and are settled directly with the operator. Operators must apply compassionate and reasonable exceptions where a cancellation occurs due to sudden clinical deterioration, death, or prior dispatch of emergency state responders.
+
+### 5. Complaints and Incident Reporting
+
+Any service deficiency, unprofessional conduct, equipment malfunction, overcharging, or safety incident should be reported promptly to Ride Support via email at support@ride.digital-papyrus.com or via WhatsApp at +8801713249520.
+
+Ride will log the incident, preserve relevant digital dispatch records in accordance with its Privacy Notice and statutory data retention periods, and take appropriate administrative action—up to and including permanent deactivation—against non-compliant ambulance operators on the Platform.
 
 # PART I — This policy governs cancellation, returns, and refund handling for Ride services.
 
