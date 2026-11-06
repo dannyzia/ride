@@ -216,36 +216,52 @@ In the event of any disagreement or dispute, you and Ride agree to first seek an
 
 # PART B — CUSTOMER / PASSENGER TERMS
 
-These terms supplement the General Terms when you book a ride or other transport service.
+These terms supplement the General Terms of Use when you request, book, or use a ride or any other passenger transportation service arranged through the Ride platform.
 
-## 1. Before travel
+**Document Status:** Official Platform Terms
 
-Check the vehicle category, driver / provider details, pickup point, destination, route, passenger count, fare estimate and any special conditions shown in the app. A booking may be declined where the selected vehicle cannot lawfully or safely carry the requested passengers or luggage.
+**Last Updated:** 1 November 2026
 
-Use the correct pickup and destination information. Update the provider through the in-app channel if your location or destination changes. Additional stops, waiting, route changes, tolls or parking may affect the final price only as disclosed in the app or agreed before the change.
-
-## 2. Passenger responsibilities
-
-- Be ready at the pickup point and keep your phone available.
-- Verify the vehicle and provider identity before starting the trip.
-- Use seat belts and appropriate safety equipment where provided.
-- Do not ask the driver to speed, violate traffic rules, carry unlawful goods or exceed legal passenger capacity.
-- Treat the provider and vehicle with respect; do not damage the vehicle or engage in abusive conduct.
-- Do not share a trip or provider's personal information publicly without a legitimate reason.
-
-## 3. Women-only matching
-
-Where the feature is enabled, a customer may request an eligible women-only match. The feature depends on verified partner availability, service area, vehicle category and live capacity. Ride will not promise a match where no eligible provider is available. Gender information and matching preference must be used only for account administration, matching, safety and related disclosed purposes, with privacy safeguards.
-
-## 4. Scheduled rides and cancellations
-
-A scheduled request is subject to provider confirmation and availability. A scheduled time is not a guarantee unless the app expressly confirms it. Cancellation and no-show charges, if any, must be disclosed before the customer confirms the booking.
-
-## 5. Lost property and incidents
-
-Report lost property, accidents, safety concerns or fare issues through `support@ride.digital-papyrus.com or WhatsApp +880171324950` as soon as reasonably possible. Do not attempt to recover property by confronting another user. Ride may share the minimum relevant booking and contact information with the matched provider or authorities to resolve the report or comply with law.
+**Effective Date:** 1 November 2026
 
 ---
+
+### 1. Before Travel
+
+Before confirming a booking request, review all trip details displayed in the app, including the vehicle category, driver profile, designated pickup point, destination, proposed route, passenger count, fare estimate, and any special conditions. A booking request may be declined or canceled if the selected vehicle cannot safely or lawfully accommodate the requested number of passengers or luggage volume.
+
+You must provide accurate pickup and destination addresses. If your pickup location, drop-off point, or itinerary changes, promptly notify the driver through the in-app communication channel. Intermediate stops, extended waiting times, unscheduled route deviations, bridge/highway tolls, or parking charges will affect the final payable amount only to the extent disclosed in the app or mutually agreed upon prior to initiating the change.
+
+### 2. Passenger Responsibilities
+
+When using the service, you agree to:
+
+* Be present and ready at the designated pickup location upon the driver's arrival, and keep your registered phone accessible;
+* Verify the vehicle's registration number plate, make, model, and the driver's identity against the in-app confirmation before boarding the vehicle;
+* Fasten seat belts and utilize provided safety equipment (including safety helmets on two-wheelers) where available;
+* Refrain from requesting or encouraging the driver to exceed speed limits, violate traffic regulations, transport unlawful or hazardous items, or exceed the vehicle’s certified passenger capacity;
+* Treat the driver, vehicle crew, and property with dignity and respect, avoiding any physical damage to the vehicle, verbal abuse, intimidation, or inappropriate conduct; and
+* Refrain from publishing or disclosing a trip's details or a driver's personal identity information publicly without a legitimate, lawful reason.
+
+### 3. Women-Only Matching
+
+Where enabled within the Platform, an eligible customer may request a women-only matching option. The availability of this feature depends on verified female partner availability, designated service zones, vehicle class, and real-time network capacity. Ride does not guarantee an immediate match where no eligible female provider is actively available online.
+
+Declared gender details and matching preferences are processed strictly for account administration, algorithmic matching, safety verification, and related disclosed purposes, subject to robust privacy protections and confidentiality safeguards.
+
+### 4. Scheduled Rides, Cancellations, and No-Show Charges
+
+A scheduled ride request remains subject to independent provider confirmation and active availability at the requested dispatch time. Specifying a scheduled pickup time does not constitute a confirmed booking unless the app explicitly issues a confirmation notification.
+
+Any applicable cancellation fees or passenger no-show charges must be clearly disclosed to the customer before the booking is confirmed.
+
+Because Ride operates on a direct customer-to-provider settlement model, any incurred cancellation or no-show charge is payable directly to the designated driver via Mobile Financial Services (MFS). If not settled immediately, the unpaid amount will be recorded as an outstanding payable balance on your account. Failure to clear an outstanding payable balance within a designated grace period may result in the restriction or suspension of your account access and booking privileges until all pending dues are fully settled.
+
+### 5. Lost Property and Incident Reporting
+
+Report any lost personal property, traffic accidents, safety emergencies, or fare discrepancies via email at support@ride.digital-papyrus.com or via WhatsApp at +8801713249520 as soon as reasonably practicable.
+
+Do not attempt to recover misplaced property or resolve disputes by directly confronting, harassing, or pursuing another user or driver. Ride may disclose the minimum relevant booking details and contact information to the matched provider or authorized law enforcement agencies solely to assist in recovering lost property, investigating safety incidents, or complying with statutory legal obligations.
 
 # PART C — DRIVER AND SERVICE PARTNER TERMS
 
@@ -602,37 +618,53 @@ Report a service incident through `support@ride.digital-papyrus.com or WhatsApp 
 
 # PART I — CANCELLATION, RETURNS AND REFUND POLICY
 
-**Do not publish a blanket “all payments are non-refundable” clause.** A fair policy needs a service-by-service matrix, disclosed before confirmation, and must preserve mandatory consumer rights.
+This policy governs medicine-specific orders placed through the Ride pharmacy channel, including prescription handling, DGDA compliance, on-site pharmacy and pharmacist requirements, tele-pharmacy limits, cold-chain handling where offered, and health-related dispute handling.
 
-## 1. General principles
+**Document Status:** Official Platform Policy
 
-A customer may request cancellation through the app or support channel. Any cancellation charge must be proportionate, based on the service stage and disclosed before the customer confirms the booking. Refund eligibility depends on the service, who caused the failure, whether the provider began performing, and any applicable law.
+**Last Updated:** 1 November 2026
 
-A refund is not guaranteed for every change of mind, but Ride will consider service failure, duplicate payment, provider no-show, merchant rejection, wrong or defective goods, failed delivery and other substantiated complaints.
-
-## 2. Suggested policy matrix — final fees and time limits are not yet set
-
-| Service | Example refund / remedy situations | Items to define before launch |
-|---|---|---|
-| Ride-hailing | Provider no-show; provider cancels; duplicate charge; incorrect fare; trip not supplied | Customer cancellation window; provider-arrival fee; waiting; fare dispute window; cash/direct MFS remedy |
-| Food | Merchant rejects; item unavailable; wrong / missing / unsafe item; delivery failure | After-preparation cancellation; partial refund; substitution consent; evidence; refund destination |
-| Grocery / shop | Wrong, damaged, expired, defective or missing product | Product-category return rules; perishables; proof; merchant response time; pickup cost |
-| Parcel / courier | Pickup fails; non-delivery; loss / damage; COD discrepancy | Reattempt fee; return charge; declared value; claim window; prohibited goods; liability process |
-| Rental / truck | Provider cancels; vehicle materially differs; customer cancels; service scope changes | Quote acceptance; deposit; cancellation ladder; overtime; tolls; loading / unloading; damage evidence |
-| Ambulance | Provider does not dispatch; duplicate charge; material service failure | Emergency cancellation rule; provider fee; no-show; service failure review |
-| Driver call package | Duplicate charge; paid access not activated; materially invalid lead / system outage | Package-specific eligibility; invalid-lead credit; rollover; expiry; refund timing; chargeback handling |
-
-## 3. Refund method and timing
-
-Where a refund is approved, Ride should return it through the original payment method where feasible, or another method agreed with the customer. Cash-paid services require a clearly documented remedy; do not promise an electronic refund when Ride did not collect the cash.
-
-The public policy should state a verified processing estimate for each payment method only after the payment processor and finance operations confirm it. The time for a bank, MFS or card issuer to post the refund may be outside Ride's control.
-
-## 4. Complaint process
-
-Contact `support@ride.digital-papyrus.com or in-app support` with the order / booking ID, date, issue and relevant evidence. Ride will acknowledge the complaint through `the same support channel` and provide an outcome or status update within `[SERVICE SLA TO BE SET]`. These internal service targets do not reduce statutory rights or time limits.
+**Effective Date:** 1 November 2026
 
 ---
+
+### 1. Pharmacy Regulation and Pre-Onboarding Verification
+
+Under the Drugs Act, 1940 and Directorate General of Drug Administration (DGDA) rules in Bangladesh, dispensing prescription drugs online requires a valid retail drug license, physical model pharmacy infrastructure, and a registered pharmacist on site. The operational onboarding team must ensure strict pre-verification before enabling the medicine category.
+
+Ride will not enable the medicine category for any merchant or provider until the operational onboarding team has verified the seller’s applicable retail drug licence, physical pharmacy infrastructure claims, and registered-pharmacist coverage for the relevant premises and service area. Ride is not a pharmacy, drug retailer, or medical provider and does not verify clinical appropriateness of any prescription it may facilitate the transmission of.
+
+Customers must not attempt to purchase prescription-only medicines without a valid prescription where one is legally required, and merchants must not dispense prescription medicines in violation of DGDA requirements or applicable Bangladeshi law.
+
+### 2. Categories of Medicine-Related Orders
+
+This policy applies to lawful pharmacy and medicine-related transactions facilitated through Ride, including over-the-counter medicines, wellness and personal care products, and, where legally permitted, prescription medicines handled by an appropriately licensed pharmacy and registered pharmacist.
+
+Ride does not permit the listing or sale of controlled substances, unapproved medicines, counterfeit or adulterated products, expired stock, or any item prohibited under Bangladeshi drug, food, health, or consumer law.
+
+### 3. Prescription Handling and Responsibility
+
+Where a prescription is required, the selling pharmacy remains responsible for reviewing the prescription, confirming that dispensing is lawful and clinically appropriate under applicable rules, and retaining the required records. Ride may transmit prescription details or images only as a conduit between the customer and the verified pharmacy, and does not review, interpret, validate, or dispense prescriptions itself.
+
+Customers should ensure that any prescription they submit is accurate, current, and issued by a duly qualified medical practitioner. Ride does not guarantee that any medicine will be available, suitable, or in stock at the time of order.
+
+### 4. Handling, Storage, and Delivery Standards
+
+Pharmacies are responsible for the safe storage, packaging, and handling of all medicines and health products they supply, including temperature-sensitive products where cold-chain handling is offered. Ride does not independently certify pharmacy storage conditions, drug quality, batch validity, or expiration dates.
+
+Where a delivery cannot be completed safely because the medicine has spoiled, been damaged, improperly stored, or dispensed in breach of law or the seller’s own disclosed standards, the matter must be treated as a defective product or service failure and handled in accordance with the complaint and claim reporting rules for the relevant order type.
+
+### 5. Health Disclaimers and Emergency Use
+
+Medicines purchased through Ride are not a substitute for emergency medical care. In a medical emergency, customers should contact emergency medical services or the nearest appropriate medical facility immediately. Ride is not an emergency-response service and does not provide medical advice, diagnosis, or treatment.
+
+No statement in this policy should be read as medical, pharmaceutical, or legal advice. Customers and providers remain responsible for complying with all applicable professional, statutory, and regulatory obligations relating to the sale and use of medicines in Bangladesh.
+
+---
+
+## Pharmacy and Prescription Regulation (Sections 1 and 4):
+
+Under the Drugs Act, 1940 and Directorate General of Drug Administration (DGDA) rules in Bangladesh, dispensing prescription drugs online requires a valid retail drug license, physical model pharmacy infrastructure, and a registered pharmacist on site. The operational onboarding team must ensure strict pre-verification before enabling the medicine category.
 
 # PART J — SAFETY AND COMMUNITY STANDARDS
 
