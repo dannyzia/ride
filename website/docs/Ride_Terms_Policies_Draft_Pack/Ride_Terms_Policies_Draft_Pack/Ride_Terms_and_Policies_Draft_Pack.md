@@ -816,15 +816,48 @@ Deleting the account may not automatically cancel an active booking, settle an u
 
 # PART M — COOKIE NOTICE (WEBSITE)
 
-**Suggested public URL:** `/cookies`
+Cookie Notice
+Public URL: https://ride.digital-papyrus.com/cookies
 
-Ride's website may use essential cookies or similar technologies to provide secure and reliable website functions. Any analytics, preference or marketing technologies will be described here with their provider, purpose, duration and available controls.
+Last Updated: 1 November 2026
 
-Before publishing this notice, inspect the production site with browser developer tools and record every cookie, local-storage item, tag, analytics script, embedded map, form provider and third-party request. If analytics or marketing cookies are not used, say so accurately. If consent is required for a category, do not load that category until the user has made the required choice. Users should be able to revisit and change their cookie choices where such choices are offered.
+Effective Date: 1 November 2026
 
-Contact: `privacy@ride.digital-papyrus.com`.
+1. What Are Cookies?
+Cookies are small text files placed on your computer or mobile device by a web server when you visit a website. They are widely used to ensure websites function properly, maintain system security, and remember user preferences during a browsing session.
 
----
+2. Our Philosophy: Strictly Necessary Technologies Only
+Ride Digital Services ("Ride", "we", "us", "our") believes in digital privacy and operational minimalism. Our marketing and legal website is designed to provide information without tracking your personal browsing habits across the internet.
+
+We do not use third-party tracking pixels, behavioural profiling tools, or cross-site advertising networks (such as ad retargeting trackers).
+
+3. Categories of Cookies We Use
+We use only Strictly Necessary and Functional Technologies:
+
+Security and Authentication: Cookies or temporary session tokens used to prevent Cross-Site Request Forgery (CSRF), authenticate web forms, and protect our servers against automated abuse or bot attacks.
+
+Infrastructure and Load Balancing: Temporary technical cookies deployed by our network reverse proxies or content delivery networks (CDNs) to distribute web traffic efficiently across servers.
+
+User Preferences: Local storage items used strictly to remember your interface preferences, such as selected language (e.g., Bengali or English) or visual display modes (e.g., light or dark mode).
+
+4. Mobile Applications and Local Storage
+Our native mobile applications (including passenger, driver, and merchant apps) do not use traditional browser cookies for operational functions. Instead, our mobile apps use secure device-level storage mechanisms (such as encrypted app storage and authentication tokens) strictly to keep you logged in, verify active dispatch sessions, and maintain offline app settings.
+
+5. Managing and Disabling Cookies
+Because we only deploy strictly necessary technical cookies required for the website to load and function securely, our website does not display an advertising cookie banner.
+
+You have the right to block or delete cookies through your internet browser settings (such as Chrome, Firefox, Edge, or Safari). Please note that if you configure your browser to reject all cookies, certain basic security features or interactive forms on our website may not function correctly.
+
+6. Updates and Contact Details
+We may update this Cookie Notice periodically to reflect changes in our web infrastructure or statutory obligations. Any revisions will be published on this page with an updated effective date.
+
+If you have questions regarding our use of cookies or website technical data, please contact:
+
+Data Controller: Ride Digital Services
+
+Registered Office: 7/1-D, R.K. Mission Road, Dhaka-1203, Bangladesh
+
+Email: privacy@ride.digital-papyrus.com
 
 # PART N — PRODUCT AND LEGAL DECISION REGISTER
 
