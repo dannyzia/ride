@@ -651,7 +651,42 @@ Report a service incident through `support@ride.digital-papyrus.com or WhatsApp 
 
 ---
 
-# PART I — CANCELLATION, RETURNS AND REFUND POLICY
+# PART I — This policy governs cancellation, returns, and refund handling for Ride services.
+
+This policy governs cancellation, returns, and refund handling for Ride services.
+
+**Document Status:** Official Platform Policy
+
+**Last Updated:** 1 November 2026
+
+**Effective Date:** 1 November 2026
+
+---
+
+### 1. Applicability
+
+This policy applies to the cancellation, return, and refund handling for rides, rental bookings, parcel deliveries, food and grocery orders, and other service bookings arranged through the Ride platform, where a cancellation, return, or reimbursement is legally or operationally relevant.
+
+Ride operates as a software intermediary and does not hold customer funds, merchant payments, or delivery cash except where a specific payment integration expressly provides otherwise and the applicable flow is clearly disclosed to the user.
+
+### 2. Cancellation Windows
+
+A booking request is not final until the relevant provider or merchant formally accepts it and the app confirms the booking. Any cancellation charge, no-show charge, or fee for a failed delivery attempt must be disclosed to the user before the booking is confirmed.
+
+Cancellations, rescheduling, and no-show charges are governed by the specific terms displayed for the service and booking at the time of confirmation, together with any provider or merchant cancellation schedule that applies to the relevant transaction.
+
+### 3. Returns, Replacements, and Refunds
+
+For goods, merchandise, and packaged consignments, returns, replacements, and refunds are governed by the merchant’s disclosed policy and by applicable Bangladeshi law, including mandatory consumer-protection rules. Prepared food, opened or perishable goods, and other items that cannot legally or safely be returned remain subject to those restrictions.
+
+Because Ride acts as a software intermediary and does not hold customer funds, any approved refund, price adjustment, cash return, or replacement must be settled directly between the user and the relevant merchant, provider, or delivery partner, except where a separate payment integration or refund route is expressly provided and disclosed.
+
+### 4. Dispute Reporting
+
+Any dispute about a cancellation charge, refund, return, lost parcel, damaged goods, or payment discrepancy must be reported to Ride Support at support@ride.digital-papyrus.com or via WhatsApp at +8801713249520 with the relevant booking or order ID, a clear description of the issue, and supporting evidence such as photos, receipts, and delivery handover details.
+
+Ride assists in good faith by coordinating the parties and reviewing the report, but does not act as an insurer, escrow holder, or financial guarantor for third-party goods or funds except where a specific service flow expressly provides otherwise.
+
 
 This policy governs medicine-specific orders placed through the Ride pharmacy channel, including prescription handling, DGDA compliance, on-site pharmacy and pharmacist requirements, tele-pharmacy limits, cold-chain handling where offered, and health-related dispute handling.
 
@@ -700,7 +735,6 @@ No statement in this policy should be read as medical, pharmaceutical, or legal 
 ## Pharmacy and Prescription Regulation (Sections 1 and 4):
 
 Under the Drugs Act, 1940 and Directorate General of Drug Administration (DGDA) rules in Bangladesh, dispensing prescription drugs online requires a valid retail drug license, physical model pharmacy infrastructure, and a registered pharmacist on site. The operational onboarding team must ensure strict pre-verification before enabling the medicine category.
-
 # PART J — SAFETY AND COMMUNITY STANDARDS
 
 All users and partners must treat each other with respect. Ride prohibits harassment, discrimination, threats, violence, sexual misconduct, stalking, doxxing, coercion, unsafe driving, intoxicated driving, misuse of emergency features, fraudulent bookings, theft, parcel tampering and unlawful goods or services.
