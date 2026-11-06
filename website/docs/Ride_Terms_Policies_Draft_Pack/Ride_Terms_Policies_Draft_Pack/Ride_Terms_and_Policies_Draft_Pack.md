@@ -797,17 +797,58 @@ No statement in this policy should be read as medical, pharmaceutical, or legal 
 ## Pharmacy and Prescription Regulation (Sections 1 and 4):
 
 Under the Drugs Act, 1940 and Directorate General of Drug Administration (DGDA) rules in Bangladesh, dispensing prescription drugs online requires a valid retail drug license, physical model pharmacy infrastructure, and a registered pharmacist on site. The operational onboarding team must ensure strict pre-verification before enabling the medicine category.
-# PART J — SAFETY AND COMMUNITY STANDARDS
+# PART J
 
-All users and partners must treat each other with respect. Ride prohibits harassment, discrimination, threats, violence, sexual misconduct, stalking, doxxing, coercion, unsafe driving, intoxicated driving, misuse of emergency features, fraudulent bookings, theft, parcel tampering and unlawful goods or services.
+Safety & Community Standards
 
-Partners must keep required licences and vehicle / equipment documents current. Customers must follow safe boarding, parcel handover and service instructions. Merchants must supply lawful, authentic and safe goods and services.
+These Safety and Community Standards govern the conduct of all customers, service partners, drivers, couriers, and merchants using the Ride platform.
 
-Use Ride's in-app report or `support@ride.digital-papyrus.com or WhatsApp +880171324950` for safety issues. For imminent danger, contact the appropriate emergency authority directly. Ride may preserve relevant evidence, restrict access, contact affected users or report matters to authorities where lawful or necessary for safety.
+**Document Status:** Official Platform Policy
 
-Ride should publish a clear safety escalation process, including who receives high-risk alerts, how quickly they are monitored, what data is visible to the safety team, and what happens outside staffed support hours. Do not advertise “24/7 safety support” unless it is actually staffed and monitored 24/7.
+**Last Updated:** 1 November 2026
+
+**Effective Date:** 1 November 2026
 
 ---
+
+### 1. General Conduct and Prohibited Activities
+
+All customers, service partners, and merchants must interact with one another with mutual dignity, courtesy, and respect.
+
+Ride maintains zero tolerance for unsafe, abusive, or unlawful conduct. Prohibited activities include:
+
+* **Harassment and Discrimination:** Any form of verbal abuse, written threats, hate speech, discrimination based on gender, religion, race, disability, or social status, stalking, coercion, or intimidation;
+* **Sexual Misconduct:** Sexual harassment, indecent exposure, inappropriate comments, intrusive personal inquiries, or unwelcome physical contact;
+* **Privacy Violations and Doxxing:** Photographing, video recording, or publicly disclosing another user's or driver’s personal identity, telephone number, residential location, or trip details without explicit lawful authorization;
+* **Reckless and Intoxicated Operation:** Speeding, aggressive maneuvering, moving traffic violations, or operating any vehicle under the influence of alcohol, drugs, or intoxicating substances;
+* **Misuse of Emergency Systems:** Triggering SOS alerts, false emergency reports, or safety features for non-emergency reasons, pranks, or illegitimate disputes;
+* **Fraud and Fictitious Bookings:** Generating fake bookings, manipulating fares, identity impersonation, or staging fraudulent incidents;
+* **Theft and Tampering:** Opening, inspecting, pilfering, tampering with, or stealing parcels, merchandise, or passenger personal property; and
+* **Unlawful Goods and Services:** Soliciting, offering, transporting, or distributing firearms, narcotics, contraband, hazardous chemicals, stolen items, or undeclared restricted cargo.
+
+### 2. Role-Specific Responsibilities
+
+* **Service Partners and Drivers:** Must hold and maintain in good standing all valid driving licences, vehicle registration certificates, fitness clearances, road tax tokens, and route permits. Partners must maintain their vehicles in clean, mechanically roadworthy condition, drive prudently, and obey all prevailing traffic laws of Bangladesh.
+* **Customers and Passengers:** Must observe safe passenger practices, board and alight from vehicles at safe curbside locations, treat the vehicle with care, avoid distracting the driver, and ensure that parcels handed over for transport are packaged securely and lawfully.
+* **Merchants:** Must ensure that all products, food items, groceries, and services prepared, packaged, and supplied through the Platform strictly comply with safety, hygiene, expiration, and consumer protection laws.
+
+### 3. Incident Reporting and Emergency Protocol
+
+If you experience a safety concern, unprofessional behavior, or policy violation, report the incident immediately through Ride’s in-app reporting tools, via email at support@ride.digital-papyrus.com, or via WhatsApp at +8801713249520.
+
+**Immediate Danger and Emergency 999:**
+
+In any situation involving imminent bodily harm, physical violence, serious road traffic accidents, armed robbery, or acute medical emergencies, **contact the Bangladesh National Emergency Service immediately by dialing 999** or seek assistance directly from local law enforcement and emergency medical facilities. Do not wait for a response from the Platform before calling 999.
+
+Ride reserves the right to preserve relevant digital transaction records, GPS traces, and communication logs; immediately restrict or permanently deactivate platform access for offending accounts; notify affected parties; and proactively refer incidents to law enforcement or statutory regulatory authorities where permitted by law or necessary to protect community safety.
+
+### 4. Safety Escalation Protocols, Transparency, and Operational Hours
+
+Ride maintains a structured safety triage protocol to review reported incidents:
+
+* **Automated In-App Safety Features:** Digital SOS shortcuts, live trip sharing, and automated telemetry alerts function continuously 24/7 across the Platform, subject to active cellular network connectivity.
+* **High-Priority Incident Triage:** Incidents involving physical assault, severe road accidents, gender-based harassment, or criminal activity are automatically prioritized over general billing or operational inquiries. High-priority safety reports received by our safety desk are acknowledged and triaged with an initial target response within 1 to 2 hours during active operational hours.
+* **Operational Review Windows:** While automated platform safeguards run continuously, human safety review and administrative case investigations operate during Ride's designated daily operational support hours. For critical emergencies occurring outside staffed support windows, users must rely on local emergency services and National Emergency Service 999 immediately. Ride does not claim full 24/7 human-staffed call center monitoring unless explicitly declared on the Platform.
 
 # PART K — PRIVACY NOTICE
 
