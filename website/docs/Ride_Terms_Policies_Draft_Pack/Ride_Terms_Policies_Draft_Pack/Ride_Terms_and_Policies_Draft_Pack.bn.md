@@ -887,3 +887,37 @@ Ride-এর ওয়েবসাইট নিরাপদ ও নির্ভ�
 এই বিজ্ঞপ্তি প্রকাশের আগে ব্রাউজার ডেভেলপার টুল দিয়ে প্রোডাকশন সাইট পরিদর্শন করে প্রতিটি কুকি, লোকাল-স্টোরেজ আইটেম, ট্যাগ, অ্যানালিটিক্স স্ক্রিপ্ট, এমবেডেড ম্যাপ, ফর্ম সেবাদাতা ও তৃতীয় পক্ষের অনুরোধ রেকর্ড করুন। অ্যানালিটিক্স বা মার্কেটিং কুকি ব্যবহার না হলে তা সঠিকভাবে বলুন। কোনো শ্রেণির জন্য সম্মতি প্রয়োজন হলে ব্যবহারকারী প্রয়োজনীয় পছন্দ না দেওয়া পর্যন্ত সেই শ্রেণি লোড করবেন না। যেখানে এই ধরনের পছন্দ দেওয়া হয়, সেখানে ব্যবহারকারীরা কুকি পছন্দ পুনর্বিবেচনা ও বদলাতে পারা উচিত।
 
 যোগাযোগ: `privacy@ride.digital-papyrus.com`।
+
+# PART N — PRODUCT AND LEGAL DECISION REGISTER
+
+These are not drafting details to guess. The owner, product lead, engineering lead and Bangladesh counsel should resolve them before the related terms become final.
+
+| ID | Decision / evidence required | Why it matters | Owner |
+|---|---|---|---|
+| L-01 | Exact legal operator name, entity form, registration, address | Contracting party and privacy contact must be identifiable | Founder / Legal |
+| L-02 | Whether Ride acts as intermediary, contracting principal, merchant of record, dispatch operator or payment recipient in each vertical | Determines liability, consumer disclosures, payment and settlement clauses | Founder / Legal |
+| L-03 | BRTA ridesharing technology-institution enlistment status and per-vehicle enlistment requirements | Ride-hailing operation may require specific approvals and tripartite arrangements | Legal / Operations |
+| L-04 | Actual tripartite agreement template and required driver / owner relationship | Partner terms must not contradict regulatory requirements | Legal / Operations |
+| L-05 | Active cities and exact service boundaries per vertical | Prevents false nationwide / 64-district / 24-hour promises | Operations |
+| L-06 | Ambulance provider list, licence, BLS/ALS equipment, crew qualifications, insurance, service hours, dispatch escalation | High-stakes medical transport claims and emergency obligations | Medical Ops / Legal |
+| L-07 | Whether Ride actually calls 999, sends SMS or shares live location; test logs and authority process | Do not imply an integrated emergency response without proof | Engineering / Safety |
+| L-08 | Driver call package price, call/lead definition, invalid lead rules, rollover, expiry, pause, renewal and refunds | Must be transparent; affects payment policy and partner contract | Product / Finance |
+| L-09 | Classification of call package under Google Play Billing and local payment rules | Digital app access may be treated differently from physical transport | Legal / Payments |
+| L-10 | Ride payment flows by vertical: cash, direct bKash/Nagad, gateway, settlement account, chargebacks | Payment clauses must identify who receives and refunds money | Finance / Engineering |
+| L-11 | Merchant commission / subscription / settlement schedule | Public terms must not invent rates | Commercial / Finance |
+| L-12 | Food, grocery, medicine, automotive parts and workshop categories actually enabled and licences required | Product safety and regulated goods controls | Merchant Ops / Legal |
+| L-13 | COD collection, reconciliation, loss and return process | Financial exposure and courier agreement | Logistics / Finance |
+| L-14 | Cancellation fees, waiting fees, refund windows, claim evidence and support SLAs | Required customer-facing clarity | Operations / Finance |
+| L-15 | Production data inventory: Supabase, storage, auth, database region, backups, Barikoi, dpMaps, SMS/OTP, maps, payment gateway, analytics, crash reporting, support tools | Privacy notice must describe real collection and transfers | Engineering / Privacy |
+| L-16 | Exact GPS behavior for rider, driver, deliveryman and ambulance roles: foreground, background, sampling, start/stop | Play permissions, consent and privacy notice | Engineering / Privacy |
+| L-17 | Whether Ride collects NID, biometric selfie, gender, medical, emergency contact, audio or call recordings | Sensitive-data rules and access controls | Product / Privacy |
+| L-18 | Data storage countries, support access countries and cross-border processors | Personal Data Protection Act 2026 transfer conditions | Engineering / Legal |
+| L-19 | Retention schedule per data category and processing-record register | Purpose limitation, deletion and statutory recordkeeping | Privacy / Finance / Engineering |
+| L-20 | In-app deletion UX, website form, request verification, SLA and retention exceptions | Google Play and data-subject rights | Product / Engineering / Support |
+| L-21 | Whether under-18 passengers may be booked by adults and the account age gate | Child-data obligations | Product / Legal |
+| L-22 | Women-only matching: gender collection, verification, eligibility, availability and appeal | Safety, privacy and discrimination risks | Product / Safety / Legal |
+| L-23 | Insurance types and coverage held by Ride, partners, fleet and ambulance providers | Avoid misleading safety / insurance assurances | Legal / Operations |
+| L-24 | Cookie inventory, analytics and ad pixels on the website | Cookie notice and consent design | Web / Marketing |
+| L-25 | Support staffing hours, incident escalation, complaint and appeals SLA | Do not promise 24/7 support without staffing | Operations |
+
+---
