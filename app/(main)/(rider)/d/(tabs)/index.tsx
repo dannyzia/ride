@@ -10,6 +10,7 @@ import { supabase } from "@/lib/supabase";
 import { useDriverStore } from "@/store/useDriverStore";
 import { useDriverFlowStore } from "@/store/useDriverFlowStore";
 import { useCallLedgerStore } from "@/store/useCallLedgerStore";
+import { useDriverMonetizationStore } from "@/store/useDriverMonetizationStore";
 import { useRideOfferStore, useWSStore } from "@/store";
 import DriverPricingReference from "@/components/DriverPricingReference";
 import RideOfferSheet from "@/components/RideOfferSheet";
@@ -138,6 +139,12 @@ export default function DriverHome() {
   const [showRecoveryDialog, setShowRecoveryDialog] = useState(false);
   // §F.0(b) — fleet marketplace bidder entry card
   const [marketplaceAccess, setMarketplaceAccess] = useState<{ fleet_id: string; fleet_name: string; role: string }[] | null>(null);
+  // Item 26 — monetization state banner (six-state: ACTIVE, OWING, LAPSED, CEILING_LOCKED, NO_PRODUCT, PRODUCT_FROZEN)
+  const monetization = useDriverMonetizationStore((s) => ({
+    state: s.state,
+    isDispatchLocked: s.isDispatchLocked,
+    fetchMonetization: s.fetchMonetization,
+  }));
 
   const markerPulseAnim = useRef(new Animated.Value(1)).current;
   const goOnlinePulse = useRef(new Animated.Value(0)).current;
@@ -470,7 +477,13 @@ export default function DriverHome() {
   useEffect(() => {
     fetchDailyStats();
     loadDriverProfile();
-  }, [fetchDailyStats, loadDriverProfile, isOnline]);
+    (async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.access_token) {
+        void monetization.fetchMonetization(session.access_token);
+      }
+    })();
+  }, [fetchDailyStats, loadDriverProfile, isOnline, monetization.fetchMonetization]);
 
   // S8 §4.4: women-only server state — refetched on mount + online
   // transitions so the banner tracks the toggle (set in Settings) without a
@@ -1360,6 +1373,80 @@ export default function DriverHome() {
             >
               {t('driver_women_only_idle_nudge')}
             </Text>
+          </View>
+        )}
+
+        {/* Item 26 — monetization state banner (six-state with CTAs) */}
+        {monetization.state && monetization.state !== "ACTIVE" && (
+          <View
+            className="p-[16px] border rounded-[12px] mb-4 flex-row items-start"
+            style={{
+              backgroundColor: monetization.isDispatchLocked
+                ? `${colors.danger}14`
+                : `${colors.amber}14`,
+              borderColor: monetization.isDispatchLocked
+                ? colors.danger
+                : colors.amber,
+            }}
+          >
+            <Ionicons
+              name={monetization.isDispatchLocked ? "lock-closed-outline" : "alert-circle"}
+              size={20}
+              color={monetization.isDispatchLocked ? colors.danger : colors.amber}
+            />
+            <View style={{ flex: 1, marginLeft: spacing.md }}>
+              <Text
+                className="text-[13px] font-JakartaSemiBold"
+                style={{ color: monetization.isDispatchLocked ? colors.danger : colors.amber }}
+              >
+                {monetization.state === "NO_PRODUCT"
+                  ? t('monetization.states.no_product')
+                  : monetization.state === "CEILING_LOCKED"
+                    ? t('monetization.states.ceiling_locked')
+                    : monetization.state === "LAPSED"
+                      ? t('monetization.states.lapsed')
+                      : monetization.state === "OWING"
+                        ? t('monetization.states.owing')
+                        : monetization.state === "PRODUCT_FROZEN"
+                          ? t('monetization.states.product_frozen')
+                          : t('monetization.states.active')}
+              </Text>
+              <Text className="text-[12px] font-Jakarta mt-1" style={{ color: textSecondary }}>
+                {monetization.state === "NO_PRODUCT"
+                  ? t('monetization.no_product_prompt')
+                  : monetization.state === "CEILING_LOCKED"
+                    ? t('monetization.reasons.debt_ceiling')
+                    : monetization.state === "LAPSED"
+                      ? t('monetization.reasons.subscription_lapsed')
+                      : monetization.state === "OWING"
+                        ? "Outstanding dues — pay to keep receiving offers"
+                        : monetization.state === "PRODUCT_FROZEN"
+                          ? "Call package frozen — switch mode or settle dues"
+                          : ""}
+              </Text>
+            </View>
+            <View style={{ marginLeft: spacing.sm }}>
+              <TouchableOpacity
+                onPress={() =>
+                  monetization.state === "CEILING_LOCKED" ||
+                  monetization.state === "OWING"
+                    ? router.push("/(main)/(rider)/due-amounts")
+                    : router.push("/(main)/(rider)/packages")
+                }
+                accessibilityRole="button"
+                accessibilityLabel="Act on monetization state"
+                style={{ paddingVertical: spacing.sm, paddingHorizontal: spacing.md, borderRadius: radii.md, backgroundColor: colors.primary }}
+               testID="rider.d.push-due-amounts">
+                <Text className="text-[12px] font-JakartaBold text-white">
+                  {monetization.state === "CEILING_LOCKED" ||
+                  monetization.state === "OWING"
+                    ? t('monetization.pay_dues')
+                    : monetization.state === "PRODUCT_FROZEN"
+                      ? t('monetization.switch_to_call_package')
+                      : t('monetization.call_package')}
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
         )}
 

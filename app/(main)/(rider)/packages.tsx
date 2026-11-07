@@ -97,12 +97,22 @@ export default function PackagesScreen() {
         headers: {
           "Content-Type": "application/json",
           "Idempotency-Key": idempotencyKey,
+          // Item 24 — postpaid lane: tell the server this client is postpaid-aware.
+          // Without this header, even in hybrid mode the legacy prepaid path runs.
+          "x-client-postpaid": "1",
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         body: JSON.stringify({ package_id: pkg.id, provider: "portpos" }),
       });
       if (res.ok) {
         const data = await res.json();
+        // Commission enrollment (T6): free, no checkout page, no WebView.
+        if (data.mode === "commission") {
+          handlePaymentSuccess();
+          setPurchasing(false);
+          setPendingPkgId(null);
+          return;
+        }
         // M-2: ৳0 trial packages activate server-side — no checkout page, no
         // WebView. Run the same success path as a confirmed payment.
         if (data.activated) {
@@ -119,6 +129,27 @@ export default function PackagesScreen() {
         setPaymentID(data.payment_event_id);
       } else {
         const err = await res.json().catch(() => ({ message: "Purchase failed" }));
+        // Surface typed 409 errors with actionable copy.
+        if (err.error === "dues_outstanding_purchase_blocked") {
+          Alert.alert(
+            t('packages.dues_blocked_title'),
+            err.message || t('packages.dues_blocked_desc'),
+            [{ text: "OK" }],
+          );
+          setPurchasing(false);
+          setPendingPkgId(null);
+          return;
+        }
+        if (err.error === "already_enrolled_commission") {
+          Alert.alert(
+            t('packages.already_enrolled_title'),
+            err.message || t('packages.already_enrolled_desc'),
+            [{ text: "OK" }],
+          );
+          setPurchasing(false);
+          setPendingPkgId(null);
+          return;
+        }
         Alert.alert(t('packages.error'), err.message || t('packages.could_not_initiate'));
         setPurchasing(false);
         setPendingPkgId(null);

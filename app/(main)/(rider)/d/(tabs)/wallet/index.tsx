@@ -18,6 +18,7 @@ import { colors } from "@/theme/goRide";
 import { useIsDark } from "@/lib/useAppearance";
 import { formatBDT } from "@/lib/format";
 import { useDriverStore } from "@/store/useDriverStore";
+import { useDriverMonetizationStore } from "@/store/useDriverMonetizationStore";
 
 import PaymentWebView from "@/components/PaymentWebView";
 import { useTranslation } from "react-i18next";
@@ -30,6 +31,8 @@ interface DuesData {
     calls_remaining: number;
     status: string;
   } | null;
+  monetization_state?: string;
+  is_dispatch_locked?: boolean;
   commission_due_bdt: number;
   total_outstanding_bdt: number;
 }
@@ -72,6 +75,11 @@ export default function WalletScreen() {
   const [credits, setCredits] = useState<CancellationCredit[]>([]);
 
   const activeSubscription = useDriverStore((s) => s.activeSubscription);
+  const monetization = useDriverMonetizationStore((s) => ({
+    state: s.state,
+    frozenSubscription: s.frozenSubscription,
+    isDispatchLocked: s.isDispatchLocked,
+  }));
 
   // C10-1 grant source: match on the stable plan code, never on the admin-editable name.
   const isLaunchFreeGrant = activeSubscription?.package_code === LAUNCH_FREE_PACKAGE_CODE;
@@ -330,6 +338,18 @@ export default function WalletScreen() {
                 {t('wallet.plan_expired_offers_paused')}
               </Text>
             ) : null}
+            {/* Item 27 — frozen subscription badge */}
+            {monetization.frozenSubscription && (
+              <View className="flex-row items-center gap-1 mt-2">
+                <Ionicons name="pause-circle" size={14} color={colors.amber} />
+                <Text
+                  className="text-[11px] font-JakartaSemiBold"
+                  style={{ color: colors.amber }}
+                >
+                  Call package frozen — switch mode or settle dues
+                </Text>
+              </View>
+            )}
           </View>
         )}
 
@@ -391,6 +411,26 @@ export default function WalletScreen() {
             >
               {t('wallet.commission_owed')}
             </Text>
+            {/* Item 27 — monetization state in dues card */}
+            {dues.monetization_state && dues.monetization_state !== "ACTIVE" && (
+              <Text
+                className="text-[11px] font-JakartaSemiBold mt-2"
+                style={{ color: dues.is_dispatch_locked ? colors.danger : colors.amber }}
+              >
+                {dues.monetization_state === "CEILING_LOCKED"
+                  ? t('monetization.states.ceiling_locked')
+                  : dues.monetization_state === "LAPSED"
+                    ? t('monetization.states.lapsed')
+                    : dues.monetization_state === "OWING"
+                      ? t('monetization.states.owing')
+                      : dues.monetization_state === "NO_PRODUCT"
+                        ? t('monetization.states.no_product')
+                        : dues.monetization_state === "PRODUCT_FROZEN"
+                          ? t('monetization.states.product_frozen')
+                          : t('monetization.states.active')}
+                {dues.is_dispatch_locked ? " — dispatch locked" : ""}
+              </Text>
+            )}
           </View>
         )}
 

@@ -652,6 +652,10 @@ export default function OnboardingWizard() {
   const [consent, setConsent] = useState<boolean[]>(
     CONSENT_ITEMS.map(() => false),
   );
+  // Item 28 — monetization choice (call package vs commission enrollment)
+  const [monetizationChoice, setMonetizationChoice] = useState<
+    "call_package" | "commission" | null
+  >(null);
   const [finishing, setFinishing] = useState(false);
 
   useEffect(() => {
@@ -720,7 +724,7 @@ export default function OnboardingWizard() {
   const step4Valid = DRIVER_DOC_FIELDS.every((f) => !!driverDocs[f.key]);
   const step5Valid = true;
   const bkashValid = /^01\d{9}$/.test(bkash);
-  const step6Valid = bkashValid;
+  const step6Valid = bkashValid && monetizationChoice != null;
   const step7Valid = consent.every(Boolean);
 
   const stepValid = (n: number): boolean => {
@@ -941,6 +945,10 @@ export default function OnboardingWizard() {
       await apiFetch("/api/driver/payout-method", {
         method: "POST",
         body: JSON.stringify({ account_number: bkash }),
+      });
+      await apiFetch("/api/driver/monetization-choice", {
+        method: "POST",
+        body: JSON.stringify({ product_type: monetizationChoice }),
       });
       setSavedPayout(bkash);
       setStep(7);
@@ -1395,6 +1403,108 @@ export default function OnboardingWizard() {
               </Text>
             )}
             <Text style={{ ...secondaryLabelStyle, marginTop: spacing.md }}>Your ride earnings are paid out to this bKash account.</Text>
+
+            {/* Item 28 — monetization choice */}
+            <Text style={{ ...labelStyle, fontSize: 16, marginTop: spacing.lg }}>
+              Choose how you want to pay for leads
+            </Text>
+            <View style={{ flexDirection: "row", gap: spacing.md, marginTop: spacing.md }}>
+              <TouchableOpacity
+                accessibilityRole="radio"
+                accessibilityState={{ checked: monetizationChoice === "call_package" }}
+                accessibilityLabel={t('monetization.call_package')}
+                onPress={() => setMonetizationChoice("call_package")}
+                style={{
+                  flex: 1,
+                  paddingVertical: spacing.md,
+                  paddingHorizontal: spacing.sm,
+                  borderRadius: radii.md,
+                  borderWidth: 1.5,
+                  borderColor: monetizationChoice === "call_package" ? colors.primary : borderColor,
+                  backgroundColor: monetizationChoice === "call_package" ? colors.primary + "1A" : "transparent",
+                  alignItems: "center",
+                }}
+                testID="rider.onboarding.set-monetization-choice">
+                <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.xs }}>
+                  <Ionicons
+                    name={monetizationChoice === "call_package" ? "radio-button-on" : "radio-button-off"}
+                    size={20}
+                    color={monetizationChoice === "call_package" ? colors.primary : textSecondary}
+                  />
+                  <View>
+                    <Text
+                      style={{
+                        fontFamily: monetizationChoice === "call_package" ? "Jakarta-SemiBold" : "Jakarta-Regular",
+                        fontSize: 14,
+                        color: monetizationChoice === "call_package" ? colors.primary : textPrimary,
+                      }}
+                    >
+                      {t('monetization.call_package')}
+                    </Text>
+                    <Text
+                      style={{
+                        fontFamily: "Jakarta-Regular",
+                        fontSize: 12,
+                        color: textSecondary,
+                        marginTop: 2,
+                      }}
+                    >
+                      Buy lead packs up front
+                    </Text>
+                  </View>
+                </View>
+              </TouchableOpacity>
+              <TouchableOpacity
+                accessibilityRole="radio"
+                accessibilityState={{ checked: monetizationChoice === "commission" }}
+                accessibilityLabel={t('monetization.commission_enrollment')}
+                onPress={() => setMonetizationChoice("commission")}
+                style={{
+                  flex: 1,
+                  paddingVertical: spacing.md,
+                  paddingHorizontal: spacing.sm,
+                  borderRadius: radii.md,
+                  borderWidth: 1.5,
+                  borderColor: monetizationChoice === "commission" ? colors.primary : borderColor,
+                  backgroundColor: monetizationChoice === "commission" ? colors.primary + "1A" : "transparent",
+                  alignItems: "center",
+                }}
+                testID="rider.onboarding.set-monetization-choice-2">
+                <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.xs }}>
+                  <Ionicons
+                    name={monetizationChoice === "commission" ? "radio-button-on" : "radio-button-off"}
+                    size={20}
+                    color={monetizationChoice === "commission" ? colors.primary : textSecondary}
+                  />
+                  <View>
+                    <Text
+                      style={{
+                        fontFamily: monetizationChoice === "commission" ? "Jakarta-SemiBold" : "Jakarta-Regular",
+                        fontSize: 14,
+                        color: monetizationChoice === "commission" ? colors.primary : textPrimary,
+                      }}
+                    >
+                      {t('monetization.commission_enrollment')}
+                    </Text>
+                    <Text
+                      style={{
+                        fontFamily: "Jakarta-Regular",
+                        fontSize: 12,
+                        color: textSecondary,
+                        marginTop: 2,
+                      }}
+                    >
+                      Commission accrues per completed ride
+                    </Text>
+                  </View>
+                </View>
+              </TouchableOpacity>
+            </View>
+            {!monetizationChoice && (
+              <Text style={{ fontFamily: "Jakarta-Regular", fontSize: 13, color: colors.danger, marginTop: spacing.xs }}>
+                Please choose how you want to pay for leads.
+              </Text>
+            )}
           </View>
         )}
 

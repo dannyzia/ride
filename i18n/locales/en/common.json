@@ -2,6 +2,30 @@
   "app": {
     "name": "Ride"
   },
+  "monetization": {
+    "states": {
+      "no_product": "No active product",
+      "ceiling_locked": "Debt ceiling reached",
+      "lapsed": "Subscription lapsed",
+      "owing": "Outstanding dues",
+      "product_frozen": "Call package frozen",
+      "active": "Active"
+    },
+    "reasons": {
+      "debt_ceiling": "Unpaid commission has reached the debt ceiling",
+      "subscription_lapsed": "Subscription expired or exhausted"
+    },
+    "open_bills": "Open bills",
+    "credit_headroom": "Credit headroom before ceiling",
+    "ceiling_warn": "You're at {pct}% of your debt ceiling — pay down to keep receiving offers",
+    "pay_dues": "Pay Dues",
+    "pay_commission_dues": "Pay Commission Dues",
+    "max_debt_limit": "Debt ceiling: {amount}",
+    "no_product_prompt": "Choose a product to start receiving offers",
+    "commission_enrollment": "Commission (pay per ride)",
+    "call_package": "Call Package (prepaid leads)",
+    "switch_to_call_package": "Switch to Call Package"
+  },
   "common": {
     "back": "Back",
     "done": "Done",
@@ -123,11 +147,21 @@
       "sign_out": "Sign out"
     },
     "terms": {
-      "required": "Please accept the Terms of Service and Privacy Policy to continue.",
-      "agree_prefix": "I agree to the",
+      "required": "Please accept the Terms of Service to continue.",
+      "agree_prefix": "I accept the",
       "terms_link": "Terms of Service",
       "privacy_link": "Privacy Policy",
-      "and": "and"
+      "and": "and core data processing required to provide ride and dispatch services",
+      "marketing_opt_in": "I agree to receive promotional discounts, SMS notifications, and marketing updates from Ride. (Optional)"
+    },
+    "location": {
+      "foreground_title": "Enable Location Access",
+      "foreground_body": "Ride uses your location while using the app to show nearby vehicles, pinpoint your pickup spot, and track your trip.",
+      "background_title": "Background Location Required for Dispatch",
+      "background_body": "Ride Driver collects location data in the background (even when the app is closed or not in use) to enable: 1. Receiving nearby passenger ride offers, 2. Live trip tracking for passenger safety, 3. Fare distance calculation.",
+      "enable_all": "Enable Location (Foreground & Background)",
+      "not_now": "Not Now",
+      "inactive_note": "Without background location you will stay inactive and will not receive ride offers."
     },
     "otp_verify": {
       "title": "Verify OTP",
@@ -844,7 +878,11 @@
     "network_error": "Network error — could not initiate purchase",
     "payment_failed": "Payment Failed",
     "success": "Success",
-    "purchase_success": "Package purchased successfully!"
+    "purchase_success": "Package purchased successfully!",
+    "dues_blocked_title": "Outstanding Dues",
+    "dues_blocked_desc": "Please clear your unpaid commission before buying a new package.",
+    "already_enrolled_title": "Already on Commission",
+    "already_enrolled_desc": "You already hold an active commission enrollment. Switch back to a call package first."
   },
   "vehicle_select": {
     "title": "Your Vehicle",
@@ -1664,7 +1702,10 @@
     "dropoff_address": "Dropoff address",
     "dropoff_placeholder": "Hospital / destination",
     "a11y_call_now": "Call ambulance now",
-    "call_now": "Call Ambulance Now"
+    "call_now": "Call Ambulance Now",
+    "health_consent": "I explicitly consent to sharing the patient's medical condition notes with the assigned ambulance team and emergency operators solely for medical triage and trip handling.",
+    "health_consent_required_title": "Health Consent Required",
+    "health_consent_required_body": "Please confirm consent to share patient condition notes with emergency responders."
   },
   "delivery": {
     "title": "Delivery",

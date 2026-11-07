@@ -73,11 +73,32 @@ export default function SubscriptionCheckout() {
       if (!token) { setError("Not authenticated"); return; }
       const res = await fetch(`${API_URL}/api/package/purchase`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        headers: {
+          "Content-Type": "application/json",
+          "Idempotency-Key": crypto.randomUUID(),
+          "x-client-postpaid": "1",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify({ package_id: plan.id, provider: "portpos" }),
       });
       const data = await res.json();
-      if (!res.ok) { setError(data.error || "Payment failed"); return; }
+      if (!res.ok) {
+        if (data.error === "dues_outstanding_purchase_blocked") {
+          setError(data.message || "Outstanding dues block this purchase.");
+          return;
+        }
+        if (data.error === "already_enrolled_commission") {
+          setError(data.message || "You already hold a commission enrollment.");
+          return;
+        }
+        setError(data.error || "Payment failed");
+        return;
+      }
+      // Commission enrollment: free, no checkout page, no WebView.
+      if (data.mode === "commission") {
+        router.replace("/(main)/(rider)/subscription-confirmation");
+        return;
+      }
       if (data.payment_url) {
         setPaymentUrl(data.payment_url);
         setPaymentEventId(data.payment_event_id);
