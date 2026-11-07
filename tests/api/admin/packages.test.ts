@@ -20,6 +20,9 @@
 jest.mock("@/lib/adminRbac", () => ({
   requireAdminPermission: jest.fn(),
 }));
+jest.mock("@/lib/platformConfig", () => ({
+  getMaxCommissionDebtBdt: jest.fn(async () => 50_000),
+}));
 jest.mock("@/src/db", () => ({
   db: { select: jest.fn(), insert: jest.fn(), update: jest.fn() },
 }));

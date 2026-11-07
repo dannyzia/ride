@@ -47,6 +47,7 @@ jest.mock("@/lib/fareFrameworkConfig", () => ({
 // exercises the vehicle/status/idempotency branches, not the payments gate.
 jest.mock("@/lib/platformConfig", () => ({
   getPlan05Bool: jest.fn(async () => true),
+  getRevenueModel: jest.fn(async () => "subscription_only"),
 }));
 
 import { PgDialect } from "drizzle-orm/pg-core";
@@ -253,7 +254,7 @@ describe("POST /api/package/purchase — branch matrix", () => {
     queuePurchase({});
     const res = await POST(request(BODY, HEADERS));
     expect(res.status).toBe(200);
-    expect(await getJson(res)).toEqual({ payment_url: "https://portpos/checkout", payment_event_id: "pe-1" });
+    expect(await getJson(res)).toEqual({ mode: "subscription", payment_url: "https://portpos/checkout", payment_event_id: "pe-1" });
     expect(initiatePortposPayment).toHaveBeenCalledWith(
       expect.objectContaining({
         driver_id: DRIVER_ID,
@@ -274,7 +275,7 @@ describe("POST /api/package/purchase — branch matrix", () => {
 
     const res = await POST(request(BODY, HEADERS));
     expect(res.status).toBe(200);
-    expect(await getJson(res)).toEqual({ payment_url: null, payment_event_id: "pe-trial", activated: true });
+    expect(await getJson(res)).toEqual({ mode: "subscription", payment_url: null, payment_event_id: "pe-trial", activated: true });
     expect(createZeroAmountPaymentEvent).toHaveBeenCalledWith(
       expect.objectContaining({ driver_id: DRIVER_ID, package_id: PKG_ID, purpose: "driver_package" }),
     );

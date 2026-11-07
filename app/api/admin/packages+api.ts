@@ -8,14 +8,18 @@ import { z } from "zod";
 import { VEHICLE_TYPE_ZOD_ENUM } from "@/lib/vehicleTypes";
 import { parseJsonBody } from "@/lib/parseBody";
 import * as errors from "@/lib/errors";
+import { getMaxCommissionDebtBdt } from "@/lib/platformConfig";
+
+const D1_DUST_BUFFER_BDT = 1_000; // PortPos settlement minimum — dust buffer
 
 const createSchema = z.object({
   name: z.string().min(1).max(100),
+  product_type: z.enum(['call_package', 'commission']).default('call_package'),
   call_count: z
     .number()
     .int()
     .refine((n) => n === -1 || n > 0, "Must be positive or -1 for unlimited"),
-  duration_days: z.number().int().positive(),
+  duration_days: z.number().int().nonnegative().nullable().optional(),
   price_bdt: z.number().int().nonnegative(),
   is_trial: z.boolean().optional().default(false),
   daily_cap: z.number().int().positive().optional().default(200),
@@ -27,6 +31,33 @@ const createSchema = z.object({
 const updateSchema = createSchema.partial().extend({
   id: z.string().uuid(),
 });
+
+/**
+ * Package constraints (Item 21 / §3.9):
+ *   - D1 ceiling side: call-package price_bdt <= max_commission_debt_bdt - 1,000
+ *     paisa dust buffer (price 0 trials exempt).
+ *   - M-09 price floor: call-package price_bdt == 0 (trial) OR price_bdt >= 1,000.
+ *   - D3 commission package: price_bdt = 0, duration_days NULL, is_trial false,
+ *     product_type='commission'.
+ */
+function validatePackageConstraints(data: { price_bdt?: number; duration_days?: number | null; is_trial?: boolean; product_type?: string }, maxDebtBdt: number): string | null {
+  const productType = data.product_type ?? 'call_package';
+  const priceBdt = data.price_bdt ?? 0;
+
+  if (productType === 'commission') {
+    if (data.price_bdt !== undefined && data.price_bdt !== 0) return 'commission package price_bdt must be 0';
+    if (data.duration_days !== undefined && data.duration_days !== null) return 'commission package duration_days must be NULL';
+    if (data.is_trial === true) return 'commission package is_trial must be false';
+    return null;
+  }
+
+  // call_package
+  if (priceBdt > 0) {
+    if (priceBdt < D1_DUST_BUFFER_BDT) return 'call package price_bdt must be 0 (trial) or >= 1,000 paisa';
+    if (priceBdt > maxDebtBdt - D1_DUST_BUFFER_BDT) return 'call package price_bdt exceeds max_commission_debt_bdt minus the 1,000 paisa dust buffer (D1 floor)';
+  }
+  return null;
+}
 
 export async function GET(request: Request) {
   try {
@@ -53,6 +84,12 @@ export async function POST(request: Request) {
     const result = await parseJsonBody(request, createSchema);
     if (!result.ok) return result.response;
 
+    const maxDebtBdt = await getMaxCommissionDebtBdt();
+    const constraintErr = validatePackageConstraints(result.data, maxDebtBdt);
+    if (constraintErr) {
+      return Response.json({ error: 'package_constraint_violation', message: constraintErr }, { status: 400 });
+    }
+
     const [pkg] = await db.insert(packages).values(result.data).returning();
     return Response.json({ package: pkg }, { status: 201 });
   } catch (err: unknown) {
@@ -78,6 +115,12 @@ export async function PUT(request: Request) {
     await requireAdminPermission('price.write')(request);
     const result = await parseJsonBody(request, updateSchema);
     if (!result.ok) return result.response;
+
+    const maxDebtBdt = await getMaxCommissionDebtBdt();
+    const constraintErr = validatePackageConstraints(result.data, maxDebtBdt);
+    if (constraintErr) {
+      return Response.json({ error: 'package_constraint_violation', message: constraintErr }, { status: 400 });
+    }
 
     const { id, ...updates } = result.data;
     const [pkg] = await db

@@ -167,6 +167,23 @@ const rideId = segments[segments.indexOf("ride") + 1];
       outsideKm = Math.round(origOutsideKm * scale * 1000) / 1000;
     }
 
+    // Monetization-mode-driven commission (Item 23 / §3.7): read the accept-time
+    // snapshot, never re-derive. 'commission' accrues at the configured rate;
+    // 'subscription' / NULL (legacy / pre-cutover) accrues zero with a zeroing
+    // log — the snapshot is stamped at accept by executeMatchFlow (Item 13).
+    const snapshot = ride.monetization_mode_snapshot;
+    let commissionPct: number;
+    if (snapshot === 'commission') {
+      commissionPct = Number(pricingRow.platform_commission_percent ?? 0);
+    } else {
+      commissionPct = 0;
+      logger.info("[complete] commission zeroed — non-commission monetization snapshot", {
+        rideId,
+        driverId: driver.id,
+        snapshot,
+      });
+    }
+
     // Recalculate fare with actual ride time
     const fare = calculateFare(
       {
@@ -177,9 +194,7 @@ const rideId = segments[segments.indexOf("ride") + 1];
         floor_length_km: Number(pricingRow.floor_length_km ?? 0),
         floor_min: pricingRow.floor_min ?? 0,
         brta_fare_ceiling_bdt: pricingRow.brta_fare_ceiling_bdt,
-        platform_commission_percent: Number(
-          pricingRow.platform_commission_percent ?? 0,
-        ),
+        platform_commission_percent: commissionPct,
       },
       insideKm,
       effectiveRideTimeMin,
@@ -189,9 +204,7 @@ const rideId = segments[segments.indexOf("ride") + 1];
       isIntercity,
     );
 
-    // ── v6 shadow (PATCH 1): recompute with actual ride time, log to shadow ──
-    // Commission is always 0% in v6 (subscription-only revenue). Shadow
-    // models the FUTURE engine — pass 0, not the v2 commission rate.
+    // v6 shadow: recompute with actual ride time, log to shadow.
     const v6NightMult = 1.0; // Stage 0: night_mult ships disabled
 
     // v6 pickup fee: compute from firm/realized data using the v6 formula
@@ -258,7 +271,7 @@ const rideId = segments[segments.indexOf("ride") + 1];
         floor_length_km: Number(pricingRow.floor_length_km ?? 0),
         floor_min: pricingRow.floor_min ?? 0,
         brta_fare_ceiling_bdt: pricingRow.brta_fare_ceiling_bdt,
-        platform_commission_percent: 0, // v6 = 0% commission (subscription-only)
+        platform_commission_percent: commissionPct,
       } as V6PricingRow,
       trip_km: insideKm + outsideKm,
       ride_time_min: effectiveRideTimeMin,
@@ -286,7 +299,7 @@ const rideId = segments[segments.indexOf("ride") + 1];
     if (waitFee > 0) {
       fare.total_bdt += waitFee;
       fare.wait_fee_bdt = (fare.wait_fee_bdt ?? 0) + waitFee;
-      const commPct = Number(pricingRow.platform_commission_percent ?? 0);
+      const commPct = snapshot === 'commission' ? commissionPct : 0;
       if (commPct > 0) {
         fare.platform_commission_bdt = percentOf(fare.total_bdt, commPct);
         fare.driver_net_bdt = fare.total_bdt - fare.platform_commission_bdt;
@@ -592,7 +605,7 @@ const rideId = segments[segments.indexOf("ride") + 1];
     try {
       await recordRideCompletion({
         id: rideId, finalFarePaisa: fareTotalBeforePickupPaisa,
-        commissionPct: Number(pricingRow.platform_commission_percent ?? 0),
+        commissionPct: commissionPct,
         driverId: driver.id, riderId: ride.user_id,
         zoneId: ride.zone_id,
       });
@@ -683,6 +696,8 @@ const rideId = segments[segments.indexOf("ride") + 1];
       // C3-5 (F-05 cash handshake → receipt entry): shared builder with the
       // receipt route so both surfaces agree on change_due / amounts_match.
       cash_handshake: paymentMethod === 'mfs_p2p' ? null : buildCashHandshake(ride.rider_cash_tendered_bdt, cashReceivedBdt, finalRiderPayableBdt),
+      platform_commission_bdt: Number(authoritative.platform_commission_bdt ?? 0),
+      monetization_mode_snapshot: snapshot,
     });
   } catch (err: unknown) {
     if (errors.getErrorStatus(err) === 401 || errors.getErrorStatus(err) === 403) {

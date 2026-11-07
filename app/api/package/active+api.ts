@@ -1,6 +1,6 @@
 import { db } from "@/src/db";
 import { subscriptions, packages, drivers, users } from "@/src/db/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, isNull, sql } from "drizzle-orm";
 import { verifySupabaseToken } from "@/lib/auth";
 import { logger } from "@/lib/logger";
 import * as errors from "@/lib/errors";
@@ -26,7 +26,14 @@ export async function GET(request: Request) {
       return Response.json({ error: 'driver_not_found', message: 'Driver not found' }, { status: 404 });
 
     const [sub] = await db
-      .select()
+      .select({
+        id: subscriptions.id,
+        status: subscriptions.status,
+        calls_remaining: subscriptions.calls_remaining,
+        expires_at: subscriptions.expires_at,
+        frozen_at: subscriptions.frozen_at,
+        package_id: subscriptions.package_id,
+      })
       .from(subscriptions)
       .where(
         and(
@@ -44,6 +51,11 @@ export async function GET(request: Request) {
       .where(eq(packages.id, sub.package_id))
       .limit(1);
 
+    const now = new Date();
+    const frozen = sub.frozen_at != null
+      && (sub.expires_at ? new Date(sub.expires_at) > now : false)
+      && (sub.calls_remaining ?? 0) > 0;
+
     return Response.json({
       subscription: {
         ...sub,
@@ -52,6 +64,10 @@ export async function GET(request: Request) {
         // C10-1 grant-source identity: stable plan code (e.g. 'launch_free').
         // Clients match on this, never on the admin-editable package_name.
         package_code: pkg?.code ?? null,
+        // D2: frozen-calls state — a frozen (but usable) call subscription must
+        // never render as spendable calls on home/calls UI (CUJ 5).
+        frozen,
+        frozen_at: sub.frozen_at ? sub.frozen_at.toISOString() : null,
       },
     });
   } catch (err: unknown) {

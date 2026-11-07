@@ -1,7 +1,7 @@
 // Auth: requireAdminPermission via adminRbac — key-level enforcement in PATCH
 import { db } from '../../../src/db';
-import { platformConfig, configAuditLog } from '../../../src/db/schema';
-import { eq } from 'drizzle-orm';
+import { platformConfig, configAuditLog, packages } from '../../../src/db/schema';
+import { eq, and, isNull, sql } from 'drizzle-orm';
 import { requireAdminPermission, isOwner, OWNER_ONLY_CONFIG_KEYS, GUARDRAIL_KM_KEYS, guardrailViolation } from '../../../lib/adminRbac';
 import { z } from 'zod';
 import { parseJsonBody } from '@/lib/parseBody';
@@ -185,6 +185,13 @@ const ALLOWED_KEYS = new Set([
   // Flipping this one flag restores priced purchases at payments launch.
   'payments_enabled',
 
+  // Commission & Hybrid Revenue Engine — global revenue model + the
+  // commission-debt ceiling that gates dispatch. Seeds live in migration
+  // 0090; consumers fresh-read them (AGENTS.md: never cache platform_config).
+  'revenue_model',
+  'max_commission_debt_bdt',
+  'commission_debt_grace_rides',
+
   // S8 §4.2/§4.6 — women-only + scooter kill switches. Owner-only writes
   // enforced generically via OWNER_ONLY_CONFIG_KEYS in PATCH below.
   'women_only_rides_enabled',
@@ -231,6 +238,7 @@ const CSV_KEYS = new Set([
 
 const ENUM_KEYS: Record<string, Set<string>> = {
   fare_framework_stage: new Set(['stage0', 'stage1', 'stage2', 'stage3']),
+  revenue_model: new Set(['subscription_only', 'hybrid']),
   night_schedule: new Set(['20:00-06:00']),
   routing_provider_mode: new Set(['off', 'shadow', 'primary', 'sole', '0', '1', '2', '3']),
   search_provider_mode: new Set(['vendor_only', 'mixed_shadow', 'dpmaps_primary', 'dpmaps_sole']),
@@ -351,6 +359,12 @@ function validateKeyValue(key: string, value: string): string | null {
   }
   if (key === 'cod_dispatch_hold_threshold_bdt') {
     if (!Number.isInteger(v) || v < 0) return `${key} must be a non-negative integer (paisa)`;
+  }
+  if (key === 'max_commission_debt_bdt') {
+    if (!Number.isInteger(v) || v < 0) return `${key} must be a non-negative integer (paisa)`;
+  }
+  if (key === 'commission_debt_grace_rides') {
+    if (!Number.isInteger(v) || v < 0) return `${key} must be a non-negative integer (rides)`;
   }
 
   // Reference quantile: 0–1
@@ -607,6 +621,24 @@ export async function PATCH(req: Request) {
         const currentVal = currentRow?.value ? parseFloat(currentRow.value) : null;
         if (guardrailViolation(key, currentVal, numericVal)) {
           return Response.json({ error: 'guardrail_violation', message: `Key '${key}' change exceeds ±${GUARDRAIL_KM_KEYS.has(key) ? '0.25km' : '1min'} guardrail — requires owner` }, { status: 403 });
+        }
+      }
+    }
+
+    // D1 floor: max_commission_debt_bdt must be >= max live call-package price + 1,000 paisa dust buffer.
+    for (const { key, value } of body.updates) {
+      if (key === 'max_commission_debt_bdt') {
+        const newCeiling = parseInt(value, 10);
+        const [maxPriceRow] = await db
+          .select({ max_price: sql<number>`COALESCE(MAX(${packages.price_bdt}), 0)` })
+          .from(packages)
+          .where(and(isNull(packages.deleted_at), eq(packages.product_type, 'call_package')));
+        const maxPrice = Number(maxPriceRow?.max_price ?? 0);
+        if (newCeiling < maxPrice + 1000) {
+          return Response.json({
+            error: 'ceiling_below_package_price',
+            message: `max_commission_debt_bdt must be >= max live call-package price (${maxPrice}) + 1,000 paisa dust buffer`,
+          }, { status: 400 });
         }
       }
     }

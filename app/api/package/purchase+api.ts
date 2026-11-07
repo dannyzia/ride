@@ -1,7 +1,16 @@
 // [auth-required] Initiate package purchase via PortPos hosted checkout
 // PortPos supports bKash, Nagad, Rocket, Visa, Mastercard, and more.
 // Idempotency-Key header required — prevents double-charge
-
+//
+// Stage 3 dual-lane routing (DESIGN-POSTPAID-MONETIZATION.md §3.4, Item 16):
+//   OFF (revenue_model='subscription_only'), or ON ('hybrid') without the
+//   `x-client-postpaid: 1` header → legacy prepaid path unchanged
+//     (initiatePortposPayment invoice before activation).
+//   ON + header → postpaid lanes: settle-first gate, grant-then-bill in one
+//   tx under the driver advisory lock, commission enrollment (freeze), and
+//   commission→call-package switch (end enrollment + grant + bill).
+// M-04: un-updated clients (no header) never see postpaid lanes even in
+// hybrid mode — closes the invisible-debt window.
 import { z } from "zod";
 import { parseJsonBody } from "@/lib/parseBody";
 import { db } from "@/src/db";
@@ -13,8 +22,9 @@ import {
   subscriptions,
   fraudFlags,
   rides,
+  commissionEnrollments,
 } from "@/src/db/schema";
-import { eq, and, gte, inArray, sql } from "drizzle-orm";
+import { eq, and, gte, inArray, sql, isNull } from "drizzle-orm";
 import { verifySupabaseToken } from "@/lib/auth";
 import { heldRoles } from "@/lib/launchRoles";
 import { isConfigured } from "@/lib/portpos";
@@ -26,14 +36,18 @@ import {
   sha256Fingerprint,
   IDEMPOTENCY_ROUTES,
 } from "@/lib/idempotency";
-import { activateSubscription } from "@/lib/activateSubscription";
-import { getPlan05Bool } from "@/lib/platformConfig";
+import { activateSubscription, grantSubscriptionOnCredit } from "@/lib/activateSubscription";
+import { getPlan05Bool, getRevenueModel } from "@/lib/platformConfig";
 import {
   getFareFrameworkConfig,
   parseConfigNumber,
 } from "@/lib/fareFrameworkConfig";
 import { logger } from "@/lib/logger";
 import * as errors from "@/lib/errors";
+import { enrollCommission, endActiveEnrollment } from "@/lib/monetizationMode";
+import { createOpenBill, BillSlotConflictError } from "@/lib/billsLedger";
+import { getDriverUnpaidObligations } from "@/lib/commissionDues";
+import { nextBdtMidnightUtc } from "@/lib/time";
 
 const purchaseSchema = z
   .object({
@@ -41,6 +55,13 @@ const purchaseSchema = z
     provider: z.enum(["portpos"]),
   })
   .strict();
+
+class DuesOutstandingError extends Error {
+  constructor() {
+    super('dues_outstanding_purchase_blocked: outstanding dues block a new package purchase');
+    this.name = 'DuesOutstandingError';
+  }
+}
 
 /**
  * Package-purchase fraud gate: true when the driver has ANY fraud_flags row
@@ -273,17 +294,178 @@ export async function POST(request: Request) {
       );
     }
 
-    const [activeSub] = await db
+    // ── Dual-lane routing (§3.4, Item 16) ─────────────────────────────────
+    const revenueModel = await getRevenueModel();
+    const postpaid = revenueModel === 'hybrid' && request.headers.get('x-client-postpaid') === '1';
+
+    if (!postpaid) {
+      // ── LEGACY PREPAID PATH (unchanged) ──
+      const [activeSub] = await db
+        .select({ id: subscriptions.id })
+        .from(subscriptions)
+        .where(
+          and(
+            eq(subscriptions.driver_id, driver.id),
+            eq(subscriptions.status, "active"),
+          ),
+        )
+        .limit(1);
+      if (activeSub) {
+        return Response.json(
+          {
+            error: "active_subscription_exists",
+            message: "Driver already has an active subscription",
+          },
+          { status: 409 },
+        );
+      }
+
+      if (pkg.is_trial) {
+        const [trialSub] = await db
+          .select({ id: subscriptions.id })
+          .from(subscriptions)
+          .where(
+            and(
+              eq(subscriptions.driver_id, driver.id),
+              eq(subscriptions.is_trial, true),
+            ),
+          )
+          .limit(1);
+        if (trialSub) {
+          return Response.json(
+            {
+              error: "trial_already_used",
+              message: "Driver has already used a trial package",
+            },
+            { status: 409 },
+          );
+        }
+
+        // M-2: a trial is ৳0 — do NOT route it through the hosted gateway
+        // (most gateways reject zero invoices; redirecting a new driver to a
+        // checkout to "pay" nothing is a funnel wall). Create the payment_event
+        // via the write owner (lib/paymentEvents.ts) and activate directly —
+        // activateSubscription validates amount == price (0 == 0), creates the
+        // subscription + initial_load ledger, and marks the event paid.
+        if (pkg.price_bdt === 0) {
+          const evt = await createZeroAmountPaymentEvent({
+            driver_id: driver.id,
+            package_id: pkg.id,
+            idempotency_key: idempotencyKey,
+            purpose: "driver_package",
+          });
+          await activateSubscription(evt.id);
+          const trialResponse = Response.json({
+            payment_url: null,
+            payment_event_id: evt.id,
+            activated: true,
+            mode: 'subscription',
+          });
+          await storeIdempotencyOutcome({ route: IDEMPOTENCY_ROUTES.packagePurchase, key: idempotencyKey }, trialResponse);
+          return trialResponse;
+        }
+      }
+
+      // Create the payment_events row + PortPos invoice via the shared owner
+      // (lib/paymentEvents.ts, see AGENTS.md). Idempotency-Key collision returns
+      // null — replay the existing payment_event instead of a second invoice.
+      const serverUrl = process.env.EXPO_PUBLIC_SERVER_URL ?? "";
+      const initiated = await initiatePortposPayment({
+        driver_id: driver.id,
+        package_id: pkg.id,
+        idempotency_key: idempotencyKey,
+        amount_bdt: pkg.price_bdt,
+        purpose: "driver_package",
+        package_name: pkg.name,
+        customer_name: "Driver",
+        customer_email: "driver@ride.app",
+        customer_phone: "+880",
+        redirect_url: `${serverUrl}/api/payment/portpos/callback`,
+        ipn_url: `${serverUrl}/api/payment/portpos/callback`,
+      }, { onConflictDoNothing: true });
+
+      if (!initiated) {
+        const [existing] = await db
+          .select()
+          .from(paymentEvents)
+          .where(eq(paymentEvents.idempotency_key, idempotencyKey))
+          .limit(1);
+        if (existing) {
+          const replayResponse = Response.json({
+            payment_url: null,
+            payment_event_id: existing.id,
+          });
+          await storeIdempotencyOutcome({ route: IDEMPOTENCY_ROUTES.packagePurchase, key: idempotencyKey }, replayResponse);
+          return replayResponse;
+        }
+      }
+
+      const finalResponse = Response.json({ payment_url: initiated!.payment_url, payment_event_id: initiated!.payment_event_id, mode: 'subscription' });
+      await storeIdempotencyOutcome({ route: IDEMPOTENCY_ROUTES.packagePurchase, key: idempotencyKey }, finalResponse);
+      return finalResponse;
+    }
+
+    // ── POSTPAID LANES (revenue_model='hybrid' + x-client-postpaid: 1) ─────
+    // Settle-first pre-check: outstanding dues block a new package purchase.
+    const obligations = await getDriverUnpaidObligations(db, driver.id);
+    if (obligations.totalUnpaidPaisa >= 1000) {
+      throw new DuesOutstandingError();
+    }
+
+    if (pkg.product_type === 'commission') {
+      // ── T6: switch to commission — freeze any usable paid-up sub, enroll ──
+      const [existingEnr] = await db
+        .select({ id: commissionEnrollments.id })
+        .from(commissionEnrollments)
+        .where(
+          and(
+            eq(commissionEnrollments.driver_id, driver.id),
+            eq(commissionEnrollments.status, 'active'),
+          ),
+        )
+        .limit(1);
+      if (existingEnr) {
+        return Response.json(
+          {
+            error: "already_enrolled_commission",
+            message: "Driver already holds an active commission enrollment",
+          },
+          { status: 409 },
+        );
+      }
+
+      await db.transaction(async (tx) => {
+        await enrollCommission(tx, { driverId: driver.id, packageId: pkg.id });
+      });
+
+      const enrollResponse = Response.json({
+        payment_url: null,
+        payment_event_id: null,
+        activated: true,
+        mode: 'commission',
+        enrollment: { package_id: pkg.id },
+      });
+      await storeIdempotencyOutcome({ route: IDEMPOTENCY_ROUTES.packagePurchase, key: idempotencyKey }, enrollResponse);
+      return enrollResponse;
+    }
+
+    // ── call_package — T2 / T6c (grant FIRST, then open bill, one tx) ──
+    // Narrowed active_subscription_exists: usable-only (unfrozen, unexpired,
+    // calls remaining) — a usable sub blocks a new purchase.
+    const [usableSub] = await db
       .select({ id: subscriptions.id })
       .from(subscriptions)
       .where(
         and(
           eq(subscriptions.driver_id, driver.id),
-          eq(subscriptions.status, "active"),
+          eq(subscriptions.status, 'active'),
+          isNull(subscriptions.frozen_at),
+          sql`${subscriptions.expires_at} > now()`,
+          sql`${subscriptions.calls_remaining} > 0 OR ${subscriptions.calls_remaining} = -1`,
         ),
       )
       .limit(1);
-    if (activeSub) {
+    if (usableSub) {
       return Response.json(
         {
           error: "active_subscription_exists",
@@ -293,86 +475,112 @@ export async function POST(request: Request) {
       );
     }
 
-    if (pkg.is_trial) {
-      const [trialSub] = await db
-        .select({ id: subscriptions.id })
-        .from(subscriptions)
-        .where(
-          and(
-            eq(subscriptions.driver_id, driver.id),
-            eq(subscriptions.is_trial, true),
-          ),
-        )
-        .limit(1);
-      if (trialSub) {
+    const [hasEnrollment] = await db
+      .select({ id: commissionEnrollments.id })
+      .from(commissionEnrollments)
+      .where(
+        and(
+          eq(commissionEnrollments.driver_id, driver.id),
+          eq(commissionEnrollments.status, 'active'),
+        ),
+      )
+      .limit(1);
+
+    let txResult:
+      | { mode: 'subscription'; subscriptionId: string; expiresAt: Date; billId: string; unfrozen: boolean }
+      | null = null;
+
+    try {
+      await db.transaction(async (tx) => {
+        // Driver advisory lock serializes concurrent purchases (M-13, Item 41).
+        await tx.execute(sql.raw("SELECT pg_advisory_xact_lock(hashtext('purchase_bill_' || '" + driver.id + "'))"));
+
+        // Settle-first re-check inside the tx (race-safe gate).
+        const obligations2 = await getDriverUnpaidObligations(tx, driver.id);
+        if (obligations2.totalUnpaidPaisa >= 1000) {
+          throw new DuesOutstandingError();
+        }
+
+        // CR-A13: trial branch after the settle-first re-check (৳0 grant, no bill).
+        if (pkg.is_trial) {
+          const evt = await createZeroAmountPaymentEvent({
+            driver_id: driver.id,
+            package_id: pkg.id,
+            idempotency_key: idempotencyKey,
+            purpose: "driver_package",
+          });
+          await activateSubscription(evt.id);
+          return;
+        }
+
+        // T6c: commission driver buying a NEW call package ends the
+        // enrollment first (one product active at a time — G1).
+        if (hasEnrollment) {
+          await endActiveEnrollment(tx, { driverId: driver.id });
+        }
+
+        // T2: grant call credit FIRST (expires stale active row in-tx), then
+        // open the bill — grantSubscriptionOnCredit runs before createOpenBill;
+        // a 23505 here rolls the grant back completely.
+        const sub = await grantSubscriptionOnCredit(tx, { driverId: driver.id, package: pkg });
+        const bill = await createOpenBill(tx, {
+          driverId: driver.id,
+          subscriptionId: sub.subscriptionId,
+          amountBdt: pkg.price_bdt,
+          dueAt: nextBdtMidnightUtc(),
+        });
+
+        txResult = {
+          mode: 'subscription',
+          subscriptionId: sub.subscriptionId,
+          expiresAt: sub.expiresAt,
+          billId: bill.id,
+          unfrozen: Boolean(hasEnrollment),
+        };
+      });
+    } catch (e: unknown) {
+      if (e instanceof DuesOutstandingError) {
         return Response.json(
           {
-            error: "trial_already_used",
-            message: "Driver has already used a trial package",
+            error: "dues_outstanding_purchase_blocked",
+            message: "Outstanding dues must be settled before purchasing a new package",
+            total_unpaid_paisa: obligations.totalUnpaidPaisa,
           },
           { status: 409 },
         );
       }
-
-      // M-2: a trial is ৳0 — do NOT route it through the hosted gateway
-      // (most gateways reject zero invoices; redirecting a new driver to a
-      // checkout to "pay" nothing is a funnel wall). Create the payment_event
-      // via the write owner (lib/paymentEvents.ts) and activate directly —
-      // activateSubscription validates amount == price (0 == 0), creates the
-      // subscription + initial_load ledger, and marks the event paid.
-      if (pkg.price_bdt === 0) {
-        const evt = await createZeroAmountPaymentEvent({
-          driver_id: driver.id,
-          package_id: pkg.id,
-          idempotency_key: idempotencyKey,
-          purpose: "driver_package",
-        });
-        await activateSubscription(evt.id);
-        const trialResponse = Response.json({
-          payment_url: null,
-          payment_event_id: evt.id,
-          activated: true,
-        });
-        await storeIdempotencyOutcome({ route: IDEMPOTENCY_ROUTES.packagePurchase, key: idempotencyKey }, trialResponse);
-        return trialResponse;
+      if (e instanceof BillSlotConflictError) {
+        return Response.json(
+          {
+            error: "dues_outstanding_purchase_blocked",
+            message: "Driver already holds an open subscription bill",
+          },
+          { status: 409 },
+        );
       }
+      throw e;
     }
 
-    // Create the payment_events row + PortPos invoice via the shared owner
-    // (lib/paymentEvents.ts, see AGENTS.md). Idempotency-Key collision returns
-    // null — replay the existing payment_event instead of a second invoice.
-    const serverUrl = process.env.EXPO_PUBLIC_SERVER_URL ?? "";
-    const initiated = await initiatePortposPayment({
-      driver_id: driver.id,
-      package_id: pkg.id,
-      idempotency_key: idempotencyKey,
-      amount_bdt: pkg.price_bdt,
-      purpose: "driver_package",
-      package_name: pkg.name,
-      customer_name: "Driver",
-      customer_email: "driver@ride.app",
-      customer_phone: "+880",
-      redirect_url: `${serverUrl}/api/payment/portpos/callback`,
-      ipn_url: `${serverUrl}/api/payment/portpos/callback`,
-    }, { onConflictDoNothing: true });
-
-    if (!initiated) {
-      const [existing] = await db
-        .select()
-        .from(paymentEvents)
-        .where(eq(paymentEvents.idempotency_key, idempotencyKey))
-        .limit(1);
-      if (existing) {
-        const replayResponse = Response.json({
-          payment_url: null,
-          payment_event_id: existing.id,
-        });
-        await storeIdempotencyOutcome({ route: IDEMPOTENCY_ROUTES.packagePurchase, key: idempotencyKey }, replayResponse);
-        return replayResponse;
-      }
+    if (pkg.is_trial) {
+      const trialResponse = Response.json({
+        payment_url: null,
+        payment_event_id: null,
+        activated: true,
+        mode: 'subscription',
+      });
+      await storeIdempotencyOutcome({ route: IDEMPOTENCY_ROUTES.packagePurchase, key: idempotencyKey }, trialResponse);
+      return trialResponse;
     }
 
-    const finalResponse = Response.json({ payment_url: initiated!.payment_url, payment_event_id: initiated!.payment_event_id });
+    const finalResponse = Response.json({
+      payment_url: null,
+      payment_event_id: null,
+      activated: true,
+      mode: 'subscription',
+      subscription: { id: txResult!.subscriptionId, expires_at: txResult!.expiresAt.toISOString() },
+      bill: { id: txResult!.billId },
+      unfrozen: txResult!.unfrozen,
+    });
     await storeIdempotencyOutcome({ route: IDEMPOTENCY_ROUTES.packagePurchase, key: idempotencyKey }, finalResponse);
     return finalResponse;
   } catch (e: unknown) {

@@ -61,6 +61,7 @@ jest.mock("@/lib/launchRoles", () => ({
 // tests exercise the fraud gate, not the payments gate.
 jest.mock("@/lib/platformConfig", () => ({
   getPlan05Bool: jest.fn(async () => true),
+  getRevenueModel: jest.fn(async () => "subscription_only"),
 }));
 
 import { db } from "@/src/db";

@@ -13,7 +13,8 @@ import { db } from "@/src/db";
 import { paymentEvents, riderPasses, drivers } from "@/src/db/schema";
 import { eq } from "drizzle-orm";
 import { activateSubscription } from "@/lib/activateSubscription";
-import { creditWalletTopup, activateRiderPass, enqueueCompensation } from "@/lib/paymentRepair";
+import { creditWalletTopup, activateRiderPass, enqueueCompensation, settleCommissionDues } from "@/lib/paymentRepair";
+import { settleSubscriptionBill } from "@/lib/billsLedger";
 import { logger } from "@/lib/logger";
 import { recordSubscriptionSale } from '@/lib/accounting';
 import * as errors from '@/lib/errors';
@@ -190,6 +191,69 @@ async function processPortposPayment(
   }
 
   const evt = txEvt!;
+
+  // Driver commission dues settlement — credits driver_commission_settlements
+  // (integer paisa) and marks the payment event paid in one transaction. No
+  // subscription/package is involved, so this must run BEFORE the package
+  // fallthrough (which would throw and enqueue a doomed compensation job).
+  if (evt.purpose === 'commission_settlement') {
+    if (!evt.driver_id) {
+      logger.error('[portpos/callback] commission settlement missing driver_id — failing event', { paymentEventId: evt.id });
+      await db.transaction(async (tx) => {
+        await tx.update(paymentEvents).set({ status: 'failed' }).where(eq(paymentEvents.id, evt.id));
+      });
+      return "failed";
+    }
+    try {
+      await settleCommissionDues(evt);
+      logger.info('[portpos/callback] commission settlement completed', {
+        paymentEventId: evt.id,
+        driverId: evt.driver_id,
+        amountBdt: evt.amount_bdt,
+      });
+      return "success";
+    } catch (settleErr: unknown) {
+      logger.error('[portpos/callback] commission settlement failed — enqueuing compensation', {
+        paymentEventId: evt.id,
+        error: errors.getErrorMessage(settleErr),
+      });
+      await enqueueCompensation(evt.id);
+      return "failed";
+    }
+  }
+
+  // Subscription-bill settlement — resolve the driver's single open bill
+  // under the advisory lock, settle it, and link the payment event
+  // (C-B2 resolve-under-lock). Placed ahead of the package-purchase fallthrough
+  // so a settlement event never reaches activateSubscription (F-1 short-circuit
+  // neutralized). Idempotent replay is a no-op via driver_bills_payment_event_uq.
+  if (evt.purpose === 'subscription_settlement') {
+    if (!evt.driver_id) {
+      logger.error('[portpos/callback] subscription settlement missing driver_id — failing event', { paymentEventId: evt.id });
+      await db.transaction(async (tx) => {
+        await tx.update(paymentEvents).set({ status: 'failed' }).where(eq(paymentEvents.id, evt.id));
+      });
+      return "failed";
+    }
+    try {
+      await db.transaction(async (tx) => {
+        await settleSubscriptionBill(tx, { eventId: evt.id });
+      });
+      logger.info('[portpos/callback] subscription bill settlement completed', {
+        paymentEventId: evt.id,
+        driverId: evt.driver_id,
+        amountBdt: evt.amount_bdt,
+      });
+      return "success";
+    } catch (settleErr: unknown) {
+      logger.error('[portpos/callback] subscription settlement failed — enqueuing compensation', {
+        paymentEventId: evt.id,
+        error: errors.getErrorMessage(settleErr),
+      });
+      await enqueueCompensation(evt.id);
+      return "failed";
+    }
+  }
 
   // Rider Pass activation — use purpose + pass_id (no price guessing)
   if (evt.purpose === 'rider_pass' && evt.pass_id) {
