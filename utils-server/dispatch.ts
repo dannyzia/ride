@@ -1,11 +1,25 @@
 import { db } from '../src/db';
-import { drivers, rides, dispatchOffers, systemConfig, pricing, preferences, subscriptions, packages, driverCommutePreferences, driverBlocklists, callLedger } from '../src/db/schema';
-import { eq, and, inArray, sql, gte } from 'drizzle-orm';
+import {
+  drivers,
+  rides,
+  dispatchOffers,
+  systemConfig,
+  pricing,
+  preferences,
+  subscriptions,
+  packages,
+  driverCommutePreferences,
+  driverBlocklists,
+  callLedger,
+  driverCommissionSettlements,
+  commissionEnrollments,
+} from '../src/db/schema';
+import { eq, and, inArray, isNull, sql, gte } from 'drizzle-orm';
 import { getH3Ring } from '../lib/h3';
 import { getDriversInCells, HEARTBEAT_STALE_MS } from './h3Index';
 import { checkDriverEligibility, type VehicleTypeEnum } from '../lib/vehicleTypes';
 import { isDriverEligibleForRideGender } from '../lib/womenOnlyEligibility';
-import { getPlan05Bool } from '../lib/platformConfig';
+import { getPlan05Bool, getRevenueModel, getMaxCommissionDebtBdt } from '../lib/platformConfig';
 import { haversineKm } from '../lib/fareCalc';
 import { logger } from '../lib/logger';
 import { getColdDropInfos } from './coldDrop';
@@ -175,6 +189,17 @@ export async function buildCandidateList(
   // in-flight women-only rides keep female-only matching regardless.
   const killSwitchEnabled = await getPlan05Bool('women_only_rides_enabled');
 
+  // ── Revenue model (fresh read ONCE per dispatch; platform_config is never
+  // cached) ─────────────────────────────────────────────────────────────
+  // commission_only needs NO call package: the subscription gates below are
+  // skipped so a driver with zero calls can still be offered a lead. hybrid
+  // keeps BOTH gates (valid package AND the commission-debt ceiling).
+    const revenueModel = await getRevenueModel();
+    const commissionGated = revenueModel !== 'subscription_only';
+    const maxCommissionDebtPaisa = commissionGated
+      ? await getMaxCommissionDebtBdt()
+      : 0;
+
   // ── Pricing row: system per-km rate (used for min_per_km_bdt filter) ──
   const [pricingRow] = await db.select({ per_km_bdt: pricing.per_km_bdt })
     .from(pricing)
@@ -212,13 +237,17 @@ export async function buildCandidateList(
     daily_cap:            packages.daily_cap,
   })
   .from(drivers)
-  .leftJoin(
-    subscriptions,
-    and(
-      eq(subscriptions.driver_id, drivers.id),
-      eq(subscriptions.status, 'active'),
-    ),
-  )
+    .leftJoin(
+      subscriptions,
+      and(
+        eq(subscriptions.driver_id, drivers.id),
+        eq(subscriptions.status, 'active'),
+        // Item 11 (per-driver possession): a frozen subscription is not
+        // usable — the driver cannot draw calls from it. Frozen state is
+        // written only through lib/monetizationMode.ts (D2 supersede).
+        isNull(subscriptions.frozen_at),
+      ),
+    )
   .leftJoin(
     packages,
     eq(packages.id, subscriptions.package_id),
@@ -269,6 +298,64 @@ export async function buildCandidateList(
   );
 
   const driverIds = driverRows.map(d => d.id);
+
+  // ── Per-driver possession (Item 11): active commission enrollments.
+  // A driver holding an active enrollment is offerable in commission mode
+  // even with an exhausted or absent call package — possession, not the
+  // pool-level kill switch, governs the driver's mode (§3.5).
+  const commissionEnrolled = new Set<string>();
+  if (driverIds.length > 0) {
+    const enrRows = await db
+      .select({ driver_id: commissionEnrollments.driver_id })
+      .from(commissionEnrollments)
+      .where(and(
+        inArray(commissionEnrollments.driver_id, driverIds),
+        eq(commissionEnrollments.status, 'active'),
+      ));
+    for (const row of enrRows) {
+      if (row.driver_id) commissionEnrolled.add(row.driver_id);
+    }
+  }
+
+  // ── Commission debt (commission_only / hybrid) — ONE batched pair of
+  // grouped sums, mirroring lib/commissionDues.ts (keep the two definitions
+  // of "net dues" in step). Drivers at or above the configured ceiling are
+  // excluded from the pool below.
+  const commissionDebtByDriver = new Map<string, number>();
+  if (commissionGated && maxCommissionDebtPaisa > 0 && driverIds.length > 0) {
+    const accruedRows = await db.select({
+      driver_id: rides.driver_id,
+      total: sql<number>`COALESCE(SUM(${rides.platform_commission_bdt}), 0)`,
+    })
+    .from(rides)
+    .where(and(
+      inArray(rides.driver_id, driverIds),
+      eq(rides.status, 'completed'),
+    ))
+    .groupBy(rides.driver_id);
+
+    const settledRows = await db.select({
+      driver_id: driverCommissionSettlements.driver_id,
+      total: sql<number>`COALESCE(SUM(${driverCommissionSettlements.amount_bdt}), 0)`,
+    })
+    .from(driverCommissionSettlements)
+    .where(and(
+      inArray(driverCommissionSettlements.driver_id, driverIds),
+      eq(driverCommissionSettlements.status, 'completed'),
+    ))
+    .groupBy(driverCommissionSettlements.driver_id);
+
+    const settledByDriver = new Map(
+      settledRows.map(r => [r.driver_id, Number(r.total)] as const),
+    );
+    for (const row of accruedRows) {
+      if (!row.driver_id) continue;
+      const accrued = Number(row.total);
+      const settled = settledByDriver.get(row.driver_id) ?? 0;
+      commissionDebtByDriver.set(row.driver_id, Math.max(0, accrued - settled));
+    }
+  }
+  let debtBlockedCount = 0;
 
   logger.info('[dispatch] candidate pipeline', {
     rideId,
@@ -471,6 +558,21 @@ export async function buildCandidateList(
     // ── Blocklist filter (batched) ──
     if (blockedDriverIds.has(d.id)) continue;
 
+    // ── Commission-debt ceiling (commission_only / hybrid) ──────────────
+    // A driver at/over max_commission_debt_bdt is not offered new rides until
+    // they settle. In subscription_only the ceiling is disabled above, so
+    // pre-existing commission accrual cannot lock legacy drivers out.
+    if (commissionGated && maxCommissionDebtPaisa > 0 &&
+        (commissionDebtByDriver.get(d.id) ?? 0) >= maxCommissionDebtPaisa) {
+      debtBlockedCount++;
+      logger.debug('[dispatch] driver filtered — commission debt ceiling', {
+        driverId: d.id,
+        debtBdt: commissionDebtByDriver.get(d.id),
+        maxCommissionDebtBdt: maxCommissionDebtPaisa,
+      });
+      continue;
+    }
+
     // ── Women-only gender eligibility (S8, single shared predicate) ─────
     // Women-only rides admit verified female drivers only; armed drivers
     // self-exclude from mixed bike rides while the kill switch is ON.
@@ -484,14 +586,22 @@ export async function buildCandidateList(
     });
     if (!isEligible) continue;
 
-    // ── Balance checks (required before auto-accept) ─────────────────────
-    if (d.calls_remaining === null || d.calls_remaining === 0) {
-      logger.debug('[dispatch] driver filtered — no subscription balance', {
-        driverId: d.id, callsRemaining: d.calls_remaining, subscriptionId: d.subscription_id,
+    // ── Per-driver possession gate (Item 11) ─────────────────────────────
+    // Admitted when the driver holds a usable call balance OR an active
+    // commission enrollment. A driver with neither is skipped before
+    // scoring — leadBilling re-validates mid-chain (F-9.1 / account-status
+    // drift). The daily-cap guard applies only to billable (sub-holding)
+    // drivers; commission-mode drivers draw no call package.
+    const billable = d.calls_remaining != null && d.calls_remaining !== 0;
+    if (!billable && !commissionEnrolled.has(d.id)) {
+      logger.debug('[dispatch] driver filtered — no usable product', {
+        driverId: d.id,
+        callsRemaining: d.calls_remaining,
+        commissionEnrolled: commissionEnrolled.has(d.id),
       });
       continue;
     }
-    if (d.daily_calls_used != null && d.daily_calls_used >= (d.daily_cap ?? Infinity)) continue;
+    if (billable && d.daily_calls_used != null && d.daily_calls_used >= (d.daily_cap ?? Infinity)) continue;
 
     // ── Auto-accept eligibility flag (match happens at the offer step in
     // the pipeline, after billing — auto-accept drivers are billed the same
@@ -556,7 +666,7 @@ export async function buildCandidateList(
     // Caps at 5+ remaining calls → 1.0 (no need to reward hoarding calls).
     const callsRem = d.calls_remaining;
     const balanceScore =
-      callsRem === null                    ? 0.0                           // no active sub
+      callsRem === null ? (commissionEnrolled.has(d.id) ? 0.5 : 0.0)   // no sub: neutral if commission-enrolled, else 0
       : callsRem === -1                    ? 1.0                           // unlimited
       : Math.min(callsRem / 5, 1.0);                                       // finite, cap at 5
 
@@ -641,6 +751,14 @@ export async function buildCandidateList(
       score,
       auto_accept_eligible: autoAcceptEligible,
       protected_tier: protectedTier,
+    });
+  }
+
+  if (debtBlockedCount > 0) {
+    logger.info('[dispatch] commission-debt exclusions', {
+      rideId,
+      excluded: debtBlockedCount,
+      maxCommissionDebtBdt: maxCommissionDebtPaisa,
     });
   }
 

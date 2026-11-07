@@ -60,7 +60,7 @@ import {
 } from "../src/db/schema";
 import { eq, and, inArray, isNull, sql, desc } from "drizzle-orm";
 import { logger } from "../lib/logger";
-import { getPlan05Bool, getPlan05Int } from "../lib/platformConfig";
+import { getPlan05Bool, getPlan05Int, getRevenueModel } from "../lib/platformConfig";
 import { getZoneForLocation } from "../lib/zone";
 import { getH3Cell, getH3Ring } from "../lib/h3";
 import { calculateFare, haversineKm } from "../lib/fareCalc";
@@ -2444,7 +2444,7 @@ async function executeMatchFlow(
   // (ride, driver). A forged offer:accept with no offer row (or a stale
   // row from a previous ride) never reaches the match commit.
   const [liveOffer] = await db
-    .select({ id: dispatchOffers.id })
+    .select({ id: dispatchOffers.id, monetization_mode: dispatchOffers.monetization_mode })
     .from(dispatchOffers)
     .where(
       and(
@@ -2465,20 +2465,25 @@ async function executeMatchFlow(
   // Generate a 4-digit ride-start PIN (rider reads aloud, driver enters it)
   const startPin = String(crypto.randomInt(1000, 10000));
 
-  // Revenue guard: never match a ride for a driver who was never billed.
-  // Under debit-on-offer every offered driver has a call_ledger deduction
-  // row from offer time (leadBilling.ts); a client that sends offer:accept
-  // directly with no billing history would otherwise match for free.
-  const [deductionRow] = await db.select({ id: callLedger.id })
-    .from(callLedger)
-    .where(and(
-      eq(callLedger.ride_id, rideId),
-      eq(callLedger.driver_id, driverId),
-      eq(callLedger.event_type, 'deduction'),
-    ))
-    .limit(1);
-  if (!deductionRow) {
-    return "no_deduction";
+  // C-B1 per-mode accept proof: commission-mode offers (monetization_mode='commission',
+  // written by leadBilling at offer time) accrue NO call lead at offer time, so no
+  // call_ledger deduction row exists — the live delivered offer row IS the proof and
+  // the accept proceeds. Subscription and legacy (NULL monetization_mode) offers
+  // require the debit-on-offer deduction row (ruling 8 — every offered lead stays
+  // billed).
+  const offerIsCommission = liveOffer.monetization_mode === 'commission';
+  if (!offerIsCommission) {
+    const [deductionRow] = await db.select({ id: callLedger.id })
+      .from(callLedger)
+      .where(and(
+        eq(callLedger.ride_id, rideId),
+        eq(callLedger.driver_id, driverId),
+        eq(callLedger.event_type, 'deduction'),
+      ))
+      .limit(1);
+    if (!deductionRow) {
+      return "no_deduction";
+    }
   }
 
   // Fetch the ride row BEFORE the match commit — the firm pickup quote
@@ -2564,6 +2569,12 @@ async function executeMatchFlow(
       status: "matched",
       matched_at: new Date(),
       start_pin: startPin,
+      // Snapshot the offer's durable mode onto the ride at accept (M-01).
+      // Commission-mode accepts carry no ledger proof, so the snapshot is the
+      // ride-time record that completion and dispatch bill from. Under
+      // subscription_only (legacy) the offer mode is NULL and the column is
+      // stamped NULL — no behavior change pre-activation.
+      monetization_mode_snapshot: liveOffer.monetization_mode ?? null,
       // Firm pickup figures persist atomically with the match commit
       // (same update — transactionally clean single-row write).
       ...(firm && !firm.result.skipped
@@ -2884,6 +2895,11 @@ async function dispatchRidePipeline(
   // candidate-loop filter; in-flight women-only rides stay female-only.
   const womenOnlyFeatureEnabled = await getPlan05Bool('women_only_rides_enabled');
 
+  // Revenue model: read ONCE per pipeline and pass into every offer debit
+  // (same zero-config-query rule as the kill switch). commission_only pays
+  // per-ride commission instead of debiting call packages.
+  const revenueModel = await getRevenueModel();
+
   // ── Offer TTL + pickup-fee config (fresh read; platform_config) ──────
   const frameworkCfg = await getFareFrameworkConfig([
     'dispatch_offer_ttl_seconds',
@@ -2962,13 +2978,17 @@ async function dispatchRidePipeline(
       // Offer-time debit — one transaction per offer (offer row + deduction
       // commit or roll back together). leadBilling.ts is the sole writer.
       debitLead: (driverId, chainIndex) =>
-        debitLeadForOfferTx({ rideId: ride.id, driverId, chainIndex, womenOnlyFeatureEnabled }),
+        debitLeadForOfferTx({ rideId: ride.id, driverId, chainIndex, womenOnlyFeatureEnabled, revenueModel }),
 
       emitLeadBilled: (driverId, balanceAfter) => {
+        // No lead charge in commission mode (balanceAfter === null) — there
+        // is nothing to confirm and sending a fake balance would corrupt the
+        // driver's call-balance display.
+        if (balanceAfter == null) return;
         sendToDriver(driverId, {
           type: 'lead:billed',
           ride_id: ride.id,
-          balance_after_calls: balanceAfter,
+          balance_after_calls: balanceAfter ?? -1,
         });
       },
 
@@ -3063,9 +3083,12 @@ async function dispatchRidePipeline(
           secondary_rider_phone: ride.secondary_rider_phone,
           upfront_tip_bdt: ride.upfront_tip_bdt ?? 0,
           stops: stopList,
-          // Lead economics (§6): this offer costs 1 call, debited at send.
-          lead_cost_calls: 1,
-          balance_after_calls: balanceAfter,
+          // Lead economics (§6): a lead is debited exactly when the offer
+          // carries a usable call balance (subscription mode). Commission
+          // mode earns per-ride commission instead — the offer card must not
+          // claim a debit (0 calls).
+          lead_cost_calls: balanceAfter == null ? 0 : 1,
+          balance_after_calls: balanceAfter ?? -1,
           pickup_fee_estimate_bdt: pickupFeeEstimatePaisa,
           expires_in_ms: ttlMs,
           expires_at: new Date(Date.now() + ttlMs).toISOString(),

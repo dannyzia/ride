@@ -30,6 +30,7 @@ import {
   pickupDistanceSamples,
   zoneRecoverySamples,
   tripTimeSamples,
+  commissionEnrollments,
 } from "../src/db/schema";
 import { and, eq, lt, lte, isNull, isNotNull, sql, or, gte, inArray } from "drizzle-orm";
 import { detectStationaryAnomaly } from "../lib/safety";
@@ -2883,6 +2884,98 @@ export function startScheduler(deps: SchedulerDeps = {}): void {
       routePurgeRunning = false;
     }
   }, 86_400_000); // daily
+
+  // Job 62 — Postpaid reconciliation (every 5 min).
+  // M-13: postpaid_cutover_at is fresh-read every tick (platform_config is
+  // never cached) and used as the transition-map boundary marker; a
+  // completed ride carrying a 'commission' snapshot dated before cutover is
+  // logged as a violation (grandfathered rides keep NULL snapshots).
+  // G1 exclusivity (M-24): an active call subscription and an active
+  // commission enrollment must never coexist for one driver — violations
+  // are ended (subscription wins) and logged.
+  let postpaidReconcileRunning = false;
+  registerJob(async () => {
+    if (postpaidReconcileRunning) return;
+    postpaidReconcileRunning = true;
+    try {
+      await withJobBudget(62, 15_000, async (tx) => {
+        const cutoverRows = await tx.execute(
+          sql`SELECT value FROM platform_config WHERE key = 'postpaid_cutover_at'`,
+        );
+        const cutoverAt =
+          Array.isArray(cutoverRows) && cutoverRows[0]?.value
+            ? new Date(String(cutoverRows[0].value))
+            : null;
+
+        // M-13 cutover-boundary integrity
+        if (cutoverAt) {
+          const premature = await tx
+            .select({
+              id: rides.id,
+              driver_id: rides.driver_id,
+              completed_at: rides.completed_at,
+            })
+            .from(rides)
+            .where(
+              and(
+                eq(rides.status, 'completed'),
+                eq(rides.monetization_mode_snapshot, 'commission'),
+                lt(rides.completed_at, cutoverAt),
+              ),
+            );
+          for (const r of premature) {
+            logger.warn(
+              '[scheduler] job 62 postpaid reconcile: commission-snapshot ride predates cutover',
+              {
+                rideId: r.id,
+                driverId: r.driver_id,
+                completedAt: r.completed_at,
+                cutoverAt,
+              },
+            );
+          }
+        }
+
+        // G1 exclusivity audit (M-24): one product active per driver
+        const violations = await tx
+          .select({ driver_id: subscriptions.driver_id })
+          .from(subscriptions)
+          .innerJoin(
+            commissionEnrollments,
+            and(
+              eq(commissionEnrollments.driver_id, subscriptions.driver_id),
+              eq(commissionEnrollments.status, 'active'),
+            ),
+          )
+          .where(
+            and(
+              eq(subscriptions.status, 'active'),
+              sql`${subscriptions.expires_at} > now()`,
+              isNull(subscriptions.frozen_at),
+            ),
+          );
+        for (const v of violations) {
+          await tx
+            .update(commissionEnrollments)
+            .set({ status: 'ended', ended_at: new Date(), updated_at: new Date() })
+            .where(
+              and(
+                eq(commissionEnrollments.driver_id, v.driver_id),
+                eq(commissionEnrollments.status, 'active'),
+              ),
+            );
+          logger.warn(
+            '[scheduler] job 62 postpaid reconcile: G1 exclusivity violation ended (subscription wins)',
+            { driverId: v.driver_id },
+          );
+        }
+      });
+    } catch (e) {
+      logger.error('[scheduler] job 62 postpaid reconcile error', e);
+    } finally {
+      postpaidReconcileRunning = false;
+    }
+  }, 300_000); // every 5 min
 
   logger.info(`[scheduler] started (${registeredJobs} jobs)`);
 }

@@ -200,7 +200,7 @@ export interface RunChainDeps {
     chainIndex: number,
   ): Promise<{ billed: boolean; balanceAfter: number | null }>;
   /** Emit `lead:billed` to the driver right after a successful debit. */
-  emitLeadBilled(driverId: string, balanceAfter: number): void;
+  emitLeadBilled(driverId: string, balanceAfter: number | null): void;
   /**
    * Auto-accept match flow. Returns true when the ride was matched to this
    * driver (chain stops); false on race loss (next status check ends chain).
@@ -210,7 +210,7 @@ export interface RunChainDeps {
   sendOffer(
     driverId: string,
     chainIndex: number,
-    balanceAfter: number,
+    balanceAfter: number | null,
   ): Promise<OfferOutcome>;
   /** Post-settlement hook — stamps terminal offer outcomes in DB. */
   onSettled(driverId: string, outcome: OfferOutcome): Promise<void> | void;
@@ -269,7 +269,7 @@ export async function runSequentialChain(
         debit = { billed: false, balanceAfter: null };
         void e;
       }
-      if (!debit.billed || debit.balanceAfter == null) continue;
+      if (!debit.billed) continue;
       state.offersSent += 1;
 
       deps.emitLeadBilled(candidate.driverId, debit.balanceAfter);

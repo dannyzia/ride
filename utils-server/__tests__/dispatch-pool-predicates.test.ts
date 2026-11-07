@@ -32,6 +32,8 @@ jest.mock("../../lib/vehicleTypes", () => ({
 // S8: kill switch reads are mocked per-suite (default OFF → legacy behavior).
 jest.mock("../../lib/platformConfig", () => ({
   getPlan05Bool: jest.fn(async () => false),
+  getRevenueModel: jest.fn(async () => "subscription_only"),
+  getMaxCommissionDebtBdt: jest.fn(async () => 50_000),
 }));
 jest.mock("../../lib/fareFrameworkConfig", () => ({
   getFareFrameworkConfig: jest.fn(async () => ({})),
