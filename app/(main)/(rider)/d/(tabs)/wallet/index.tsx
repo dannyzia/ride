@@ -18,7 +18,7 @@ import { colors } from "@/theme/goRide";
 import { useIsDark } from "@/lib/useAppearance";
 import { formatBDT } from "@/lib/format";
 import { useDriverStore } from "@/store/useDriverStore";
-import { useDriverMonetizationStore } from "@/store/useDriverMonetizationStore";
+import { useMonetizationStateStore } from "@/store/useMonetizationStateStore";
 
 import PaymentWebView from "@/components/PaymentWebView";
 import { useTranslation } from "react-i18next";
@@ -75,7 +75,7 @@ export default function WalletScreen() {
   const [credits, setCredits] = useState<CancellationCredit[]>([]);
 
   const activeSubscription = useDriverStore((s) => s.activeSubscription);
-  const monetization = useDriverMonetizationStore((s) => ({
+  const monetization = useMonetizationStateStore((s) => ({
     state: s.state,
     frozenSubscription: s.frozenSubscription,
     isDispatchLocked: s.isDispatchLocked,

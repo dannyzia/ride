@@ -10,7 +10,7 @@ import { supabase } from "@/lib/supabase";
 import { useDriverStore } from "@/store/useDriverStore";
 import { useDriverFlowStore } from "@/store/useDriverFlowStore";
 import { useCallLedgerStore } from "@/store/useCallLedgerStore";
-import { useDriverMonetizationStore } from "@/store/useDriverMonetizationStore";
+import { useMonetizationStateStore } from "@/store/useMonetizationStateStore";
 import { useRideOfferStore, useWSStore } from "@/store";
 import DriverPricingReference from "@/components/DriverPricingReference";
 import RideOfferSheet from "@/components/RideOfferSheet";
@@ -140,7 +140,7 @@ export default function DriverHome() {
   // §F.0(b) — fleet marketplace bidder entry card
   const [marketplaceAccess, setMarketplaceAccess] = useState<{ fleet_id: string; fleet_name: string; role: string }[] | null>(null);
   // Item 26 — monetization state banner (six-state: ACTIVE, OWING, LAPSED, CEILING_LOCKED, NO_PRODUCT, PRODUCT_FROZEN)
-  const monetization = useDriverMonetizationStore((s) => ({
+  const monetization = useMonetizationStateStore((s) => ({
     state: s.state,
     isDispatchLocked: s.isDispatchLocked,
     fetchMonetization: s.fetchMonetization,

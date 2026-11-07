@@ -40,6 +40,7 @@ export const IDEMPOTENCY_KEY_MAX_LENGTH = 255;
 export const IDEMPOTENCY_ROUTES = {
   riderWalletTopup: '/api/rider/wallet/topup',
   driverWalletTopup: '/api/driver/wallet/topup',
+  driverDuesPay: '/api/driver/dues/pay',
   riderPasses: '/api/rider/passes',
   packagePurchase: '/api/package/purchase',
   shopOrderCreate: '/api/shop/orders',

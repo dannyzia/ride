@@ -47,7 +47,7 @@ interface DriverMonetizationState {
   reset: () => void;
 }
 
-export const useDriverMonetizationStore = create<DriverMonetizationState>((set) => ({
+export const useMonetizationStateStore = create<DriverMonetizationState>((set) => ({
   state: null,
   openBills: [],
   totalUnpaid: 0,

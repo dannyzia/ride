@@ -6,7 +6,7 @@ import { usePackageStore } from "@/store/usePackageStore";
 import { useCallLedgerStore } from "@/store/useCallLedgerStore";
 import { useDriverFlowStore } from "@/store/useDriverFlowStore";
 import { useDeliveryStore } from "@/store/useDeliveryStore";
-import { useDriverMonetizationStore } from "@/store/useDriverMonetizationStore";
+import { useMonetizationStateStore } from "@/store/useMonetizationStateStore";
 import { useEmergencyStore } from "@/store/useEmergencyStore";
 import { useFleetStore } from "@/store/useFleetStore";
 import { useRentalStore } from "@/store/useRentalStore";
@@ -90,7 +90,7 @@ export const storeRegistry: RegistryStore[] = [
   entry("fleet", useFleetStore),
   entry("rental", useRentalStore),
   entry("shop", useShopStore),
-  entry("monetization", useDriverMonetizationStore),
+  entry("monetization", useMonetizationStateStore),
   // Barrel stores — D6-1 wholesale reset()s.
   entry("rideOffer", useRideOfferStore),
   entry("customer", useCustomer),
