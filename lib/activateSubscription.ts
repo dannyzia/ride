@@ -3,6 +3,10 @@ import { paymentEvents, packages, subscriptions, callLedger, creditVouchers } fr
 import { eq, and, sql } from 'drizzle-orm';
 import { nextBdtMidnightUtc } from './time';
 import { logger } from './logger';
+import type { PgTransaction } from 'drizzle-orm/pg-core';
+import type { PostgresJsQueryResultHKT } from 'drizzle-orm/postgres-js';
+
+type Tx = PgTransaction<PostgresJsQueryResultHKT, typeof import('../src/db/schema'), any>;
 
 export async function activateSubscription(paymentEventId: string): Promise<{ subscriptionId: string }> {
   return db.transaction(async (tx) => {
@@ -35,7 +39,7 @@ export async function activateSubscription(paymentEventId: string): Promise<{ su
       .where(and(eq(subscriptions.driver_id, evt.driver_id), eq(subscriptions.status, 'active')));
 
     const isUnlimited = pkg.call_count === -1;
-    const expiresAt = new Date(Date.now() + pkg.duration_days * 86400_000);
+    const expiresAt = new Date(Date.now() + (pkg.duration_days ?? 0) * 86400_000);
 
     const [sub] = await tx.insert(subscriptions).values({
       driver_id:          evt.driver_id,
@@ -88,4 +92,54 @@ export async function activateSubscription(paymentEventId: string): Promise<{ su
     logger.info('[activateSub] success', { paymentEventId, subscriptionId: sub.id });
     return { subscriptionId: sub.id };
   });
+}
+
+/**
+ * Grant call credit FIRST: expire any stale/exhausted/frozen-expired active
+ * subscription row for this driver in-tx, insert the new subscription plus
+ * its initial_load call_ledger row, and return { subscriptionId, expiresAt }.
+ * Runs before createOpenBill inside the shared purchase transaction (the
+ * bill's subscription_id/due_at depend on it); a 23505 in the later bill
+ * insert rolls the grant and call_ledger back completely (owner fix, Gate 3).
+ * This file remains the sole writer of call_ledger rows (AGENTS.md); the
+ * legacy activateSubscription (callback/trial path) is unchanged.
+ */
+export async function grantSubscriptionOnCredit(
+  tx: Tx,
+  params: { driverId: string; package: typeof packages.$inferSelect },
+): Promise<{ subscriptionId: string; expiresAt: Date }> {
+  await tx
+    .update(subscriptions)
+    .set({ status: 'expired', updated_at: new Date() })
+    .where(and(eq(subscriptions.driver_id, params.driverId), eq(subscriptions.status, 'active')));
+
+  const pkg = params.package;
+  const isUnlimited = pkg.call_count === -1;
+  const expiresAt = new Date(Date.now() + Number(pkg.duration_days ?? 0) * 86400_000);
+
+  const [sub] = await tx
+    .insert(subscriptions)
+    .values({
+      driver_id: params.driverId,
+      package_id: pkg.id,
+      calls_remaining: isUnlimited ? -1 : pkg.call_count,
+      daily_reset_at: nextBdtMidnightUtc(),
+      status: 'active',
+      expires_at: expiresAt,
+      credit_calls_received: 0,
+      total_deductions: 0,
+      is_trial: pkg.is_trial,
+    })
+    .returning();
+
+  await tx.insert(callLedger).values({
+    subscription_id: sub.id,
+    driver_id: params.driverId,
+    event_type: 'initial_load',
+    delta: isUnlimited ? -1 : pkg.call_count,
+    balance_after: isUnlimited ? -1 : pkg.call_count,
+    reason: 'initial_load',
+  });
+
+  return { subscriptionId: sub.id, expiresAt };
 }

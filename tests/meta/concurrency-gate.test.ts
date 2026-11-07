@@ -97,6 +97,11 @@ const GATED_HARNESSES = [
   "tests/concurrency/activate-subscription-lock.test.ts",
   "tests/concurrency/promo-lock.test.ts",
   "tests/concurrency/promo-lock-no-contention.test.ts",
+  // Stage 1 postpaid monetization harnesses (DESIGN-POSTPAID-MONETIZATION.md §5 Items 40-43).
+  "tests/concurrency/driver-unpaid-obligations.test.ts",
+  "tests/concurrency/purchase-settle-first.test.ts",
+  "tests/concurrency/grant-bill-atomicity.test.ts",
+  "tests/concurrency/subscription-bill-settlement.test.ts",
 ];
 const JEST_BIN = path.join(REPO, "node_modules", "jest", "bin", "jest.js");
 /**

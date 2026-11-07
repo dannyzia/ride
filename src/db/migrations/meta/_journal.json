@@ -631,6 +631,27 @@
       "when": 1793620300000,
       "tag": "0089_p2p_mfs_and_dispatch_messaging",
       "breakpoints": true
+    },
+    {
+      "idx": 90,
+      "version": "7",
+      "when": 1793923200000,
+      "tag": "0090_driver_commission_settlements",
+      "breakpoints": true
+    },
+    {
+      "idx": 91,
+      "version": "7",
+      "when": 1794009600000,
+      "tag": "0091_crash_reports_and_consents",
+      "breakpoints": true
+    },
+    {
+      "idx": 92,
+      "version": 7,
+      "when": 1794041859522,
+      "tag": "0092_postpaid_monetization",
+      "breakpoints": true
     }
   ]
 }

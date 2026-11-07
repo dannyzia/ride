@@ -23,9 +23,11 @@ import {
   riderWalletTransactions,
   riderPasses,
   riderSubscriptions,
+  driverCommissionSettlements,
 } from '../src/db/schema';
 import { eq } from 'drizzle-orm';
 import { activateSubscription } from './activateSubscription';
+import { settleSubscriptionBill } from './billsLedger';
 import { recordWalletTopup, recordRiderPassPurchase } from './accounting';
 import { logger } from './logger';
 
@@ -149,6 +151,56 @@ export async function activateRiderPass(evt: PaymentEvent, pass: RiderPass): Pro
 }
 
 /**
+ * Record a driver commission settlement (money paid toward accrued per-ride
+ * commission dues). Locked on the payment event; a paid row short-circuits
+ * (idempotent). The payment_event_id unique index is the DB backstop: a
+ * duplicate settlement row would inflate SUM(amount_bdt) and hide real debt.
+ */
+export async function settleCommissionDues(evt: PaymentEvent): Promise<void> {
+  if (!evt.driver_id) {
+    throw new Error(`commission settlement without driver_id: ${evt.id}`);
+  }
+
+  await db.transaction(async (tx) => {
+    const [locked] = await tx
+      .select()
+      .from(paymentEvents)
+      .where(eq(paymentEvents.id, evt.id))
+      .for('update')
+      .limit(1);
+    if (!locked || locked.status === 'paid') {
+      logger.debug('[paymentRepair] commission settlement already recorded (concurrent)', {
+        paymentEventId: evt.id,
+      });
+      return;
+    }
+
+    await tx
+      .insert(driverCommissionSettlements)
+      .values({
+        driver_id: evt.driver_id!,
+        payment_event_id: evt.id,
+        amount_bdt: evt.amount_bdt,
+        status: 'completed',
+        provider: 'portpos',
+        provider_txn_id: evt.provider_txn_id ?? null,
+      })
+      .onConflictDoNothing();
+
+    await tx
+      .update(paymentEvents)
+      .set({ status: 'paid', confirmed_at: new Date() })
+      .where(eq(paymentEvents.id, evt.id));
+  });
+
+  logger.info('[paymentRepair] commission settlement completed', {
+    paymentEventId: evt.id,
+    driverId: evt.driver_id,
+    amountBdt: evt.amount_bdt,
+  });
+}
+
+/**
  * Repair a failed payment event, dispatched by purpose. Throws on unrepairable
  * state so the worker keeps backing off and eventually marks the row failed
  * with the error preserved — but every purpose that can be repaired is.
@@ -161,6 +213,22 @@ export async function repairPaymentEvent(paymentEventId: string): Promise<void> 
     .limit(1);
   if (!evt) throw new Error(`payment_event not found: ${paymentEventId}`);
   if (evt.status === 'paid') return; // already repaired
+
+  // Driver commission dues settlement — no subscription/package involved.
+  if (evt.purpose === 'commission_settlement') {
+    await settleCommissionDues(evt);
+    return;
+  }
+
+  // Subscription-bill settlement — resolves under the driver advisory lock in
+  // billsLedger. Placed before the driver_package fallthrough so a settlement
+  // event can never reach activateSubscription (F-1 short-circuit neutralized).
+  if (evt.purpose === 'subscription_settlement') {
+    await db.transaction(async (tx) => {
+      await settleSubscriptionBill(tx, { eventId: evt.id });
+    });
+    return;
+  }
 
   // Same wallet classification as the callback (covers legacy no-purpose rows).
   const isWalletTopup =

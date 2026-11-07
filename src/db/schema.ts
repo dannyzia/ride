@@ -100,6 +100,17 @@ export const callEventTypeEnum = pgEnum("call_event_type", [
   "initial_load",
   "expiry_writeoff",
 ]);
+export type CallEventType = (typeof callEventTypeEnum.enumValues)[number];
+export const packageProductTypeEnum = pgEnum("package_product_type", [
+  "call_package",
+  "commission",
+]);
+export type PackageProductType = (typeof packageProductTypeEnum.enumValues)[number];
+export const monetizationModeEnum = pgEnum("monetization_mode", [
+  "subscription",
+  "commission",
+]);
+export type MonetizationMode = (typeof monetizationModeEnum.enumValues)[number];
 export const paymentProviderEnum = pgEnum("payment_provider", ["portpos"]);
 export const paymentStatusEnum = pgEnum("payment_status", [
   "initiated",
@@ -313,6 +324,12 @@ export const users = pgTable(
     // legacy rows pre-dating the gate stay valid; new registrations stamp
     // it from the carried terms_accepted flag (400 terms_required if absent).
     terms_accepted_at: timestamptz("terms_accepted_at"),
+    // Crash/consent architecture (plan .kilo/plans/crash-logger-and-consent-architecture-plan.md
+    // Phase 1): granular marketing opt-in (default OFF) + pinned terms version.
+    // WRITE OWNERSHIP: app/api/register+api.ts only.
+    marketingOptIn: boolean("marketing_opt_in").notNull().default(false),
+    marketingOptInAt: timestamptz("marketing_opt_in_at"),
+    termsVersion: varchar("terms_version", { length: 32 }).default("v1.0"),
     gender: genderEnum("gender").notNull().default("unspecified"),
     deleted_at: timestamptz("deleted_at"),
     created_at: timestamptz("created_at").notNull().defaultNow(),
@@ -521,12 +538,14 @@ export const packages = pgTable(
     // on code, never on name.
     code: varchar("code", { length: 50 }),
     call_count: integer("call_count").notNull(),
-    duration_days: integer("duration_days").notNull(),
+    // NULL for the ৳0 commission package (D3: non-expiring); call packages keep a value.
+    duration_days: integer("duration_days"),
     price_bdt: integer("price_bdt").notNull(),
     is_trial: boolean("is_trial").notNull().default(false),
     is_active: boolean("is_active").notNull().default(true),
     daily_cap: integer("daily_cap").notNull().default(200),
     vehicle_type: vehicleTypeEnum("vehicle_type"),
+    product_type: packageProductTypeEnum("product_type").notNull().default("call_package"),
     // §14 role-based subscription engine (S2 F4): which account roles this plan
     // may be sold to / shown to, resolved against user_roles. Additive, every
     // existing row defaults to the driver base.
@@ -639,6 +658,8 @@ export const subscriptions = pgTable(
     status: subscriptionStatusEnum("status").notNull().default("active"),
     purchased_at: timestamptz("purchased_at").notNull().defaultNow(),
     expires_at: timestamptz("expires_at").notNull(),
+    // D2 frozen-calls state: set when a paid-up call subscription is frozen in favor of commission mode. Nullable — old code ignores it, rollback is lossless.
+    frozen_at: timestamptz("frozen_at"),
     credit_calls_received: integer("credit_calls_received")
       .notNull()
       .default(0),
@@ -772,6 +793,8 @@ export const rides = pgTable(
     secondary_rider_female: boolean("secondary_rider_female").notNull().default(false),
     distance_km: numeric("distance_km", { precision: 7, scale: 3 }).notNull(),
     platform_commission_bdt: integer("platform_commission_bdt"),
+    // S5: monetization mode snapshotted at accept (never re-derived). NULL = pre-cutover ride (D5 grandfathering).
+    monetization_mode_snapshot: monetizationModeEnum("monetization_mode"),
     scheduled_at: timestamptz("scheduled_at"),
     dispatch_window_start: timestamptz("dispatch_window_start"),
     dispatch_window_end: timestamptz("dispatch_window_end"),
@@ -993,6 +1016,8 @@ export const dispatchOffers = pgTable(
     filtered_reason: varchar("filtered_reason", { length: 50 }),
     // v6: routed ETA at offer time for dawdle baseline calibration
     pickup_estimated_time_min: numeric("pickup_estimated_time_min", { precision: 7, scale: 2 }),
+    // S7: durable ride-level mode binding, written by lib/leadBilling inside the debit transaction (M-01); copied onto rides.monetization_mode_snapshot at accept. NULL on legacy rows (D5 boundary).
+    monetization_mode: monetizationModeEnum("monetization_mode"),
     created_at: timestamptz("created_at").notNull().defaultNow(),
   },
   (t) => [
@@ -1057,7 +1082,9 @@ export const paymentEvents = pgTable(
     confirmed_at: timestamptz("confirmed_at"),
     subscription_id: uuid("subscription_id").references(() => subscriptions.id),
     ride_id: uuid("ride_id").references(() => rides.id),
-    purpose: varchar("purpose", { length: 20 }).default("ride"),
+    // length 40: 'commission_settlement' (21 chars) must fit — a 20-char
+    // column silently rejects every driver dues settlement.
+    purpose: varchar("purpose", { length: 40 }).default("ride"),
     pass_id: uuid("pass_id").references(() => riderPasses.id),
     created_at: timestamptz("created_at").notNull().defaultNow(),
     updated_at: timestamptz("updated_at").notNull().defaultNow(),
@@ -1067,6 +1094,103 @@ export const paymentEvents = pgTable(
     index("payment_events_orphan_paid_idx")
       .on(t.status)
       .where(sql`subscription_id IS NULL AND status = 'paid'`),
+  ],
+);
+
+/**
+ * Driver commission settlements — money PAID by a driver to reduce their
+ * accrued per-ride commission liability (revenue_model commission_only /
+ * hybrid). Written ONLY by lib/paymentRepair.ts `settleCommissionDues` (live
+ * callback + compensation repair), one row per payment_event (unique index).
+ * `amount_bdt` is integer paisa. Net dues = SUM(rides.platform_commission_bdt
+ * for completed rides) − SUM(amount_bdt for status='completed').
+ */
+export const driverCommissionSettlements = pgTable(
+  "driver_commission_settlements",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    driver_id: uuid("driver_id")
+      .notNull()
+      .references(() => drivers.id, { onDelete: "cascade" }),
+    payment_event_id: uuid("payment_event_id")
+      .notNull()
+      .references(() => paymentEvents.id),
+    amount_bdt: integer("amount_bdt").notNull(), // integer paisa
+    kind: varchar("kind", { length: 20 }).notNull().default("commission"),
+    status: varchar("status", { length: 20 }).notNull().default("completed"), // 'pending' | 'completed' | 'failed'
+    provider: paymentProviderEnum("provider").notNull().default("portpos"),
+    provider_txn_id: varchar("provider_txn_id", { length: 255 }),
+    settled_at: timestamptz("settled_at").notNull().defaultNow(),
+    created_at: timestamptz("created_at").notNull().defaultNow(),
+  },
+  (t) => [
+    index("dcs_driver_settled_idx").on(t.driver_id, t.settled_at),
+    // One settlement per payment event — the DB backstop that makes the IPN
+    // callback idempotent even if two callbacks race past the row lock.
+    uniqueIndex("dcs_payment_event_idx").on(t.payment_event_id),
+  ],
+);
+
+/**
+ * Driver bills — the platform's receivable for granted call packages (S2).
+ * One open `subscription_purchase` bill per driver at any time (partial unique index); settled rows retained, never deleted.
+ * Written ONLY by lib/billsLedger.ts.
+ */
+export const driverBills = pgTable(
+  "driver_bills",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    driver_id: uuid("driver_id")
+      .notNull()
+      .references(() => drivers.id),
+    subscription_id: uuid("subscription_id").references(() => subscriptions.id),
+    kind: varchar("kind", { length: 30 }).notNull().default("subscription_purchase"),
+    amount_bdt: integer("amount_bdt").notNull(),
+    status: varchar("status", { length: 20 }).notNull().default("open"),
+    payment_event_id: uuid("payment_event_id").references(() => paymentEvents.id),
+    due_at: timestamptz("due_at"),
+    created_at: timestamptz("created_at").notNull().defaultNow(),
+    updated_at: timestamptz("updated_at").notNull().defaultNow(),
+  },
+  (t) => [
+    index("driver_bills_driver_idx").on(t.driver_id),
+    // B4 settle-first barrier at the database layer; 23505 here is authoritative (maps to 409 dues_outstanding_purchase_blocked).
+    uniqueIndex("driver_bills_one_open_uq")
+      .on(t.driver_id)
+      .where(sql`${t.status} = 'open' AND ${t.kind} = 'subscription_purchase'`),
+    // M-14 settlement barrier: one payment event settles at most one bill.
+    uniqueIndex("driver_bills_payment_event_uq")
+      .on(t.payment_event_id)
+      .where(sql`${t.payment_event_id} IS NOT NULL`),
+  ],
+);
+
+/**
+ * Commission enrollments — commission-mode possession, separate from subscriptions so the
+ * supersede sequence and subs_one_active_per_driver are untouched (B3/F3, D2).
+ * Non-expiring (no expires_at). Written ONLY by lib/monetizationMode.ts.
+ */
+export const commissionEnrollments = pgTable(
+  "commission_enrollments",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    driver_id: uuid("driver_id")
+      .notNull()
+      .references(() => drivers.id),
+    package_id: uuid("package_id")
+      .notNull()
+      .references(() => packages.id),
+    status: varchar("status", { length: 20 }).notNull().default("active"),
+    started_at: timestamptz("started_at").notNull().defaultNow(),
+    ended_at: timestamptz("ended_at"),
+    created_at: timestamptz("created_at").notNull().defaultNow(),
+    updated_at: timestamptz("updated_at").notNull().defaultNow(),
+  },
+  (t) => [
+    index("commission_enrollments_driver_idx").on(t.driver_id),
+    uniqueIndex("commission_enrollments_one_active_uq")
+      .on(t.driver_id)
+      .where(sql`${t.status} = 'active'`),
   ],
 );
 
@@ -3614,6 +3738,10 @@ export const emergencyRequests = pgTable("emergency_requests", {
   // seed 60) — the sweep stamps this, re-broadcasts to the next ring tier and
   // notifies the requester of the delay. Job 53 still owns final TTL failure.
   escalated_at: timestamptz("escalated_at"),
+  // Crash/consent architecture Phase 1 §7: explicit consent for patient health
+  // notes. WRITE OWNERSHIP: app/api/emergency/requests+api.ts only.
+  healthConsentGranted: boolean("health_consent_granted").notNull().default(false),
+  healthConsentAt: timestamptz("health_consent_at"),
   created_at: timestamptz("created_at").notNull().defaultNow(),
   updated_at: timestamptz("updated_at").notNull().defaultNow(),
   }, (t) => [
@@ -4006,6 +4134,31 @@ export const customerComplaints = pgTable("customer_complaints", {
   index("customer_complaints_shop_idx").on(t.shop_id, t.status),
   index("customer_complaints_status_idx").on(t.status, t.created_at),
   index("customer_complaints_against_idx").on(t.against_user_id),
+]);
+
+/**
+ * First-party client crash reports (crash-logger plan Phase 1/2, Option B).
+ * Zero third-party SDKs: the app POSTs to /api/telemetry/crash and rows land
+ * here. WRITE OWNERSHIP: app/api/telemetry/crash+api.ts only (unauthenticated
+ * writes, rate-limited). Surfaced read-only in app/admin/monitoring.tsx via
+ * app/api/admin/monitoring/crashes+api.ts.
+ */
+export const clientCrashReports = pgTable("client_crash_reports", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id").references(() => users.id, { onDelete: "set null" }),
+  deviceId: varchar("device_id", { length: 128 }),
+  platform: varchar("platform", { length: 20 }).notNull(), // 'ios' | 'android' | 'web'
+  appVersion: varchar("app_version", { length: 32 }).notNull(),
+  errorMessage: text("error_message").notNull(),
+  stackTrace: text("stack_trace"),
+  componentStack: text("component_stack"),
+  isFatal: boolean("is_fatal").notNull().default(false),
+  extraData: jsonb("extra_data"),
+  createdAt: timestamptz("created_at").notNull().defaultNow(),
+}, (table) => [
+  index("ccr_created_at_idx").on(table.createdAt),
+  index("ccr_user_id_idx").on(table.userId),
+  index("ccr_platform_idx").on(table.platform),
 ]);
 
 export const idempotencyKeys = pgTable("idempotency_keys", {

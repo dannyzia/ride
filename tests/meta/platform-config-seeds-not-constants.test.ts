@@ -123,6 +123,43 @@ describe("§12 economics — seeds, not constants (stage-order rule)", () => {
     }
   });
 
+  // ── Postpaid monetization seeds (Stage 1, DESIGN-POSTPAID-MONETIZATION.md) ──
+  describe("postpaid monetization seeds", () => {
+    const POSTPAID_SEED_SRC = fs.readFileSync(path.join(ROOT, "scripts/seed-platform-config.js"), "utf8");
+
+    it("seeds revenue_model='subscription_only' (kill-switch OFF at launch)", () => {
+      expect(POSTPAID_SEED_SRC).toMatch(new RegExp(`\\(\\s*'revenue_model'\\s*,\\s*'subscription_only'\\s*,\\s*now\\(\\)\\s*\\)`));
+    });
+
+    it("seeds max_commission_debt_bdt='50000' (D1 ceiling at launch)", () => {
+      expect(POSTPAID_SEED_SRC).toMatch(new RegExp(`\\(\\s*'max_commission_debt_bdt'\\s*,\\s*'50000'\\s*,\\s*now\\(\\)\\s*\\)`));
+    });
+
+    it("seeds the canonical ৳0 commission package idempotently (product_type='commission', price_bdt=0, duration_days NULL, is_trial=false)", () => {
+      expect(POSTPAID_SEED_SRC).toMatch(/product_type = 'commission'/);
+      expect(POSTPAID_SEED_SRC).toMatch(/price_bdt = 0/);
+      expect(POSTPAID_SEED_SRC).toMatch(/duration_days IS NULL/);
+      expect(POSTPAID_SEED_SRC).toMatch(/is_trial = false/);
+      // The Stage-3 activation runbook writes the cutover timestamp at
+      // activation time; this script does not seed it.
+      expect(POSTPAID_SEED_SRC).not.toMatch(/postpaid_cutover_at/);
+    });
+
+    it("FAULT: a wrong revenue_model seed is detected", () => {
+      const wrong = "('revenue_model', 'hybrid', now())";
+      expect(wrong).not.toMatch(new RegExp(`\\(\\s*'revenue_model'\\s*,\\s*'subscription_only'\\)`));
+    });
+
+    it("FAULT: a wrong commission debt ceiling seed is detected", () => {
+      const wrong = "('max_commission_debt_bdt', '1000', now())";
+      expect(wrong).not.toMatch(new RegExp(`\\(\\s*'max_commission_debt_bdt'\\s*,\\s*'50000'\\)`));
+    });
+
+    it("FAULT: a commission package with a concrete duration is not the canonical D3 seed", () => {
+      expect("price_bdt = 0, duration_days = 30").not.toMatch(/duration_days IS NULL/);
+    });
+  });
+
   // ── Fault injection: a neutered scanner must flip both directions ─────────
   it("FAULT: a literal in a lib file is detected (scanner is not a no-op)", () => {
     const sandbox = path.join(ROOT, "lib/__fault_injection_probe__.ts");

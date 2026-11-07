@@ -250,6 +250,39 @@ export async function getConfigInt(
   return Number.isFinite(n) ? n : fallback;
 }
 
+// ══════════════════════════════════════════════════════════════════════
+// REVENUE MODEL — subscription vs commission vs hybrid
+// ══════════════════════════════════════════════════════════════════════
+
+/**
+ * `revenue_model` platform_config values (fresh-read, never cached):
+ *   - subscription_only: kill-switch OFF — legacy prepaid behavior (the default)
+ *   - hybrid:            kill-switch ON — per-driver possession governs
+ * `commission_only` is removed from the allowed set (Stage 1); unknown values
+ * default to subscription_only so the degraded contract is checked, not assumed.
+ */
+export type RevenueModel = 'subscription_only' | 'hybrid';
+
+/** Safe default — preserves the pre-commission dispatch behavior until toggled. */
+export const REVENUE_MODEL_DEFAULT: RevenueModel = 'subscription_only';
+
+/** ৳500 in integer paisa — default commission-debt ceiling before dispatch lockout. */
+export const MAX_COMMISSION_DEBT_DEFAULT_PAISA = 50_000;
+
+export function parseRevenueModel(raw: string | null | undefined): RevenueModel {
+  return raw === 'subscription_only' || raw === 'hybrid' ? raw : REVENUE_MODEL_DEFAULT;
+}
+
+/** Fresh-read the global revenue model (AGENTS.md: never cache platform_config). */
+export async function getRevenueModel(): Promise<RevenueModel> {
+  return parseRevenueModel(await getConfigValue('revenue_model', REVENUE_MODEL_DEFAULT));
+}
+
+/** Fresh-read the commission-debt ceiling in integer paisa. */
+export async function getMaxCommissionDebtBdt(): Promise<number> {
+  return getConfigInt('max_commission_debt_bdt', MAX_COMMISSION_DEBT_DEFAULT_PAISA);
+}
+
 /**
  * Read a platform_config integer that MUST exist in the DB — for the §12
  * economics keys, whose values are seeded by scripts/seed-platform-config.js

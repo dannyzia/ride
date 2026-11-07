@@ -12,7 +12,7 @@ type Tx = PgTransaction<PostgresJsQueryResultHKT, typeof schema, any>;
 /**
  * Write-ownership (AGENTS.md): payment_events rows may ONLY be created through
  * this file. All creation paths:
- *   - `initiatePortposPayment` — PortPos gateway (wallet topup, rider pass, driver package)
+ *   - `initiatePortposPayment` — PortPos gateway (wallet topup, rider pass, driver package, commission settlement, subscription settlement)
  *   - `createZeroAmountPaymentEvent` — ৳0 trial packages
  *   - `createCancellationFeeEventInTx` — cancellation fee tracking (in-transaction)
  * Status transitions (paid/failed) happen ONLY in lib/activateSubscription.ts,
@@ -28,7 +28,7 @@ export interface PortposPaymentInitiation {
   ride_id?: string;
   idempotency_key: string;
   amount_bdt: number;
-  purpose: 'wallet_topup' | 'rider_pass' | 'driver_package';
+  purpose: 'wallet_topup' | 'rider_pass' | 'driver_package' | 'commission_settlement' | 'subscription_settlement';
   package_name: string;
   customer_name: string;
   customer_email: string;

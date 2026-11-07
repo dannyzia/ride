@@ -37,6 +37,8 @@ interface NavItem {
 // catalog.write / config.write / finance.write / support.write /
 // review.write / safety.write.
 const OWNER_ADMIN: AdminRole[] = ["owner", "admin"];
+const OWNER_ONLY: AdminRole[] = ["owner"];
+const ALL_ADMIN: AdminRole[] = ["owner", "admin", "ops_manager", "moderator"];
 const OWNER_ADMIN_OPS: AdminRole[] = ["owner", "admin", "ops_manager"];
 const OWNER_OPS: AdminRole[] = ["owner", "ops_manager"];
 const OWNER_OPS_MOD: AdminRole[] = ["owner", "ops_manager", "moderator"];
@@ -65,7 +67,7 @@ const NAV: NavItem[] = [
     label: "Verification",
     icon: "account-check",
     group: "Operations",
-    roles: OWNER_ADMIN_OPS, // admin.read
+    roles: OWNER_ADMIN_OPS, // admin.read (role decisions: owner/admin)
   },
   {
     // S7 (§7 A1-F-30/E2): the admin side of the F-22 vehicle-type request.
@@ -102,7 +104,7 @@ const NAV: NavItem[] = [
     label: "Recovery",
     icon: "alert-circle",
     group: "Operations",
-    roles: OWNER_ADMIN_OPS, // verification.write
+    roles: OWNER_ADMIN, // finance.write (+ safety/catalog actions)
   },
   {
     route: "/admin/lost-items",
@@ -123,28 +125,28 @@ const NAV: NavItem[] = [
     label: "Support Tickets",
     icon: "headset",
     group: "Operations",
-    roles: OWNER_ADMIN, // finance.write per current tickets API
+    roles: OWNER_ADMIN_OPS, // support.write
   },
   {
     route: "/admin/broadcast",
     label: "Broadcast",
     icon: "bullhorn",
     group: "Operations",
-    roles: OWNER_ADMIN_OPS, // support.write
+    roles: OWNER_OPS_MOD, // safety.write
   },
   {
     route: "/admin/heat-monitor",
     label: "Heat Monitor",
     icon: "fire",
     group: "Operations",
-    roles: OWNER_OPS, // review.write
+    roles: ALL_ADMIN, // admin.read
   },
   {
     route: "/admin/trust-safety",
     label: "Trust & Safety",
     icon: "shield-check",
     group: "Operations",
-    roles: OWNER_OPS_MOD, // safety.write
+    roles: OWNER_OPS, // review.write
   },
   {
     route: "/admin/sos-alerts",
@@ -165,7 +167,7 @@ const NAV: NavItem[] = [
     label: "Fare Gate Metrics",
     icon: "gauge",
     group: "Operations",
-    roles: OWNER_OPS, // review.write
+    roles: ALL_ADMIN, // admin.read
   },
 
   // Catalogs
@@ -174,7 +176,7 @@ const NAV: NavItem[] = [
     label: "Call Packages",
     icon: "package-variant-closed",
     group: "Catalogs",
-    roles: OWNER_ADMIN, // catalog.write
+    roles: OWNER_ONLY, // price.write (owner only)
   },
   {
     route: "/admin/zones",
@@ -188,7 +190,7 @@ const NAV: NavItem[] = [
     label: "Pricing",
     icon: "currency-bdt",
     group: "Catalogs",
-    roles: OWNER_ADMIN, // catalog.write
+    roles: OWNER_ONLY, // price.write (owner only)
   },
   {
     route: "/admin/city-boundaries",
@@ -267,7 +269,7 @@ const NAV: NavItem[] = [
     label: "Events",
     icon: "calendar-star",
     group: "Programs",
-    roles: OWNER_ADMIN_OPS, // support.write
+    roles: OWNER_ADMIN, // catalog.write
   },
   {
     route: "/admin/premium-allowlist",
@@ -297,28 +299,35 @@ const NAV: NavItem[] = [
     label: "Zone P&L",
     icon: "chart-pie",
     group: "Finance",
-    roles: OWNER_ADMIN, // finance.write
+    roles: ALL_ADMIN, // admin.read
   },
   {
     route: "/admin/pickup-analytics",
     label: "Pickup Analytics",
     icon: "chart-bar",
     group: "Finance",
-    roles: OWNER_OPS, // review.write
+    roles: ALL_ADMIN, // admin.read
   },
   {
     route: "/admin/fleet-plans",
     label: "Fleet Plans",
     icon: "credit-card-outline",
     group: "Finance",
-    roles: OWNER_ADMIN, // catalog.write
+    roles: OWNER_ADMIN, // admin.read / catalog.write
   },
   {
     route: "/admin/fleet-billing",
     label: "Fleet Billing",
     icon: "receipt",
     group: "Finance",
-    roles: OWNER_ADMIN, // admin.read
+    roles: ALL_ADMIN, // admin.read
+  },
+  {
+    route: "/admin/monetization",
+    label: "Monetization",
+    icon: "currency-bdt",
+    group: "Finance",
+    roles: OWNER_ADMIN, // config.write — locked-drivers + postpaid obligations
   },
 
   // Marketplace

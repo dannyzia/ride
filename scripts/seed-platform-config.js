@@ -1,5 +1,6 @@
 const postgres = require("postgres");
 const { drizzle } = require("drizzle-orm/postgres-js");
+const { sql } = require("drizzle-orm");
 require("dotenv").config({ path: ".env.local" });
 
 async function seed() {
@@ -72,10 +73,43 @@ async function seed() {
       ('dpmaps_osrm_timeout_ms',               '300', now()),
       ('dpmaps_barikoi_timeout_ms',            '400', now()),
       ('dpmaps_google_spend_cap_usd',          '50.00', now()),
-      ('dpmaps_learning_ingest_enabled',       'true', now())
+      ('dpmaps_learning_ingest_enabled',       'true', now()),
+      // The Stage-3 activation runbook writes the cutover timestamp at
+      // activation time; this script does not seed it.
+      ('revenue_model',           'subscription_only', now()),
+      ('max_commission_debt_bdt', '50000',             now())
     ON CONFLICT (key) DO NOTHING;
   `);
-  console.log("platform_config seeded (35 keys)");
+
+  // M-20: canonical ৳0 Commission package — idempotent, inline SQL because
+  // this CJS script cannot import the TS lib. The SQL mirrors
+  // lib/monetizationMode.ensureCommissionPackage()'s predicate (and its
+  // pg_advisory_xact_lock pattern — race-prone callers guard with
+  // hashtext('ensure_commission_package')); packages_code_live_uq is the
+  // schema backstop. The helper remains the runtime consumer of record.
+  await db.execute(sql`
+    INSERT INTO packages (name, code, call_count, duration_days, price_bdt, is_trial, is_active, daily_cap, vehicle_type, roles, product_type, created_at, updated_at)
+    SELECT 'Commission', 'commission', 0, NULL, 0, false, true, 0, NULL, '{driver}'::text[], 'commission', now(), now()
+    WHERE NOT EXISTS (
+      SELECT 1 FROM packages
+      WHERE product_type = 'commission' AND price_bdt = 0 AND is_trial = false
+        AND duration_days IS NULL AND deleted_at IS NULL
+    );
+  `);
+
+  // D1 seed-time assertion: ceiling must cover the most expensive live
+  // call package plus the ৳10 dust buffer.
+  const [ceilingRow] = await db.execute(sql`SELECT value FROM platform_config WHERE key = 'max_commission_debt_bdt'`);
+  const [maxPriceRow] = await db.execute(sql`SELECT COALESCE(MAX(price_bdt), 0) AS max_price FROM packages WHERE deleted_at IS NULL AND product_type = 'call_package'`);
+  const ceiling = Number(ceilingRow?.value);
+  const maxPrice = Number(maxPriceRow?.max_price);
+  if (!Number.isFinite(ceiling) || ceiling < maxPrice + 1000) {
+    throw new Error(
+      `D1 floor violated: max_commission_debt_bdt ${ceiling} < max live call-package price ${maxPrice} + 1,000 paisa`,
+    );
+  }
+
+  console.log("platform_config seeded (37 keys)");
   await client.end();
 }
 seed().catch(console.error);
