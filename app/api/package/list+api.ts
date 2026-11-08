@@ -65,11 +65,18 @@ export async function GET(request: Request) {
         )
       : isNull(packages.vehicle_type);
 
+    // Batch-2 Item 1: operator applicability — this surface serves drivers,
+    // so plans whose applicable_roles excludes 'driver' are not listed.
+    // The column default '{driver}' keeps every existing package visible
+    // (no-op today). Shop/delivery/fleet surfaces pin their own role.
+    const operatorFilter = sql`${packages.applicable_roles} @> ARRAY['driver']::text[]`;
+
     const whereClause = and(
       isNull(packages.deleted_at),
       eq(packages.is_active, true),
       roleFilter,
       vehicleFilter,
+      operatorFilter,
     );
 
     const pkgList = await db

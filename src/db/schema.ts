@@ -106,6 +106,16 @@ export const packageProductTypeEnum = pgEnum("package_product_type", [
   "commission",
 ]);
 export type PackageProductType = (typeof packageProductTypeEnum.enumValues)[number];
+// Batch-2 Item 1: operator role registry — the operator TYPE a plan applies
+// to. Restaurants are shops (no separate role). packages.applicable_roles is
+// a text[] validated against this value set at the API boundary.
+export const operatorRoleEnum = pgEnum("operator_role", [
+  "driver",
+  "shop",
+  "delivery",
+  "fleet",
+]);
+export type OperatorRole = (typeof operatorRoleEnum.enumValues)[number];
 export const monetizationModeEnum = pgEnum("monetization_mode", [
   "subscription",
   "commission",
@@ -555,6 +565,11 @@ export const packages = pgTable(
     // Divergence recorded in migration 0063: §14 names `subscription_plans`,
     // which does not exist on disk — `packages` is the purchasable-plan table.
     roles: text("roles").array().notNull().default(sql`'{driver}'`),
+    // Batch-2 Item 1: operator applicability — which operator TYPE this plan
+    // applies to ('driver' | 'shop' | 'delivery' | 'fleet', validated against
+    // the operator_role enum at the API boundary). Distinct from `roles`
+    // (§14 account-role gating). Non-empty via packages_applicable_roles_nonempty.
+    applicable_roles: text("applicable_roles").array().notNull().default(sql`'{driver}'`),
     created_at: timestamptz("created_at").notNull().defaultNow(),
     updated_at: timestamptz("updated_at").notNull().defaultNow(),
     deleted_at: timestamptz("deleted_at"),

@@ -20,6 +20,12 @@
 jest.mock("@/lib/adminRbac", () => ({
   requireAdminPermission: jest.fn(),
 }));
+jest.mock("@/lib/parseBody", () => ({
+  parseJsonBody: jest.fn(async (request: Request) => {
+    const body = await request.json();
+    return { ok: true, data: body };
+  }),
+}));
 jest.mock("@/lib/platformConfig", () => ({
   getMaxCommissionDebtBdt: jest.fn(async () => 50_000),
 }));
@@ -32,6 +38,7 @@ jest.mock("@/lib/logger", () => ({
 
 import { db } from "@/src/db";
 import { requireAdminPermission } from "@/lib/adminRbac";
+import { logger } from "@/lib/logger";
 import { packages } from "@/src/db/schema";
 import { GET, POST, PUT, DELETE } from "@/app/api/admin/packages+api";
 
@@ -144,18 +151,197 @@ describe("POST /api/admin/packages", () => {
     });
   });
 
-  test("rejects invalid call_count (0 or negative other than -1)", async () => {
+  test("D3-B-r2: call_count = 0 (no lead leg) is accepted; -5 rejected with call_count_invalid", async () => {
+    // 0 was rejected pre-amendment; D3-B-r2 redefines 0 as "no lead leg".
+    (db.insert as jest.Mock).mockImplementation(() => ({
+      values: jest.fn((vals) => ({ returning: jest.fn(async () => [{ id: PKG_ID, ...vals }]) })),
+    }));
     const resZero = await POST(jsonRequest({ ...VALID, call_count: 0 }));
-    expect(resZero.status).toBe(400);
+    expect(resZero.status).toBe(201);
 
     const resNeg = await POST(jsonRequest({ ...VALID, call_count: -5 }));
     expect(resNeg.status).toBe(400);
+    expect((await getJson(resNeg)).error).toBe("call_count_invalid");
   });
 
   test("401 without price.write", async () => {
     grant("price.write", false);
     const res = await POST(jsonRequest(VALID));
     expect(res.status).toBe(401);
+  });
+
+  // ── Batch-2 Item 1: applicable_roles matrix ──────────────────────────────
+
+  test("omitting applicable_roles is accepted (column default '{driver}' applies in DB)", async () => {
+    let insertedValues: unknown;
+    (db.insert as jest.Mock).mockImplementation(() => ({
+      values: jest.fn((vals) => {
+        insertedValues = vals;
+        return { returning: jest.fn(async () => [{ id: PKG_ID, ...vals }]) };
+      }),
+    }));
+    const res = await POST(jsonRequest(VALID));
+    expect(res.status).toBe(201);
+    // The parseBody mock bypasses Zod defaults, so the key is absent here —
+    // the Postgres column default '{driver}' covers the row.
+    expect(insertedValues).not.toHaveProperty("applicable_roles");
+  });
+
+  test("multi-role applicable_roles ['driver','shop'] is accepted", async () => {
+    let insertedValues: unknown;
+    (db.insert as jest.Mock).mockImplementation(() => ({
+      values: jest.fn((vals) => {
+        insertedValues = vals;
+        return { returning: jest.fn(async () => [{ id: PKG_ID, ...vals }]) };
+      }),
+    }));
+    const res = await POST(
+      jsonRequest({ ...VALID, applicable_roles: ["driver", "shop"] }),
+    );
+    expect(res.status).toBe(201);
+    expect(insertedValues).toMatchObject({ applicable_roles: ["driver", "shop"] });
+  });
+
+  test("invalid element 'restaurant' → 400 applicable_roles_invalid (restaurants are shops)", async () => {
+    const res = await POST(
+      jsonRequest({ ...VALID, applicable_roles: ["driver", "restaurant"] }),
+    );
+    expect(res.status).toBe(400);
+    expect((await getJson(res)).error).toBe("applicable_roles_invalid");
+  });
+
+  test("empty applicable_roles array → 400 applicable_roles_invalid", async () => {
+    const res = await POST(jsonRequest({ ...VALID, applicable_roles: [] }));
+    expect(res.status).toBe(400);
+    expect((await getJson(res)).error).toBe("applicable_roles_invalid");
+  });
+
+  test("non-array applicable_roles → 400 applicable_roles_invalid", async () => {
+    const res = await POST(jsonRequest({ ...VALID, applicable_roles: "driver" }));
+    expect(res.status).toBe(400);
+    expect((await getJson(res)).error).toBe("applicable_roles_invalid");
+  });
+
+  // ── D3-B-r2 four-field admin matrix ──────────────────────────────────────
+
+  test("commission_percent = 50 (bundle commission leg) is accepted", async () => {
+    let insertedValues: unknown;
+    (db.insert as jest.Mock).mockImplementation(() => ({
+      values: jest.fn((vals) => {
+        insertedValues = vals;
+        return { returning: jest.fn(async () => [{ id: PKG_ID, ...vals }]) };
+      }),
+    }));
+    const res = await POST(
+      jsonRequest({ ...VALID, commission_percent: 50 }),
+    );
+    expect(res.status).toBe(201);
+    // Drizzle numeric columns receive string values.
+    expect(insertedValues).toMatchObject({ commission_percent: "50" });
+  });
+
+  test("commission_percent = 0 (no commission leg) is accepted", async () => {
+    let insertedValues: unknown;
+    (db.insert as jest.Mock).mockImplementation(() => ({
+      values: jest.fn((vals) => {
+        insertedValues = vals;
+        return { returning: jest.fn(async () => [{ id: PKG_ID, ...vals }]) };
+      }),
+    }));
+    const res = await POST(
+      jsonRequest({ ...VALID, commission_percent: 0 }),
+    );
+    expect(res.status).toBe(201);
+    expect(insertedValues).toMatchObject({ commission_percent: "0" });
+  });
+
+  test("commission_percent = 101 → 400 commission_percent_invalid", async () => {
+    const res = await POST(jsonRequest({ ...VALID, commission_percent: 101 }));
+    expect(res.status).toBe(400);
+    expect((await getJson(res)).error).toBe("commission_percent_invalid");
+  });
+
+  test("commission_percent = -5 → 400 commission_percent_invalid", async () => {
+    const res = await POST(jsonRequest({ ...VALID, commission_percent: -5 }));
+    expect(res.status).toBe(400);
+    expect((await getJson(res)).error).toBe("commission_percent_invalid");
+  });
+
+  test("trial package with commission_percent → 400 commission_percent_invalid", async () => {
+    const res = await POST(
+      jsonRequest({ ...VALID, is_trial: true, commission_percent: 5 }),
+    );
+    expect(res.status).toBe(400);
+    expect((await getJson(res)).error).toBe("commission_percent_invalid");
+  });
+
+  test("call_count = -5 → 400 call_count_invalid", async () => {
+    const res = await POST(jsonRequest({ ...VALID, call_count: -5 }));
+    expect(res.status).toBe(400);
+    expect((await getJson(res)).error).toBe("call_count_invalid");
+  });
+
+  test("call_count = 0 (no lead leg) is accepted", async () => {
+    let insertedValues: unknown;
+    (db.insert as jest.Mock).mockImplementation(() => ({
+      values: jest.fn((vals) => {
+        insertedValues = vals;
+        return { returning: jest.fn(async () => [{ id: PKG_ID, ...vals }]) };
+      }),
+    }));
+    const res = await POST(jsonRequest({ ...VALID, call_count: 0 }));
+    expect(res.status).toBe(201);
+    expect(insertedValues).toMatchObject({ call_count: 0 });
+  });
+
+  test("duration_days = 0 → 400 duration_days_invalid", async () => {
+    const res = await POST(jsonRequest({ ...VALID, duration_days: 0 }));
+    expect(res.status).toBe(400);
+    expect((await getJson(res)).error).toBe("duration_days_invalid");
+  });
+
+  test("duration_days = -5 → 400 duration_days_invalid", async () => {
+    const res = await POST(jsonRequest({ ...VALID, duration_days: -5 }));
+    expect(res.status).toBe(400);
+    expect((await getJson(res)).error).toBe("duration_days_invalid");
+  });
+
+  test("duration_days = -1 (unlimited) is accepted", async () => {
+    let insertedValues: unknown;
+    (db.insert as jest.Mock).mockImplementation(() => ({
+      values: jest.fn((vals) => {
+        insertedValues = vals;
+        return { returning: jest.fn(async () => [{ id: PKG_ID, ...vals }]) };
+      }),
+    }));
+    const res = await POST(jsonRequest({ ...VALID, duration_days: -1 }));
+    expect(res.status).toBe(201);
+    expect(insertedValues).toMatchObject({ duration_days: -1 });
+  });
+
+  test("non-trial price_bdt = 500 (< ৳10) → 400 package_constraint_violation", async () => {
+    const res = await POST(jsonRequest({ ...VALID, price_bdt: 500, is_trial: false }));
+    expect(res.status).toBe(400);
+    expect((await getJson(res)).error).toBe("package_constraint_violation");
+  });
+
+  test("price_bdt above ceiling - ৳10 → 400 package_constraint_violation", async () => {
+    const res = await POST(jsonRequest({ ...VALID, price_bdt: 50000 }));
+    expect(res.status).toBe(400);
+    expect((await getJson(res)).error).toBe("package_constraint_violation");
+  });
+
+  test("PUT with commission_percent converts to string for numeric column", async () => {
+    let updatedValues: unknown;
+    (db.update as jest.Mock).mockImplementation(() => ({
+      set: jest.fn((vals) => {
+        updatedValues = vals;
+        return { where: jest.fn(() => ({ returning: jest.fn(async () => [{ id: PKG_ID }]) })) };
+      }),
+    }));
+    const res = await PUT(jsonRequest({ ...VALID, id: PKG_ID, commission_percent: 15 }));
+    expect(res.status).toBe(200);
+    expect((updatedValues as Record<string, unknown>).commission_percent).toBe("15");
   });
 });
 
@@ -186,6 +372,24 @@ describe("PUT /api/admin/packages", () => {
     (db.update as jest.Mock).mockImplementation(updateThrows("23503"));
     const res = await PUT(jsonRequest({ id: PKG_ID, name: "Pro 200" }));
     expect(res.status).toBe(500);
+  });
+
+  test("PUT with applicable_roles passes the array through to Drizzle", async () => {
+    let updatedValues: unknown;
+    (db.update as jest.Mock).mockImplementation(() => ({
+      set: jest.fn((vals) => {
+        updatedValues = vals;
+        return { where: jest.fn(() => ({ returning: jest.fn(async () => [{ id: PKG_ID }]) })) };
+      }),
+    }));
+    const res = await PUT(
+      jsonRequest({ id: PKG_ID, applicable_roles: ["shop", "delivery"] }),
+    );
+    expect(res.status).toBe(200);
+    expect((updatedValues as Record<string, unknown>).applicable_roles).toEqual([
+      "shop",
+      "delivery",
+    ]);
   });
 });
 

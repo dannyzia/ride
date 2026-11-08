@@ -294,6 +294,21 @@ export async function POST(request: Request) {
       );
     }
 
+    // Batch-2 Item 1: operator applicability — the buying operator's role
+    // must be in the package's applicable_roles. This surface serves drivers;
+    // the '{driver}' column default keeps every existing package purchasable
+    // (driver path unchanged today). Placed before dual-lane routing so the
+    // gate applies to both lanes. Mirrors vehicle_type_mismatch (403).
+    if (pkg.applicable_roles != null && !pkg.applicable_roles.includes("driver")) {
+      return Response.json(
+        {
+          error: "package_not_applicable_to_role",
+          message: "This package is not available for your operator type",
+        },
+        { status: 403 },
+      );
+    }
+
     // ── Dual-lane routing (§3.4, Item 16) ─────────────────────────────────
     const revenueModel = await getRevenueModel();
     const postpaid = revenueModel === 'hybrid' && request.headers.get('x-client-postpaid') === '1';

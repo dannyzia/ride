@@ -659,6 +659,13 @@
       "when": 1794078508005,
       "tag": "0093_d3b_billing_sets",
       "breakpoints": true
+    },
+    {
+      "idx": 94,
+      "version": 7,
+      "when": 1794112917950,
+      "tag": "0094_operator_roles",
+      "breakpoints": true
     }
   ]
 }

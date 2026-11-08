@@ -19,6 +19,18 @@ jest.mock("@/src/db", () => ({
     // idempotency claim/outcome writes (lib/idempotency.ts) — fire-and-forget
     insert: jest.fn(() => ({ values: jest.fn(async () => undefined) })),
     update: jest.fn(() => ({ set: jest.fn(() => ({ where: jest.fn(async () => undefined) })) })),
+    // D3-B-r2 / postpaid lanes: driver_unpaid_obligations view reads (lib/commissionDues)
+    execute: jest.fn(async () => []),
+    // grant+bill tx (Item 16 postpaid lane) — executes the callback with a
+    // pass-through tx whose inserts return a generated row id.
+    transaction: jest.fn(async (fn: (tx: unknown) => Promise<unknown>) =>
+      fn({
+        execute: jest.fn(async () => []),
+        update: jest.fn(() => ({ set: jest.fn(() => ({ where: jest.fn(async () => undefined) })) })),
+        insert: jest.fn(() => ({
+          values: jest.fn(() => ({ returning: jest.fn(async () => [{ id: "new-row" }]) })),
+        })),
+      })),
   },
 }));
 jest.mock("@/lib/logger", () => ({
@@ -36,6 +48,11 @@ jest.mock("@/lib/paymentEvents", () => ({
 }));
 jest.mock("@/lib/activateSubscription", () => ({
   activateSubscription: jest.fn(),
+  // D3-B-r2 / Item 16 postpaid lane: grant-then-bill uses the shared lib fn.
+  grantSubscriptionOnCredit: jest.fn(async () => ({
+    subscriptionId: "sub-new",
+    expiresAt: new Date(Date.now() + 30 * 86_400_000),
+  })),
 }));
 jest.mock("@/lib/parseBody", () => ({
   parseJsonBody: jest.fn(async () => ({
@@ -66,7 +83,7 @@ jest.mock("@/lib/platformConfig", () => ({
 
 import { db } from "@/src/db";
 import { initiatePortposPayment, createZeroAmountPaymentEvent } from "@/lib/paymentEvents";
-import { getPlan05Bool } from "@/lib/platformConfig";
+import { getPlan05Bool, getRevenueModel } from "@/lib/platformConfig";
 import { POST } from "@/app/api/package/purchase+api";
 
 type Row = Record<string, unknown>;
@@ -276,5 +293,88 @@ describe("package purchase — fraud gate", () => {
     // Fourth select call is the flag lookup — the fraud gate runs AFTER the
     // package load (M-2: role eligibility first, then the driver rail).
     expect(db.select).toHaveBeenCalledTimes(4);
+  });
+
+  // ── D3-B-r2: postpaid lane (hybrid + x-client-postpaid header) ────────────
+
+  test("hybrid + x-client-postpaid: 1 + bundle package → postpaid lane, no checkout URL", async () => {
+    (getRevenueModel as jest.Mock).mockResolvedValueOnce("hybrid");
+    const bundleReq = {
+      headers: {
+        get: (name: string) => {
+          const lower = name.toLowerCase();
+          if (lower === "x-client-postpaid") return "1";
+          if (lower === "idempotency-key") return IDEMPOTENCY_KEY;
+          return null;
+        },
+      },
+      text: async () => JSON.stringify(BODY),
+    } as unknown as Request;
+    mockSelectQueue([
+      USER_ROW,
+      DRIVER_ROW,
+      PACKAGE_ROW, // package load — BEFORE the gate
+      [], // no blocked fraud flag
+      [], // no active subscription (narrowed usable-only check passes)
+      [], // commission debt query — empty
+      [], // grantSubscriptionOnCredit insert — no rows returned
+      [], // createOpenBill insert — no rows returned
+    ]);
+    const res = await POST(bundleReq);
+
+    expect(res.status).toBe(200);
+    const body = await getJson(res);
+    expect(body.mode).toBe("subscription");
+    expect(body.payment_url).toBeNull();
+    expect(body.payment_event_id).toBeNull();
+    expect(body.activated).toBe(true);
+    // Rows generated inside the grant+bill tx (mocked grant lib fn + tx.insert returning mocks).
+    expect(body.subscription).toMatchObject({ id: "sub-new" });
+    expect(body.bill).toMatchObject({ id: "new-row" });
+    expect(body.unfrozen).toBe(false);
+    expect(initiatePortposPayment).not.toHaveBeenCalled();
+  });
+
+  test("hybrid + no x-client-postpaid header → legacy prepaid lane (invisible-debt protection)", async () => {
+    (getRevenueModel as jest.Mock).mockResolvedValueOnce("hybrid");
+    mockSelectQueue([
+      USER_ROW,
+      DRIVER_ROW,
+      PACKAGE_ROW,
+      [],
+      [],
+      [], // grant + bill
+      [],
+    ]);
+    const res = await POST(makeRequest());
+
+    expect(res.status).toBe(200);
+    const body = await getJson(res);
+    expect(body.mode).toBe("subscription");
+    expect(body.payment_url).toBe("https://pay.example/invoice");
+    expect(initiatePortposPayment).toHaveBeenCalledTimes(1);
+  });
+
+  // ── Batch-2 Item 1: operator applicability gate ──────────────────────────
+
+  test("package whose applicable_roles excludes 'driver' → 403 package_not_applicable_to_role", async () => {
+    mockSelectQueue([
+      USER_ROW,
+      DRIVER_ROW,
+      // Shop-only plan: the §14 roles gate passes (roles: ["driver"]) so ONLY
+      // the new operator-applicability gate can reject.
+      [{ id: PACKAGE_ID, is_active: true, vehicle_type: null, is_trial: false, price_bdt: 10000, name: "Shop Plan", roles: ["driver"], applicable_roles: ["shop"] }],
+      [], // no blocked fraud flag
+      gateCounts(0, 0, 0),
+      [], // no active subscription
+    ]);
+    const res = await POST(makeRequest());
+
+    expect(res.status).toBe(403);
+    expect(await getJson(res)).toEqual({
+      error: "package_not_applicable_to_role",
+      message: "This package is not available for your operator type",
+    });
+    expect(initiatePortposPayment).not.toHaveBeenCalled();
   });
 });

@@ -1,6 +1,6 @@
 // Auth: requireAdminPermission via adminRbac
 import { db } from "@/src/db";
-import { packages } from "@/src/db/schema";
+import { packages, operatorRoleEnum } from "@/src/db/schema";
 import { eq, desc, isNull } from "drizzle-orm";
 import { requireAdminPermission } from '@/lib/adminRbac';
 import { logger } from "@/lib/logger";
@@ -19,6 +19,10 @@ const createSchema = z.object({
   duration_days: z.number().int().nullable().optional(),
   price_bdt: z.number().int().nonnegative(),
   is_trial: z.boolean().optional().default(false),
+  // Batch-2 Item 1: operator applicability — every element must be an
+  // operator_role value; non-empty. Validated (with the pinned
+  // applicable_roles_invalid code) in validatePackageConstraints below.
+  applicable_roles: z.array(z.string()).optional().default(['driver']),
   // D3-B-r2: commission rate for bundle packages. blank/0 = no commission leg;
   // when set, (0, 100]. Trials carry no percent.
   commission_percent: z.number().min(0).max(100).optional(),
@@ -49,12 +53,29 @@ function validatePackageConstraints(data: {
   product_type?: string;
   call_count?: number;
   commission_percent?: number;
+  applicable_roles?: string[];
 }, maxDebtBdt: number): { code: string; message: string } | null {
   const priceBdt = data.price_bdt ?? 0;
   const callCount = data.call_count ?? 5;
   const durationDays = data.duration_days;
   const isTrial = data.is_trial ?? false;
   const commissionPercent = data.commission_percent;
+
+  // Batch-2 Item 1: applicable_roles — non-empty, every element an
+  // operator_role enum value ('driver' | 'shop' | 'delivery' | 'fleet').
+  if (data.applicable_roles !== undefined) {
+    const arr = data.applicable_roles;
+    const valid =
+      Array.isArray(arr) &&
+      arr.length >= 1 &&
+      arr.every((r) => (operatorRoleEnum.enumValues as readonly string[]).includes(r));
+    if (!valid) {
+      return {
+        code: 'applicable_roles_invalid',
+        message: 'Applicable roles must be a non-empty array of operator roles (driver, shop, delivery, fleet)',
+      };
+    }
+  }
 
   // D3-B-r2: trials carry no percent
   if (isTrial && commissionPercent != null && commissionPercent > 0) {
