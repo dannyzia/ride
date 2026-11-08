@@ -666,6 +666,13 @@
       "when": 1794112917950,
       "tag": "0094_operator_roles",
       "breakpoints": true
+    },
+    {
+      "idx": 95,
+      "version": 7,
+      "when": 1794114734205,
+      "tag": "0095_operator_bills",
+      "breakpoints": true
     }
   ]
 }

@@ -1155,17 +1155,20 @@ export const driverCommissionSettlements = pgTable(
 );
 
 /**
- * Driver bills — the platform's receivable for granted call packages (S2).
- * One open `subscription_purchase` bill per driver at any time (partial unique index); settled rows retained, never deleted.
- * Written ONLY by lib/billsLedger.ts.
+ * Operator bills — the platform's receivable for granted call packages (S2),
+ * generalized to every operator type (Batch-2 Item 2). One open
+ * `subscription_purchase` bill per (operator_role, operator_id) at any time
+ * (partial unique index); settled rows retained, never deleted. Driver rows
+ * carry operator_role='driver'. Written ONLY by lib/billsLedger.ts.
  */
-export const driverBills = pgTable(
-  "driver_bills",
+export const operatorBills = pgTable(
+  "operator_bills",
   {
     id: uuid("id").defaultRandom().primaryKey(),
-    driver_id: uuid("driver_id")
+    operator_id: uuid("operator_id")
       .notNull()
       .references(() => drivers.id),
+    operator_role: operatorRoleEnum("operator_role").notNull().default("driver"),
     subscription_id: uuid("subscription_id").references(() => subscriptions.id),
     kind: varchar("kind", { length: 30 }).notNull().default("subscription_purchase"),
     amount_bdt: integer("amount_bdt").notNull(),
@@ -1176,13 +1179,14 @@ export const driverBills = pgTable(
     updated_at: timestamptz("updated_at").notNull().defaultNow(),
   },
   (t) => [
-    index("driver_bills_driver_idx").on(t.driver_id),
-    // B4 settle-first barrier at the database layer; 23505 here is authoritative (maps to 409 dues_outstanding_purchase_blocked).
-    uniqueIndex("driver_bills_one_open_uq")
-      .on(t.driver_id)
+    index("operator_bills_operator_idx").on(t.operator_id),
+    // B4 settle-first barrier at the database layer, per operator role+id;
+    // 23505 here is authoritative (maps to 409 dues_outstanding_purchase_blocked).
+    uniqueIndex("operator_bills_one_open_uq")
+      .on(t.operator_role, t.operator_id)
       .where(sql`${t.status} = 'open' AND ${t.kind} = 'subscription_purchase'`),
     // M-14 settlement barrier: one payment event settles at most one bill.
-    uniqueIndex("driver_bills_payment_event_uq")
+    uniqueIndex("operator_bills_payment_event_uq")
       .on(t.payment_event_id)
       .where(sql`${t.payment_event_id} IS NOT NULL`),
   ],

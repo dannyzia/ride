@@ -539,7 +539,9 @@ export async function POST(request: Request) {
         // a 23505 here rolls the grant back completely.
         const sub = await grantSubscriptionOnCredit(tx, { driverId: driver.id, package: pkg });
         const bill = await createOpenBill(tx, {
-          driverId: driver.id,
+          operatorRole: 'driver',
+          operatorId: driver.id,
+          packageId: pkg.id,
           subscriptionId: sub.subscriptionId,
           amountBdt: pkg.price_bdt,
           dueAt: nextBdtMidnightUtc(),

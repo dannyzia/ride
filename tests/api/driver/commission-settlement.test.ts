@@ -98,13 +98,13 @@ function queueDuesBase(
   } = {},
 ): void {
   // Select order in GET /api/driver/dues: users, drivers, subscriptions,
-  // commissionEnrollments, driverBills — then the view via db.execute.
+  // commissionEnrollments, operatorBills — then the view via db.execute.
   const queue: Row[][] = [
     [{ id: USER_ID }],
     [{ id: DRIVER_ID, status: "active" }],
     [], // subscriptions (none usable in these tests)
     opts.enrollment ? [opts.enrollment] : [], // commissionEnrollments
-    [], // driverBills (none open)
+    [], // operatorBills (none open)
   ];
   mockSelectQueue(queue);
   // View read (db.execute): total_unpaid_paisa = accrued - settled floored at 0;

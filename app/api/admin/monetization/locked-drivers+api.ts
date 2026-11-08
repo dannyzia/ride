@@ -8,7 +8,7 @@
 // All figures derive from existing timestamps — no new persistence (M-15/M-05,
 // D4).
 import { db } from "@/src/db";
-import { drivers, driverBills, subscriptions, commissionEnrollments, rides } from "@/src/db/schema";
+import { drivers, operatorBills, subscriptions, commissionEnrollments, rides } from "@/src/db/schema";
 import { eq, and, isNull, sql, desc, asc } from "drizzle-orm";
 import { requireAdminPermission } from "@/lib/adminRbac";
 import { logger } from "@/lib/logger";
@@ -101,17 +101,19 @@ export async function GET(request: Request) {
     for (const e of enrRows) enrolledDriverIds.add(e.driver_id);
 
     // Earliest open subscription bill per driver (ceiling-locked aging).
+    // Driver surface pins operator_role='driver' (Batch-2 Item 2).
     const earliestOpenBillByDriver = new Map<string, Date>();
     const openBills = await db
-      .select({ driver_id: driverBills.driver_id, created_at: driverBills.created_at })
-      .from(driverBills)
+      .select({ driver_id: operatorBills.operator_id, created_at: operatorBills.created_at })
+      .from(operatorBills)
       .where(
         and(
-          eq(driverBills.status, 'open'),
-          eq(driverBills.kind, 'subscription_purchase'),
+          eq(operatorBills.operator_role, 'driver'),
+          eq(operatorBills.status, 'open'),
+          eq(operatorBills.kind, 'subscription_purchase'),
         ),
       )
-      .orderBy(asc(driverBills.created_at));
+      .orderBy(asc(operatorBills.created_at));
     for (const b of openBills) {
       if (!earliestOpenBillByDriver.has(b.driver_id)) {
         earliestOpenBillByDriver.set(b.driver_id, b.created_at);
@@ -120,7 +122,7 @@ export async function GET(request: Request) {
 
     // Earliest unpaid commission ride per driver (ceiling-locked aging fallback:
     // a completed commission ride whose commission has not been settled carries
-    // no driver_bills row yet, so its completed_at is the aging origin).
+    // no operator_bills row yet, so its completed_at is the aging origin).
     const earliestUnpaidRideByDriver = new Map<string, Date>();
     const unpaidRides = await db
       .select({ driver_id: rides.driver_id, completed_at: rides.completed_at })

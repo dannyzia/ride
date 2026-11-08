@@ -17,7 +17,7 @@ import { requireScratchDbUrl } from "./scratch-db-url";
 import { db, recyclePool } from "@/src/db";
 import { eq } from "drizzle-orm";
 import {
-  driverBills,
+  operatorBills,
   subscriptions,
   paymentEvents,
   drivers,
@@ -52,12 +52,12 @@ const dirt: { driverId: string; userId: string }[] = [];
 beforeAll(async () => {
   requireScratchDbUrl();
   scratch = postgresTag(DB_URL!, { max: 4, connect_timeout: 15 });
-  const [ok] = await scratch.unsafe<{ driver_bills: unknown; commission_enrollments: unknown; driver_unpaid_obligations: unknown }[]>(
-    "SELECT to_regclass('public.driver_bills') AS driver_bills, " +
+  const [ok] = await scratch.unsafe<{ operator_bills: unknown; commission_enrollments: unknown; driver_unpaid_obligations: unknown }[]>(
+    "SELECT to_regclass('public.operator_bills') AS operator_bills, " +
       "to_regclass('public.commission_enrollments') AS commission_enrollments, " +
       "to_regclass('public.driver_unpaid_obligations') AS driver_unpaid_obligations",
   );
-  if (!ok.driver_bills || !ok.commission_enrollments || !ok.driver_unpaid_obligations) {
+  if (!ok.operator_bills || !ok.commission_enrollments || !ok.driver_unpaid_obligations) {
     throw new Error(
       "Stage 1 schema objects are missing on SCRATCH_DATABASE_URL — run drizzle-kit push against it first",
     );
@@ -75,7 +75,7 @@ afterEach(async () => {
   for (const f of dirt) {
     try {
       await db.transaction(async (tx) => {
-        await tx.delete(driverBills).where(eq(driverBills.driver_id, f.driverId));
+        await tx.delete(operatorBills).where(eq(operatorBills.operator_id, f.driverId));
         await tx.delete(subscriptions).where(eq(subscriptions.driver_id, f.driverId));
         await tx.delete(paymentEvents).where(eq(paymentEvents.driver_id, f.driverId));
         await tx.delete(drivers).where(eq(drivers.id, f.driverId));
@@ -143,8 +143,9 @@ async function seedSubscription(driverId: string, pkgId: string, usable: boolean
 }
 
 async function seedBill(driverId: string, subscriptionId: string | null, amountBdt = 3000): Promise<void> {
-  await db.insert(driverBills).values({
-    driver_id: driverId,
+  await db.insert(operatorBills).values({
+    operator_id: driverId,
+    operator_role: "driver",
     subscription_id: subscriptionId,
     amount_bdt: amountBdt,
     status: "open",

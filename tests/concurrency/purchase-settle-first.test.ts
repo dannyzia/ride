@@ -2,14 +2,14 @@
  * Item 41 — settle-first purchase at lib level: two concurrent purchases for
  * the same driver (distinct idempotency claims) serialize on the driver
  * advisory lock; exactly one grant+bill commits; the loser is blocked by the
- * driver_bills one-open-slot barrier.
+ * operator_bills one-open-slot barrier.
  *
  * Two scenarios:
  *   A. route contract — lock, recheck for an open bill, then grant+bill:
  *      exactly one fulfills; the other rejects BillSlotConflictError from the
  *      recheck. Final state: exactly one active subscription + one open bill.
  *   B. direct createOpenBill twice (no grant) — the 23505 path: exactly one
- *      bill inserts; the loser takes driver_bills_one_open_uq →
+ *      bill inserts; the loser takes operator_bills_one_open_uq →
  *      BillSlotConflictError (pinned typed barrier).
  *
  * The route-layer mapping (BillSlotConflictError -> 409
@@ -26,7 +26,7 @@ import { requireScratchDbUrl } from "./scratch-db-url";
 import { db, recyclePool } from "@/src/db";
 import { and, eq, sql } from "drizzle-orm";
 import {
-  driverBills,
+  operatorBills,
   subscriptions,
   drivers,
   fleets,
@@ -48,10 +48,10 @@ const dirt: { driverId: string; userId: string }[] = [];
 beforeAll(async () => {
   requireScratchDbUrl();
   scratch = postgresTag(DB_URL!, { max: 4, connect_timeout: 15 });
-  const [ok] = await scratch.unsafe<{ driver_bills: unknown }[]>(
-    "SELECT to_regclass('public.driver_bills') AS driver_bills",
+  const [ok] = await scratch.unsafe<{ operator_bills: unknown }[]>(
+    "SELECT to_regclass('public.operator_bills') AS operator_bills",
   );
-  if (!ok.driver_bills) {
+  if (!ok.operator_bills) {
     throw new Error(
       "Stage 1 schema objects are missing on SCRATCH_DATABASE_URL — run drizzle-kit push against it first",
     );
@@ -69,7 +69,7 @@ afterEach(async () => {
   for (const f of dirt) {
     try {
       await db.transaction(async (tx) => {
-        await tx.delete(driverBills).where(eq(driverBills.driver_id, f.driverId));
+        await tx.delete(operatorBills).where(eq(operatorBills.operator_id, f.driverId));
         await tx.delete(subscriptions).where(eq(subscriptions.driver_id, f.driverId));
         await tx.delete(drivers).where(eq(drivers.id, f.driverId));
         await tx.delete(users).where(eq(users.id, f.userId));
@@ -129,18 +129,20 @@ async function purchaseTx(
   return db.transaction(async (tx) => {
     await tx.execute(lock(driverId));
     const [open] = await tx
-      .select({ id: driverBills.id })
-      .from(driverBills)
-      .where(and(eq(driverBills.driver_id, driverId), eq(driverBills.status, "open"), eq(driverBills.kind, "subscription_purchase")))
+      .select({ id: operatorBills.id })
+      .from(operatorBills)
+      .where(and(eq(operatorBills.operator_id, driverId), eq(operatorBills.status, "open"), eq(operatorBills.kind, "subscription_purchase")))
       .limit(1);
     if (open) throw new BillSlotConflictError();
-  const sub = await grantSubscriptionOnCredit(tx, { driverId, package: pkg });
-  const bill = await createOpenBill(tx, {
-    driverId,
-    subscriptionId: sub.subscriptionId,
-    amountBdt: pkg.price_bdt,
-    dueAt: new Date(Date.now() + 7 * 86400000),
-  });
+    const sub = await grantSubscriptionOnCredit(tx, { driverId, package: pkg });
+    const bill = await createOpenBill(tx, {
+      operatorRole: 'driver',
+      operatorId: driverId,
+      packageId: pkg.id,
+      subscriptionId: sub.subscriptionId,
+      amountBdt: pkg.price_bdt,
+      dueAt: new Date(Date.now() + 7 * 86400000),
+    });
     return { billId: bill.id };
   });
 }
@@ -159,8 +161,8 @@ T("Item 41A — two concurrent purchases, one driver: exactly one grant+bill com
 
   const [bills] = await db
     .select({ count: sql<number>`count(*)` })
-    .from(driverBills)
-    .where(eq(driverBills.driver_id, d.driverId));
+    .from(operatorBills)
+    .where(eq(operatorBills.operator_id, d.driverId));
   const [subs] = await db
     .select({ count: sql<number>`count(*)` })
     .from(subscriptions)
@@ -187,14 +189,14 @@ T("Item 41B — two concurrent createOpenBill calls: exactly one bill, 23505 -> 
   const a = scratch.begin(async (tx) => {
     await tx.unsafe(`SELECT pg_advisory_xact_lock(hashtext('purchase_bill_${d.driverId}'))`);
     return tx.unsafe(
-      `INSERT INTO driver_bills (driver_id, subscription_id, amount_bdt, status, kind) VALUES ($1, $2, $3, 'open', 'subscription_purchase') RETURNING id`,
+      `INSERT INTO operator_bills (operator_id, operator_role, subscription_id, amount_bdt, status, kind) VALUES ($1, 'driver', $2, $3, 'open', 'subscription_purchase') RETURNING id`,
       [d.driverId, subId, pkg.price_bdt],
     );
   });
   const b = scratch.begin(async (tx) => {
     await tx.unsafe(`SELECT pg_advisory_xact_lock(hashtext('purchase_bill_${d.driverId}'))`);
     return tx.unsafe(
-      `INSERT INTO driver_bills (driver_id, subscription_id, amount_bdt, status, kind) VALUES ($1, $2, $3, 'open', 'subscription_purchase') RETURNING id`,
+      `INSERT INTO operator_bills (operator_id, operator_role, subscription_id, amount_bdt, status, kind) VALUES ($1, 'driver', $2, $3, 'open', 'subscription_purchase') RETURNING id`,
       [d.driverId, subId, pkg.price_bdt],
     );
   });
@@ -206,7 +208,7 @@ T("Item 41B — two concurrent createOpenBill calls: exactly one bill, 23505 -> 
   expect(((rejected[0] as PromiseRejectedResult).reason as { code?: string } | undefined)?.code).toBe("23505");
 
   const [count] = await scratch.unsafe<{ count: string }[]>(
-    `SELECT count(*)::text AS count FROM driver_bills WHERE driver_id = $1 AND status = 'open'`,
+    `SELECT count(*)::text AS count FROM operator_bills WHERE operator_id = $1 AND status = 'open'`,
     [d.driverId],
   );
   expect(Number(count.count)).toBe(1);

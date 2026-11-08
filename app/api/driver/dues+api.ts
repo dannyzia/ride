@@ -15,7 +15,7 @@ import {
   drivers,
   subscriptions,
   packages,
-  driverBills,
+  operatorBills,
   commissionEnrollments,
 } from "@/src/db/schema";
 import { eq, and, desc, sql } from "drizzle-orm";
@@ -98,22 +98,24 @@ export async function GET(request: Request) {
       .limit(1);
     const hasCommissionEnrollment = Boolean(enrollment);
 
-    // Open subscription-purchase bills (itemized).
+    // Open subscription-purchase bills (itemized). Driver surface pins
+    // operator_role='driver' (Batch-2 Item 2).
     const openBills = await db
       .select({
-        id: driverBills.id,
-        amount_bdt: driverBills.amount_bdt,
-        due_at: driverBills.due_at,
+        id: operatorBills.id,
+        amount_bdt: operatorBills.amount_bdt,
+        due_at: operatorBills.due_at,
       })
-      .from(driverBills)
+      .from(operatorBills)
       .where(
         and(
-          eq(driverBills.driver_id, driver.id),
-          eq(driverBills.status, 'open'),
-          eq(driverBills.kind, 'subscription_purchase'),
+          eq(operatorBills.operator_id, driver.id),
+          eq(operatorBills.operator_role, 'driver'),
+          eq(operatorBills.status, 'open'),
+          eq(operatorBills.kind, 'subscription_purchase'),
         ),
       )
-      .orderBy(desc(driverBills.created_at));
+      .orderBy(desc(operatorBills.created_at));
 
     const now = new Date();
     const usableSub = allSubs.find(

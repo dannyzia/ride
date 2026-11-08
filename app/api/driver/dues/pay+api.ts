@@ -12,7 +12,7 @@
 // computes those dues.
 import { z } from "zod";
 import { db } from "@/src/db";
-import { drivers, users, driverBills } from "@/src/db/schema";
+import { drivers, users, operatorBills } from "@/src/db/schema";
 import { eq, and } from "drizzle-orm";
 import { verifySupabaseToken } from "@/lib/auth";
 import { parseJsonBody } from "@/lib/parseBody";
@@ -115,14 +115,15 @@ export async function POST(originalRequest: Request) {
 
     if (bill_id) {
       const [bill] = await db
-        .select({ id: driverBills.id, amount_bdt: driverBills.amount_bdt, status: driverBills.status, kind: driverBills.kind })
-        .from(driverBills)
+        .select({ id: operatorBills.id, amount_bdt: operatorBills.amount_bdt, status: operatorBills.status, kind: operatorBills.kind })
+        .from(operatorBills)
         .where(
           and(
-            eq(driverBills.id, bill_id),
-            eq(driverBills.driver_id, driver.id),
-            eq(driverBills.kind, 'subscription_purchase'),
-            eq(driverBills.status, 'open'),
+            eq(operatorBills.id, bill_id),
+            eq(operatorBills.operator_id, driver.id),
+            eq(operatorBills.operator_role, 'driver'),
+            eq(operatorBills.kind, 'subscription_purchase'),
+            eq(operatorBills.status, 'open'),
           ),
         )
         .limit(1);

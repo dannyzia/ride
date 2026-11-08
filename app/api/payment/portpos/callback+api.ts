@@ -226,7 +226,7 @@ async function processPortposPayment(
   // under the advisory lock, settle it, and link the payment event
   // (C-B2 resolve-under-lock). Placed ahead of the package-purchase fallthrough
   // so a settlement event never reaches activateSubscription (F-1 short-circuit
-  // neutralized). Idempotent replay is a no-op via driver_bills_payment_event_uq.
+  // neutralized). Idempotent replay is a no-op via operator_bills_payment_event_uq.
   if (evt.purpose === 'subscription_settlement') {
     if (!evt.driver_id) {
       logger.error('[portpos/callback] subscription settlement missing driver_id — failing event', { paymentEventId: evt.id });

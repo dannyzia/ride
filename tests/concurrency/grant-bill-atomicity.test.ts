@@ -15,7 +15,7 @@ import { requireScratchDbUrl } from "./scratch-db-url";
 import { db, recyclePool } from "@/src/db";
 import { and, eq, sql } from "drizzle-orm";
 import {
-  driverBills,
+  operatorBills,
   subscriptions,
   drivers,
   fleets,
@@ -37,10 +37,10 @@ const dirt: { driverId: string; userId: string }[] = [];
 beforeAll(async () => {
   requireScratchDbUrl();
   scratch = postgresTag(DB_URL!, { max: 4, connect_timeout: 15 });
-  const [ok] = await scratch.unsafe<{ driver_bills: unknown }[]>(
-    "SELECT to_regclass('public.driver_bills') AS driver_bills",
+  const [ok] = await scratch.unsafe<{ operator_bills: unknown }[]>(
+    "SELECT to_regclass('public.operator_bills') AS operator_bills",
   );
-  if (!ok.driver_bills) {
+  if (!ok.operator_bills) {
     throw new Error(
       "Stage 1 schema objects are missing on SCRATCH_DATABASE_URL — run drizzle-kit push against it first",
     );
@@ -58,7 +58,7 @@ afterEach(async () => {
   for (const f of dirt) {
     try {
       await db.transaction(async (tx) => {
-        await tx.delete(driverBills).where(eq(driverBills.driver_id, f.driverId));
+        await tx.delete(operatorBills).where(eq(operatorBills.operator_id, f.driverId));
         await tx.delete(subscriptions).where(eq(subscriptions.driver_id, f.driverId));
         await tx.delete(drivers).where(eq(drivers.id, f.driverId));
         await tx.delete(users).where(eq(users.id, f.userId));
@@ -116,12 +116,12 @@ async function counts(driverId: string): Promise<{ subs: number; bills: number; 
     .where(eq(subscriptions.driver_id, driverId));
   const [bills] = await db
     .select({ count: sql<number>`count(*)` })
-    .from(driverBills)
-    .where(eq(driverBills.driver_id, driverId));
+    .from(operatorBills)
+    .where(eq(operatorBills.operator_id, driverId));
   const [openBills] = await db
     .select({ count: sql<number>`count(*)` })
-    .from(driverBills)
-    .where(and(eq(driverBills.driver_id, driverId), eq(driverBills.status, "open")));
+    .from(operatorBills)
+    .where(and(eq(operatorBills.operator_id, driverId), eq(operatorBills.status, "open")));
   return {
     subs: Number(subs?.count ?? 0),
     bills: Number(bills?.count ?? 0),
@@ -155,7 +155,14 @@ T("Item 42 — committed grant leaves exactly one active subscription with exact
   await db.transaction(async (tx) => {
     await tx.execute(lock(d.driverId));
     const sub = await grantSubscriptionOnCredit(tx, { driverId: d.driverId, package: pkg });
-    await createOpenBill(tx, { driverId: d.driverId, subscriptionId: sub.subscriptionId, amountBdt: pkg.price_bdt, dueAt: new Date(Date.now() + 7 * 86400000) });
+    await createOpenBill(tx, {
+      operatorRole: 'driver',
+      operatorId: d.driverId,
+      packageId: pkg.id,
+      subscriptionId: sub.subscriptionId,
+      amountBdt: pkg.price_bdt,
+      dueAt: new Date(Date.now() + 7 * 86400000),
+    });
   });
 
   const c = await counts(d.driverId);

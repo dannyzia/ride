@@ -436,8 +436,8 @@ async function main(): Promise<void> {
   // ---- postpaid leg: open bill surfaces in dues totals + lockout state ----
   const postpaidBillBdt = 3_000;
   const postpaidBill = (await db`
-    insert into driver_bills (driver_id, amount_bdt, status, kind, due_at)
-    values (${driver.driver_id}, ${postpaidBillBdt}, 'open', 'subscription_purchase',
+    insert into operator_bills (operator_id, operator_role, amount_bdt, status, kind, due_at)
+    values (${driver.driver_id}, 'driver', ${postpaidBillBdt}, 'open', 'subscription_purchase',
             ${new Date(Date.now() + 7 * 86400000).toISOString()})
     returning id, amount_bdt
   `) as unknown as { id: string; amount_bdt: number }[];
@@ -462,7 +462,7 @@ async function main(): Promise<void> {
   );
 
   // Remove the probe bill so it cannot affect lockout restoration / residue.
-  await db`delete from driver_bills where id = ${postpaidBill[0].id}`;
+  await db`delete from operator_bills where id = ${postpaidBill[0].id}`;
 
   // Restore before cleanup so cleanup only ever has to fix rows, not config.
   await db`update platform_config set value = ${originalModel}, updated_at = now() where key = ${REVENUE_MODEL_KEY}`;
