@@ -55,6 +55,24 @@ The five-stage review is verified accurate against the codebase. All 2 Blockers,
   - Inline SQL in seed script (M-20) and add citation ID glossary appendix (M-22).
   - Apply all 11 Nit packs (N-01 to N-11).
 
+## Amendment D3-A (2026-11-07, post-review) — Unified 4-Field Package Model
+
+Owner ruling ("this is common sense — build it"): every package carries four fields — Commission %, Subscription Amount, Number of calls (−1 = unlimited), Expiration days (−1 = unlimited until the admin retires the package). Supersedes D3's non-expiring clause and A3's pricing-only rate source, as follows:
+- **A-1 Rate override**: `packages.commission_percent` (numeric(5,2) NULL). NULL → not commission-rated (call packages; commission enrollments on NULL-rate packages fall back to the zone/vehicle pricing table). > 0 → the package's own rate overrides zone/vehicle pricing for rides completed while holding it.
+- **B-1 Expiring commission**: commission packages may carry `duration_days` (NULL = unlimited; > 0 = expiring enrollment). `commission_enrollments.expires_at` set from package duration at enrollment; expiry = lockout exactly like a lapsed subscriber; re-enrollment follows settle-first. Supersedes D3's "duration_days = NULL" mandate.
+- **Exclusivity guard**: `commission_percent > 0 ⇒ price_bdt = 0` and no sold calls — a package bills exactly one side (G1 / mutual zeroing preserved).
+- **Retirement semantics (M-3-consistent)**: retiring (soft-deleting) a package affects new enrollments/purchases only; existing holders run out their term.
+- Lands pre-Stage-4 (before `hybrid` activation).
+
+## Amendment D3-B (2026-11-07, post-review) — Package-as-Billing-Contract (supersedes the D3-A exclusivity guard)
+
+Owner ruling: "a package determines the billing option for a driver, and for how long; the admin configures it." Example sanctioned: 1% commission + ৳50 + 70 calls + 7 days — ALL legs active on ONE package.
+- The D3-A exclusivity guard (`commission_percent > 0 ⇒ price_bdt = 0`, no sold calls) is WITHDRAWN. A package may carry any combination of the four fields; the package's values ARE the driver's billing terms.
+- G1 is amended: a ride bills exactly the legs the driver's held package defines — lead debit iff the package sells calls, commission accrual iff the package carries percent > 0, both for bundles. The original zero-commission/zero-bill rule is retired (admin achieves it by configuring 0 in the unwanted fields).
+- Package exhaustion = EITHER leg dying (calls_remaining = 0 OR days elapsed). Exhaustion blocks the driver from offers and leaves outstanding bills payable with a clear payment CTA (existing banner states + dues deep-link); Settle-First (no new purchase with unpaid bills) is reaffirmed.
+- Implementation: `dispatch_offers`/`rides` mode column widens to `'lead' | 'commission' | 'bundle'` (ALTER TYPE ADD VALUE); leadBilling classifies the billing SET; completion accrues for `commission`/`bundle`; accept proof per billing set; admin form removes the guard.
+- Lands pre-Stage-4.
+
 ## What To Do Next
 1. **Trigger Correction Cycle**: Apply these approved dispositions directly to DESIGN-POSTPAID-MONETIZATION.md.
 2. **Audit Verification**: Verify the diff against the 2 Blockers and 23 Majors to confirm all are closed and file citations remain verified against the tree.
