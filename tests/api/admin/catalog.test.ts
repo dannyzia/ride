@@ -127,7 +127,7 @@ describe("admin packages", () => {
       name: "Starter 50",
       call_count: 50,
       duration_days: 30,
-      price_bdt: 99_000,
+      price_bdt: 9_900,
     }));
     expect(res.status).toBe(201);
     const body = await getJson(res);
