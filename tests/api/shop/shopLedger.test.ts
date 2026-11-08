@@ -7,9 +7,15 @@
  * only when the fresh-read percent is > 0; integer paisa math throughout.
  */
 import { jest } from "@jest/globals";
-import { settleShopOrder, type ShopTx } from "@/lib/shopLedger";
+import { reverseShopOrder, settleShopOrder, type ShopTx } from "@/lib/shopLedger";
+import { operatorBills } from "@/src/db/schema";
 
 const mockRequireInt = jest.fn<(...args: unknown[]) => Promise<number>>();
+// The writer now also creates usage bills through lib/billsLedger, which
+// imports the pool — the tx is always injected, so the module-level db is inert.
+jest.mock("@/src/db", () => ({
+  db: { select: jest.fn(), insert: jest.fn(), execute: jest.fn(), transaction: jest.fn() },
+}));
 jest.mock("@/lib/platformConfig", () => ({
   requireConfigInt: (key: string) => mockRequireInt(key),
 }));
@@ -17,28 +23,45 @@ jest.mock("@/lib/logger", () => ({
   logger: { info: jest.fn(), error: jest.fn(), warn: jest.fn(), debug: jest.fn() },
 }));
 
-function makeTx(existing: { entry_type: string }[] = []) {
+function makeTx(existing: { entry_type: string; amount_bdt?: number }[] = []) {
   const inserts: Record<string, unknown>[] = [];
+  const billUpdates: Record<string, unknown>[] = [];
+  // Batch-2 Item 8: the same transaction also inserts operator_bills rows
+  // (usage bills, via lib/billsLedger.openUsageBill) — bucketed separately so
+  // the ledger assertions below stay about shop_ledger entries.
+  const billInserts: Record<string, unknown>[] = [];
   const tx = {
     select: jest.fn(() => ({
       from: jest.fn(() => ({
         where: jest.fn(() => ({
           then: (r: (v: unknown) => unknown) =>
-            r(existing.map((e) => ({ entry_type: e.entry_type }))),
+            r(existing.map((e) => ({ entry_type: e.entry_type, amount_bdt: e.amount_bdt ?? 0 }))),
         })),
       })),
-      then: (r: (v: unknown) => unknown) => r(existing.map((e) => ({ entry_type: e.entry_type }))),
+      then: (r: (v: unknown) => unknown) =>
+        r(existing.map((e) => ({ entry_type: e.entry_type, amount_bdt: e.amount_bdt ?? 0 }))),
+    })),
+    // Batch-2 Item 8: reverseShopOrder voids the accrued usage bill.
+    update: jest.fn(() => ({
+      set: (vals: Record<string, unknown>) => {
+        billUpdates.push(vals);
+        return { where: () => ({ returning: async () => [{ id: "bill-void-1" }] }) };
+      },
     })),
     insert: jest.fn((table: unknown) => ({
       values: jest.fn((vals: Record<string, unknown>) => {
-        inserts.push(vals);
+        const isBill = table === operatorBills;
+        (isBill ? billInserts : inserts).push(vals);
         return {
+          onConflictDoNothing: () => ({
+            returning: async () => (isBill ? [vals] : []),
+          }),
           then: (r: (v: unknown) => unknown) => r(vals),
         };
       }),
     })),
   } as unknown as ShopTx & { insert: jest.Mock };
-  return { tx, inserts };
+  return { tx, inserts, billInserts, billUpdates };
 }
 
 describe("shopLedger — settlement writer (§12)", () => {
@@ -143,6 +166,62 @@ describe("shopLedger — settlement writer (§12)", () => {
 
     expect(inserts).toHaveLength(1);
     expect(inserts[0]).toMatchObject({ entry_type: "order_revenue" });
+  });
+
+  it("accrues ONE usage bill for the commission, keyed by the source order (Batch-2 Item 8)", async () => {
+    mockRequireInt.mockResolvedValue(8);
+    const { tx, billInserts } = makeTx();
+
+    await settleShopOrder(
+      tx,
+      {
+        id: "order-8",
+        shop_id: "shop-1",
+        subtotal_bdt: 10_000,
+        delivery_fee_bdt: 2_000,
+      },
+      { selfDelivered: true },
+    );
+
+    // The platform fee is the commission only — never the delivery fee.
+    expect(billInserts).toHaveLength(1);
+    expect(billInserts[0]).toMatchObject({
+      operator_role: "shop",
+      operator_id: "shop-1",
+      kind: "usage",
+      status: "open",
+      amount_bdt: 800,
+      source_order_id: "order-8",
+      subscription_id: null,
+    });
+  });
+
+  it("accrues NO usage bill at the launch default of 0% (owed figure unchanged)", async () => {
+    mockRequireInt.mockResolvedValue(0);
+    const { tx, billInserts } = makeTx();
+
+    await settleShopOrder(tx, { id: "order-9", shop_id: "shop-1", subtotal_bdt: 50_000 });
+
+    expect(billInserts).toHaveLength(0);
+  });
+
+  it("voids the accrued usage bill when an order's settlement is reversed (Batch-2 Item 8)", async () => {
+    const { tx, inserts, billUpdates } = makeTx([
+      { entry_type: "order_revenue", amount_bdt: 10_000 },
+      { entry_type: "commission", amount_bdt: -800 },
+    ]);
+
+    const out = await reverseShopOrder(
+      tx,
+      { id: "order-r", shop_id: "shop-1" },
+      { reason: "admin force-cancel" },
+    );
+
+    expect(inserts.map((i) => [i.entry_type, i.amount_bdt])).toEqual([["reversal", -9_200]]);
+    // The receivable leaves the owed figure with the ledger debit.
+    expect(billUpdates).toHaveLength(1);
+    expect(billUpdates[0]).toMatchObject({ status: "void" });
+    expect(out).toEqual({ reversed_bdt: -9_200 });
   });
 
   it("propagates a missing config key as a 500 (no invented zero)", async () => {

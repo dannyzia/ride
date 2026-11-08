@@ -15,6 +15,7 @@
 import { eq } from "drizzle-orm";
 import { db } from "@/src/db";
 import { shopLedger } from "@/src/db/schema";
+import { openUsageBill, voidUsageBillForSource } from "@/lib/billsLedger";
 import { requireConfigInt } from "@/lib/platformConfig";
 import { logger } from "@/lib/logger";
 
@@ -79,6 +80,21 @@ export async function settleShopOrder(
         entry_type: "commission",
         amount_bdt: -commissionBdt,
         note: opts.note ?? null,
+      });
+
+      // Batch-2 Item 8 — the same commission is also a platform RECEIVABLE:
+      // one open usage bill per order, so it lands in the unified owed figure
+      // (operator_unpaid_obligations.net_commission_paisa) and the shop's
+      // statement. Single-writer preserved: the bill row is created by
+      // lib/billsLedger.openUsageBill inside THIS transaction, so the accrual
+      // commits or rolls back with the delivered transition. At the launch
+      // default the fresh-read percent is zero, so no commission exists and no
+      // bill is written — the owed figure is byte-identical to pre-Item-8.
+      await openUsageBill(tx, {
+        operatorRole: "shop",
+        operatorId: order.shop_id,
+        amountBdt: commissionBdt,
+        sourceOrderId: order.id,
       });
     }
   }
@@ -155,6 +171,11 @@ export async function reverseShopOrder(
     amount_bdt: -booked,
     note: opts.reason,
   });
+
+  // Batch-2 Item 8: the reversal also retires the commission receivable this
+  // order accrued, so the shop stops owing a fee the ledger just gave back.
+  // Settled usage bills are money already received and are left untouched.
+  await voidUsageBillForSource(tx, { operatorRole: "shop", sourceOrderId: order.id });
 
   return { reversed_bdt: -booked };
 }

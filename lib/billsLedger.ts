@@ -86,6 +86,106 @@ export async function createOpenBill(
 }
 
 /**
+ * Batch-2 Item 8 — open ONE per-order usage bill (platform fee accrued by a
+ * usage-time hook, e.g. the shop's delivered-transition commission).
+ *
+ * Caller passes its own transaction: the accrual must commit or roll back with
+ * the event that produced it (the delivered transition). Idempotent at the DB
+ * layer via `operator_bills_source_order_uq` — a retried transition returns
+ * null instead of accruing twice. Usage bills never take the purchase lock and
+ * never collide with the subscription slot (that barrier is kind-scoped).
+ *
+ * amount_bdt is integer paisa and MUST be positive: a zero-fee event writes no
+ * bill at all (the caller gates on its own fresh-read rate), so a 0 row here is
+ * a programming error rather than data.
+ */
+export async function openUsageBill(
+  tx: Tx,
+  params: {
+    operatorRole: 'driver' | 'shop' | 'delivery' | 'fleet';
+    operatorId: string;
+    amountBdt: number;
+    sourceOrderId: string;
+    dueAt?: Date | null;
+  },
+): Promise<{ id: string } | null> {
+  if (!Number.isInteger(params.amountBdt) || params.amountBdt <= 0) {
+    throw new Error(
+      `openUsageBill: amount must be a positive integer paisa (got ${params.amountBdt})`,
+    );
+  }
+
+  const [bill] = await tx
+    .insert(operatorBills)
+    .values({
+      operator_id: params.operatorId,
+      operator_role: params.operatorRole,
+      subscription_id: null,
+      amount_bdt: params.amountBdt,
+      due_at: params.dueAt ?? null,
+      status: 'open',
+      kind: 'usage',
+      source_order_id: params.sourceOrderId,
+    })
+    .onConflictDoNothing()
+    .returning({ id: operatorBills.id });
+
+  if (!bill) {
+    logger.debug('[billsLedger] usage bill already accrued for this source', {
+      operatorRole: params.operatorRole,
+      operatorId: params.operatorId,
+      sourceOrderId: params.sourceOrderId,
+    });
+    return null;
+  }
+
+  logger.info('[billsLedger] usage bill accrued', {
+    billId: bill.id,
+    operatorRole: params.operatorRole,
+    operatorId: params.operatorId,
+    sourceOrderId: params.sourceOrderId,
+    amountBdt: params.amountBdt,
+  });
+  return { id: bill.id };
+}
+
+/**
+ * Batch-2 Item 8 — void the usage bill accrued for a producer event.
+ *
+ * Used by the reversal path (admin force-cancel of a delivered shop order): if
+ * the ledger debit is reversed, the receivable it fed must leave the owed
+ * figure too, or the shop keeps owing a fee the platform already gave back.
+ * Only an OPEN usage bill is voided; settled bills are money already received
+ * and are never rewritten. Idempotent: a second call finds nothing to void.
+ */
+export async function voidUsageBillForSource(
+  tx: Tx,
+  params: { operatorRole: 'driver' | 'shop' | 'delivery' | 'fleet'; sourceOrderId: string },
+): Promise<{ billId: string } | null> {
+  const [bill] = await tx
+    .update(operatorBills)
+    .set({ status: 'void', updated_at: new Date() })
+    .where(
+      and(
+        eq(operatorBills.operator_role, params.operatorRole),
+        eq(operatorBills.source_order_id, params.sourceOrderId),
+        eq(operatorBills.kind, 'usage'),
+        eq(operatorBills.status, 'open'),
+      ),
+    )
+    .returning({ id: operatorBills.id });
+
+  if (!bill) return null;
+
+  logger.info('[billsLedger] usage bill voided', {
+    billId: bill.id,
+    operatorRole: params.operatorRole,
+    sourceOrderId: params.sourceOrderId,
+  });
+  return { billId: bill.id };
+}
+
+/**
  * The advisory lock key for one operator's purchase slot. The STRING is a
  * cross-module contract: the writer that opens the bill (lib/operatorPurchase)
  * and this resolver must use the same key, or a purchase and a settlement can
