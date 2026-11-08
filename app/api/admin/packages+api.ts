@@ -8,7 +8,7 @@ import { z } from "zod";
 import { VEHICLE_TYPE_ZOD_ENUM } from "@/lib/vehicleTypes";
 import { parseJsonBody } from "@/lib/parseBody";
 import * as errors from "@/lib/errors";
-import { getMaxCommissionDebtBdt } from "@/lib/platformConfig";
+import { getMaxCommissionDebtBdt, getDebtCeilingForRole } from "@/lib/platformConfig";
 
 const D1_DUST_BUFFER_BDT = 1_000; // PortPos settlement minimum — dust buffer
 
@@ -37,6 +37,22 @@ const updateSchema = createSchema.partial().extend({
 });
 
 /**
+ * Batch-2 Item 5: per-role D1 ceilings — for each NON-driver role R in the
+ * package's applicable_roles, fetch R's fresh debt ceiling. The driver role is
+ * covered by the existing maxDebtBdt check (unchanged).
+ */
+async function getRoleCeilings(data: {
+  applicable_roles?: string[];
+}): Promise<Record<string, number>> {
+  const ceilings: Record<string, number> = {};
+  for (const role of data.applicable_roles ?? []) {
+    if (role === 'driver') continue;
+    ceilings[role] = await getDebtCeilingForRole(role);
+  }
+  return ceilings;
+}
+
+/**
  * Package constraints (Item 21 / §3.9, D3-B-r2):
  *   - D1 ceiling side: call-package price_bdt <= max_commission_debt_bdt - 1,000
  *     paisa dust buffer (price 0 trials exempt).
@@ -54,7 +70,7 @@ function validatePackageConstraints(data: {
   call_count?: number;
   commission_percent?: number;
   applicable_roles?: string[];
-}, maxDebtBdt: number): { code: string; message: string } | null {
+}, maxDebtBdt: number, roleCeilings: Record<string, number> = {}): { code: string; message: string } | null {
   const priceBdt = data.price_bdt ?? 0;
   const callCount = data.call_count ?? 5;
   const durationDays = data.duration_days;
@@ -96,8 +112,21 @@ function validatePackageConstraints(data: {
     if (priceBdt < D1_DUST_BUFFER_BDT) {
       return { code: 'package_constraint_violation', message: 'Call package price_bdt must be 0 (trial) or >= 1,000 paisa' };
     }
+    // Driver keeps its existing check — driver behavior unchanged for
+    // driver-only packages.
     if (priceBdt > maxDebtBdt - D1_DUST_BUFFER_BDT) {
       return { code: 'package_constraint_violation', message: 'Call package price_bdt exceeds max_commission_debt_bdt minus the 1,000 paisa dust buffer (D1 floor)' };
+    }
+    // Batch-2 Item 5: per-role ceilings — for each NON-driver role R in
+    // applicable_roles, price_bdt must be <= R's ceiling - 1,000 paisa.
+    // Same error code as the config-side floor (debt_ceiling_below_package_price).
+    for (const [role, ceiling] of Object.entries(roleCeilings)) {
+      if (priceBdt > ceiling - D1_DUST_BUFFER_BDT) {
+        return {
+          code: 'debt_ceiling_below_package_price',
+          message: `Call package price_bdt exceeds the ${role} debt ceiling (${ceiling}) minus the 1,000 paisa dust buffer`,
+        };
+      }
     }
   }
 
@@ -140,7 +169,14 @@ export async function POST(request: Request) {
     if (!result.ok) return result.response;
 
     const maxDebtBdt = await getMaxCommissionDebtBdt();
-    const constraintErr = validatePackageConstraints(result.data, maxDebtBdt);
+    const constraintErr = validatePackageConstraints(
+      result.data,
+      maxDebtBdt,
+      // Batch-2 Item 5: per-role ceilings for the package's NON-driver
+      // applicable roles (the driver role is covered by the existing D1 check
+      // above — driver behavior unchanged for driver-only packages).
+      await getRoleCeilings(result.data),
+    );
     if (constraintErr) {
       return Response.json({ error: constraintErr.code, message: constraintErr.message }, { status: 400 });
     }
@@ -176,7 +212,14 @@ export async function PUT(request: Request) {
     if (!result.ok) return result.response;
 
     const maxDebtBdt = await getMaxCommissionDebtBdt();
-    const constraintErr = validatePackageConstraints(result.data, maxDebtBdt);
+    const constraintErr = validatePackageConstraints(
+      result.data,
+      maxDebtBdt,
+      // Batch-2 Item 5: per-role ceilings for the package's NON-driver
+      // applicable roles (the driver role is covered by the existing D1 check
+      // above — driver behavior unchanged for driver-only packages).
+      await getRoleCeilings(result.data),
+    );
     if (constraintErr) {
       return Response.json({ error: constraintErr.code, message: constraintErr.message }, { status: 400 });
     }

@@ -526,7 +526,7 @@ Single list; each file appears exactly once. Within each stage, list order is bu
 #### 20. `app/api/admin/config+api.ts` (Modify)
 
 *   **Type / Scope**: Admin config boundary — `requireAdminPermission` enforced (AGENTS.md RBAC).
-*   **Proposed Changes**: `revenue_model` ENUM_KEYS narrowed to `{'subscription_only','hybrid'}` (IR-B-N1: the value set lives in ENUM_KEYS at :241, not ALLOWED_KEYS); `max_commission_debt_bdt` setter validates the D1 floor against live call-package prices (`ceiling_below_package_price` rejection).
+*   **Proposed Changes**: `revenue_model` ENUM_KEYS narrowed to `{'subscription_only','hybrid'}` (IR-B-N1: the value set lives in ENUM_KEYS at :241, not ALLOWED_KEYS); `max_commission_debt_bdt` setter validates the D1 floor against live call-package prices (`debt_ceiling_below_package_price` rejection — Batch-2 unified the code name across all four role keys).
 
 #### 21. `app/api/admin/packages+api.ts` (Modify)
 

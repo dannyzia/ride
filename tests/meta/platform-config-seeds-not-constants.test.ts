@@ -135,6 +135,21 @@ describe("§12 economics — seeds, not constants (stage-order rule)", () => {
       expect(POSTPAID_SEED_SRC).toMatch(new RegExp(`\\(\\s*'max_commission_debt_bdt'\\s*,\\s*'50000'\\s*,\\s*now\\(\\)\\s*\\)`));
     });
 
+    // ── Batch-2 Item 5: per-operator-role debt ceilings ──
+    it.each(["shop", "delivery", "fleet"])(
+      "seeds max_debt_ceiling_%s_bdt='50000' (mirrors the driver default)",
+      (role) => {
+        expect(POSTPAID_SEED_SRC).toMatch(
+          new RegExp(`\\(\\s*'max_debt_ceiling_${role}_bdt'\\s*,\\s*'50000'\\s*,\\s*now\\(\\)\\s*\\)`),
+        );
+      },
+    );
+
+    it("FAULT: a wrong per-role ceiling seed is detected", () => {
+      const wrong = "('max_debt_ceiling_shop_bdt', '1000', now())";
+      expect(wrong).not.toMatch(new RegExp(`\\(\\s*'max_debt_ceiling_shop_bdt'\\s*,\\s*'50000'\\s*,\\s*now\\(\\)\\s*\\)`));
+    });
+
     it("seeds the canonical ৳0 commission package idempotently (product_type='commission', price_bdt=0, duration_days NULL, is_trial=false)", () => {
       expect(POSTPAID_SEED_SRC).toMatch(/product_type = 'commission'/);
       expect(POSTPAID_SEED_SRC).toMatch(/price_bdt = 0/);

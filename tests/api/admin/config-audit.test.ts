@@ -38,7 +38,7 @@ import { parseJsonBody } from '@/lib/parseBody';
 let auditInsertValues: Record<string, unknown> | null = null;
 let auditInsertCalled = false;
 
-function mockSelect(existingRows: { key: string; value: string | null }[] = []) {
+function mockSelect(existingRows: Record<string, unknown>[] = []) {
   (db.select as jest.Mock).mockImplementation(() => {
     const promise = Promise.resolve(existingRows);
     return {
@@ -207,5 +207,59 @@ describe('T-A9 — config audit log on PATCH', () => {
 
     expect(insertCalls.length).toBe(3);
     expect(insertCalls.map((c) => c.config_key)).toEqual(keys);
+  });
+});
+
+// ── Batch-2 Item 5 — per-operator-role debt ceilings ────────────────────────
+
+describe('Batch-2 Item 5 — per-role debt ceilings on PATCH', () => {
+  const CEILING_KEYS = [
+    'max_debt_ceiling_shop_bdt',
+    'max_debt_ceiling_delivery_bdt',
+    'max_debt_ceiling_fleet_bdt',
+  ];
+
+  test('valid set: each ceiling key PATCHes cleanly and audits', async () => {
+    for (const key of CEILING_KEYS) {
+      // D1 floor select (packages max price) → 0; audit old-value read → the row.
+      mockSelect([{ max_price: 0 }, { key, value: 'old' }]);
+      mockInsertAndAudit();
+      (parseJsonBody as jest.Mock).mockResolvedValue({
+        ok: true,
+        data: { updates: [{ key, value: '50000' }] },
+      });
+
+      const res = await PATCH(apiRequest());
+      expect(res.status).toBe(200);
+    }
+  });
+
+  test('negative values are rejected for every per-role ceiling key', async () => {
+    for (const key of CEILING_KEYS) {
+      mockSelect([]);
+      (parseJsonBody as jest.Mock).mockResolvedValue({
+        ok: true,
+        data: { updates: [{ key, value: '-1' }] },
+      });
+
+      const res = await PATCH(apiRequest());
+      expect(res.status).toBe(400);
+    }
+  });
+
+  test('floor violation per role: setting a ceiling below a live applicable package price → 400 debt_ceiling_below_package_price', async () => {
+    for (const key of CEILING_KEYS) {
+      // The D1 floor read sees a live shop/delivery/fleet-applicable package
+      // priced at 5000; the 400 returns before the audit old-value read.
+      mockSelect([{ max_price: 5000 }]);
+      (parseJsonBody as jest.Mock).mockResolvedValue({
+        ok: true,
+        data: { updates: [{ key, value: '4000' }] },
+      });
+
+      const res = await PATCH(apiRequest());
+      expect(res.status).toBe(400);
+      expect((await res.json()).error).toBe('debt_ceiling_below_package_price');
+    }
   });
 });

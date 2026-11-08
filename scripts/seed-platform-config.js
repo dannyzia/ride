@@ -77,7 +77,12 @@ async function seed() {
       // The Stage-3 activation runbook writes the cutover timestamp at
       // activation time; this script does not seed it.
       ('revenue_model',           'subscription_only', now()),
-      ('max_commission_debt_bdt', '50000',             now())
+      ('max_commission_debt_bdt', '50000',             now()),
+      // Batch-2 Item 5: per-operator-role debt ceilings (paisa). Defaults
+      // mirror the driver ceiling — no invented sizing; admin raises as needed.
+      ('max_debt_ceiling_shop_bdt',     '50000', now()),
+      ('max_debt_ceiling_delivery_bdt', '50000', now()),
+      ('max_debt_ceiling_fleet_bdt',    '50000', now())
     ON CONFLICT (key) DO NOTHING;
   `);
 
@@ -97,19 +102,32 @@ async function seed() {
     );
   `);
 
-  // D1 seed-time assertion: ceiling must cover the most expensive live
-  // call package plus the ৳10 dust buffer.
-  const [ceilingRow] = await db.execute(sql`SELECT value FROM platform_config WHERE key = 'max_commission_debt_bdt'`);
-  const [maxPriceRow] = await db.execute(sql`SELECT COALESCE(MAX(price_bdt), 0) AS max_price FROM packages WHERE deleted_at IS NULL AND product_type = 'call_package'`);
-  const ceiling = Number(ceilingRow?.value);
-  const maxPrice = Number(maxPriceRow?.max_price);
-  if (!Number.isFinite(ceiling) || ceiling < maxPrice + 1000) {
-    throw new Error(
-      `D1 floor violated: max_commission_debt_bdt ${ceiling} < max live call-package price ${maxPrice} + 1,000 paisa`,
-    );
+  // D1 seed-time assertion, generalized per role (Batch-2 Item 5): EACH
+  // role's ceiling must cover the most expensive live call package applicable
+  // to that role plus the ৳10 dust buffer.
+  const ceilingKeys = [
+    { key: 'max_commission_debt_bdt', role: 'driver' },
+    { key: 'max_debt_ceiling_shop_bdt', role: 'shop' },
+    { key: 'max_debt_ceiling_delivery_bdt', role: 'delivery' },
+    { key: 'max_debt_ceiling_fleet_bdt', role: 'fleet' },
+  ];
+  for (const { key, role } of ceilingKeys) {
+    const [ceilingRow] = await db.execute(sql`SELECT value FROM platform_config WHERE key = ${key}`);
+    const [maxPriceRow] = await db.execute(sql`
+      SELECT COALESCE(MAX(price_bdt), 0) AS max_price
+      FROM packages
+      WHERE deleted_at IS NULL AND product_type = 'call_package'
+        AND applicable_roles @> ARRAY[${role}]::text[]`);
+    const ceiling = Number(ceilingRow?.value);
+    const maxPrice = Number(maxPriceRow?.max_price);
+    if (!Number.isFinite(ceiling) || ceiling < maxPrice + 1000) {
+      throw new Error(
+        `D1 floor violated: ${key} ${ceiling} < max live ${role}-applicable call-package price ${maxPrice} + 1,000 paisa`,
+      );
+    }
   }
 
-  console.log("platform_config seeded (37 keys)");
+  console.log("platform_config seeded (40 keys)");
   await client.end();
 }
 seed().catch(console.error);

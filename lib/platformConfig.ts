@@ -1,7 +1,7 @@
 import { db } from '@/src/db';
 
 import { platformConfig } from '@/src/db/schema';
-import { inArray, eq } from 'drizzle-orm';
+import { inArray, eq, sql } from 'drizzle-orm';
 import { logger } from './logger';
 
 /**
@@ -281,6 +281,51 @@ export async function getRevenueModel(): Promise<RevenueModel> {
 /** Fresh-read the commission-debt ceiling in integer paisa. */
 export async function getMaxCommissionDebtBdt(): Promise<number> {
   return getConfigInt('max_commission_debt_bdt', MAX_COMMISSION_DEBT_DEFAULT_PAISA);
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// PER-OPERATOR-ROLE DEBT CEILINGS (Batch-2 Item 5)
+// ══════════════════════════════════════════════════════════════════════
+
+/**
+ * Batch-2 Item 5: per-operator-role debt ceiling keys (integer paisa).
+ * 'driver' keeps the existing max_commission_debt_bdt key; the shop/delivery/
+ * fleet defaults mirror the driver default (৳500) — no invented sizing; admin
+ * raises fleet's as needed. Consumers fresh-read via getDebtCeilingForRole
+ * (AGENTS.md: never cache platform_config).
+ */
+export const DEBT_CEILING_KEYS_BY_ROLE: Record<string, string> = {
+  driver: 'max_commission_debt_bdt',
+  shop: 'max_debt_ceiling_shop_bdt',
+  delivery: 'max_debt_ceiling_delivery_bdt',
+  fleet: 'max_debt_ceiling_fleet_bdt',
+};
+
+/** DB tx handle type. */
+type DbTx = Parameters<Parameters<typeof db.transaction>[0]>[0];
+/** Any drizzle query executor: the pool, or a caller's transaction. */
+export type PlatformConfigExecutor = DbTx | typeof db;
+
+/**
+ * Batch-2 Item 5: fresh-read the debt ceiling for an operator role in integer
+ * paisa. Unknown roles fall back to the driver key (safe default). Fresh read,
+ * never cached.
+ *
+ * The optional executor lets Items 8-10's hooks read the ceiling inside the
+ * same transaction as their money write (never a cached figure).
+ */
+export async function getDebtCeilingForRole(
+  operatorRole: string,
+  executor?: PlatformConfigExecutor,
+): Promise<number> {
+  const key = DEBT_CEILING_KEYS_BY_ROLE[operatorRole] ?? 'max_commission_debt_bdt';
+  if (!executor) return getConfigInt(key, MAX_COMMISSION_DEBT_DEFAULT_PAISA);
+
+  const [row] = await executor.execute(
+    sql`SELECT value FROM platform_config WHERE key = ${key} LIMIT 1`,
+  );
+  const parsed = parseInt(String((row as { value?: unknown } | undefined)?.value ?? ''), 10);
+  return Number.isFinite(parsed) ? parsed : MAX_COMMISSION_DEBT_DEFAULT_PAISA;
 }
 
 /**

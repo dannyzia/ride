@@ -192,6 +192,13 @@ const ALLOWED_KEYS = new Set([
   'max_commission_debt_bdt',
   'commission_debt_grace_rides',
 
+  // Batch-2 Item 5: per-operator-role debt ceilings (paisa). Defaults mirror
+  // the driver ceiling (৳500); consumers fresh-read via
+  // lib/platformConfig.getDebtCeilingForRole.
+  'max_debt_ceiling_shop_bdt',
+  'max_debt_ceiling_delivery_bdt',
+  'max_debt_ceiling_fleet_bdt',
+
   // S8 §4.2/§4.6 — women-only + scooter kill switches. Owner-only writes
   // enforced generically via OWNER_ONLY_CONFIG_KEYS in PATCH below.
   'women_only_rides_enabled',
@@ -361,6 +368,15 @@ function validateKeyValue(key: string, value: string): string | null {
     if (!Number.isInteger(v) || v < 0) return `${key} must be a non-negative integer (paisa)`;
   }
   if (key === 'max_commission_debt_bdt') {
+    if (!Number.isInteger(v) || v < 0) return `${key} must be a non-negative integer (paisa)`;
+  }
+
+  // Batch-2 Item 5: per-operator-role debt ceilings — non-negative integer paisa.
+  if (
+    key === 'max_debt_ceiling_shop_bdt' ||
+    key === 'max_debt_ceiling_delivery_bdt' ||
+    key === 'max_debt_ceiling_fleet_bdt'
+  ) {
     if (!Number.isInteger(v) || v < 0) return `${key} must be a non-negative integer (paisa)`;
   }
   if (key === 'commission_debt_grace_rides') {
@@ -625,21 +641,35 @@ export async function PATCH(req: Request) {
       }
     }
 
-    // D1 floor: max_commission_debt_bdt must be >= max live call-package price + 1,000 paisa dust buffer.
+    // D1-style floor per role (Batch-2 Item 5): setting role R's ceiling key
+    // enforces ceiling >= max(price_bdt of live call packages whose
+    // applicable_roles includes R, excluding trials) + 1,000 paisa dust buffer.
+    const DEBT_CEILING_KEY_ROLES: Record<string, string> = {
+      max_commission_debt_bdt: 'driver',
+      max_debt_ceiling_shop_bdt: 'shop',
+      max_debt_ceiling_delivery_bdt: 'delivery',
+      max_debt_ceiling_fleet_bdt: 'fleet',
+    };
     for (const { key, value } of body.updates) {
-      if (key === 'max_commission_debt_bdt') {
-        const newCeiling = parseInt(value, 10);
-        const [maxPriceRow] = await db
-          .select({ max_price: sql<number>`COALESCE(MAX(${packages.price_bdt}), 0)` })
-          .from(packages)
-          .where(and(isNull(packages.deleted_at), eq(packages.product_type, 'call_package')));
-        const maxPrice = Number(maxPriceRow?.max_price ?? 0);
-        if (newCeiling < maxPrice + 1000) {
-          return Response.json({
-            error: 'ceiling_below_package_price',
-            message: `max_commission_debt_bdt must be >= max live call-package price (${maxPrice}) + 1,000 paisa dust buffer`,
-          }, { status: 400 });
-        }
+      const ceilingRole = DEBT_CEILING_KEY_ROLES[key];
+      if (!ceilingRole) continue;
+      const newCeiling = parseInt(value, 10);
+      const [maxPriceRow] = await db
+        .select({ max_price: sql<number>`COALESCE(MAX(${packages.price_bdt}), 0)` })
+        .from(packages)
+        .where(and(
+          isNull(packages.deleted_at),
+          eq(packages.product_type, 'call_package'),
+          // Packages applicable to role R (Batch-2 Item 1), excluding trials.
+          sql`${packages.applicable_roles} @> ARRAY[${ceilingRole}]::text[]`,
+          sql`NOT ${packages.is_trial}`,
+        ));
+      const maxPrice = Number(maxPriceRow?.max_price ?? 0);
+      if (newCeiling < maxPrice + 1000) {
+        return Response.json({
+          error: 'debt_ceiling_below_package_price',
+          message: `${key} must be >= max live ${ceilingRole}-applicable call-package price (${maxPrice}) + 1,000 paisa dust buffer`,
+        }, { status: 400 });
       }
     }
 

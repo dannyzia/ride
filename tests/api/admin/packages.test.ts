@@ -28,6 +28,7 @@ jest.mock("@/lib/parseBody", () => ({
 }));
 jest.mock("@/lib/platformConfig", () => ({
   getMaxCommissionDebtBdt: jest.fn(async () => 50_000),
+  getDebtCeilingForRole: jest.fn(async () => 50_000),
 }));
 jest.mock("@/src/db", () => ({
   db: { select: jest.fn(), insert: jest.fn(), update: jest.fn() },
@@ -40,6 +41,7 @@ import { db } from "@/src/db";
 import { requireAdminPermission } from "@/lib/adminRbac";
 import { logger } from "@/lib/logger";
 import { packages } from "@/src/db/schema";
+import { getDebtCeilingForRole } from "@/lib/platformConfig";
 import { GET, POST, PUT, DELETE } from "@/app/api/admin/packages+api";
 
 const PKG_ID = "44444444-4444-4444-8444-444444444444";
@@ -390,6 +392,51 @@ describe("PUT /api/admin/packages", () => {
       "shop",
       "delivery",
     ]);
+  });
+});
+
+describe("POST /api/admin/packages — Batch-2 Item 5 per-role ceiling floors", () => {
+  test("multi-role package (driver+shop) is validated against BOTH ceilings", async () => {
+    // Shop ceiling mocked to 5500: price 5000 passes the driver D1 check
+    // (5000 <= 50000-1000) but exceeds the shop ceiling minus the dust buffer.
+    (getDebtCeilingForRole as jest.Mock).mockImplementation(async (role: string) =>
+      role === "shop" ? 5_500 : 50_000,
+    );
+    const res = await POST(
+      jsonRequest({ ...VALID, applicable_roles: ["driver", "shop"] }),
+    );
+    expect(res.status).toBe(400);
+    expect((await getJson(res)).error).toBe("debt_ceiling_below_package_price");
+  });
+
+  test("multi-role package within every role ceiling is accepted", async () => {
+    (getDebtCeilingForRole as jest.Mock).mockImplementation(async (role: string) =>
+      role === "shop" ? 8_000 : 50_000,
+    );
+    (db.insert as jest.Mock).mockImplementation(() => ({
+      values: jest.fn((vals) => ({
+        returning: jest.fn(async () => [{ id: PKG_ID, ...vals }]),
+      })),
+    }));
+    const res = await POST(
+      jsonRequest({ ...VALID, applicable_roles: ["driver", "shop"] }),
+    );
+    expect(res.status).toBe(201);
+  });
+
+  test("driver-only packages never touch the per-role ceilings (behavior unchanged)", async () => {
+    // Back to the launch default so a stale role-specific implementation from
+    // the tests above cannot mask a regression here.
+    (getDebtCeilingForRole as jest.Mock).mockImplementation(async () => 50_000);
+    (getDebtCeilingForRole as jest.Mock).mockClear();
+    (db.insert as jest.Mock).mockImplementation(() => ({
+      values: jest.fn((vals) => ({
+        returning: jest.fn(async () => [{ id: PKG_ID, ...vals }]),
+      })),
+    }));
+    const res = await POST(jsonRequest(VALID));
+    expect(res.status).toBe(201);
+    expect(getDebtCeilingForRole).not.toHaveBeenCalled();
   });
 });
 
