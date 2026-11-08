@@ -2,18 +2,23 @@
 // a driver's mode is derived from possession rows (usable subscription vs active
 // commission enrollment), never from a pool-level constant. SOLE writer of
 // commission_enrollments and subscriptions.frozen_at (Item 4, pinned per M-12).
+// Batch-2 Item 3 extends the module with NON-driver operator possession
+// (operator_packages — shop, delivery, fleet; drivers keep
+// subscriptions/enrollments): SOLE writer of operator_packages.
 // Every function takes the caller's tx handle — no module-level `db` writes.
 import { db } from '@/src/db';
 import * as schema from '@/src/db/schema';
 import { and, eq, isNotNull, isNull, sql } from 'drizzle-orm';
 import { DuesExecutor, getDriverUnpaidObligations } from '@/lib/commissionDues';
+import { driverErrorCode } from '@/lib/idempotency';
 import { logger } from './logger';
+import type { OperatorRole } from '@/src/db/schema';
 import type { PgTransaction } from 'drizzle-orm/pg-core';
 import type { PostgresJsQueryResultHKT } from 'drizzle-orm/postgres-js';
 
 type Tx = PgTransaction<PostgresJsQueryResultHKT, typeof schema, any>;
 
-const { commissionEnrollments, packages, subscriptions } = schema;
+const { commissionEnrollments, operatorPackages, packages, subscriptions } = schema;
 
 /** Midpoint of the [0, 1] balance-score scale; commission-mode drivers are pinned here (§3.5, disposition N-04). */
 export const COMMISSION_MODE_BALANCE_SCORE = 0.5;
@@ -235,4 +240,103 @@ export async function ensureCommissionPackage(exec: DuesExecutor): Promise<strin
     .returning({ id: packages.id });
   logger.info('[monetizationMode] commission package seeded', { packageId: row.id });
   return row.id;
+}
+
+// ── Batch-2 Item 3: non-driver operator possession (operator_packages) ──────
+
+/** Batch-2 Item 3: typed wrapper for the operator_packages_one_active_uq 23505 — a second active grant for the same (operator_role, operator_id). */
+export class OperatorPackageActiveError extends Error {
+  constructor() {
+    super('operator_packages_one_active_uq: operator already holds an active package for the role');
+    this.name = 'OperatorPackageActiveError';
+  }
+}
+
+/** Batch-2 Item 3: possession predicate for an operator_packages row —
+ * status='active' AND (expires_at IS NULL OR expires_at > now()). Exported for
+ * reuse in pool/state predicates (dispatch/dues wiring is a later Batch-2 item). */
+export function isOperatorPackageActive(row: {
+  status: string;
+  expires_at: Date | string | null;
+}): boolean {
+  return (
+    row.status === 'active' &&
+    (row.expires_at == null || new Date(row.expires_at) > new Date())
+  );
+}
+
+/** Batch-2 Item 3: grant a non-driver operator package (shop, delivery, fleet).
+ * expires_at follows the package's duration_days per Amendment D3-A
+ * (NULL/-1 → NULL unlimited; >= 1 → now() + days). A second active grant for
+ * the same (operator_role, operator_id) raises OperatorPackageActiveError
+ * (the one-active 23505, typed per brief). Driver paths untouched. */
+export async function grantOperatorPackage(
+  tx: Tx,
+  params: {
+    operatorRole: OperatorRole;
+    operatorId: string;
+    package: typeof packages.$inferSelect;
+  },
+): Promise<typeof operatorPackages.$inferSelect> {
+  const durationDays = params.package.duration_days ?? null;
+  const expiresAt =
+    durationDays != null && durationDays >= 1
+      ? new Date(Date.now() + durationDays * 86_400_000)
+      : null;
+  try {
+    const [row] = await tx
+      .insert(operatorPackages)
+      .values({
+        operator_role: params.operatorRole,
+        operator_id: params.operatorId,
+        package_id: params.package.id,
+        status: 'active',
+        expires_at: expiresAt,
+      })
+      .returning();
+    if (!row) throw new Error('grantOperatorPackage: insert returned no row');
+    logger.info('[monetizationMode] operator package granted', {
+      operatorRole: params.operatorRole,
+      operatorId: params.operatorId,
+      packageId: params.package.id,
+      expiresAt: expiresAt?.toISOString() ?? null,
+    });
+    return row;
+  } catch (e: unknown) {
+    if (driverErrorCode(e) === '23505') {
+      logger.warn('[monetizationMode] operator package slot conflict', {
+        operatorRole: params.operatorRole,
+        operatorId: params.operatorId,
+      });
+      throw new OperatorPackageActiveError();
+    }
+    throw e;
+  }
+}
+
+/** Batch-2 Item 3: end the operator's active package (status='ended'). Returns
+ * the ended row, or null when none is active. */
+export async function endOperatorPackage(
+  tx: Tx,
+  params: { operatorRole: OperatorRole; operatorId: string },
+): Promise<typeof operatorPackages.$inferSelect | null> {
+  const [row] = await tx
+    .update(operatorPackages)
+    .set({ status: 'ended', ended_at: new Date(), updated_at: new Date() })
+    .where(
+      and(
+        eq(operatorPackages.operator_role, params.operatorRole),
+        eq(operatorPackages.operator_id, params.operatorId),
+        eq(operatorPackages.status, 'active'),
+      ),
+    )
+    .returning();
+  if (row) {
+    logger.info('[monetizationMode] operator package ended', {
+      operatorRole: params.operatorRole,
+      operatorId: params.operatorId,
+      packageId: row.package_id,
+    });
+  }
+  return row ?? null;
 }

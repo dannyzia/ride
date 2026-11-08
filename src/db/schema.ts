@@ -1193,6 +1193,37 @@ export const operatorBills = pgTable(
 );
 
 /**
+ * Operator packages — non-driver operator possession (shop, delivery, fleet;
+ * Batch-2 Item 3 — drivers keep subscriptions/enrollments). One ACTIVE package
+ * per (operator_role, operator_id) via the partial unique index. expires_at
+ * follows the package's duration_days (Amendment D3-A). Written ONLY by
+ * lib/monetizationMode.ts.
+ */
+export const operatorPackages = pgTable(
+  "operator_packages",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    operator_role: operatorRoleEnum("operator_role").notNull(),
+    operator_id: uuid("operator_id").notNull(),
+    package_id: uuid("package_id")
+      .notNull()
+      .references(() => packages.id),
+    status: varchar("status", { length: 20 }).notNull().default("active"), // 'active' | 'ended'
+    started_at: timestamptz("started_at").notNull().defaultNow(),
+    ended_at: timestamptz("ended_at"),
+    expires_at: timestamptz("expires_at"),
+    created_at: timestamptz("created_at").notNull().defaultNow(),
+    updated_at: timestamptz("updated_at").notNull().defaultNow(),
+  },
+  (t) => [
+    // One ACTIVE package per (operator_role, operator_id) — the possession barrier.
+    uniqueIndex("operator_packages_one_active_uq")
+      .on(t.operator_role, t.operator_id)
+      .where(sql`${t.status} = 'active'`),
+  ],
+);
+
+/**
  * Commission enrollments — commission-mode possession, separate from subscriptions so the
  * supersede sequence and subs_one_active_per_driver are untouched (B3/F3, D2).
  * Non-expiring (no expires_at). Written ONLY by lib/monetizationMode.ts.

@@ -673,6 +673,13 @@
       "when": 1794114734205,
       "tag": "0095_operator_bills",
       "breakpoints": true
+    },
+    {
+      "idx": 96,
+      "version": 7,
+      "when": 1794133100840,
+      "tag": "0096_operator_packages",
+      "breakpoints": true
     }
   ]
 }
