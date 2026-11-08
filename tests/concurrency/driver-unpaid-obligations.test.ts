@@ -13,6 +13,7 @@
  */
 import "../../scripts/_load-env";
 import postgresTag from "postgres";
+import { randomUUID } from "crypto";
 import { requireScratchDbUrl } from "./scratch-db-url";
 import { db, recyclePool } from "@/src/db";
 import { eq } from "drizzle-orm";
@@ -25,7 +26,10 @@ import {
   users,
   packages,
 } from "@/src/db/schema";
-import { getDriverUnpaidObligations } from "@/lib/commissionDues";
+import {
+  getDriverUnpaidObligations,
+  getOperatorUnpaidObligations,
+} from "@/lib/commissionDues";
 import { nextBdtMidnightUtc } from "@/lib/time";
 
 const RUN = process.env.RUN_CONCURRENCY_TESTS === "1";
@@ -181,6 +185,30 @@ async function viaBatched(driverId: string): Promise<ObligationRow> {
   return rows[0];
 }
 
+// Batch-2 Item 4: the GENERALIZED view path (operator_unpaid_obligations,
+// keyed operator_role + operator_id) — driver rows read with role='driver'.
+async function viaGeneralizedView(operatorRole: string, operatorId: string): Promise<ObligationRow> {
+  const rows = await scratch.unsafe<ObligationRow[]>(
+    `SELECT operator_id AS driver_id, ${OBLIG_COLUMNS.replace("driver_id, ", "")} FROM operator_unpaid_obligations WHERE operator_role = $1 AND operator_id = $2`,
+    [operatorRole, operatorId],
+  );
+  return rows[0];
+}
+
+// Batch-2 Item 4: the GENERALIZED lib path (getOperatorUnpaidObligations).
+async function viaGeneralizedLib(operatorRole: string, operatorId: string) {
+  const o = await getOperatorUnpaidObligations(operatorRole as never, operatorId, db);
+  return {
+    operator_role: operatorRole,
+    operator_id: operatorId,
+    unpaid_subscription_paisa: String(o.unpaidSubscriptionPaisa),
+    net_commission_paisa: String(o.netCommissionPaisa),
+    total_unpaid_paisa: String(o.totalUnpaidPaisa),
+    active_self_bill_paisa: String(o.activeSelfBillPaisa),
+    lockout_exposure_paisa: String(o.lockoutExposurePaisa),
+  };
+}
+
 T("Item 40 — view, lib function, and batched dispatch shape agree on all five figures", async () => {
   const pkgId = await seedPackage();
 
@@ -225,4 +253,101 @@ T("Item 40 — view, lib function, and batched dispatch shape agree on all five 
     check(b, "lib");
     check(c, "batched");
   }
+}, CASE_TIMEOUT_MS);
+
+// ── Batch-2 Item 4: generalized view/lib/wrapper equality + non-driver rows ──
+
+T("Batch-2 Item 4 — generalized view, generalized lib, and driver wrapper agree for drivers", async () => {
+  const pkgId = await seedPackage();
+  const d = await seedDriver();
+  const sub = await seedSubscription(d.driverId, pkgId, true);
+  await seedBill(d.driverId, sub, 3000);
+
+  const driverId = d.driverId;
+  const [a, b, w] = await Promise.all([
+    viaGeneralizedView("driver", driverId),
+    viaGeneralizedLib("driver", driverId),
+    viaView(driverId),
+  ]);
+  // Wrapper equality: the driver wrapper (driver_unpaid_obligations) is the
+  // generalized row for role='driver', byte-for-byte.
+  expect(num(w.unpaid_subscription_paisa)).toBe(num(b.unpaid_subscription_paisa));
+  expect(num(w.net_commission_paisa)).toBe(num(b.net_commission_paisa));
+  expect(num(w.total_unpaid_paisa)).toBe(num(b.total_unpaid_paisa));
+  expect(num(w.active_self_bill_paisa)).toBe(num(b.active_self_bill_paisa));
+  expect(num(w.lockout_exposure_paisa)).toBe(num(b.lockout_exposure_paisa));
+  // Generalized view and generalized lib agree with the wrapper.
+  expect(num(a.unpaid_subscription_paisa)).toBe(num(b.unpaid_subscription_paisa));
+  expect(num(a.net_commission_paisa)).toBe(num(b.net_commission_paisa));
+  expect(num(a.total_unpaid_paisa)).toBe(num(b.total_unpaid_paisa));
+  expect(num(a.active_self_bill_paisa)).toBe(num(b.active_self_bill_paisa));
+  expect(num(a.lockout_exposure_paisa)).toBe(num(b.lockout_exposure_paisa));
+  // Fixture figures: usable sub + open bill -> self-bill subtracts from lockout.
+  expect(num(b.unpaid_subscription_paisa)).toBe(3000);
+  expect(num(b.total_unpaid_paisa)).toBe(3000);
+  expect(num(b.active_self_bill_paisa)).toBe(3000);
+  expect(num(b.lockout_exposure_paisa)).toBe(0);
+}, CASE_TIMEOUT_MS);
+
+T("Batch-2 Item 4 — open shop-role bill appears in the shop row and NOT in any driver row", async () => {
+  const shopOperatorId = randomUUID();
+
+  // A shop-role USAGE bill (kind <> subscription_purchase) on a non-driver
+  // operator with no drivers row at all.
+  await scratch.unsafe(
+    `INSERT INTO operator_bills (operator_id, operator_role, amount_bdt, status, kind)
+     VALUES ($1, 'shop', 5000, 'open', 'usage_monthly')`,
+    [shopOperatorId],
+  );
+
+  // The shop row exists in the generalized view with the usage figure.
+  const shopRow = await viaGeneralizedView("shop", shopOperatorId);
+  expect(num(shopRow.unpaid_subscription_paisa)).toBe(5000);
+  expect(num(shopRow.net_commission_paisa)).toBe(5000);
+  expect(num(shopRow.total_unpaid_paisa)).toBe(5000);
+  expect(num(shopRow.active_self_bill_paisa)).toBe(0);
+  expect(num(shopRow.lockout_exposure_paisa)).toBe(5000);
+
+  // The shop bill does NOT pollute any DRIVER row: the driver wrapper for the
+  // same operator_id reads zeros (the driver view is operator_role='driver'
+  // and this operator has no driver-role bills).
+  const driverRow = await getDriverUnpaidObligations(db, shopOperatorId);
+  expect(driverRow.unpaidSubscriptionPaisa).toBe(0);
+  expect(driverRow.totalUnpaidPaisa).toBe(0);
+  expect(driverRow.lockoutExposurePaisa).toBe(0);
+}, CASE_TIMEOUT_MS);
+
+T("Batch-2 Item 4 — non-driver carve-out: active operator_packages possession zeroes lockout", async () => {
+  const pkgId = await seedPackage();
+  const shopOperatorId = randomUUID();
+
+  // An ACTIVE operator_packages possession for the shop operator.
+  await scratch.unsafe(
+    `INSERT INTO operator_packages (operator_role, operator_id, package_id, status, expires_at)
+     VALUES ('shop', $1, $2, 'active', NULL)`,
+    [shopOperatorId, pkgId],
+  );
+
+  // Open shop-role bill (usage kind) while possession is active.
+  await scratch.unsafe(
+    `INSERT INTO operator_bills (operator_id, operator_role, amount_bdt, status, kind)
+     VALUES ($1, 'shop', 5000, 'open', 'usage_monthly')`,
+    [shopOperatorId],
+  );
+
+  // Carve-out: the open bill is the operator's own (active possession), so
+  // active_self_bill subtracts it and lockout exposure is zero.
+  const withPossession = await viaGeneralizedView("shop", shopOperatorId);
+  expect(num(withPossession.unpaid_subscription_paisa)).toBe(5000);
+  expect(num(withPossession.active_self_bill_paisa)).toBe(5000);
+  expect(num(withPossession.lockout_exposure_paisa)).toBe(0);
+
+  // The same bill WITHOUT active possession locks out in full.
+  await scratch.unsafe(
+    `UPDATE operator_packages SET status = 'ended', ended_at = now() WHERE operator_id = $1`,
+    [shopOperatorId],
+  );
+  const withoutPossession = await viaGeneralizedView("shop", shopOperatorId);
+  expect(num(withoutPossession.active_self_bill_paisa)).toBe(0);
+  expect(num(withoutPossession.lockout_exposure_paisa)).toBe(5000);
 }, CASE_TIMEOUT_MS);

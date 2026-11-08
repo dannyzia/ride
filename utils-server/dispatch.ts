@@ -327,6 +327,12 @@ export async function buildCandidateList(
   // grouped sums, mirroring lib/commissionDues.ts (keep the two definitions
   // of "net dues" in step). Drivers at or above the configured ceiling are
   // excluded from the pool below.
+  // Batch-2 Item 4: this batched query helper stays DRIVER-scoped by design —
+  // non-driver pool admission (shop/delivery/fleet possession via
+  // operator_packages) is NOT Batch-2 scope. Non-driver ceiling-lockout
+  // enforcement at usage time is likewise deferred (pinned in migration
+  // 0097): the ceiling gates PURCHASE for all operators via the settle-first
+  // barrier.
   const commissionDebtByDriver = new Map<string, number>();
   if (commissionGated && maxCommissionDebtPaisa > 0 && driverIds.length > 0) {
     const accruedRows = await db.select({
