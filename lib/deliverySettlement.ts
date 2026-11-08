@@ -19,27 +19,138 @@
  *     2026-10-17): the due stays the FULL subtotal — the shortfall is
  *     courier liability, recorded on the due row's remittance_note so
  *     "never paid" is never a one-sided claim.
+ *
+ * Batch-2 Item 9 — the PLATFORM-FEE leg only (D7: the COD remittance rows and
+ * the dispatch-hold rules below are a different ledger and are NOT touched by
+ * this hook). The fee is priced through the same A-1 matrix the shop path uses
+ * (lib/shopLedger.resolveCommissionRate): an ACTIVE delivery possession whose
+ * package carries a positive rate REPLACES `delivery_commission_percent`, and
+ * the fee accrues into the courier's aggregate usage bill (postpaid-gross XOR:
+ * the earnings row keeps the fee whole — no at-source deduction). Unpackaged /
+ * no-rate couriers keep the legacy percent byte-for-byte; an exhausted
+ * possession prices at 0. The two legs are never additive.
+ * The delivery operator is the courier ENTITY — couriers.id WHERE
+ * courier_type='food' (the Item 6 mapping in lib/operatorPurchase) — so the
+ * bill is the same row the delivery dues screen reads and settles.
  */
-import { and, eq, inArray, sql } from 'drizzle-orm';
+import { and, desc, eq, inArray, sql } from 'drizzle-orm';
 import { db } from '@/src/db';
 import {
   deliveries,
   deliveryEarnings,
   courierRemittanceDues,
+  operatorPackages,
+  packages,
   shopOrders,
   couriers,
 } from '@/src/db/schema';
+import { accrueUsageBill, reduceUsageBillForReversal } from '@/lib/billsLedger';
+import { isOperatorPackageActive } from '@/lib/monetizationMode';
 import { requireConfigInt } from '@/lib/platformConfig';
 import { logger } from '@/lib/logger';
 
 export interface SettleDeliveryLegResult {
+  /** Paisa credited to the courier. GROSS on the postpaid path (the fee is billed, not withheld). */
   earned_bdt: number;
+  /** Paisa withheld from the earnings AT SOURCE. 0 on the postpaid path. */
   commission_bdt: number;
+  /** Paisa accrued into the courier's aggregate usage bill. 0 on the legacy path. */
+  usage_accrued_bdt: number;
   due_bdt: number;
 }
 
 /** DB tx handle type (same shape leadBilling uses). */
 type DbTx = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+/** Which rate governs this courier's platform fee, and who the bill belongs to. */
+interface DeliveryFeeRate {
+  percent: number;
+  source: 'package' | 'legacy' | 'none';
+  /** couriers.id holding the possession (Item 6 mapping); null on the legacy/no-package path. */
+  operatorId: string | null;
+}
+
+/**
+ * The courier ENTITY for a user: `couriers.id WHERE user_id = $1 AND
+ * courier_type = 'food'`. This is the exact Item 6 ownership mapping
+ * (lib/operatorPurchase.resolveOperatorIdentity 'delivery'), which is what
+ * operator_packages / operator_bills are keyed by — so the fee accrues onto the
+ * very bill the delivery dues screen shows. Parcel couriers are driver-role and
+ * have no delivery possession: their fee stays on the legacy percent.
+ */
+async function resolveDeliveryCourierId(
+  tx: DbTx,
+  courierUserId: string,
+): Promise<string | null> {
+  const [row] = await tx
+    .select({ id: couriers.id })
+    .from(couriers)
+    .where(and(eq(couriers.user_id, courierUserId), eq(couriers.courier_type, 'food')))
+    .limit(1);
+  return row?.id ?? null;
+}
+
+async function readLegacyPercent(): Promise<number> {
+  try {
+    return await requireConfigInt('delivery_commission_percent');
+  } catch (err: unknown) {
+    // Missing key is a deployment defect (requireConfigInt logs loudly) — the
+    // settlement transaction must not price off an invented zero.
+    logger.error('[deliverySettlement] commission percent unreadable', {
+      error: err instanceof Error ? err.message : String(err),
+    });
+    throw err;
+  }
+}
+
+/**
+ * A-1 rate precedence for a delivery fee (Batch-2 Item 9) — the same matrix
+ * lib/shopLedger.resolveCommissionRate applies to orders:
+ *
+ *   active package with a positive rate  → that rate; `delivery_commission_percent`
+ *                                          is NOT read or applied (never additive).
+ *   active package with no rate          → the legacy config percent continues.
+ *   possession exhausted (expired)       → 0 (the billing contract lapsed).
+ *   no package ever granted              → the legacy percent, byte-for-byte.
+ */
+async function resolveDeliveryFeeRate(
+  tx: DbTx,
+  courierUserId: string,
+): Promise<DeliveryFeeRate> {
+  const operatorId = await resolveDeliveryCourierId(tx, courierUserId);
+  if (!operatorId) return { percent: await readLegacyPercent(), source: 'legacy', operatorId: null };
+
+  const possession = await tx
+    .select({
+      status: operatorPackages.status,
+      expires_at: operatorPackages.expires_at,
+      commission_percent: packages.commission_percent,
+    })
+    .from(operatorPackages)
+    .leftJoin(packages, eq(operatorPackages.package_id, packages.id))
+    .where(
+      and(
+        eq(operatorPackages.operator_role, 'delivery'),
+        eq(operatorPackages.operator_id, operatorId),
+      ),
+    )
+    .orderBy(desc(operatorPackages.started_at));
+
+  if (possession.length === 0) {
+    return { percent: await readLegacyPercent(), source: 'legacy', operatorId: null };
+  }
+
+  const usable = possession.find((row) => isOperatorPackageActive(row));
+  if (!usable) return { percent: 0, source: 'none', operatorId: null };
+
+  const packagePercent =
+    usable.commission_percent == null ? 0 : Number(usable.commission_percent);
+  if (packagePercent > 0) {
+    return { percent: packagePercent, source: 'package', operatorId };
+  }
+
+  return { percent: await readLegacyPercent(), source: 'legacy', operatorId: null };
+}
 
 /**
  * Settle one delivered leg inside the caller's transaction:
@@ -61,23 +172,52 @@ export async function settleDeliveryLeg(
   if (existingEarning) return null; // already settled — no-op
 
   const [leg] = await tx
-    .select({ delivery_fee_bdt: deliveries.delivery_fee_bdt })
+    .select({
+      delivery_fee_bdt: deliveries.delivery_fee_bdt,
+      delivery_man_user_id: deliveries.delivery_man_user_id,
+    })
     .from(deliveries)
     .where(eq(deliveries.id, legId))
     .limit(1);
   const feeBdt = leg?.delivery_fee_bdt ?? 0;
 
-  // Fresh-read commission (seeds-not-constants): missing key propagates.
-  const commissionPercent = await requireConfigInt('delivery_commission_percent');
-  const commissionBdt = Math.round((feeBdt * commissionPercent) / 100);
-  const netBdt = feeBdt - commissionBdt;
+  // Batch-2 Item 9 — the DELIVERING courier comes off the delivery record (its
+  // own assignee column); the caller's authenticated id is only a fallback for
+  // a row written before that column was stamped. The route has already checked
+  // `leg.delivery_man_user_id === auth.dbUser.id` for the action it authorized.
+  const deliveringUserId = leg?.delivery_man_user_id ?? courierUserId;
+
+  // A-1 matrix (fresh-read; missing key propagates): package rate > legacy config
+  // > exhausted = 0, never additive.
+  const rate = await resolveDeliveryFeeRate(tx, deliveringUserId);
+  const platformFeeBdt = rate.percent > 0 ? Math.round((feeBdt * rate.percent) / 100) : 0;
+
+  // ── The two billing models are MUTUALLY EXCLUSIVE per leg ────────────────
+  // POSTPAID — a packaged courier is billed through the aggregate usage bill
+  // (the dues screen's one owed figure): the fee accrues there and the earnings
+  // row keeps the fee WHOLE (no at-source deduction), so the same paisa is never
+  // credited and withheld at once.
+  // LEGACY / EXHAUSTED — the fee is withheld from the earnings exactly as
+  // before (config percent, or 0 when the possession lapsed); no bill is touched.
+  let atSourceBdt = platformFeeBdt;
+  let accruedBdt = 0;
+  if (platformFeeBdt > 0 && rate.source === 'package' && rate.operatorId) {
+    await accrueUsageBill(tx, {
+      operatorRole: 'delivery',
+      operatorId: rate.operatorId,
+      amountBdt: platformFeeBdt,
+    });
+    accruedBdt = platformFeeBdt;
+    atSourceBdt = 0;
+  }
+  const netBdt = feeBdt - atSourceBdt;
 
   await tx.insert(deliveryEarnings).values({
     delivery_man_user_id: courierUserId,
     leg_id: legId,
     order_id: orderId,
     fee_bdt: feeBdt,
-    commission_bdt: commissionBdt,
+    commission_bdt: atSourceBdt,
     net_bdt: netBdt,
   });
 
@@ -127,12 +267,89 @@ export async function settleDeliveryLeg(
     orderId,
     courierUserId,
     feeBdt,
-    commissionBdt,
+    rateSource: rate.source,
+    ratePercent: rate.percent,
+    commissionBdt: atSourceBdt,
+    usageAccruedBdt: accruedBdt,
     netBdt,
     dueBdt,
   });
 
-  return { earned_bdt: netBdt, commission_bdt: commissionBdt, due_bdt: dueBdt };
+  return {
+    earned_bdt: netBdt,
+    commission_bdt: atSourceBdt,
+    usage_accrued_bdt: accruedBdt,
+    due_bdt: dueBdt,
+  };
+}
+
+/**
+ * Batch-2 Item 9 — take a delivered leg's platform fee back out of the
+ * courier's aggregate usage bill (reversal parity with
+ * lib/shopLedger.reverseShopOrder's postpaid branch).
+ *
+ * Mirror, exactly:
+ *   POSTPAID leg  — the earnings row carries NO commission (commission_bdt = 0,
+ *                   the fee lives on the bill), so the fee must come back out of
+ *                   the bill, recomputed from the leg's own fee_bdt × the rate
+ *                   that governs today (the postpaid path leaves no per-leg
+ *                   receipt, so this is the same recomputation the shop reversal
+ *                   performs from shop_orders.subtotal_bdt).
+ *   LEGACY leg    — the fee was withheld at source; nothing ever accrued, so no
+ *                   bill is touched. Exactly one path runs per leg.
+ *
+ * Scope guard: this reads delivery_earnings and reduces operator_bills. It never
+ * writes courier_remittance_dues, delivery_earnings, or any hold input — COD
+ * remittance is a different custody ledger (D7) and stays exactly as it is.
+ *
+ * Idempotence: the caller invokes it only in the transaction that just wrote the
+ * shop ledger reversal row for this order (`reversed_bdt !== 0`), and that row is
+ * the barrier — a second force-cancel is a 409 before it ever reaches here, and a
+ * repeat call would return 0 from reverseShopOrder and skip this hook.
+ */
+export async function reverseDeliveryUsageForOrder(
+  tx: DbTx,
+  opts: { orderId: string },
+): Promise<{ reduced_bdt: number }> {
+  const rows = await tx
+    .select({
+      leg_id: deliveryEarnings.leg_id,
+      delivery_man_user_id: deliveryEarnings.delivery_man_user_id,
+      fee_bdt: deliveryEarnings.fee_bdt,
+      commission_bdt: deliveryEarnings.commission_bdt,
+    })
+    .from(deliveryEarnings)
+    .where(eq(deliveryEarnings.order_id, opts.orderId));
+
+  let reducedBdt = 0;
+  for (const row of rows) {
+    // Nothing moved on this leg (never delivered) or the row is not a fee credit.
+    if (!Number.isInteger(row.fee_bdt) || row.fee_bdt <= 0) continue;
+    // Legacy pair: the fee came off the earnings, so no bill accrued for it.
+    if (row.commission_bdt > 0) continue;
+
+    const rate = await resolveDeliveryFeeRate(tx, row.delivery_man_user_id);
+    if (rate.source !== 'package' || rate.percent <= 0 || !rate.operatorId) continue;
+
+    const accrued = Math.round((row.fee_bdt * rate.percent) / 100);
+    if (accrued <= 0) continue;
+
+    await reduceUsageBillForReversal(tx, {
+      operatorRole: 'delivery',
+      operatorId: rate.operatorId,
+      amountBdt: accrued,
+    });
+    reducedBdt += accrued;
+
+    logger.info('[deliverySettlement] usage bill reduced for reversal', {
+      orderId: opts.orderId,
+      legId: row.leg_id,
+      operatorId: rate.operatorId,
+      reducedBy: accrued,
+    });
+  }
+
+  return { reduced_bdt: reducedBdt };
 }
 
 /**

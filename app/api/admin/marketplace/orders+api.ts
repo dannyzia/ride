@@ -36,6 +36,7 @@ import { requireAdminPermission } from '@/lib/adminRbac';
 import { parseJsonBody } from '@/lib/parseBody';
 import { writeAudit } from '@/lib/auditLog';
 import { reverseShopOrder } from '@/lib/shopLedger';
+import { reverseDeliveryUsageForOrder } from '@/lib/deliverySettlement';
 import { CUSTOMER_CANCELLABLE_STATES } from '@/lib/shopOrderCancel';
 import { notifyCustomerForceCancel } from '@/lib/shopNotify';
 import { notifyWs } from '@/lib/wsNotify';
@@ -263,6 +264,16 @@ export async function POST(request: Request) {
         { reason: `force_cancel:${reason_code}` },
       );
       reversedBdt = reversed_bdt;
+
+      // Batch-2 Item 9 — the courier's PLATFORM FEE for this order's delivered
+      // leg comes back out of their usage bill, mirroring the shop reversal in
+      // the same transaction. Gated on the reversal that just happened, so an
+      // order that never settled (or an already-reversed one) touches no bill.
+      // COD remittance dues are a different custody ledger (D7) and are not
+      // read or written here.
+      if (reversed_bdt !== 0) {
+        await reverseDeliveryUsageForOrder(tx, { orderId: order.id });
+      }
     });
 
     if (guard) return guard;
