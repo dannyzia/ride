@@ -91,7 +91,11 @@ function mockSelectQueue(queue: Row[][]): void {
 function queueDuesBase(
   accrued: number,
   settled: number,
-  opts: { includeSubscription?: boolean; includeBills?: boolean } = {},
+  opts: {
+    includeSubscription?: boolean;
+    includeBills?: boolean;
+    enrollment?: Row | null;
+  } = {},
 ): void {
   // Select order in GET /api/driver/dues: users, drivers, subscriptions,
   // commissionEnrollments, driverBills — then the view via db.execute.
@@ -99,7 +103,7 @@ function queueDuesBase(
     [{ id: USER_ID }],
     [{ id: DRIVER_ID, status: "active" }],
     [], // subscriptions (none usable in these tests)
-    [], // commissionEnrollments (none active)
+    opts.enrollment ? [opts.enrollment] : [], // commissionEnrollments
     [], // driverBills (none open)
   ];
   mockSelectQueue(queue);
@@ -178,6 +182,31 @@ describe("GET /api/driver/dues — net commission dues", () => {
     expect(body.commission_accrued_bdt).toBe(80_000);
     expect(body.commission_settled_bdt).toBe(80_000);
     expect(body.commission_due_bdt).toBe(80_000);
+    expect(body.is_dispatch_locked).toBe(false);
+  });
+
+  // ── D3-B-r2 audit closure: enrollment expiry in the state machine ────────
+
+  test("D3-B-r2: expired enrollment (expires_at <= now) reports LAPSED", async () => {
+    queueDuesBase(0, 0, {
+      enrollment: { id: "enr-1", expires_at: new Date(Date.now() - 3_600_000).toISOString() },
+    });
+
+    const body = await getJson(await GET(request()));
+
+    expect(body.monetization_state).toBe("LAPSED");
+    // Zero dues → debt-based lockout unchanged (state only).
+    expect(body.is_dispatch_locked).toBe(false);
+  });
+
+  test("D3-B-r2: usable (non-expiring) enrollment keeps the driver out of LAPSED", async () => {
+    queueDuesBase(0, 0, {
+      enrollment: { id: "enr-1", expires_at: null },
+    });
+
+    const body = await getJson(await GET(request()));
+
+    expect(body.monetization_state).toBe("ACTIVE");
     expect(body.is_dispatch_locked).toBe(false);
   });
 });

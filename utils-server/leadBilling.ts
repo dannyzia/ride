@@ -27,7 +27,7 @@ import {
   drivers,
   rides,
 } from '../src/db/schema';
-import { eq, and, isNull, sql, desc } from 'drizzle-orm';
+import { eq, and, isNull, or, sql, desc } from 'drizzle-orm';
 import { logger } from '../lib/logger';
 import { driverErrorCode } from '../lib/idempotency';
 import { isDriverEligibleForRideGender } from '../lib/womenOnlyEligibility';
@@ -43,9 +43,16 @@ export interface DebitResult {
    * (the lead WAS debited), 'commission' when an active commission enrollment
    * governs (no lead debited — the offer row still commits), 'none' when the
    * driver holds neither product (skip). Derived from possession rows per
-   * driver (§3.5) — never from the pool-level kill switch.
+   * §3.5 — never from the pool-level kill switch.
    */
   mode: 'subscription' | 'commission' | 'none';
+  /**
+   * D3-B-r2: resolved commission rate for this offer, null when there is no
+   * commission leg (pure subscription or legacy). Non-null on bundle
+   * (subscription + percent > 0) and commission-mode offers. Written onto
+   * dispatch_offers.commission_percent by this module.
+   */
+  commissionPercent: number | null;
 }
 
 export interface DebitLeadParams {
@@ -116,6 +123,7 @@ export async function debitLeadForOffer(
   // holds no product and is skipped.
   let lockedSub: typeof subscriptions.$inferSelect | undefined;
   let mode: 'subscription' | 'commission' | 'none' = 'none';
+  let commissionPercent: number | null = null;
   let callsRemaining = -1;
   let dailyUsed = 0;
 
@@ -133,7 +141,7 @@ export async function debitLeadForOffer(
     .orderBy(desc(subscriptions.expires_at))
     .limit(1);
 
-  if (sub) {
+    if (sub) {
     // ── Subscription mode: draw one call lead ────────────────────────────
     mode = 'subscription';
 
@@ -144,44 +152,64 @@ export async function debitLeadForOffer(
       .where(eq(subscriptions.id, sub.id))
       .for('update');
 
-    if (!row) return { billed: false, balanceAfter: null, mode: 'none' };
+    if (!row) return { billed: false, balanceAfter: null, mode: 'none', commissionPercent: null };
     lockedSub = row;
 
     // 3. Daily-cap guard (daily_cap lives on packages, not subscriptions)
     const [pkg] = await tx
-      .select({ daily_cap: packages.daily_cap })
+      .select({ daily_cap: packages.daily_cap, commission_percent: packages.commission_percent })
       .from(packages)
       .where(eq(packages.id, row.package_id))
       .limit(1);
     const dailyCap = pkg?.daily_cap ?? 200;
     dailyUsed = row.daily_calls_used ?? 0;
     if (dailyUsed >= dailyCap) {
-      return { billed: false, balanceAfter: null, mode: 'none' };
+      return { billed: false, balanceAfter: null, mode: 'none', commissionPercent: null };
     }
 
     // 4. Balance guard (-1 = unlimited)
     callsRemaining = row.calls_remaining;
     if (callsRemaining !== -1 && callsRemaining <= 0) {
-      return { billed: false, balanceAfter: null, mode: 'none' };
+      return { billed: false, balanceAfter: null, mode: 'none', commissionPercent: null };
     }
+
+    // D3-B-r2: resolve the bundle commission rate from the package. A bundle
+    // is mode='subscription' with a non-null percent; pure subscription has
+    // commission_percent = null.
+    const pkgPercent = Number(pkg?.commission_percent ?? 0);
+    commissionPercent = pkgPercent > 0 ? pkgPercent : null;
   } else {
-    // ── 1b. Commission mode: active enrollment, no lead debit ────────────
+    // ── 1b. Commission mode: active, UNEXPIRED enrollment, no lead debit ──
+    // (D3-B-r2 audit closure / F-9.1 defense-in-depth: an enrollment whose
+    // expires_at has passed is treated as no-enrollment — falls to the
+    // existing no-sub skip below.)
     const [enr] = await tx
-      .select()
+      .select({
+        id: commissionEnrollments.id,
+        commission_percent: packages.commission_percent,
+      })
       .from(commissionEnrollments)
+      .innerJoin(packages, eq(commissionEnrollments.package_id, packages.id))
       .where(
         and(
           eq(commissionEnrollments.driver_id, driverId),
           eq(commissionEnrollments.status, 'active'),
+          or(
+            isNull(commissionEnrollments.expires_at),
+            sql`${commissionEnrollments.expires_at} > now()`,
+          ),
         ),
       )
       .limit(1);
 
     if (!enr) {
       // Neither product — skip driver, zero writes
-      return { billed: false, balanceAfter: null, mode: 'none' };
+      return { billed: false, balanceAfter: null, mode: 'none', commissionPercent: null };
     }
     mode = 'commission';
+    // D3-B-r2: commission-only offers carry the enrollment package's percent.
+    const enrPercent = Number(enr.commission_percent ?? 0);
+    commissionPercent = enrPercent > 0 ? enrPercent : null;
   }
 
   // ── 4b. Account-status + mid-chain drift guard (F-9.1, S8) ─────────────
@@ -210,13 +238,13 @@ export async function debitLeadForOffer(
 
   // Fail closed if driver or ride missing
   if (!driverRow || !rideRow || driverRow.status !== 'active' || driverRow.is_online !== true) {
-    return { billed: false, balanceAfter: null, mode };
+    return { billed: false, balanceAfter: null, mode, commissionPercent: null };
   }
 
   // Require vehicle type equality (guards against mid-chain vehicle switch)
   if (driverRow.vehicle_type !== rideRow.vehicle_type) {
     logger.info('[leadBilling] driver vehicle_type drifted mid-chain — skipping debit', { rideId, driverId });
-    return { billed: false, balanceAfter: null, mode };
+    return { billed: false, balanceAfter: null, mode, commissionPercent: null };
   }
 
   // Pass womenOnlyFeatureEnabled directly from params (zero additional DB queries inside tx)
@@ -231,10 +259,10 @@ export async function debitLeadForOffer(
 
   if (!isStillEligible) {
     logger.info('[leadBilling] driver drifted ineligible mid-chain — skipping debit', { rideId, driverId });
-    return { billed: false, balanceAfter: null, mode };
+    return { billed: false, balanceAfter: null, mode, commissionPercent: null };
   }
 
-  // ── 5. Insert dispatch_offers row carrying monetization_mode ────────────
+  // ── 5. Insert dispatch_offers row carrying monetization_mode + commission_percent ──
   const insertedOffer = await tx
     .insert(dispatchOffers)
     .values({
@@ -244,6 +272,9 @@ export async function debitLeadForOffer(
       sent_at: new Date(),
       outcome: 'delivered',
       monetization_mode: mode,
+      // D3-B-r2: durable commission rate on the offer (bundle/commission leg).
+      // numeric(5,2) columns take string values.
+      commission_percent: commissionPercent != null ? String(commissionPercent) : null,
     })
     .onConflictDoNothing()
     .returning({ id: dispatchOffers.id });
@@ -253,7 +284,7 @@ export async function debitLeadForOffer(
       rideId,
       driverId,
     });
-    return { billed: false, balanceAfter: null, mode };
+    return { billed: false, balanceAfter: null, mode, commissionPercent: null };
   }
 
   // ── 5b. Commission mode: the offer row is the only write ────────────────
@@ -264,13 +295,14 @@ export async function debitLeadForOffer(
       rideId,
       driverId,
       chainIndex,
+      commissionPercent,
     });
-    return { billed: true, balanceAfter: null, mode: 'commission' };
+    return { billed: true, balanceAfter: null, mode: 'commission', commissionPercent };
   }
 
   // Defensive: subscription mode always sets lockedSub before reaching here.
   if (!lockedSub) {
-    return { billed: false, balanceAfter: null, mode: 'none' };
+    return { billed: false, balanceAfter: null, mode: 'none', commissionPercent: null };
   }
 
   // ── 6. Insert call_ledger deduction ─────────────────────────────────────
@@ -315,7 +347,7 @@ export async function debitLeadForOffer(
     balanceAfter: newBalance,
   });
 
-  return { billed: true, balanceAfter: newBalance, mode: 'subscription' };
+  return { billed: true, balanceAfter: newBalance, mode: 'subscription', commissionPercent };
 }
 
 /**
@@ -334,7 +366,7 @@ export async function debitLeadForOfferTx(
     return await db.transaction(async (tx) => debitLeadForOffer(tx, params));
   } catch (e) {
     if (e instanceof SkipBillingError) {
-      return { billed: false, balanceAfter: null, mode: 'none' };
+      return { billed: false, balanceAfter: null, mode: 'none', commissionPercent: null };
     }
     throw e;
   }

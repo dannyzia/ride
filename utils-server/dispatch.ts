@@ -14,7 +14,7 @@ import {
   driverCommissionSettlements,
   commissionEnrollments,
 } from '../src/db/schema';
-import { eq, and, inArray, isNull, sql, gte } from 'drizzle-orm';
+import { eq, and, inArray, isNull, or, sql, gte } from 'drizzle-orm';
 import { getH3Ring } from '../lib/h3';
 import { getDriversInCells, HEARTBEAT_STALE_MS } from './h3Index';
 import { checkDriverEligibility, type VehicleTypeEnum } from '../lib/vehicleTypes';
@@ -302,7 +302,9 @@ export async function buildCandidateList(
   // ── Per-driver possession (Item 11): active commission enrollments.
   // A driver holding an active enrollment is offerable in commission mode
   // even with an exhausted or absent call package — possession, not the
-  // pool-level kill switch, governs the driver's mode (§3.5).
+  // pool-level kill switch, governs the driver's mode (§3.5). An ACTIVE
+  // enrollment whose expires_at has passed is NOT usable (§3.5 billing-set
+  // predicate) — expired enrollments are excluded from the pool.
   const commissionEnrolled = new Set<string>();
   if (driverIds.length > 0) {
     const enrRows = await db
@@ -311,6 +313,10 @@ export async function buildCandidateList(
       .where(and(
         inArray(commissionEnrollments.driver_id, driverIds),
         eq(commissionEnrollments.status, 'active'),
+        or(
+          isNull(commissionEnrollments.expires_at),
+          sql`${commissionEnrollments.expires_at} > now()`,
+        ),
       ));
     for (const row of enrRows) {
       if (row.driver_id) commissionEnrolled.add(row.driver_id);

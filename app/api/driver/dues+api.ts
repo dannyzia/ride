@@ -80,8 +80,14 @@ export async function GET(request: Request) {
       .orderBy(desc(subscriptions.created_at));
 
     // Single active commission enrollment (one-active index guarantees <= 1).
+    // D3-B-r2: expires_at participates in the state machine — an enrollment
+    // whose expiry has passed is NOT a usable product and lands the driver in
+    // LAPSED (§3.6 item 3).
     const [enrollment] = await db
-      .select({ id: commissionEnrollments.id })
+      .select({
+        id: commissionEnrollments.id,
+        expires_at: commissionEnrollments.expires_at,
+      })
       .from(commissionEnrollments)
       .where(
         and(
@@ -123,6 +129,13 @@ export async function GET(request: Request) {
     );
     const latestSub = allSubs[0];
 
+    // D3-B-r2: enrollment expiry state — an active enrollment whose
+    // expires_at has passed is NOT a usable product.
+    const enrollmentUsable = hasCommissionEnrollment &&
+      (!enrollment || enrollment.expires_at == null || new Date(enrollment.expires_at) > now);
+    const enrollmentExpired = hasCommissionEnrollment && enrollment != null &&
+      enrollment.expires_at != null && new Date(enrollment.expires_at) <= now;
+
     // Single owed-figure from the view (canonical total).
     const obligations = await getDriverUnpaidObligations(db, driver.id);
     const totalUnpaid = obligations.totalUnpaidPaisa;
@@ -143,19 +156,19 @@ export async function GET(request: Request) {
       // 2. CEILING_LOCKED — exposure at/above the debt ceiling.
       state = 'CEILING_LOCKED';
       lockReason = 'debt_ceiling';
-    } else if (!hasCommissionEnrollment && (
+    } else if (enrollmentExpired || (!enrollmentUsable && (
       (latestSub && (latestSub.status === 'expired' || latestSub.calls_remaining === 0)) ||
       (totalUnpaid >= DUST_DUES_BDT && !usableSub)
-    )) {
-      // 3. LAPSED — no enrollment; latest sub expired/exhausted, or >= ৳10
-      //    owed with no usable product.
+    ))) {
+      // 3. LAPSED — no usable product: latest sub expired/exhausted, >= ৳10
+      //    owed with no usable product, or D3-B-r2 expired enrollment.
       state = 'LAPSED';
       lockReason = 'subscription_lapsed';
     } else if (usableSub && totalUnpaid >= DUST_DUES_BDT && totalUnpaid < ceiling) {
       // 4. OWING — usable product held, owe >= ৳10 but below ceiling.
       state = 'OWING';
-    } else if (hasCommissionEnrollment && frozenSub && totalUnpaid < DUST_DUES_BDT) {
-      // 5. PRODUCT_FROZEN — active enrollment + frozen usable sub, no debt.
+    } else if (enrollmentUsable && frozenSub && totalUnpaid < DUST_DUES_BDT) {
+      // 5. PRODUCT_FROZEN — usable enrollment + frozen usable sub, no debt.
       state = 'PRODUCT_FROZEN';
     } else {
       // 6. ACTIVE — usable product (or pure commission mode) with no debt.

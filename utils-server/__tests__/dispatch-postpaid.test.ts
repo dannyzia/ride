@@ -101,7 +101,15 @@ let settlementsGrouped: Row[] = [];
 function rowsFor(table: unknown): Row[] {
   if (table === rides) return [RIDE_ROW];
   if (table === drivers) return driverRows;
-  if (table === commissionEnrollments) return enrollmentRows;
+  if (table === commissionEnrollments) {
+    // Simulate the D3-B-r2 SQL expiry predicate (§3.5 billing-set): active
+    // enrollments whose expires_at has passed are invisible to the pool,
+    // like Postgres would be.
+    const now = new Date();
+    return enrollmentRows.filter(
+      (e) => e.expires_at == null || new Date(String(e.expires_at)) > now,
+    );
+  }
   if (table === pricing) return [{ per_km_bdt: 775 }];
   return [];
 }
@@ -149,8 +157,37 @@ describe("dispatch-postpaid — per-driver possession admission", () => {
   test("commission-enrolled driver with no usable subscription is admitted (no lead debit needed)", async () => {
     driverRows = [{ ...BASE_DRIVER, calls_remaining: null }];
     enrollmentRows = [
-      { id: "enr-1", driver_id: "d1", package_id: "pkg-comm", status: "active" },
+      { id: "enr-1", driver_id: "d1", package_id: "pkg-comm", status: "active", expires_at: null },
     ];
+
+    const candidates = await build();
+
+    expect(candidates).toHaveLength(1);
+    expect(candidates[0].driverId).toBe("d1");
+  });
+
+  test("expired enrollment (expires_at <= now) is excluded from the pool", async () => {
+    driverRows = [{ ...BASE_DRIVER, calls_remaining: null }];
+    enrollmentRows = [
+      {
+        id: "enr-1",
+        driver_id: "d1",
+        package_id: "pkg-comm",
+        status: "active",
+        expires_at: new Date(Date.now() - 3_600_000).toISOString(),
+      },
+    ];
+
+    const candidates = await build();
+
+    expect(candidates).toEqual([]);
+  });
+
+  test("bundle driver (calls + commission percent) is admitted under hybrid", async () => {
+    // A bundle package has both calls AND a commission leg. At the pool
+    // level the driver is billable via calls_remaining; the commission leg
+    // is bound at offer time by leadBilling.
+    driverRows = [{ ...BASE_DRIVER, calls_remaining: 7 }];
 
     const candidates = await build();
 
@@ -167,8 +204,17 @@ describe("dispatch-postpaid — per-driver possession admission", () => {
     expect(candidates).toEqual([]);
   });
 
-  test("exhausted subscription (calls_remaining = 0) is never in the pool", async () => {
+  test("exhaustion-by-calls (calls_remaining = 0) blocks offers", async () => {
     driverRows = [{ ...BASE_DRIVER, calls_remaining: 0 }];
+
+    const candidates = await build();
+
+    expect(candidates).toEqual([]);
+  });
+
+  test("exhausted calls with no commission enrollment is excluded", async () => {
+    driverRows = [{ ...BASE_DRIVER, calls_remaining: 0 }];
+    enrollmentRows = [];
 
     const candidates = await build();
 

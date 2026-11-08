@@ -108,8 +108,19 @@ function buildDbMock(initial: Partial<FakeState>): {
     // The real query filters status='active' (and expiry) in SQL; the mock
     // applies the active-status predicate for subscriptions so expired
     // subscription rows are invisible to the resolver, like Postgres would be.
-    const visible = table === subscriptions ? rows.filter((r) => r.status === "active") : rows;
+    // D3-B-r2: expired active enrollments are invisible to the classification
+    // resolver, like Postgres would be (§3.5 billing-set predicate).
+    const visible = table === subscriptions
+      ? rows.filter((r) => r.status === "active")
+      : table === commissionEnrollments
+        ? rows.filter(
+            (r) => r.expires_at == null || new Date(String(r.expires_at)) > new Date(),
+          )
+        : rows;
     const chain: Record<string, unknown> = {
+      // D3-B-r2: the commission-mode enrollment lookup inner-joins packages
+      // for commission_percent — the mock passes the join through.
+      innerJoin: () => chain,
       where: () => chain,
       orderBy: () => chain,
       for: () => chain,
@@ -229,7 +240,7 @@ describe("debitLeadForOfferTx — happy path", () => {
       womenOnlyFeatureEnabled: false,
     });
 
-    expect(res).toEqual({ billed: true, balanceAfter: 4, mode: 'subscription' });
+    expect(res).toEqual({ billed: true, balanceAfter: 4, mode: 'subscription', commissionPercent: null });
     expect(state.dispatchOffers).toHaveLength(1);
     expect(state.dispatchOffers[0]).toMatchObject({
       ride_id: "ride-1",
@@ -266,7 +277,7 @@ describe("debitLeadForOfferTx — happy path", () => {
 
     const res = await debitLeadForOfferTx({ rideId: "ride-1", driverId: "driver-1", womenOnlyFeatureEnabled: false });
 
-    expect(res).toEqual({ billed: true, balanceAfter: -1, mode: 'subscription' });
+    expect(res).toEqual({ billed: true, balanceAfter: -1, mode: 'subscription', commissionPercent: null });
     expect(state.callLedger[0]).toMatchObject({ balance_after: -1, delta: -1 });
     expect(state.subscriptions[0].calls_remaining).toBe(-1);
     expect(state.subscriptions[0].daily_calls_used).toBe(1);
@@ -487,7 +498,7 @@ describe("debitLeadForOfferTx — account-status guard (F-9.1)", () => {
 
     const res = await debitLeadForOfferTx({ rideId: "ride-1", driverId: "driver-1", womenOnlyFeatureEnabled: false });
 
-    expect(res).toEqual({ billed: false, balanceAfter: null, mode: 'subscription' });
+    expect(res).toEqual({ billed: false, balanceAfter: null, mode: 'subscription', commissionPercent: null });
     expect(state.dispatchOffers).toHaveLength(0);
     expect(state.callLedger).toHaveLength(0);
   });
@@ -501,7 +512,7 @@ describe("debitLeadForOfferTx — account-status guard (F-9.1)", () => {
 
     const res = await debitLeadForOfferTx({ rideId: "ride-1", driverId: "driver-1", womenOnlyFeatureEnabled: false });
 
-    expect(res).toEqual({ billed: false, balanceAfter: null, mode: 'subscription' });
+    expect(res).toEqual({ billed: false, balanceAfter: null, mode: 'subscription', commissionPercent: null });
     expect(state.dispatchOffers).toHaveLength(0);
   });
 
@@ -514,7 +525,7 @@ describe("debitLeadForOfferTx — account-status guard (F-9.1)", () => {
 
     const res = await debitLeadForOfferTx({ rideId: "ride-1", driverId: "driver-1", womenOnlyFeatureEnabled: false });
 
-    expect(res).toEqual({ billed: true, balanceAfter: 4, mode: 'subscription' });
+    expect(res).toEqual({ billed: true, balanceAfter: 4, mode: 'subscription', commissionPercent: null });
     expect(state.dispatchOffers).toHaveLength(1);
     expect(state.callLedger).toHaveLength(1);
   });
@@ -576,7 +587,7 @@ describe("debitLeadForOfferTx — drizzle-wrapped 23505 (S6 regression)", () => 
 
     // Pre-fix: SkipBillingError was never thrown for the wrapped error and
     // this call REJECTED. Post-fix: recognized → rollback-and-skip.
-    expect(res).toEqual({ billed: false, balanceAfter: null, mode: 'none' });
+    expect(res).toEqual({ billed: false, balanceAfter: null, mode: 'none', commissionPercent: null });
     expect(mock.state.dispatchOffers).toHaveLength(0); // offer row rolled back
     expect(mock.state.callLedger).toHaveLength(0);
     expect(mock.state.subscriptions[0].calls_remaining).toBe(5); // untouched
@@ -613,7 +624,7 @@ describe("debitLeadForOfferTx — S8 step 4b (women-only drift guard)", () => {
       driverId: "driver-1",
       womenOnlyFeatureEnabled: true,
     });
-    expect(res).toEqual({ billed: true, balanceAfter: 4, mode: 'subscription' });
+    expect(res).toEqual({ billed: true, balanceAfter: 4, mode: 'subscription', commissionPercent: null });
     expect(state.dispatchOffers).toHaveLength(1);
     expect(state.callLedger).toHaveLength(1);
   });
@@ -628,7 +639,7 @@ describe("debitLeadForOfferTx — S8 step 4b (women-only drift guard)", () => {
       driverId: "driver-1",
       womenOnlyFeatureEnabled: true,
     });
-    expect(res).toEqual({ billed: false, balanceAfter: null, mode: 'subscription' });
+    expect(res).toEqual({ billed: false, balanceAfter: null, mode: 'subscription', commissionPercent: null });
     expect(state.dispatchOffers).toHaveLength(0);
     expect(state.callLedger).toHaveLength(0);
   });
@@ -640,7 +651,7 @@ describe("debitLeadForOfferTx — S8 step 4b (women-only drift guard)", () => {
       driverId: "driver-1",
       womenOnlyFeatureEnabled: true,
     });
-    expect(res).toEqual({ billed: false, balanceAfter: null, mode: 'subscription' });
+    expect(res).toEqual({ billed: false, balanceAfter: null, mode: 'subscription', commissionPercent: null });
     expect(state.dispatchOffers).toHaveLength(0);
     expect(state.callLedger).toHaveLength(0);
   });
@@ -654,7 +665,7 @@ describe("debitLeadForOfferTx — S8 step 4b (women-only drift guard)", () => {
       driverId: "driver-1",
       womenOnlyFeatureEnabled: true,
     });
-    expect(res).toEqual({ billed: false, balanceAfter: null, mode: 'subscription' });
+    expect(res).toEqual({ billed: false, balanceAfter: null, mode: 'subscription', commissionPercent: null });
     expect(state.dispatchOffers).toHaveLength(0);
     expect(state.callLedger).toHaveLength(0);
   });
@@ -668,7 +679,7 @@ describe("debitLeadForOfferTx — S8 step 4b (women-only drift guard)", () => {
       driverId: "driver-1",
       womenOnlyFeatureEnabled: false,
     });
-    expect(res).toEqual({ billed: true, balanceAfter: 4, mode: 'subscription' });
+    expect(res).toEqual({ billed: true, balanceAfter: 4, mode: 'subscription', commissionPercent: null });
     expect(state.dispatchOffers).toHaveLength(1);
   });
 
@@ -679,7 +690,7 @@ describe("debitLeadForOfferTx — S8 step 4b (women-only drift guard)", () => {
       driverId: "driver-1",
       womenOnlyFeatureEnabled: false,
     });
-    expect(res).toEqual({ billed: false, balanceAfter: null, mode: 'subscription' });
+    expect(res).toEqual({ billed: false, balanceAfter: null, mode: 'subscription', commissionPercent: null });
     expect(state.dispatchOffers).toHaveLength(0);
     expect(state.callLedger).toHaveLength(0);
   });
@@ -693,7 +704,7 @@ describe("debitLeadForOfferTx — S8 step 4b (women-only drift guard)", () => {
       driverId: "driver-1",
       womenOnlyFeatureEnabled: false,
     });
-    expect(res).toEqual({ billed: false, balanceAfter: null, mode: 'subscription' });
+    expect(res).toEqual({ billed: false, balanceAfter: null, mode: 'subscription', commissionPercent: null });
     expect(state.dispatchOffers).toHaveLength(0);
     expect(state.callLedger).toHaveLength(0);
   });
@@ -708,7 +719,7 @@ describe("debitLeadForOfferTx — S8 step 4b (women-only drift guard)", () => {
       driverId: "driver-1",
       womenOnlyFeatureEnabled: true,
     });
-    expect(res).toEqual({ billed: true, balanceAfter: 4, mode: 'subscription' });
+    expect(res).toEqual({ billed: true, balanceAfter: 4, mode: 'subscription', commissionPercent: null });
   });
 });
 
@@ -725,6 +736,7 @@ describe("debitLeadForOfferTx — per-driver classification", () => {
     package_id: "pkg-comm",
     status: "active",
     started_at: new Date().toISOString(),
+    expires_at: null,
   };
 
   test("commission enrollment without a subscription → commission mode: offer row only, no ledger, no counter update", async () => {
@@ -741,7 +753,7 @@ describe("debitLeadForOfferTx — per-driver classification", () => {
       womenOnlyFeatureEnabled: false,
     });
 
-    expect(res).toEqual({ billed: true, balanceAfter: null, mode: 'commission' });
+    expect(res).toEqual({ billed: true, balanceAfter: null, mode: 'commission', commissionPercent: null });
     expect(state.dispatchOffers).toHaveLength(1);
     expect(state.dispatchOffers[0]).toMatchObject({
       ride_id: "ride-1",
@@ -767,7 +779,7 @@ describe("debitLeadForOfferTx — per-driver classification", () => {
       womenOnlyFeatureEnabled: false,
     });
 
-    expect(res).toEqual({ billed: true, balanceAfter: 4, mode: 'subscription' });
+    expect(res).toEqual({ billed: true, balanceAfter: 4, mode: 'subscription', commissionPercent: null });
     expect(state.callLedger).toHaveLength(1);
     expect(state.dispatchOffers).toHaveLength(1);
     expect(state.dispatchOffers[0].monetization_mode).toBe('subscription');
@@ -789,6 +801,31 @@ describe("debitLeadForOfferTx — per-driver classification", () => {
     expect(res.billed).toBe(false);
     expect(res.balanceAfter).toBeNull();
     expect(res.mode).toBe('none'); // neither product subscribed nor enrolled
+    expect(state.dispatchOffers).toHaveLength(0);
+    expect(state.callLedger).toHaveLength(0);
+    expect(updates).toHaveLength(0);
+  });
+
+  test("D3-B-r2: expired enrollment without a subscription → skipped (F-9.1 defense-in-depth)", async () => {
+    const { state, updates } = buildDbMock({
+      subscriptions: [],
+      packages: [],
+      commissionEnrollments: [
+        { ...COMMISSION_ENROLLMENT, expires_at: new Date(Date.now() - 3_600_000).toISOString() },
+      ],
+    });
+
+    const res = await debitLeadForOfferTx({
+      rideId: "ride-1",
+      driverId: "driver-1",
+      womenOnlyFeatureEnabled: false,
+    });
+
+    // An enrollment whose expiry has passed is treated as no-enrollment —
+    // the driver falls to the existing no-sub skip, zero writes.
+    expect(res.billed).toBe(false);
+    expect(res.balanceAfter).toBeNull();
+    expect(res.mode).toBe('none');
     expect(state.dispatchOffers).toHaveLength(0);
     expect(state.callLedger).toHaveLength(0);
     expect(updates).toHaveLength(0);

@@ -541,6 +541,9 @@ export const packages = pgTable(
     // NULL for the ৳0 commission package (D3: non-expiring); call packages keep a value.
     duration_days: integer("duration_days"),
     price_bdt: integer("price_bdt").notNull(),
+    // D3-B-r2: commission rate for bundle packages (non-null when this plan
+    // carries a commission leg; null = pure call package). (0, 100] when set.
+    commission_percent: numeric("commission_percent", { precision: 5, scale: 2 }),
     is_trial: boolean("is_trial").notNull().default(false),
     is_active: boolean("is_active").notNull().default(true),
     daily_cap: integer("daily_cap").notNull().default(200),
@@ -795,6 +798,9 @@ export const rides = pgTable(
     platform_commission_bdt: integer("platform_commission_bdt"),
     // S5: monetization mode snapshotted at accept (never re-derived). NULL = pre-cutover ride (D5 grandfathering).
     monetization_mode_snapshot: monetizationModeEnum("monetization_mode"),
+    // D3-B-r2: commission rate snapped from the offer at accept.
+    // Non-null on bundle/commission rides; null on pure subscription/legacy rides.
+    commission_percent_snapshot: numeric("commission_percent_snapshot", { precision: 5, scale: 2 }),
     scheduled_at: timestamptz("scheduled_at"),
     dispatch_window_start: timestamptz("dispatch_window_start"),
     dispatch_window_end: timestamptz("dispatch_window_end"),
@@ -1018,6 +1024,8 @@ export const dispatchOffers = pgTable(
     pickup_estimated_time_min: numeric("pickup_estimated_time_min", { precision: 7, scale: 2 }),
     // S7: durable ride-level mode binding, written by lib/leadBilling inside the debit transaction (M-01); copied onto rides.monetization_mode_snapshot at accept. NULL on legacy rows (D5 boundary).
     monetization_mode: monetizationModeEnum("monetization_mode"),
+    // D3-B-r2: commission rate for this offer (bundle leg). Non-null on bundle/commission offers; null on pure subscription/legacy offers.
+    commission_percent: numeric("commission_percent", { precision: 5, scale: 2 }),
     created_at: timestamptz("created_at").notNull().defaultNow(),
   },
   (t) => [
@@ -1182,7 +1190,9 @@ export const commissionEnrollments = pgTable(
       .references(() => packages.id),
     status: varchar("status", { length: 20 }).notNull().default("active"),
     started_at: timestamptz("started_at").notNull().defaultNow(),
+    // D3-B-r2: enrollment expiry. NULL = non-expiring (the ৳0 commission package).
     ended_at: timestamptz("ended_at"),
+    expires_at: timestamptz("expires_at"),
     created_at: timestamptz("created_at").notNull().defaultNow(),
     updated_at: timestamptz("updated_at").notNull().defaultNow(),
   },

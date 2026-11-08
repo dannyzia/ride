@@ -2443,8 +2443,19 @@ async function executeMatchFlow(
   // S8: the accept must correspond to a live delivered offer for this
   // (ride, driver). A forged offer:accept with no offer row (or a stale
   // row from a previous ride) never reaches the match commit.
+  // Revenue model: read ONCE per pipeline (zero config queries — see
+  // line ~2901). Gated on kill-switch ON: under subscription_only neither
+  // snapshot is written, preserving the D5 NULL boundary.
+  const revenueModel = await getRevenueModel();
+  const isHybrid = revenueModel === 'hybrid';
   const [liveOffer] = await db
-    .select({ id: dispatchOffers.id, monetization_mode: dispatchOffers.monetization_mode })
+    .select({
+      id: dispatchOffers.id,
+      monetization_mode: dispatchOffers.monetization_mode,
+      // D3-B-r2: commission rate on the offer (bundle/commission leg), stamped
+      // onto rides.commission_percent_snapshot at accept.
+      commission_percent: dispatchOffers.commission_percent,
+    })
     .from(dispatchOffers)
     .where(
       and(
@@ -2574,7 +2585,11 @@ async function executeMatchFlow(
       // ride-time record that completion and dispatch bill from. Under
       // subscription_only (legacy) the offer mode is NULL and the column is
       // stamped NULL — no behavior change pre-activation.
-      monetization_mode_snapshot: liveOffer.monetization_mode ?? null,
+      monetization_mode_snapshot: isHybrid ? liveOffer.monetization_mode ?? null : null,
+      // D3-B-r2: snapshot the offer's commission rate onto the ride so
+      // completion can accrue at the snapped rate (COALESCE with the pinned
+      // pricing row percent). Gated on kill-switch ON like the mode snapshot.
+      commission_percent_snapshot: isHybrid ? liveOffer.commission_percent ?? null : null,
       // Firm pickup figures persist atomically with the match commit
       // (same update — transactionally clean single-row write).
       ...(firm && !firm.result.skipped

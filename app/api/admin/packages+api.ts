@@ -15,13 +15,13 @@ const D1_DUST_BUFFER_BDT = 1_000; // PortPos settlement minimum — dust buffer
 const createSchema = z.object({
   name: z.string().min(1).max(100),
   product_type: z.enum(['call_package', 'commission']).default('call_package'),
-  call_count: z
-    .number()
-    .int()
-    .refine((n) => n === -1 || n > 0, "Must be positive or -1 for unlimited"),
-  duration_days: z.number().int().nonnegative().nullable().optional(),
+  call_count: z.number().int(),
+  duration_days: z.number().int().nullable().optional(),
   price_bdt: z.number().int().nonnegative(),
   is_trial: z.boolean().optional().default(false),
+  // D3-B-r2: commission rate for bundle packages. blank/0 = no commission leg;
+  // when set, (0, 100]. Trials carry no percent.
+  commission_percent: z.number().min(0).max(100).optional(),
   daily_cap: z.number().int().positive().optional().default(200),
   is_active: z.boolean().optional().default(true),
   vehicle_type: VEHICLE_TYPE_ZOD_ENUM.nullable().optional().default(null),
@@ -33,29 +33,63 @@ const updateSchema = createSchema.partial().extend({
 });
 
 /**
- * Package constraints (Item 21 / §3.9):
+ * Package constraints (Item 21 / §3.9, D3-B-r2):
  *   - D1 ceiling side: call-package price_bdt <= max_commission_debt_bdt - 1,000
  *     paisa dust buffer (price 0 trials exempt).
  *   - M-09 price floor: call-package price_bdt == 0 (trial) OR price_bdt >= 1,000.
- *   - D3 commission package: price_bdt = 0, duration_days NULL, is_trial false,
- *     product_type='commission'.
+ *   - D3-B-r2 four-field form: commission_percent blank/0 = no commission leg;
+ *     when set, (0, 100]; trials carry no percent. call_count: -1 = unlimited,
+ *     0 = no lead leg, positive = finite. duration_days: -1 = unlimited (NULL),
+ *     >= 1 = expiring, 0 rejected.
  */
-function validatePackageConstraints(data: { price_bdt?: number; duration_days?: number | null; is_trial?: boolean; product_type?: string }, maxDebtBdt: number): string | null {
-  const productType = data.product_type ?? 'call_package';
+function validatePackageConstraints(data: {
+  price_bdt?: number;
+  duration_days?: number | null;
+  is_trial?: boolean;
+  product_type?: string;
+  call_count?: number;
+  commission_percent?: number;
+}, maxDebtBdt: number): { code: string; message: string } | null {
   const priceBdt = data.price_bdt ?? 0;
+  const callCount = data.call_count ?? 5;
+  const durationDays = data.duration_days;
+  const isTrial = data.is_trial ?? false;
+  const commissionPercent = data.commission_percent;
 
-  if (productType === 'commission') {
-    if (data.price_bdt !== undefined && data.price_bdt !== 0) return 'commission package price_bdt must be 0';
-    if (data.duration_days !== undefined && data.duration_days !== null) return 'commission package duration_days must be NULL';
-    if (data.is_trial === true) return 'commission package is_trial must be false';
-    return null;
+  // D3-B-r2: trials carry no percent
+  if (isTrial && commissionPercent != null && commissionPercent > 0) {
+    return { code: 'commission_percent_invalid', message: 'Trial packages cannot carry a commission leg' };
   }
 
-  // call_package
-  if (priceBdt > 0) {
-    if (priceBdt < D1_DUST_BUFFER_BDT) return 'call package price_bdt must be 0 (trial) or >= 1,000 paisa';
-    if (priceBdt > maxDebtBdt - D1_DUST_BUFFER_BDT) return 'call package price_bdt exceeds max_commission_debt_bdt minus the 1,000 paisa dust buffer (D1 floor)';
+  // D3-B-r2: commission_percent blank/0 = no commission leg; when set, (0, 100]
+  if (commissionPercent != null && commissionPercent !== 0 && (commissionPercent <= 0 || commissionPercent > 100)) {
+    return { code: 'commission_percent_invalid', message: 'Commission percent must be between 0 (exclusive) and 100 (inclusive)' };
   }
+
+  // D1 ceiling side + M-09 price floor
+  if (isTrial) {
+    if (priceBdt !== 0) {
+      return { code: 'package_constraint_violation', message: 'Trial packages must have price_bdt = 0' };
+    }
+  } else if (priceBdt > 0) {
+    if (priceBdt < D1_DUST_BUFFER_BDT) {
+      return { code: 'package_constraint_violation', message: 'Call package price_bdt must be 0 (trial) or >= 1,000 paisa' };
+    }
+    if (priceBdt > maxDebtBdt - D1_DUST_BUFFER_BDT) {
+      return { code: 'package_constraint_violation', message: 'Call package price_bdt exceeds max_commission_debt_bdt minus the 1,000 paisa dust buffer (D1 floor)' };
+    }
+  }
+
+  // D3-B-r2: call_count: -1 = unlimited, 0 = no lead leg, positive = finite
+  if (callCount < -1) {
+    return { code: 'call_count_invalid', message: 'Call count must be -1 (unlimited), 0 (no lead leg), or positive' };
+  }
+
+  // D3-B-r2: duration_days: -1 = unlimited (NULL), >= 1 = expiring, 0 rejected
+  if (durationDays === 0 || (durationDays != null && durationDays < -1)) {
+    return { code: 'duration_days_invalid', message: 'Duration days must be -1 (unlimited) or >= 1' };
+  }
+
   return null;
 }
 
@@ -87,10 +121,14 @@ export async function POST(request: Request) {
     const maxDebtBdt = await getMaxCommissionDebtBdt();
     const constraintErr = validatePackageConstraints(result.data, maxDebtBdt);
     if (constraintErr) {
-      return Response.json({ error: 'package_constraint_violation', message: constraintErr }, { status: 400 });
+      return Response.json({ error: constraintErr.code, message: constraintErr.message }, { status: 400 });
     }
 
-    const [pkg] = await db.insert(packages).values(result.data).returning();
+    const { commission_percent, ...insertData } = result.data;
+    const [pkg] = await db.insert(packages).values({
+      ...insertData,
+      ...(commission_percent != null ? { commission_percent: String(commission_percent) } : {}),
+    }).returning();
     return Response.json({ package: pkg }, { status: 201 });
   } catch (err: unknown) {
     if (errors.getErrorStatus(err) === 401)
@@ -119,13 +157,17 @@ export async function PUT(request: Request) {
     const maxDebtBdt = await getMaxCommissionDebtBdt();
     const constraintErr = validatePackageConstraints(result.data, maxDebtBdt);
     if (constraintErr) {
-      return Response.json({ error: 'package_constraint_violation', message: constraintErr }, { status: 400 });
+      return Response.json({ error: constraintErr.code, message: constraintErr.message }, { status: 400 });
     }
 
-    const { id, ...updates } = result.data;
+    const { id, commission_percent, ...updates } = result.data;
     const [pkg] = await db
       .update(packages)
-      .set({ ...updates, updated_at: new Date() })
+      .set({
+        ...updates,
+        ...(commission_percent != null ? { commission_percent: String(commission_percent) } : {}),
+        updated_at: new Date(),
+      })
       .where(eq(packages.id, id))
       .returning();
 

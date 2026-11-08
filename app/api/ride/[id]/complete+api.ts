@@ -167,14 +167,16 @@ const rideId = segments[segments.indexOf("ride") + 1];
       outsideKm = Math.round(origOutsideKm * scale * 1000) / 1000;
     }
 
-    // Monetization-mode-driven commission (Item 23 / §3.7): read the accept-time
-    // snapshot, never re-derive. 'commission' accrues at the configured rate;
-    // 'subscription' / NULL (legacy / pre-cutover) accrues zero with a zeroing
-    // log — the snapshot is stamped at accept by executeMatchFlow (Item 13).
+    // D3-B-r2: accrual condition = 'commission' OR non-null
+    // commission_percent_snapshot (bundle leg). percent = COALESCE(snapshot,
+    // pinned pricing row percent via rides.pricing_id).
     const snapshot = ride.monetization_mode_snapshot;
+    const hasCommissionLeg = snapshot === 'commission' || ride.commission_percent_snapshot != null;
     let commissionPct: number;
-    if (snapshot === 'commission') {
-      commissionPct = Number(pricingRow.platform_commission_percent ?? 0);
+    if (hasCommissionLeg) {
+      commissionPct = Number(
+        ride.commission_percent_snapshot ?? pricingRow.platform_commission_percent ?? 0,
+      );
     } else {
       commissionPct = 0;
       logger.info("[complete] commission zeroed — non-commission monetization snapshot", {
@@ -299,7 +301,7 @@ const rideId = segments[segments.indexOf("ride") + 1];
     if (waitFee > 0) {
       fare.total_bdt += waitFee;
       fare.wait_fee_bdt = (fare.wait_fee_bdt ?? 0) + waitFee;
-      const commPct = snapshot === 'commission' ? commissionPct : 0;
+      const commPct = commissionPct;
       if (commPct > 0) {
         fare.platform_commission_bdt = percentOf(fare.total_bdt, commPct);
         fare.driver_net_bdt = fare.total_bdt - fare.platform_commission_bdt;
@@ -698,6 +700,8 @@ const rideId = segments[segments.indexOf("ride") + 1];
       cash_handshake: paymentMethod === 'mfs_p2p' ? null : buildCashHandshake(ride.rider_cash_tendered_bdt, cashReceivedBdt, finalRiderPayableBdt),
       platform_commission_bdt: Number(authoritative.platform_commission_bdt ?? 0),
       monetization_mode_snapshot: snapshot,
+      // D3-B-r2: snapped commission rate for the receipt commission line.
+      commission_percent_snapshot: ride.commission_percent_snapshot ?? null,
     });
   } catch (err: unknown) {
     if (errors.getErrorStatus(err) === 401 || errors.getErrorStatus(err) === 403) {

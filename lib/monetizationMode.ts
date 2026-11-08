@@ -83,14 +83,34 @@ export async function enrollCommission(
     .set({ frozen_at: new Date(), updated_at: new Date() })
     .where(subscriptionUsable(params.driverId));
 
+  // D3-B-r2 audit closure: enrollment expiry follows the package's duration.
+  // NULL duration (the canonical ৳0 commission package) → NULL expires_at
+  // (unlimited); duration >= 1 → now() + days.
+  const [pkg] = await tx
+    .select({ duration_days: packages.duration_days })
+    .from(packages)
+    .where(eq(packages.id, params.packageId))
+    .limit(1);
+  const durationDays = pkg?.duration_days ?? null;
+  const expiresAt =
+    durationDays != null && durationDays >= 1
+      ? new Date(Date.now() + durationDays * 86_400_000)
+      : null;
+
   const [enr] = await tx
     .insert(commissionEnrollments)
-    .values({ driver_id: params.driverId, package_id: params.packageId, status: 'active' })
+    .values({
+      driver_id: params.driverId,
+      package_id: params.packageId,
+      status: 'active',
+      expires_at: expiresAt,
+    })
     .returning({ id: commissionEnrollments.id });
   logger.info('[monetizationMode] commission enrollment created', {
     enrollmentId: enr.id,
     driverId: params.driverId,
     packageId: params.packageId,
+    expiresAt: expiresAt?.toISOString() ?? null,
   });
   return { enrollmentId: enr.id };
 }
