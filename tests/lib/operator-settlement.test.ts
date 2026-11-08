@@ -30,6 +30,7 @@ import { initiatePortposPayment } from "@/lib/paymentEvents";
 import {
   getOperatorStatement,
   initiateOperatorSettlement,
+  initiateUsageSettlement,
   OperatorSettlementError,
 } from "@/lib/operatorSettlement";
 
@@ -133,6 +134,7 @@ beforeEach(() => {
           orderBy: () => chain,
           for: () => chain,
           limit: async () => rows,
+          then: (resolve: (v: unknown) => void) => Promise.resolve(rows).then(resolve),
         };
         return chain;
       }),
@@ -269,6 +271,70 @@ describe("initiateOperatorSettlement", () => {
     expect(stampedValues[1]).toMatchObject({ payment_event_id: "evt-B" });
   });
 
+  test("billKind='usage' resolves and stamps the aggregated usage bill (Batch-2 Item 8)", async () => {
+    // resolve → then the usage rail re-reads the set it prices the invoice from
+    mockSelectQueue([
+      [{ id: "usage-1", kind: "usage", amount_bdt: 1_200, status: "open" }],
+      [{ id: "usage-1", amount_bdt: 1_200 }],
+    ]);
+    txSelectRows = [[{ id: "usage-1", amount_bdt: 1_200 }]];
+
+    const result = await initiateOperatorSettlement({
+      operatorRole: "shop",
+      operatorId: OP_ID,
+      userId: "user-1",
+      serverUrl: "",
+      billKind: "usage",
+    });
+
+    expect(result).toMatchObject({ billId: "usage-1", bill_kind: "usage", amountBdt: 1_200 });
+    expect(stampedValues[0]).toMatchObject({ payment_event_id: "evt-1" });
+    expect(initiatePortposPayment).toHaveBeenCalledWith(
+      expect.objectContaining({ amount_bdt: 1_200, package_name: "Commission Dues" }),
+    );
+  });
+
+  test("no kind named → pays the usage bill when that is all the shop owes (gate is clearable)", async () => {
+    // subscription select finds nothing; the usage select finds the aggregate.
+    mockSelectQueue([
+      [],
+      [{ id: "usage-1", kind: "usage", amount_bdt: 2_500, status: "open" }],
+      [{ id: "usage-1", amount_bdt: 2_500 }],
+    ]);
+    txSelectRows = [[{ id: "usage-1", amount_bdt: 2_500 }]];
+
+    const result = await initiateOperatorSettlement({
+      operatorRole: "shop",
+      operatorId: OP_ID,
+      userId: "user-1",
+      serverUrl: "",
+    });
+
+    expect(result).toMatchObject({ billId: "usage-1", bill_kind: "usage", amountBdt: 2_500 });
+    expect(initiatePortposPayment).toHaveBeenCalledWith(
+      expect.objectContaining({ amount_bdt: 2_500, purpose: "subscription_settlement" }),
+    );
+    expect(stampedValues[0]).toMatchObject({ payment_event_id: "evt-1" });
+  });
+
+  test("no kind named → the due-dated package bill wins when both slots are open", async () => {
+    // The subscription select answers first, so the usage query is never reached.
+    mockSelectQueue([[{ id: BILL_ID, kind: "subscription_purchase", amount_bdt: 5_000, status: "open" }]]);
+    txSelectRows = [[{ id: BILL_ID, kind: "subscription_purchase", amount_bdt: 5_000, status: "open" }]];
+
+    const result = await initiateOperatorSettlement({
+      operatorRole: "fleet",
+      operatorId: OP_ID,
+      userId: "u",
+      serverUrl: "",
+    });
+
+    expect(result).toMatchObject({ billId: BILL_ID, bill_kind: "subscription_purchase" });
+    expect(initiatePortposPayment).toHaveBeenCalledWith(
+      expect.objectContaining({ package_name: "Operator Package Bill" }),
+    );
+  });
+
   test("no open bill → typed no_open_bill, no invoice", async () => {
     mockSelectQueue([[]]);
 
@@ -300,5 +366,98 @@ describe("initiateOperatorSettlement", () => {
     );
     expect(err.status).toBe(409);
     expect(txUpdate).not.toHaveBeenCalled();
+  });
+});
+
+describe("initiateUsageSettlement — aggregate commission rail (Batch-2 Item 8b)", () => {
+  test("ONE event settles the whole open usage set", async () => {
+    mockSelectQueue([
+      [
+        { id: "usage-a", amount_bdt: 5_000 },
+        { id: "usage-b", amount_bdt: 700 },
+      ],
+      [
+        { id: "usage-a", amount_bdt: 5_000 },
+        { id: "usage-b", amount_bdt: 700 },
+      ],
+    ]);
+    txSelectRows = [
+      [
+        { id: "usage-a", amount_bdt: 5_000 },
+        { id: "usage-b", amount_bdt: 700 },
+      ],
+    ];
+
+    const result = await initiateUsageSettlement({
+      operatorRole: "shop",
+      operatorId: OP_ID,
+      userId: "user-1",
+      serverUrl: "",
+    });
+
+    expect(result).toMatchObject({
+      bill_kind: "usage",
+      bill_ids: ["usage-a", "usage-b"],
+      amountBdt: 5_700,
+      payment_event_id: "evt-1",
+    });
+    // One invoice for the set, not one per bill.
+    expect(initiatePortposPayment).toHaveBeenCalledTimes(1);
+    expect(initiatePortposPayment).toHaveBeenCalledWith(
+      expect.objectContaining({ amount_bdt: 5_700, purpose: "subscription_settlement" }),
+    );
+    expect(stampedValues).toHaveLength(2);
+    expect(stampedValues.every((v) => v.payment_event_id === "evt-1")).toBe(true);
+    // Stamped, NOT settled: the money is credited when the gateway confirms.
+    expect(stampedValues.some((v) => v.status === "settled")).toBe(false);
+  });
+
+  test("dust below the ৳10 minimum is not invoiced (it rolls forward, D1)", async () => {
+    mockSelectQueue([[{ id: "usage-a", amount_bdt: 600 }]]);
+
+    const err = await expectSettlementCode(
+      initiateUsageSettlement({
+        operatorRole: "shop",
+        operatorId: OP_ID,
+        userId: "u",
+        serverUrl: "",
+      }),
+      "amount_below_minimum",
+    );
+    expect(err.status).toBe(400);
+    expect(initiatePortposPayment).not.toHaveBeenCalled();
+  });
+
+  test("a set that moved while the invoice was created aborts with 409 amount_changed", async () => {
+    mockSelectQueue([[{ id: "usage-a", amount_bdt: 2_000 }]]);
+    // Another order accrued into the same bill between pricing and stamping.
+    txSelectRows = [[{ id: "usage-a", amount_bdt: 2_400 }]];
+
+    const err = await expectSettlementCode(
+      initiateUsageSettlement({
+        operatorRole: "shop",
+        operatorId: OP_ID,
+        userId: "u",
+        serverUrl: "",
+      }),
+      "amount_changed",
+    );
+    expect(err.status).toBe(409);
+    expect(stampedValues).toHaveLength(0);
+  });
+
+  test("no open usage bill → typed no_open_bill, no invoice", async () => {
+    mockSelectQueue([[]]);
+
+    await expectSettlementCode(
+      initiateUsageSettlement({
+        operatorRole: "shop",
+        operatorId: OP_ID,
+        userId: "u",
+        serverUrl: "",
+      }),
+      "no_open_bill",
+    );
+    expect(initiatePortposPayment).not.toHaveBeenCalled();
   });
 });

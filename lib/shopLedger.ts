@@ -12,10 +12,11 @@
  *   (state machine) AND the DB backstop is the partial unique index
  *   (order_id, entry_type) WHERE order_id IS NOT NULL (0067).
  */
-import { eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { db } from "@/src/db";
-import { shopLedger } from "@/src/db/schema";
-import { openUsageBill, voidUsageBillForSource } from "@/lib/billsLedger";
+import { operatorPackages, packages, shopLedger, shopOrders } from "@/src/db/schema";
+import { accrueUsageBill, reduceUsageBillForReversal } from "@/lib/billsLedger";
+import { isOperatorPackageActive } from "@/lib/monetizationMode";
 import { requireConfigInt } from "@/lib/platformConfig";
 import { logger } from "@/lib/logger";
 
@@ -50,7 +51,12 @@ export async function settleShopOrder(
   tx: ShopTx,
   order: SettleableOrder,
   opts: { note?: string; selfDelivered?: boolean } = {},
-): Promise<{ order_revenue_bdt: number; commission_bdt: number; delivery_fee_bdt: number }> {
+): Promise<{
+  order_revenue_bdt: number;
+  commission_bdt: number;
+  usage_accrued_bdt: number;
+  delivery_fee_bdt: number;
+}> {
   const existing = await tx
     .select({ entry_type: shopLedger.entry_type })
     .from(shopLedger)
@@ -58,7 +64,12 @@ export async function settleShopOrder(
 
   if (existing.some((r) => r.entry_type === "order_revenue")) {
     // In-tx idempotence: treat as already settled.
-    return { order_revenue_bdt: order.subtotal_bdt, commission_bdt: 0, delivery_fee_bdt: 0 };
+    return {
+      order_revenue_bdt: order.subtotal_bdt,
+      commission_bdt: 0,
+      usage_accrued_bdt: 0,
+      delivery_fee_bdt: 0,
+    };
   }
 
   await tx.insert(shopLedger).values({
@@ -70,32 +81,37 @@ export async function settleShopOrder(
   });
 
   let commissionBdt = 0;
+  let accruedBdt = 0;
   if (order.subtotal_bdt > 0) {
-    const percent = await readPercent();
-    commissionBdt = percent > 0 ? Math.round((order.subtotal_bdt * percent) / 100) : 0;
+    const rate = await resolveCommissionRate(tx, order.shop_id);
+    commissionBdt = rate.percent > 0 ? Math.round((order.subtotal_bdt * rate.percent) / 100) : 0;
     if (commissionBdt > 0) {
-      await tx.insert(shopLedger).values({
-        shop_id: order.shop_id,
-        order_id: order.id,
-        entry_type: "commission",
-        amount_bdt: -commissionBdt,
-        note: opts.note ?? null,
-      });
-
-      // Batch-2 Item 8 — the same commission is also a platform RECEIVABLE:
-      // one open usage bill per order, so it lands in the unified owed figure
-      // (operator_unpaid_obligations.net_commission_paisa) and the shop's
-      // statement. Single-writer preserved: the bill row is created by
-      // lib/billsLedger.openUsageBill inside THIS transaction, so the accrual
-      // commits or rolls back with the delivered transition. At the launch
-      // default the fresh-read percent is zero, so no commission exists and no
-      // bill is written — the owed figure is byte-identical to pre-Item-8.
-      await openUsageBill(tx, {
-        operatorRole: "shop",
-        operatorId: order.shop_id,
-        amountBdt: commissionBdt,
-        sourceOrderId: order.id,
-      });
+      // ── The two billing models are MUTUALLY EXCLUSIVE per order ──────────
+      //
+      // POSTPAID (Batch-2 Item 8b) — a package-billed shop is charged through
+      // its bill, like every other operator: the commission accrues into the
+      // single open usage bill (the unified owed figure / dues statement) and
+      // the shop's ledger keeps GROSS revenue. No commission debit is written,
+      // so the same ৳ of commission is never represented twice.
+      //
+      // LEGACY — an unpackaged/no-rate shop keeps the original debit-on-
+      // settlement, byte-for-byte (the ledger nets the commission out of gross).
+      if (rate.source === "package") {
+        await accrueUsageBill(tx, {
+          operatorRole: "shop",
+          operatorId: order.shop_id,
+          amountBdt: commissionBdt,
+        });
+        accruedBdt = commissionBdt;
+      } else {
+        await tx.insert(shopLedger).values({
+          shop_id: order.shop_id,
+          order_id: order.id,
+          entry_type: "commission",
+          amount_bdt: -commissionBdt,
+          note: opts.note ?? null,
+        });
+      }
     }
   }
 
@@ -113,7 +129,75 @@ export async function settleShopOrder(
     });
   }
 
-  return { order_revenue_bdt: order.subtotal_bdt, commission_bdt: -commissionBdt, delivery_fee_bdt: feeBdt > 0 ? feeBdt : 0 };
+  // `commission_bdt` reports the LEDGER leg: 0 on the postpaid path (the fee
+  // lives on the bill). `usage_accrued_bdt` reports the bill leg — exactly one
+  // of the two is ever non-zero, per order.
+  return {
+    order_revenue_bdt: order.subtotal_bdt,
+    commission_bdt: -commissionBdt + accruedBdt,
+    usage_accrued_bdt: accruedBdt,
+    delivery_fee_bdt: feeBdt > 0 ? feeBdt : 0,
+  };
+}
+
+/**
+ * A-1 rate precedence for a shop order (Batch-2 Item 8).
+ *
+ *   package with a positive rate  → that rate; the legacy percent is NOT read
+ *                                  or applied (no double charge).
+ *   package with no rate         → legacy shop_commission_percent continues.
+ *   possession exhausted         → 0 (the billing contract lapsed; nothing
+ *                                  accrues).
+ *   no package ever granted      → legacy percent, exactly as before — this is
+ *                                  the branch that keeps unpackaged shops
+ *                                  byte-for-byte.
+ */
+async function resolveCommissionRate(
+  tx: ShopTx,
+  shopId: string,
+): Promise<{ percent: number; source: "package" | "legacy" | "none" }> {
+  const possession = await tx
+    .select({
+      status: operatorPackages.status,
+      expires_at: operatorPackages.expires_at,
+      commission_percent: packages.commission_percent,
+    })
+    .from(operatorPackages)
+    .leftJoin(packages, eq(operatorPackages.package_id, packages.id))
+    .where(
+      and(
+        eq(operatorPackages.operator_role, "shop"),
+        eq(operatorPackages.operator_id, shopId),
+      ),
+    )
+    .orderBy(desc(operatorPackages.started_at));
+
+  if (possession.length === 0) {
+    return { percent: await readPercent(), source: "legacy" };
+  }
+
+  const usable = possession.find((row) => isOperatorPackageActive(row));
+  if (!usable) {
+    return { percent: 0, source: "none" };
+  }
+
+  const packagePercent =
+    usable.commission_percent == null ? 0 : Number(usable.commission_percent);
+  if (packagePercent > 0) {
+    return { percent: packagePercent, source: "package" };
+  }
+
+  return { percent: await readPercent(), source: "legacy" };
+}
+
+/** Items subtotal for a reversal that arrived without the order row. */
+async function readOrderSubtotal(tx: ShopTx, orderId: string): Promise<number> {
+  const [row] = await tx
+    .select({ subtotal_bdt: shopOrders.subtotal_bdt })
+    .from(shopOrders)
+    .where(eq(shopOrders.id, orderId))
+    .limit(1);
+  return Number(row?.subtotal_bdt ?? 0);
 }
 
 async function readPercent(): Promise<number> {
@@ -147,7 +231,10 @@ async function readPercent(): Promise<number> {
  */
 export async function reverseShopOrder(
   tx: ShopTx,
-  order: { id: string; shop_id: string },
+  /** `subtotal_bdt` is optional: callers that hold the order row pass it, and
+   * the writer re-reads shop_orders when they do not (the postpaid reversal
+   * needs the items subtotal to size the commission it takes back). */
+  order: { id: string; shop_id: string; subtotal_bdt?: number },
   opts: { reason: string },
 ): Promise<{ reversed_bdt: number }> {
   const rows = await tx
@@ -172,10 +259,34 @@ export async function reverseShopOrder(
     note: opts.reason,
   });
 
-  // Batch-2 Item 8: the reversal also retires the commission receivable this
-  // order accrued, so the shop stops owing a fee the ledger just gave back.
-  // Settled usage bills are money already received and are left untouched.
-  await voidUsageBillForSource(tx, { operatorRole: "shop", sourceOrderId: order.id });
+  // ── Mirror whichever pair the settlement wrote (Batch-2 Item 8b) ─────────
+  // LEGACY order: the ledger carries the `commission` debit, and the reversal
+  // row just written gives it back in full — no bill ever accrued for it.
+  // POSTPAID order: the ledger carries GROSS revenue only (no commission row),
+  // so the fee must come back out of the aggregate usage bill instead, voiding
+  // it when the bill reaches zero.
+  // Exactly one path runs — the pair is never mixed for the same order.
+  const ledgerCommission = rows
+    .filter((row) => row.entry_type === "commission")
+    .reduce((sum, row) => sum + Math.abs(Number(row.amount_bdt)), 0);
+
+  if (ledgerCommission === 0) {
+    const subtotal = order.subtotal_bdt ?? (await readOrderSubtotal(tx, order.id));
+    if (subtotal > 0) {
+      const rate = await resolveCommissionRate(tx, order.shop_id);
+      const accrued =
+        rate.source === "package" && rate.percent > 0
+          ? Math.round((subtotal * rate.percent) / 100)
+          : 0;
+      if (accrued > 0) {
+        await reduceUsageBillForReversal(tx, {
+          operatorRole: "shop",
+          operatorId: order.shop_id,
+          amountBdt: accrued,
+        });
+      }
+    }
+  }
 
   return { reversed_bdt: -booked };
 }

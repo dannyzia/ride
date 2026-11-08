@@ -2,10 +2,12 @@
 // POST /api/fleet/dues — start a full-bill PortPos settlement of that bill.
 //
 // Same core as the shop/delivery routes (lib/operatorSettlement).
+import { z } from "zod";
 import { db } from "@/src/db";
 import { users } from "@/src/db/schema";
 import { eq } from "drizzle-orm";
 import { verifySupabaseToken } from "@/lib/auth";
+import { parseJsonBody } from "@/lib/parseBody";
 import { isConfigured } from "@/lib/portpos";
 import { getPlan05Bool } from "@/lib/platformConfig";
 import { hasActiveOperatorRole, resolveOperatorIdentity } from "@/lib/operatorPurchase";
@@ -16,6 +18,10 @@ import {
 } from "@/lib/operatorSettlement";
 import { logger } from "@/lib/logger";
 import * as errors from "@/lib/errors";
+
+const settlementSchema = z
+  .object({ bill_kind: z.enum(["subscription_purchase", "usage"]).optional() })
+  .strict();
 
 async function resolveFleet(request: Request): Promise<
   | { ok: true; operatorId: string; user: { id: string; name: string | null; email: string | null; phone: string | null } }
@@ -97,7 +103,15 @@ export async function POST(request: Request) {
       );
     }
 
+    // Optional target kind: the package purchase bill or the aggregated
+    // usage/commission receivable (Batch-2 Item 8). Omitted → whichever is
+    // outstanding, so commission dues are payable even when no package bill
+    // exists (the two slots are settled one at a time).
+    const parsed = await parseJsonBody(request, settlementSchema);
+    if (!parsed.ok) return parsed.response;
+
     const settlement = await initiateOperatorSettlement({
+      billKind: parsed.data.bill_kind,
       operatorRole: "fleet",
       operatorId: resolved.operatorId,
       userId: resolved.user.id,
@@ -115,6 +129,8 @@ export async function POST(request: Request) {
       amount_bdt: settlement.amountBdt,
       purpose: "subscription_settlement",
       bill_id: settlement.billId,
+      bill_kind: settlement.bill_kind,
+      bill_ids: settlement.bill_ids,
     });
   } catch (e: unknown) {
     if (errors.getErrorStatus(e) === 401) {

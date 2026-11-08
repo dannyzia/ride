@@ -358,6 +358,11 @@ export default function ShopDashboardScreen() {
               <Ionicons name="storefront-outline" size={24} color={C.text} />
             </TouchableOpacity>
             <TouchableOpacity
+              onPress={() => router.push("/(main)/(shop-owner)/dues")}
+              testID="shop-owner.push-dues">
+              <Ionicons name="receipt-outline" size={24} color={C.text} />
+            </TouchableOpacity>
+            <TouchableOpacity
               onPress={() => router.push("/(main)/(shop-owner)/settlement")}
              
              testID="shop-owner.push-settlement">

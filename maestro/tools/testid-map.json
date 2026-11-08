@@ -1,5 +1,5 @@
 {
-  "total": 1339,
+  "total": 1345,
   "screens": {
     "(auth)/_layout.tsx": [
       {
@@ -4323,90 +4323,116 @@
         "line": 460
       }
     ],
+    "(main)/(shop-owner)/dues.tsx": [
+      {
+        "id": "shop-owner.dues.el-1",
+        "line": 297
+      },
+      {
+        "id": "shop-owner.dues.load",
+        "line": 318
+      },
+      {
+        "id": "shop-owner.dues.pay-package-bill",
+        "line": 408
+      },
+      {
+        "id": "shop-owner.dues.pay-commission-dues",
+        "line": 436
+      },
+      {
+        "id": "shop-owner.dues.begin-sequence",
+        "line": 461
+      }
+    ],
     "(main)/(shop-owner)/index.tsx": [
       {
         "id": "shop-owner.push-shops",
         "line": 357
       },
       {
+        "id": "shop-owner.push-dues",
+        "line": 362
+      },
+      {
         "id": "shop-owner.push-settlement",
-        "line": 363
+        "line": 368
       },
       {
         "id": "shop-owner.push-staff",
-        "line": 369
+        "line": 374
       },
       {
         "id": "shop-owner.push-workshop",
-        "line": 375
+        "line": 380
       },
       {
         "id": "shop-owner.push-catalog",
-        "line": 381
+        "line": 386
       },
       {
         "id": "shop-owner.patch-availability",
-        "line": 403
+        "line": 408
       },
       {
         "id": "shop-owner.patch-availability-2",
-        "line": 416
+        "line": 421
       },
       {
         "id": "shop-owner.push-payout-method",
-        "line": 459
+        "line": 464
       },
       {
         "id": "shop-owner.push-workshop-2",
-        "line": 480
+        "line": 485
       },
       {
         "id": "shop-owner.purchase-plan",
-        "line": 529
+        "line": 534
       },
       {
         "id": "shop-owner.set-segment",
-        "line": 554
+        "line": 559
       },
       {
         "id": "shop-owner.set-prep-target",
-        "line": 611
+        "line": 616
       },
       {
         "id": "shop-owner.set-reject-reason",
-        "line": 625
+        "line": 630
       },
       {
         "id": "shop-owner.patch-status",
-        "line": 640
+        "line": 645
       },
       {
         "id": "shop-owner.patch-status-2",
-        "line": 654
+        "line": 659
       },
       {
         "id": "shop-owner.patch-status-3",
-        "line": 680
+        "line": 685
       },
       {
         "id": "shop-owner.patch-status-4",
-        "line": 693
+        "line": 698
       },
       {
         "id": "shop-owner.set-prep-target-2",
-        "line": 728
+        "line": 733
       },
       {
         "id": "shop-owner.set-reject-reason-2",
-        "line": 760
+        "line": 765
       },
       {
         "id": "shop-owner.set-reject-target",
-        "line": 767
+        "line": 772
       },
       {
         "id": "shop-owner.set-reject-target-2",
-        "line": 782
+        "line": 787
       }
     ],
     "(main)/(shop-owner)/settlement.tsx": [

@@ -14,6 +14,10 @@ type Tx = PgTransaction<PostgresJsQueryResultHKT, typeof schema, any>;
 
 const { operatorBills, paymentEvents } = schema;
 
+/** Bill kinds the settlement resolver may settle (Batch-2 Item 8 adds the
+ * aggregated usage/commission receivable). */
+const SETTLEABLE_BILL_KINDS = new Set(['subscription_purchase', 'usage']);
+
 /** The DB rejected a second open subscription_purchase bill for this operator+role (operator_bills_one_open_uq). The purchase route maps this to `409 dues_outstanding_purchase_blocked` (IR-A15). */
 export class BillSlotConflictError extends Error {
   constructor() {
@@ -86,33 +90,66 @@ export async function createOpenBill(
 }
 
 /**
- * Batch-2 Item 8 — open ONE per-order usage bill (platform fee accrued by a
- * usage-time hook, e.g. the shop's delivered-transition commission).
+ * Batch-2 Item 8 — accrue platform fee into the operator's ONE open usage bill
+ * (the aggregate receivable: the rides model, where per-event detail lives with
+ * the event, not in the bill).
  *
- * Caller passes its own transaction: the accrual must commit or roll back with
- * the event that produced it (the delivered transition). Idempotent at the DB
- * layer via `operator_bills_source_order_uq` — a retried transition returns
- * null instead of accruing twice. Usage bills never take the purchase lock and
- * never collide with the subscription slot (that barrier is kind-scoped).
+ * Caller passes its own transaction so the accrual commits or rolls back with
+ * the event that produced it (a shop order's delivered transition). Concurrent
+ * events serialize on `usage_bill_<role>:<id>`, so two orders can never lose an
+ * increment; the partial unique index `operator_bills_one_open_usage_uq` is the
+ * backstop that forbids a second open usage row. due_at stays NULL — commission
+ * is payable at any time (D6).
  *
  * amount_bdt is integer paisa and MUST be positive: a zero-fee event writes no
- * bill at all (the caller gates on its own fresh-read rate), so a 0 row here is
- * a programming error rather than data.
+ * bill at all, so a 0 row here is a programming error rather than data.
  */
-export async function openUsageBill(
+export async function accrueUsageBill(
   tx: Tx,
   params: {
     operatorRole: 'driver' | 'shop' | 'delivery' | 'fleet';
     operatorId: string;
     amountBdt: number;
-    sourceOrderId: string;
-    dueAt?: Date | null;
   },
-): Promise<{ id: string } | null> {
+): Promise<{ billId: string; amount_bdt: number }> {
   if (!Number.isInteger(params.amountBdt) || params.amountBdt <= 0) {
     throw new Error(
-      `openUsageBill: amount must be a positive integer paisa (got ${params.amountBdt})`,
+      `accrueUsageBill: amount must be a positive integer paisa (got ${params.amountBdt})`,
     );
+  }
+
+  await tx.execute(
+    sql`SELECT pg_advisory_xact_lock(hashtext(${`usage_bill_${params.operatorRole}:${params.operatorId}`}))`,
+  );
+
+  const [existing] = await tx
+    .select({ id: operatorBills.id, amount_bdt: operatorBills.amount_bdt })
+    .from(operatorBills)
+    .where(
+      and(
+        eq(operatorBills.operator_role, params.operatorRole),
+        eq(operatorBills.operator_id, params.operatorId),
+        eq(operatorBills.kind, 'usage'),
+        eq(operatorBills.status, 'open'),
+      ),
+    )
+    .for('update')
+    .limit(1);
+
+  if (existing) {
+    const next = existing.amount_bdt + params.amountBdt;
+    await tx
+      .update(operatorBills)
+      .set({ amount_bdt: next, updated_at: new Date() })
+      .where(eq(operatorBills.id, existing.id));
+    logger.info('[billsLedger] usage bill accrued', {
+      billId: existing.id,
+      operatorRole: params.operatorRole,
+      operatorId: params.operatorId,
+      amountBdt: params.amountBdt,
+      totalBdt: next,
+    });
+    return { billId: existing.id, amount_bdt: next };
   }
 
   const [bill] = await tx
@@ -122,67 +159,188 @@ export async function openUsageBill(
       operator_role: params.operatorRole,
       subscription_id: null,
       amount_bdt: params.amountBdt,
-      due_at: params.dueAt ?? null,
+      due_at: null,
       status: 'open',
       kind: 'usage',
-      source_order_id: params.sourceOrderId,
     })
     .onConflictDoNothing()
-    .returning({ id: operatorBills.id });
+    .returning({ id: operatorBills.id, amount_bdt: operatorBills.amount_bdt });
 
-  if (!bill) {
-    logger.debug('[billsLedger] usage bill already accrued for this source', {
+  if (bill) {
+    logger.info('[billsLedger] usage bill opened', {
+      billId: bill.id,
       operatorRole: params.operatorRole,
       operatorId: params.operatorId,
-      sourceOrderId: params.sourceOrderId,
+      amountBdt: params.amountBdt,
     });
-    return null;
+    return { billId: bill.id, amount_bdt: bill.amount_bdt };
   }
 
-  logger.info('[billsLedger] usage bill accrued', {
-    billId: bill.id,
-    operatorRole: params.operatorRole,
-    operatorId: params.operatorId,
-    sourceOrderId: params.sourceOrderId,
-    amountBdt: params.amountBdt,
-  });
-  return { id: bill.id };
-}
-
-/**
- * Batch-2 Item 8 — void the usage bill accrued for a producer event.
- *
- * Used by the reversal path (admin force-cancel of a delivered shop order): if
- * the ledger debit is reversed, the receivable it fed must leave the owed
- * figure too, or the shop keeps owing a fee the platform already gave back.
- * Only an OPEN usage bill is voided; settled bills are money already received
- * and are never rewritten. Idempotent: a second call finds nothing to void.
- */
-export async function voidUsageBillForSource(
-  tx: Tx,
-  params: { operatorRole: 'driver' | 'shop' | 'delivery' | 'fleet'; sourceOrderId: string },
-): Promise<{ billId: string } | null> {
-  const [bill] = await tx
-    .update(operatorBills)
-    .set({ status: 'void', updated_at: new Date() })
+  // A writer that skipped the lock created the slot between our SELECT and
+  // INSERT; the unique index rejected ours. We hold the lock now, so re-read
+  // and fold the increment in.
+  const [racer] = await tx
+    .select({ id: operatorBills.id, amount_bdt: operatorBills.amount_bdt })
+    .from(operatorBills)
     .where(
       and(
         eq(operatorBills.operator_role, params.operatorRole),
-        eq(operatorBills.source_order_id, params.sourceOrderId),
+        eq(operatorBills.operator_id, params.operatorId),
         eq(operatorBills.kind, 'usage'),
         eq(operatorBills.status, 'open'),
       ),
     )
-    .returning({ id: operatorBills.id });
+    .for('update')
+    .limit(1);
+  if (!racer) {
+    throw new Error('accrueUsageBill: open usage bill vanished after an insert conflict');
+  }
+  const next = racer.amount_bdt + params.amountBdt;
+  await tx
+    .update(operatorBills)
+    .set({ amount_bdt: next, updated_at: new Date() })
+    .where(eq(operatorBills.id, racer.id));
+  logger.info('[billsLedger] usage bill accrued (post-conflict)', {
+    billId: racer.id,
+    operatorRole: params.operatorRole,
+    operatorId: params.operatorId,
+    totalBdt: next,
+  });
+  return { billId: racer.id, amount_bdt: next };
+}
 
+/**
+ * Batch-2 Item 8 — take one order's commission back out of the aggregate
+ * usage bill (admin force-cancel / reversal of a delivered order).
+ *
+ * The accrual is an aggregate, so the reversal is a subtraction under the same
+ * usage lock. A bill reduced to zero is voided rather than left as a 0-amount
+ * open row (it must leave the owed figure and free the one-open slot). Settled
+ * bills are money already received and are never rewritten: they return null.
+ */
+export async function reduceUsageBillForReversal(
+  tx: Tx,
+  params: { operatorRole: 'driver' | 'shop' | 'delivery' | 'fleet'; operatorId: string; amountBdt: number },
+): Promise<{ billId: string; amount_bdt: number } | null> {
+  if (!Number.isInteger(params.amountBdt) || params.amountBdt <= 0) {
+    throw new Error(
+      `reduceUsageBillForReversal: amount must be a positive integer paisa (got ${params.amountBdt})`,
+    );
+  }
+
+  await tx.execute(
+    sql`SELECT pg_advisory_xact_lock(hashtext(${`usage_bill_${params.operatorRole}:${params.operatorId}`}))`,
+  );
+
+  const [bill] = await tx
+    .select({ id: operatorBills.id, amount_bdt: operatorBills.amount_bdt })
+    .from(operatorBills)
+    .where(
+      and(
+        eq(operatorBills.operator_role, params.operatorRole),
+        eq(operatorBills.operator_id, params.operatorId),
+        eq(operatorBills.kind, 'usage'),
+        eq(operatorBills.status, 'open'),
+      ),
+    )
+    .for('update')
+    .limit(1);
   if (!bill) return null;
 
-  logger.info('[billsLedger] usage bill voided', {
+  const next = Math.max(0, bill.amount_bdt - params.amountBdt);
+  await tx
+    .update(operatorBills)
+    .set({
+      amount_bdt: next,
+      status: next === 0 ? 'void' : 'open',
+      updated_at: new Date(),
+    })
+    .where(eq(operatorBills.id, bill.id));
+
+  logger.info('[billsLedger] usage bill reduced for reversal', {
     billId: bill.id,
     operatorRole: params.operatorRole,
-    sourceOrderId: params.sourceOrderId,
+    operatorId: params.operatorId,
+    reducedBy: params.amountBdt,
+    totalBdt: next,
   });
-  return { billId: bill.id };
+  return { billId: bill.id, amount_bdt: next };
+}
+
+/**
+ * Batch-2 Item 8b — settle EVERY bill stamped with one payment event.
+ *
+ * Usage bills are aggregated receivables, so one payment clears all open usage
+ * rows an operator holds at initiation time; they share the event stamp
+ * (migration 0100 scopes the M-14 unique index to subscription bills, which
+ * remain 1:1). The subscription rail keeps its single-bill behavior — it simply
+ * has one row stamped.
+ *
+ * Order of operations: read the stamps WITHOUT a row lock to learn which
+ * operator locks are needed, take those advisory locks in sorted order (so two
+ * callbacks can never deadlock against each other), then re-read FOR UPDATE and
+ * settle. `null` means "nothing left to settle" (a replay), never an error.
+ */
+async function settleStampedBills(
+  tx: Tx,
+  evt: { id: string; amount_bdt: number },
+): Promise<{ billId: string; billIds: string[]; amountBdt: number } | null> {
+  const stamps = await tx
+    .select({
+      id: operatorBills.id,
+      operator_role: operatorBills.operator_role,
+      operator_id: operatorBills.operator_id,
+    })
+    .from(operatorBills)
+    .where(eq(operatorBills.payment_event_id, evt.id));
+
+  if (stamps.length === 0) return null;
+
+  const lockKeys = Array.from(
+    new Set(stamps.map((s) => operatorPurchaseLockKey(s.operator_role, s.operator_id))),
+  ).sort();
+  for (const key of lockKeys) {
+    await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${key}))`);
+  }
+
+  const bills = await tx
+    .select()
+    .from(operatorBills)
+    .where(eq(operatorBills.payment_event_id, evt.id))
+    .for('update');
+
+  const settleable = bills.filter(
+    (b) => b.status === 'open' && SETTLEABLE_BILL_KINDS.has(b.kind),
+  );
+  if (settleable.length === 0) {
+    logger.debug('[billsLedger] every stamped bill already settled (replay no-op)', {
+      paymentEventId: evt.id,
+    });
+    return null;
+  }
+
+  for (const bill of settleable) {
+    await markBillSettled(tx, bill, evt.id);
+  }
+
+  const settledTotal = settleable.reduce((sum, b) => sum + b.amount_bdt, 0);
+  // Money-integrity check: the invoice was priced from exactly these bills. A
+  // drift means an accrual landed after initiation but before the stamp — the
+  // shortfall must surface, not be silently absorbed.
+  if (settledTotal !== evt.amount_bdt) {
+    logger.error('[billsLedger] settled total does not match the payment event amount', {
+      paymentEventId: evt.id,
+      settledTotal,
+      eventAmountBdt: evt.amount_bdt,
+      billIds: settleable.map((b) => b.id),
+    });
+  }
+
+  return {
+    billId: settleable[0].id,
+    billIds: settleable.map((b) => b.id),
+    amountBdt: settledTotal,
+  };
 }
 
 /**
@@ -224,8 +382,13 @@ async function markBillSettled(
 }
 
 /**
- * Settle the operator's single open subscription_purchase bill under the
- * operator advisory lock, linking it to the settlement payment event.
+ * Settle every bill stamped with one settlement payment event, under the
+ * operator advisory locks.
+ *
+ * Batch-2 Item 8b: a subscription bill stays 1:1 with its event
+ * (`operator_bills_payment_event_uq`, now kind-scoped by migration 0100); the
+ * aggregated usage receivables may share one event stamp, because one payment
+ * clears all of them.
  *
  * RESOLUTION — Batch-2 Item 7 (C-B2 implementation refinement):
  *   PRIMARY  resolution-by-pre-stamp. The initiating route stamps
@@ -241,14 +404,19 @@ async function markBillSettled(
  *            behavior is preserved exactly.
  *
  * Replay is a no-op: a bill already settled BY THIS EVENT returns null.
- * operator_bills_payment_event_uq makes one event settle at most one bill.
+ * operator_bills_payment_event_uq keeps a subscription bill 1:1 with its event;
+ * usage bills may share one stamp (migration 0100), and ALL of them settle here.
  */
 export async function settleSubscriptionBill(
   tx: Tx,
   params: { eventId: string },
-): Promise<{ billId: string } | null> {
+): Promise<{ billId: string; billIds: string[]; amountBdt: number } | null> {
   const [evt] = await tx
-    .select({ id: paymentEvents.id, driver_id: paymentEvents.driver_id })
+    .select({
+      id: paymentEvents.id,
+      driver_id: paymentEvents.driver_id,
+      amount_bdt: paymentEvents.amount_bdt,
+    })
     .from(paymentEvents)
     .where(eq(paymentEvents.id, params.eventId))
     .for('update')
@@ -256,38 +424,11 @@ export async function settleSubscriptionBill(
   if (!evt) return null;
 
   // ── PRIMARY: the initiation stamp ────────────────────────────────────────
-  const [stamp] = await tx
-    .select({
-      id: operatorBills.id,
-      operator_role: operatorBills.operator_role,
-      operator_id: operatorBills.operator_id,
-    })
-    .from(operatorBills)
-    .where(eq(operatorBills.payment_event_id, evt.id))
-    .limit(1);
-
-  if (stamp) {
-    await tx.execute(
-      sql`SELECT pg_advisory_xact_lock(hashtext(${operatorPurchaseLockKey(stamp.operator_role, stamp.operator_id)}))`,
-    );
-    // Re-read under the lock: a concurrent settlement may have flipped it.
-    const [bill] = await tx
-      .select()
-      .from(operatorBills)
-      .where(eq(operatorBills.id, stamp.id))
-      .for('update')
-      .limit(1);
-    if (!bill) return null;
-    if (bill.status === 'settled') {
-      logger.debug('[billsLedger] bill already settled by this event (replay no-op)', {
-        billId: bill.id,
-        paymentEventId: evt.id,
-      });
-      return null;
-    }
-    if (bill.status !== 'open' || bill.kind !== 'subscription_purchase') return null;
-    return markBillSettled(tx, bill, evt.id);
-  }
+  // Batch-2 Item 8/8b: the stamp resolves any settleable bill kind, and one
+  // event may carry the stamps of the whole open usage set (aggregated
+  // receivables). Subscription bills stay 1:1 (operator_bills_payment_event_uq).
+  const stamped = await settleStampedBills(tx, evt);
+  if (stamped) return stamped;
 
   // ── FALLBACK: C-B2 literal driver resolution (unstamped events) ──────────
   if (!evt.driver_id) return null;
@@ -311,5 +452,5 @@ export async function settleSubscriptionBill(
     .limit(1);
   if (!bill) return null;
 
-  return markBillSettled(tx, bill, evt.id);
+  return { ...(await markBillSettled(tx, bill, evt.id)), billIds: [bill.id], amountBdt: bill.amount_bdt };
 }

@@ -67,6 +67,7 @@ import {
   shopProducts,
   shops,
   shopMembers,
+  operatorPackages,
 } from "@/src/db/schema";
 import { POST as deliverLeg } from "@/app/api/delivery/active/[id]/action+api";
 import { PATCH as patchStatus } from "@/app/api/shop/orders/[id]/status+api";
@@ -120,7 +121,11 @@ let updateReturnRows: Row[];
 function chain(rows: Row[]) {
   const c: Record<string, unknown> = {
     from: jest.fn(() => c),
+    // Batch-2 Item 8: settleShopOrder reads the shop's operator_packages
+    // possession through a leftJoin + orderBy chain before the legacy read.
+    leftJoin: jest.fn(() => c),
     where: jest.fn(() => c),
+    orderBy: jest.fn(() => c),
     // Thenable: covers both `.limit(1).for("update")` and direct awaits.
     limit: jest.fn(() => c),
     for: jest.fn(() => c),
@@ -178,6 +183,9 @@ beforeEach(() => {
   jest.clearAllMocks();
   mockCurrentRider = "44444444-4444-4444-8444-444444444444";
   resolvers = new Map();
+  // Unpackaged shop: the Item 8 possession read finds nothing, so settlement
+  // takes the untouched legacy commission path these identities were written for.
+  resolvers.set(operatorPackages, []);
   inserts = [];
   updates = [];
   updateReturnRows = [{ id: ORDER_ID }];

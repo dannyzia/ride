@@ -16,6 +16,9 @@ jest.mock("@/lib/launchRoles", () => ({
   heldRoles: jest.fn(async () => [{ role: "shop_owner", status: "active" }]),
 }));
 jest.mock("@/lib/portpos", () => ({ isConfigured: jest.fn(() => true) }));
+jest.mock("@/lib/parseBody", () => ({
+  parseJsonBody: jest.fn(async () => ({ ok: true, data: {} })),
+}));
 jest.mock("@/lib/platformConfig", () => ({ getPlan05Bool: jest.fn(async () => true) }));
 jest.mock("@/lib/logger", () => ({
   logger: { info: jest.fn(), error: jest.fn(), warn: jest.fn(), debug: jest.fn() },
@@ -41,6 +44,7 @@ import { db } from "@/src/db";
 import { heldRoles } from "@/lib/launchRoles";
 import { getPlan05Bool } from "@/lib/platformConfig";
 import { isConfigured } from "@/lib/portpos";
+import { parseJsonBody } from "@/lib/parseBody";
 import {
   getOperatorStatement,
   initiateOperatorSettlement,
@@ -92,6 +96,8 @@ beforeEach(() => {
   });
   (initiateOperatorSettlement as jest.Mock).mockResolvedValue({
     billId: "bill-1",
+    bill_ids: ["bill-1"],
+    bill_kind: "subscription_purchase",
     paymentEventId: "evt-1",
     amountBdt: 5_000,
     payment_url: "https://gateway.example/inv-1",
@@ -140,10 +146,50 @@ describe("POST settlement", () => {
       amount_bdt: 5_000,
       purpose: "subscription_settlement",
       bill_id: "bill-1",
+      bill_kind: "subscription_purchase",
+      bill_ids: ["bill-1"],
     });
     expect(initiateOperatorSettlement).toHaveBeenCalledWith(
       expect.objectContaining({ operatorRole: role, operatorId: OP_ID, userId: USER_ID }),
     );
+  });
+
+  test("bill_kind='usage' targets the aggregated commission receivable (Batch-2 Item 8)", async () => {
+    (parseJsonBody as jest.Mock).mockResolvedValueOnce({
+      ok: true,
+      data: { bill_kind: "usage" },
+    });
+
+    const res = await shopPay(request());
+
+    expect(res.status).toBe(200);
+    expect(initiateOperatorSettlement).toHaveBeenCalledWith(
+      expect.objectContaining({ operatorRole: "shop", billKind: "usage" }),
+    );
+  });
+
+  test("no bill_kind sent → the core resolves whichever slot is outstanding", async () => {
+    (initiateOperatorSettlement as jest.Mock).mockResolvedValueOnce({
+      billId: "usage-1",
+      bill_ids: ["usage-1"],
+      bill_kind: "usage",
+      paymentEventId: "evt-2",
+      amountBdt: 2_500,
+      payment_url: "https://gateway.example/inv-2",
+      payment_event_id: "evt-2",
+    });
+
+    const res = await shopPay(request());
+
+    expect(initiateOperatorSettlement).toHaveBeenCalledWith(
+      expect.objectContaining({ operatorRole: "shop", billKind: undefined }),
+    );
+    expect(await res.json()).toMatchObject({
+      bill_id: "usage-1",
+      bill_kind: "usage",
+      bill_ids: ["usage-1"],
+      amount_bdt: 2_500,
+    });
   });
 
   test("gateway not configured → 503 before any auth/read", async () => {

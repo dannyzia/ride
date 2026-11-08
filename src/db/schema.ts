@@ -1174,11 +1174,6 @@ export const operatorBills = pgTable(
     operator_role: operatorRoleEnum("operator_role").notNull().default("driver"),
     subscription_id: uuid("subscription_id").references(() => subscriptions.id),
     kind: varchar("kind", { length: 30 }).notNull().default("subscription_purchase"),
-    // Batch-2 Item 8: the producing event for a per-order usage bill
-    // (shop_orders.id for shops; later verticals record their own source).
-    // Role-polymorphic like operator_id — no FK. Subscription-purchase bills
-    // leave it NULL.
-    source_order_id: uuid("source_order_id"),
     amount_bdt: integer("amount_bdt").notNull(),
     status: varchar("status", { length: 20 }).notNull().default("open"),
     payment_event_id: uuid("payment_event_id").references(() => paymentEvents.id),
@@ -1193,15 +1188,19 @@ export const operatorBills = pgTable(
     uniqueIndex("operator_bills_one_open_uq")
       .on(t.operator_role, t.operator_id)
       .where(sql`${t.status} = 'open' AND ${t.kind} = 'subscription_purchase'`),
-    // M-14 settlement barrier: one payment event settles at most one bill.
+    // M-14 settlement barrier: one payment event settles at most one
+    // SUBSCRIPTION bill (Batch-2 Item 8b scoped it — migration 0100). Usage
+    // bills are aggregated receivables: ONE payment clears every open usage
+    // bill, so they deliberately share an event stamp.
     uniqueIndex("operator_bills_payment_event_uq")
       .on(t.payment_event_id)
-      .where(sql`${t.payment_event_id} IS NOT NULL`),
-    // Batch-2 Item 8: one usage bill per producer event, so a retried
-    // delivered transition accrues the fee exactly once.
-    uniqueIndex("operator_bills_source_order_uq")
-      .on(t.operator_role, t.source_order_id)
-      .where(sql`${t.source_order_id} IS NOT NULL`),
+      .where(sql`${t.payment_event_id} IS NOT NULL AND ${t.kind} = 'subscription_purchase'`),
+    // Batch-2 Item 8: ONE open usage bill per shop — the aggregated commission
+    // receivable (accrued per order under its own advisory lock). 1:1 with a
+    // settlement, so the usage slot needs no per-event key.
+    uniqueIndex("operator_bills_one_open_usage_uq")
+      .on(t.operator_role, t.operator_id)
+      .where(sql`${t.status} = 'open' AND ${t.kind} = 'usage'`),
   ],
 );
 
