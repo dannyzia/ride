@@ -1165,9 +1165,12 @@ export const operatorBills = pgTable(
   "operator_bills",
   {
     id: uuid("id").defaultRandom().primaryKey(),
-    operator_id: uuid("operator_id")
-      .notNull()
-      .references(() => drivers.id),
+    // Polymorphic operator reference, keyed WITH operator_role (Batch-2 Item 6):
+    // driver rows point at drivers.id; shop/delivery/fleet rows point at
+    // shops.id / couriers.id / fleets.id. Migration 0098 drops the original
+    // driver_bills_driver_id_fkey, which the role-dependent id can no longer
+    // satisfy.
+    operator_id: uuid("operator_id").notNull(),
     operator_role: operatorRoleEnum("operator_role").notNull().default("driver"),
     subscription_id: uuid("subscription_id").references(() => subscriptions.id),
     kind: varchar("kind", { length: 30 }).notNull().default("subscription_purchase"),

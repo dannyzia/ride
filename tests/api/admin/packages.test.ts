@@ -84,6 +84,18 @@ function insertThrows(code: string): jest.Mock {
   }));
 }
 
+/**
+ * The Batch-2 Item 6 partial-update floor reads the row's stored
+ * applicable_roles when the request changes the price without restating them.
+ */
+function mockSelectRoles(applicable_roles: string[]): void {
+  (db.select as jest.Mock).mockImplementation(() => ({
+    from: jest.fn(() => ({
+      where: jest.fn(() => ({ limit: jest.fn(async () => [{ applicable_roles }]) })),
+    })),
+  }));
+}
+
 /** A drizzle update chain that rejects the way Postgres rejects a 23505. */
 function updateThrows(code: string): jest.Mock {
   return jest.fn(() => ({
@@ -334,6 +346,9 @@ describe("POST /api/admin/packages", () => {
   });
 
   test("PUT with commission_percent converts to string for numeric column", async () => {
+    // Batch-2 Item 6: a priced PUT without applicable_roles reads the row's
+    // STORED roles for the per-role floor, so this path needs that read mocked.
+    mockSelectRoles(["driver"]);
     let updatedValues: unknown;
     (db.update as jest.Mock).mockImplementation(() => ({
       set: jest.fn((vals) => {
@@ -374,6 +389,37 @@ describe("PUT /api/admin/packages", () => {
     (db.update as jest.Mock).mockImplementation(updateThrows("23503"));
     const res = await PUT(jsonRequest({ id: PKG_ID, name: "Pro 200" }));
     expect(res.status).toBe(500);
+  });
+
+  test("partial update (price only) is floored against the row's STORED roles", async () => {
+    // A shop-scoped row raised to 5,000 must fail the shop ceiling (5,500 -
+    // 1,000 = 4,500) even though the request never restates applicable_roles.
+    // Driver D1 alone (5,000 <= 49,000) would have let it through.
+    (getDebtCeilingForRole as jest.Mock).mockImplementation(async (role: string) =>
+      role === "shop" ? 5_500 : 50_000,
+    );
+    mockSelectRoles(["shop"]);
+    const res = await PUT(jsonRequest({ id: PKG_ID, price_bdt: 5_000 }));
+
+    expect(res.status).toBe(400);
+    expect((await getJson(res)).error).toBe("debt_ceiling_below_package_price");
+    expect(db.update).not.toHaveBeenCalled();
+  });
+
+  test("partial update on a driver-only row keeps the existing D1 check", async () => {
+    (getDebtCeilingForRole as jest.Mock).mockImplementation(async () => 50_000);
+    (getDebtCeilingForRole as jest.Mock).mockClear();
+    mockSelectRoles(["driver"]);
+    (db.update as jest.Mock).mockImplementation(() => ({
+      set: jest.fn(() => ({
+        where: jest.fn(() => ({ returning: jest.fn(async () => [{ id: PKG_ID }]) })),
+      })),
+    }));
+    const res = await PUT(jsonRequest({ id: PKG_ID, price_bdt: 5_000 }));
+
+    expect(res.status).toBe(200);
+    // Driver-only rows never consult the per-role reader (unchanged behavior).
+    expect(getDebtCeilingForRole).not.toHaveBeenCalled();
   });
 
   test("PUT with applicable_roles passes the array through to Drizzle", async () => {

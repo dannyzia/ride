@@ -25,6 +25,7 @@ jest.mock("@/lib/logger", () => ({
 }));
 
 import { db } from "@/src/db";
+import { heldRoles } from "@/lib/launchRoles";
 import { packages, drivers } from "@/src/db/schema";
 import { PgDialect } from "drizzle-orm/pg-core";
 import { GET } from "@/app/api/package/list+api";
@@ -99,9 +100,44 @@ describe("GET /api/package/list — operator applicability (Batch-2 Item 1)", ()
     await GET(makeRequest());
 
     expect(whereArg).toBeDefined();
-    const sqlText = new PgDialect().sqlToQuery(whereArg as any).sql;
-    expect(sqlText).toContain('"packages"."applicable_roles"');
-    expect(sqlText).toContain("@> ARRAY['driver']::text[]");
+    const query = new PgDialect().sqlToQuery(whereArg as any);
+    expect(query.sql).toContain('"packages"."applicable_roles"');
+    expect(query.sql).toContain("@> ARRAY[");
+    expect(query.params).toContain("driver");
+    // Driver-only caller: exactly ONE applicable_roles containment clause (the
+    // pre-Item-6 shape). The separate packages.roles §14 filter also uses @>.
+    expect(query.sql.match(/applicable_roles" @> ARRAY\[/g)).toHaveLength(1);
+  });
+
+  test("multi-role caller: visibility is the UNION over active operator roles", async () => {
+    // Batch-2 Item 6: a driver+shop account sees driver plans AND shop plans,
+    // including multi-role (shared) plans, which match either containment.
+    (heldRoles as jest.Mock).mockResolvedValue([
+      { role: "driver", status: "active" },
+      { role: "shop_owner", status: "active" },
+    ]);
+    packageRows = [DRIVER_PLAN, SHOP_PLAN];
+
+    await GET(makeRequest());
+
+    const query = new PgDialect().sqlToQuery(whereArg as any);
+    expect(query.params).toContain("driver");
+    expect(query.params).toContain("shop");
+    expect(query.sql.match(/applicable_roles" @> ARRAY\[/g)).toHaveLength(2);
+  });
+
+  test("a pending/suspended role contributes no visibility", async () => {
+    (heldRoles as jest.Mock).mockResolvedValue([
+      { role: "driver", status: "active" },
+      { role: "shop_owner", status: "pending" },
+    ]);
+    packageRows = [DRIVER_PLAN];
+
+    await GET(makeRequest());
+
+    const query = new PgDialect().sqlToQuery(whereArg as any);
+    expect(query.params).toContain("driver");
+    expect(query.params).not.toContain("shop");
   });
 
   test("driver-visible plans are returned with their fields", async () => {

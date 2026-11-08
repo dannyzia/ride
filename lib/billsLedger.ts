@@ -28,6 +28,10 @@ export class BillSlotConflictError extends Error {
  * Batch-2 Item 2: params carry the operator identity (role + id). packageId is
  * accepted for caller symmetry/logging — operator_bills has no package_id column
  * (the subscription carries the package link).
+ * Batch-2 Item 6: non-driver purchases have NO subscriptions row — the grant
+ * (`operator_packages`) carries the package link instead — so subscriptionId is
+ * null for shop/delivery/fleet bills, and dueAt follows the grant's expires_at
+ * (null = unlimited term). Driver callers are unchanged.
  */
 export async function createOpenBill(
   tx: Tx,
@@ -35,9 +39,9 @@ export async function createOpenBill(
     operatorRole: 'driver' | 'shop' | 'delivery' | 'fleet';
     operatorId: string;
     packageId?: string;
-    subscriptionId: string;
+    subscriptionId?: string | null;
     amountBdt: number;
-    dueAt: Date;
+    dueAt: Date | null;
   },
 ): Promise<{ id: string; operator_id: string; operator_role: string; amount_bdt: number; due_at: Date | null; status: string }> {
   try {
@@ -46,7 +50,7 @@ export async function createOpenBill(
       .values({
         operator_id: params.operatorId,
         operator_role: params.operatorRole,
-        subscription_id: params.subscriptionId,
+        subscription_id: params.subscriptionId ?? null,
         amount_bdt: params.amountBdt,
         due_at: params.dueAt,
         status: 'open',

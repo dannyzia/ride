@@ -212,13 +212,32 @@ export async function PUT(request: Request) {
     if (!result.ok) return result.response;
 
     const maxDebtBdt = await getMaxCommissionDebtBdt();
+
+    // Batch-2 Item 6: a PARTIAL update that changes the price without restating
+    // applicable_roles must still be checked against the roles the row ALREADY
+    // applies to. Otherwise raising a shop/fleet/delivery-scoped plan's price
+    // silently escapes its per-role ceiling floor (the request array is empty
+    // only because the client did not send it). The stored row is the
+    // authority; an explicit array in the request still wins.
+    const rolesForCeilings =
+      result.data.applicable_roles ??
+      (result.data.price_bdt !== undefined
+        ? (
+            await db
+              .select({ applicable_roles: packages.applicable_roles })
+              .from(packages)
+              .where(eq(packages.id, result.data.id))
+              .limit(1)
+          )[0]?.applicable_roles
+        : undefined);
+
     const constraintErr = validatePackageConstraints(
       result.data,
       maxDebtBdt,
       // Batch-2 Item 5: per-role ceilings for the package's NON-driver
       // applicable roles (the driver role is covered by the existing D1 check
       // above — driver behavior unchanged for driver-only packages).
-      await getRoleCeilings(result.data),
+      await getRoleCeilings({ applicable_roles: rolesForCeilings }),
     );
     if (constraintErr) {
       return Response.json({ error: constraintErr.code, message: constraintErr.message }, { status: 400 });

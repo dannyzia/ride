@@ -65,11 +65,29 @@ export async function GET(request: Request) {
         )
       : isNull(packages.vehicle_type);
 
-    // Batch-2 Item 1: operator applicability — this surface serves drivers,
-    // so plans whose applicable_roles excludes 'driver' are not listed.
-    // The column default '{driver}' keeps every existing package visible
-    // (no-op today). Shop/delivery/fleet surfaces pin their own role.
-    const operatorFilter = sql`${packages.applicable_roles} @> ARRAY['driver']::text[]`;
+    // Batch-2 Item 1/6: operator applicability — visibility is the UNION over
+    // the caller's ACTIVE operator roles. A driver-only account sees exactly
+    // what it saw before (driver-applicable plans, including plans shared with
+    // other roles); a multi-role account additionally sees its other role's
+    // plans. Containment is what makes "role + shared" one predicate: a plan
+    // listing several roles matches every one of them.
+    const OPERATOR_ROLE_BY_LAUNCH_ROLE: Record<string, string> = {
+      driver: 'driver',
+      shop_owner: 'shop',
+      delivery_man: 'delivery',
+      fleet_owner: 'fleet',
+    };
+    const operatorRoles = [
+      ...new Set(
+        activeRoleNames
+          .map((r) => OPERATOR_ROLE_BY_LAUNCH_ROLE[r])
+          .filter((r): r is string => Boolean(r)),
+      ),
+    ];
+    const operatorFilter =
+      operatorRoles.length > 0
+        ? or(...operatorRoles.map((r) => sql`${packages.applicable_roles} @> ARRAY[${r}]::text[]`))
+        : sql`false`;
 
     const whereClause = and(
       isNull(packages.deleted_at),

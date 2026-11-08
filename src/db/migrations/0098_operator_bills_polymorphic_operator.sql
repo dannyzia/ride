@@ -1,0 +1,13 @@
+-- Migration: 0098_operator_bills_polymorphic_operator.sql
+-- Batch-2 Item 6: non-driver operator purchases write operator_bills rows keyed
+-- (operator_role, operator_id), where operator_id may be shops.id, couriers.id
+-- or fleets.id. Migration 0095 renamed driver_bills.driver_id → operator_id but
+-- the original driver_bills_driver_id_fkey still enforces drivers(id), so no
+-- shop/courier/fleet id can satisfy it and every such bill would be rejected.
+--
+-- Drop the single-table FK. The authoritative key is the (operator_role,
+-- operator_id) pair: plain lookups use operator_bills_operator_idx, and the
+-- one-open settle-first barrier is operator_bills_one_open_uq on that pair.
+-- User-visible behavior for driver rows is unchanged (drivers rows still exist
+-- and are still written by the same single writer, lib/billsLedger.ts).
+ALTER TABLE operator_bills DROP CONSTRAINT IF EXISTS driver_bills_driver_id_fkey;
