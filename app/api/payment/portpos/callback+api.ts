@@ -228,13 +228,11 @@ async function processPortposPayment(
   // so a settlement event never reaches activateSubscription (F-1 short-circuit
   // neutralized). Idempotent replay is a no-op via operator_bills_payment_event_uq.
   if (evt.purpose === 'subscription_settlement') {
-    if (!evt.driver_id) {
-      logger.error('[portpos/callback] subscription settlement missing driver_id — failing event', { paymentEventId: evt.id });
-      await db.transaction(async (tx) => {
-        await tx.update(paymentEvents).set({ status: 'failed' }).where(eq(paymentEvents.id, evt.id));
-      });
-      return "failed";
-    }
+    // Batch-2 Item 7: settlement events are resolved by the bill's own stamp
+    // (operator_bills.payment_event_id, written at initiation under the
+    // purchase lock), so a non-driver settlement event legitimately carries no
+    // driver_id. The previous `!evt.driver_id → failed` guard is therefore
+    // removed; the branch body, lock and replay semantics are unchanged.
     try {
       await db.transaction(async (tx) => {
         await settleSubscriptionBill(tx, { eventId: evt.id });

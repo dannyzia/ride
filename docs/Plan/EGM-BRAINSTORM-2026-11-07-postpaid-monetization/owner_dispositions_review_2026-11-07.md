@@ -73,6 +73,18 @@ Owner ruling: "a package determines the billing option for a driver, and for how
 - Implementation: `dispatch_offers`/`rides` mode column widens to `'lead' | 'commission' | 'bundle'` (ALTER TYPE ADD VALUE); leadBilling classifies the billing SET; completion accrues for `commission`/`bundle`; accept proof per billing set; admin form removes the guard.
 - Lands pre-Stage-4.
 
+## C-B2 Implementation Refinement (recorded 2026-11-08, Item 7)
+
+Resolution-by-pre-stamp replaces the ruling's literal callback-time resolution as the PRIMARY mechanism: the bill↔event link is stamped on the bill at settlement initiation (under the same `purchase_bill_` advisory lock), and the callback resolves `WHERE payment_event_id = event.id`. Rationale: non-driver settlement events carry no operator identity (a user can be driver and shop owner), so callback-time resolution by `driver_id` cannot work for them. C-B2's guarantees are preserved exactly — link made under lock, `operator_bills_payment_event_uq` keeps one event → at most one bill, replay is an idempotent no-op — and C-B2's literal driver resolution is retained as the FALLBACK for unstamped events. Recorded per the rulings-beat-artifacts protocol; no ruling text changed above.
+
+## Batch-2 Rulings (2026-11-07) — Operator Package Platform (all operator roles)
+
+1. **ONE LEDGER**: every operator's obligations land in the same receivables figure — one unpaid total, settle-first across all operations, ceiling across all. No per-vertical ledgers.
+2. **FLEET FOLDS IN**: fleet's existing subscription tables (`fleet_subscription_plans`, `fleet_subscriptions`, `fleet_billing_transactions`) fold into the unified package model (migration/cleanup), not a parallel system.
+3. **BILLING EVENTS**: rides per trip; delivery per parcel/remittance; shops/restaurants per order; fleet per period — **plus purchase of the subscription itself** (the package's Subscription Amount bills immediately at purchase, postpaid, for every operator role — already the driver model; generalized to all).
+4. **ONE-TIME SWITCH confirmed**: the package model is fully general; `hybrid` activation is a one-time cutover — no future switches for new package configurations.
+5. Scope note (D7 preserved): delivery-man packages bill PLATFORM fees only (commission per parcel + subscription amount); COD cash remittance remains the separate remittance-dues system — rider money is never platform billing (Zero Escrow).
+
 ## What To Do Next
 1. **Trigger Correction Cycle**: Apply these approved dispositions directly to DESIGN-POSTPAID-MONETIZATION.md.
 2. **Audit Verification**: Verify the diff against the 2 Blockers and 23 Majors to confirm all are closed and file citations remain verified against the tree.

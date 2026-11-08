@@ -86,18 +86,62 @@ export async function createOpenBill(
 }
 
 /**
+ * The advisory lock key for one operator's purchase slot. The STRING is a
+ * cross-module contract: the writer that opens the bill (lib/operatorPurchase)
+ * and this resolver must use the same key, or a purchase and a settlement can
+ * interleave. The driver slot keeps its legacy `purchase_bill_<id>` form.
+ */
+function operatorPurchaseLockKey(operatorRole: string, operatorId: string): string {
+  return operatorRole === 'driver'
+    ? `purchase_bill_${operatorId}`
+    : `purchase_bill_${operatorRole}:${operatorId}`;
+}
+
+/** Flip the bill to settled and the event to paid (same tx, caller holds lock). */
+async function markBillSettled(
+  tx: Tx,
+  bill: typeof operatorBills.$inferSelect,
+  eventId: string,
+): Promise<{ billId: string }> {
+  const now = new Date();
+  await tx
+    .update(operatorBills)
+    .set({ status: 'settled', payment_event_id: eventId, updated_at: now })
+    .where(eq(operatorBills.id, bill.id));
+
+  await tx
+    .update(paymentEvents)
+    .set({ status: 'paid', confirmed_at: now })
+    .where(eq(paymentEvents.id, eventId));
+
+  logger.info('[billsLedger] subscription bill settled', {
+    billId: bill.id,
+    operatorRole: bill.operator_role,
+    operatorId: bill.operator_id,
+    paymentEventId: eventId,
+  });
+  return { billId: bill.id };
+}
+
+/**
  * Settle the operator's single open subscription_purchase bill under the
  * operator advisory lock, linking it to the settlement payment event.
  *
- * RESOLUTION MAPPING (pinned, Batch-2 Item 2): until multi-operator payment
- * events land, every settlement event carries the DRIVER identity —
- * payment_events.driver_id maps to operator_bills.operator_id with
- * operator_role='driver'. Shop/delivery/fleet settlement events are a
- * Batch-2 concern; they will pin their own role on the event.
+ * RESOLUTION — Batch-2 Item 7 (C-B2 implementation refinement):
+ *   PRIMARY  resolution-by-pre-stamp. The initiating route stamps
+ *            `operator_bills.payment_event_id` with the new event id at
+ *            initiation, under this same advisory lock, so the BILL carries
+ *            the resolution key and payment_events needs no operator identity.
+ *            Works for every role — driver included — with the callback
+ *            unchanged.
+ *   FALLBACK the C-B2 driver resolution, kept literal: an event that carries a
+ *            driver_id but resolves no stamp settles that driver's single open
+ *            subscription bill (operator_role='driver'). Any event written
+ *            before the stamp existed takes this path, so the ruling's driver
+ *            behavior is preserved exactly.
  *
- * Idempotent: replays return null when the bill is already settled with the
- * same event (operator_bills_payment_event_uq makes double-settlement
- * structurally impossible).
+ * Replay is a no-op: a bill already settled BY THIS EVENT returns null.
+ * operator_bills_payment_event_uq makes one event settle at most one bill.
  */
 export async function settleSubscriptionBill(
   tx: Tx,
@@ -109,10 +153,47 @@ export async function settleSubscriptionBill(
     .where(eq(paymentEvents.id, params.eventId))
     .for('update')
     .limit(1);
-  if (!evt || !evt.driver_id) return null;
+  if (!evt) return null;
+
+  // ── PRIMARY: the initiation stamp ────────────────────────────────────────
+  const [stamp] = await tx
+    .select({
+      id: operatorBills.id,
+      operator_role: operatorBills.operator_role,
+      operator_id: operatorBills.operator_id,
+    })
+    .from(operatorBills)
+    .where(eq(operatorBills.payment_event_id, evt.id))
+    .limit(1);
+
+  if (stamp) {
+    await tx.execute(
+      sql`SELECT pg_advisory_xact_lock(hashtext(${operatorPurchaseLockKey(stamp.operator_role, stamp.operator_id)}))`,
+    );
+    // Re-read under the lock: a concurrent settlement may have flipped it.
+    const [bill] = await tx
+      .select()
+      .from(operatorBills)
+      .where(eq(operatorBills.id, stamp.id))
+      .for('update')
+      .limit(1);
+    if (!bill) return null;
+    if (bill.status === 'settled') {
+      logger.debug('[billsLedger] bill already settled by this event (replay no-op)', {
+        billId: bill.id,
+        paymentEventId: evt.id,
+      });
+      return null;
+    }
+    if (bill.status !== 'open' || bill.kind !== 'subscription_purchase') return null;
+    return markBillSettled(tx, bill, evt.id);
+  }
+
+  // ── FALLBACK: C-B2 literal driver resolution (unstamped events) ──────────
+  if (!evt.driver_id) return null;
 
   await tx.execute(
-    sql.raw("SELECT pg_advisory_xact_lock(hashtext('purchase_bill_' || " + evt.driver_id + "))"),
+    sql`SELECT pg_advisory_xact_lock(hashtext(${operatorPurchaseLockKey('driver', evt.driver_id)}))`,
   );
 
   const [bill] = await tx
@@ -120,41 +201,15 @@ export async function settleSubscriptionBill(
     .from(operatorBills)
     .where(
       and(
-        // Resolution mapping (see doc above): driver events resolve the
-        // operator_role='driver' slot only.
         eq(operatorBills.operator_role, 'driver'),
         eq(operatorBills.operator_id, evt.driver_id),
         eq(operatorBills.status, 'open'),
         eq(operatorBills.kind, 'subscription_purchase'),
       ),
     )
+    .for('update')
     .limit(1);
   if (!bill) return null;
 
-  if (bill.status === 'settled' && bill.payment_event_id === params.eventId) {
-    logger.debug('[billsLedger] bill already settled by this event (replay no-op)', {
-      billId: bill.id,
-      paymentEventId: params.eventId,
-    });
-    return null;
-  }
-
-  const now = new Date();
-  await tx
-    .update(operatorBills)
-    .set({ status: 'settled', payment_event_id: params.eventId, updated_at: now })
-    .where(eq(operatorBills.id, bill.id));
-
-  await tx
-    .update(paymentEvents)
-    .set({ status: 'paid', confirmed_at: now })
-    .where(eq(paymentEvents.id, params.eventId));
-
-  logger.info('[billsLedger] subscription bill settled', {
-    billId: bill.id,
-    operatorRole: 'driver',
-    operatorId: evt.driver_id,
-    paymentEventId: params.eventId,
-  });
-  return { billId: bill.id };
+  return markBillSettled(tx, bill, evt.id);
 }

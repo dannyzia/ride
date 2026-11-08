@@ -104,6 +104,8 @@ const GATED_HARNESSES = [
   "tests/concurrency/subscription-bill-settlement.test.ts",
   // Batch-2 Item 3: operator possession (operator_packages) harness (M-17 registration).
   "tests/concurrency/operator-packages.test.ts",
+  // Batch-2 Item 7: non-driver settlement by initiation stamp (M-17 registration).
+  "tests/concurrency/operator-bill-stamp-settlement.test.ts",
 ];
 const JEST_BIN = path.join(REPO, "node_modules", "jest", "bin", "jest.js");
 /**
