@@ -38,6 +38,7 @@ import {
   vehicles,
 } from "@/src/db/schema";
 import { logger } from "@/lib/logger";
+import { getOperatorUnpaidObligations } from "@/lib/commissionDues";
 
 /** Drizzle transaction handle type (postgres-js driver). */
 export type FleetTx = Parameters<Parameters<typeof db.transaction>[0]>[0];
@@ -291,9 +292,11 @@ export async function checkDriverExitDues(
 }
 
 /**
- * Dues gate check for vehicle delisting (BD-1..3):
+ * Dues gate check for vehicle delisting (BD-1..3 + Item 10b):
  * 1. Active trip on vehicle's assigned driver -> BLOCKED.
  * 2. Overdue/pending fleet subscription transactions -> BLOCKED.
+ * 3. (Item 10b) Any unpaid operator-package dues (operator_bills) -> BLOCKED,
+ *    same structured reason; both ledgers block.
  */
 export async function checkFleetVehicleExitDues(
   tx: FleetTx,
@@ -357,6 +360,20 @@ export async function checkFleetVehicleExitDues(
       blocked: true,
       reason: "fleet_has_overdue_billing",
       details: { transaction_id: overdueTx.id, amount_bdt: overdueTx.amount_bdt },
+    };
+  }
+
+  // Item 10b: post-fold fleet package debt lives in operator_bills — any
+  // positive total blocks delisting (no dust exemption). Same structured
+  // reason; the figure rides in the details payload (and so into the BD-2
+  // audit log on override). Legacy fleet_billing_transactions debt still
+  // blocks above; both ledgers block.
+  const obligations = await getOperatorUnpaidObligations("fleet", fleetId, tx);
+  if (obligations.totalUnpaidPaisa > 0) {
+    return {
+      blocked: true,
+      reason: "fleet_has_overdue_billing",
+      details: { operator_unpaid_paisa: obligations.totalUnpaidPaisa },
     };
   }
 

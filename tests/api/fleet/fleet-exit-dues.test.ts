@@ -28,6 +28,8 @@ let mockBillingRows: Record<string, unknown>[] = [];
 let mockAssignmentRows: Record<string, unknown>[] = [];
 let mockUserRows: Record<string, unknown>[] = [];
 let mockFleetRows: Record<string, unknown>[] = [];
+// Item 10b: the operator_unpaid_obligations view row (null -> zero obligations).
+let mockObligationsRow: Record<string, unknown> | null = null;
 
 let mockCapturedInserts: { table: unknown; vals: Record<string, unknown> }[] = [];
 let mockCapturedUpdates: { table: unknown; vals: Record<string, unknown> }[] = [];
@@ -129,6 +131,8 @@ jest.mock("@/src/db", () => {
     select: makeSelect(),
     update: makeUpdate(),
     insert: makeInsert(),
+    // getOperatorUnpaidObligations reads via exec.execute(sql...).
+    execute: async () => [mockObligationsRow ?? {}],
   });
 
   return {
@@ -148,6 +152,7 @@ describe("ISSUE-36: Fleet Exit / Delisting + Dues Gate", () => {
     mockAssignmentRows = [];
     mockUserRows = [];
     mockFleetRows = [];
+    mockObligationsRow = null;
     mockCapturedInserts = [];
     mockCapturedUpdates = [];
     mockAuthRole = "OWNER";
@@ -208,6 +213,43 @@ describe("ISSUE-36: Fleet Exit / Delisting + Dues Gate", () => {
       expect(res.blocked).toBe(true);
       expect(res.reason).toBe("fleet_has_overdue_billing");
       expect(res.details).toEqual({ transaction_id: "tx-overdue", amount_bdt: 2500 });
+    });
+
+    it("blocks when fleet has unpaid operator-package dues (Item 10b), figure in payload", async () => {
+      mockVehicleRows = [{ id: VEHICLE_ID, fleet_id: FLEET_ID, driver_id: null }];
+      mockRideRows = [];
+      mockBillingRows = [];
+      // Open operator bill: ৳45 package dues outstanding.
+      mockObligationsRow = {
+        unpaid_subscription_paisa: 4500,
+        net_commission_paisa: 0,
+        total_unpaid_paisa: 4500,
+        active_self_bill_paisa: 4500,
+        lockout_exposure_paisa: 4500,
+      };
+      const { db } = require("@/src/db");
+
+      const res = await checkFleetVehicleExitDues(db as any, VEHICLE_ID, FLEET_ID);
+      expect(res.blocked).toBe(true);
+      expect(res.reason).toBe("fleet_has_overdue_billing");
+      expect(res.details).toEqual({ operator_unpaid_paisa: 4500 });
+    });
+
+    it("allows delisting when no legacy debts and zero operator dues (Item 10b)", async () => {
+      mockVehicleRows = [{ id: VEHICLE_ID, fleet_id: FLEET_ID, driver_id: null }];
+      mockRideRows = [];
+      mockBillingRows = [];
+      mockObligationsRow = {
+        unpaid_subscription_paisa: 0,
+        net_commission_paisa: 0,
+        total_unpaid_paisa: 0,
+        active_self_bill_paisa: 0,
+        lockout_exposure_paisa: 0,
+      };
+      const { db } = require("@/src/db");
+
+      const res = await checkFleetVehicleExitDues(db as any, VEHICLE_ID, FLEET_ID);
+      expect(res.blocked).toBe(false);
     });
 
     it("allows delisting when vehicle has no active trip and fleet has no overdue billing", async () => {
