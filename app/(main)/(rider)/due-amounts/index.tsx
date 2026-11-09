@@ -19,6 +19,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import Ionicons from "@expo/vector-icons/Ionicons";
+import * as Crypto from "expo-crypto";
 import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
 import { colors } from "@/theme/goRide";
@@ -139,7 +140,7 @@ export default function DueAmounts() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Idempotency-Key": crypto.randomUUID(),
+          "Idempotency-Key": Crypto.randomUUID(),
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify(body),

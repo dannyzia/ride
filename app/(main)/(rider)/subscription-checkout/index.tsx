@@ -4,6 +4,7 @@ import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator, StatusBar 
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
 import Ionicons from "@expo/vector-icons/Ionicons";
+import * as Crypto from "expo-crypto";
 import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
 import { colors } from "@/theme/goRide";
@@ -75,7 +76,7 @@ export default function SubscriptionCheckout() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Idempotency-Key": crypto.randomUUID(),
+          "Idempotency-Key": Crypto.randomUUID(),
           "x-client-postpaid": "1",
           Authorization: `Bearer ${token}`,
         },

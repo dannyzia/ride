@@ -42,6 +42,7 @@ import { colors } from "@/theme/goRide";
 import { useIsDark } from "@/lib/useAppearance";
 import { formatBDT, formatDate } from "@/lib/format";
 import { logger } from "@/lib/logger";
+import * as Crypto from "expo-crypto";
 import PaymentWebView from "@/components/PaymentWebView";
 
 interface ShopPackage {
@@ -155,7 +156,7 @@ export default function ShopPackagesScreen() {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "Idempotency-Key": crypto.randomUUID(),
+            "Idempotency-Key": Crypto.randomUUID(),
             Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify({ package_id: pkg.id }),
@@ -225,7 +226,7 @@ export default function ShopPackagesScreen() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Idempotency-Key": crypto.randomUUID(),
+          "Idempotency-Key": Crypto.randomUUID(),
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({ bill_kind: "subscription_purchase" }),

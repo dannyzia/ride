@@ -28,7 +28,7 @@ CREATE UNIQUE INDEX operator_bills_payment_event_uq ON operator_bills(payment_ev
   WHERE payment_event_id IS NOT NULL;
 
 -- Naming hygiene: the plain lookup index follows the rename.
-ALTER INDEX driver_bills_driver_idx RENAME TO operator_bills_operator_idx;
+CREATE INDEX IF NOT EXISTS operator_bills_operator_idx ON operator_bills(operator_id);
 
 -- §3.3 view re-issued: IDENTICAL driver math, references updated to
 -- operator_bills. Driver rows carry operator_role='driver'; shop/delivery/

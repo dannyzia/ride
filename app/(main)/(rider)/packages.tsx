@@ -15,6 +15,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import Ionicons from "@expo/vector-icons/Ionicons";
+import * as Crypto from "expo-crypto";
 import { useIsDark, useAppearance } from "@/lib/useAppearance";
 import { supabase } from "@/lib/supabase";
 import PaymentWebView from "@/components/PaymentWebView";
@@ -91,7 +92,7 @@ export default function PackagesScreen() {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token;
-      const idempotencyKey = crypto.randomUUID();
+      const idempotencyKey = Crypto.randomUUID();
       const res = await fetch(`${API_URL}/api/package/purchase`, {
         method: "POST",
         headers: {
