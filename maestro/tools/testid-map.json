@@ -1,5 +1,5 @@
 {
-  "total": 1345,
+  "total": 1353,
   "screens": {
     "(auth)/_layout.tsx": [
       {
@@ -4348,91 +4348,125 @@
     "(main)/(shop-owner)/index.tsx": [
       {
         "id": "shop-owner.push-shops",
-        "line": 357
+        "line": 354
       },
       {
         "id": "shop-owner.push-dues",
-        "line": 362
+        "line": 359
       },
       {
         "id": "shop-owner.push-settlement",
-        "line": 368
+        "line": 365
       },
       {
         "id": "shop-owner.push-staff",
-        "line": 374
+        "line": 371
       },
       {
         "id": "shop-owner.push-workshop",
-        "line": 380
+        "line": 377
       },
       {
         "id": "shop-owner.push-catalog",
-        "line": 386
+        "line": 383
+      },
+      {
+        "id": "shop-owner.handle-banner-cta",
+        "line": 454
       },
       {
         "id": "shop-owner.patch-availability",
-        "line": 408
+        "line": 479
       },
       {
         "id": "shop-owner.patch-availability-2",
-        "line": 421
+        "line": 492
       },
       {
         "id": "shop-owner.push-payout-method",
-        "line": 464
+        "line": 535
       },
       {
         "id": "shop-owner.push-workshop-2",
-        "line": 485
+        "line": 556
       },
       {
-        "id": "shop-owner.purchase-plan",
-        "line": 534
+        "id": "shop-owner.push-packages",
+        "line": 586
       },
       {
         "id": "shop-owner.set-segment",
-        "line": 559
+        "line": 613
       },
       {
         "id": "shop-owner.set-prep-target",
-        "line": 616
+        "line": 670
       },
       {
         "id": "shop-owner.set-reject-reason",
-        "line": 630
+        "line": 684
       },
       {
         "id": "shop-owner.patch-status",
-        "line": 645
+        "line": 699
       },
       {
         "id": "shop-owner.patch-status-2",
-        "line": 659
+        "line": 713
       },
       {
         "id": "shop-owner.patch-status-3",
-        "line": 685
+        "line": 739
       },
       {
         "id": "shop-owner.patch-status-4",
-        "line": 698
+        "line": 752
       },
       {
         "id": "shop-owner.set-prep-target-2",
-        "line": 733
+        "line": 787
       },
       {
         "id": "shop-owner.set-reject-reason-2",
-        "line": 765
+        "line": 819
       },
       {
         "id": "shop-owner.set-reject-target",
-        "line": 772
+        "line": 826
       },
       {
         "id": "shop-owner.set-reject-target-2",
-        "line": 787
+        "line": 841
+      }
+    ],
+    "(main)/(shop-owner)/packages.tsx": [
+      {
+        "id": "shop-owner.packages.el-1",
+        "line": 292
+      },
+      {
+        "id": "shop-owner.packages.load",
+        "line": 312
+      },
+      {
+        "id": "shop-owner.packages.go-to-dues",
+        "line": 355
+      },
+      {
+        "id": "shop-owner.packages.pay-now",
+        "line": 397
+      },
+      {
+        "id": "shop-owner.packages.set-activated",
+        "line": 410
+      },
+      {
+        "id": "shop-owner.packages.set-activated-2",
+        "line": 425
+      },
+      {
+        "id": "shop-owner.packages.purchase",
+        "line": 477
       }
     ],
     "(main)/(shop-owner)/settlement.tsx": [

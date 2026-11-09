@@ -2096,9 +2096,6 @@
       "workshop_pending": "{{n}}টি ওয়ার্কশপ রিকোয়েস্ট অপেক্ষমান",
       "workshop_overdue": "{{n}}টি নিশ্চিত করার সময়সীমা পেরিয়েছে",
       "workshop_sla_ok": "{{h}} ঘণ্টার মধ্যে নিশ্চিত করুন",
-      "plans_title": "আপনার অ্যাকাউন্টের প্ল্যান",
-      "plan_meta": "{{calls}} কল · {{days}} দিন",
-      "purchase_failed": "কেনা যায়নি",
       "no_orders": "এখানে কোনো অর্ডার নেই",
       "prep_picker_title": "প্রস্তুতির সময়",
       "prep_min": "{{n}} মিনিট",
@@ -2116,7 +2113,12 @@
       "segment_new": "নতুন",
       "segment_active": "চলমান",
       "segment_ready": "প্রস্তুত",
-      "segment_history": "ইতিহাস"
+      "segment_history": "ইতিহাস",
+      "banner_packages_cta": "商店套餐",
+      "banner_dues_cta": "结清欠款",
+      "banner_bills_cta": "查看账单",
+      "packages_card_title": "商店套餐",
+      "packages_card_hint": "购买套餐，继续接单"
     },
     "state": {
       "pending": "নতুন অর্ডার",
@@ -2226,6 +2228,30 @@
       "hint_lapsed": "আপনার প্যাকেজের মেয়াদ শেষ — বাকি পরিশোধযোগ্য থাকে।",
       "hint_owing": "আরেকটি প্যাকেজ কিনতে বাকি পরিশোধ করুন।",
       "hint_active": "সবকিছু ঠিক আছে।"
+    },
+    "packages": {
+      "title": "商店套餐",
+      "empty_title": "暂无在售商店套餐",
+      "empty_body": "当有新的商店套餐上架时，这里会显示出来。",
+      "plan_days": "有效期 {days} 天",
+      "plan_no_expiry": "长期有效",
+      "plan_commission": "每单平台费 {pct}%",
+      "buy": "激活",
+      "activated_title": "套餐已激活",
+      "activated_bill": "账单 {amount} — 立即支付或稍后支付。",
+      "activated_no_bill": "这个套餐无需付费。",
+      "expires_on": "有效期至 {date}",
+      "minimum_note": "গেটওয়ের সর্বনিম্ন ৳১০ এর কম — এটি পরের বিলে যুক্ত হবে।",
+      "pay_now": "立即支付",
+      "pay_later": "稍后支付",
+      "blocked_title": "请先结清欠款",
+      "blocked_body": "您还欠 {amount}。请先结清欠款，再购买套餐。",
+      "go_to_dues": "去结账",
+      "already_open_title": "您已有生效中的套餐",
+      "already_open_body": "请先结清当前账单，再购买新套餐。",
+      "purchase_failed": "套餐激活失败",
+      "load_failed": "套餐信息加载失败。",
+      "retry": "再试一次"
     }
   },
   "shops_track": {

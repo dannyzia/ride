@@ -24,7 +24,6 @@ import {
   ActivityIndicator,
   TextInput,
   Alert,
-  Linking,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -35,6 +34,7 @@ import { supabase } from "@/lib/supabase";
 import { colors } from "@/theme/goRide";
 import { useIsDark } from "@/lib/useAppearance";
 import { ensureShopSocket } from "@/lib/shopSocket";
+import { formatBDT } from "@/lib/format";
 import { logger } from "@/lib/logger";
 
 interface ShopMine {
@@ -70,12 +70,9 @@ interface ShopOrder {
   has_live_leg: boolean;
 }
 
-interface PlanRow {
-  id: string;
-  name: string;
-  price_bdt: number;
-  duration_days: number;
-  call_count: number;
+interface Statement {
+  state: "NO_PRODUCT" | "LAPSED" | "OWING" | "ACTIVE";
+  total_unpaid_paisa: number;
 }
 
 /** Taka display: money is integer paisa end-to-end; /100 here at render. */
@@ -108,7 +105,7 @@ export default function ShopDashboardScreen() {
 
   const [mine, setMine] = useState<ShopMine | null>(null);
   const [orders, setOrders] = useState<ShopOrder[]>([]);
-  const [plans, setPlans] = useState<PlanRow[]>([]);
+  const [statement, setStatement] = useState<Statement | null>(null);
   const [segment, setSegment] = useState<"new" | "active" | "ready" | "history">("new");
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -143,28 +140,40 @@ export default function ShopDashboardScreen() {
       const shopData = (await mineRes.json()) as ShopMine;
       setMine(shopData);
 
-      const [ordersRes, plansRes] = await Promise.all([
-        fetch(
-          `${API_URL}/api/shop/orders?shop_id=${shopData.shop.id}&limit=50`,
-          { headers: { Authorization: `Bearer ${token}` } },
-        ),
-        fetch(`${API_URL}/api/package/list`, {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
-      ]);
+      const ordersRes = await fetch(
+        `${API_URL}/api/shop/orders?shop_id=${shopData.shop.id}&limit=50`,
+        { headers: { Authorization: `Bearer ${token}` } },
+      );
 
       if (ordersRes.ok) {
         const data = (await ordersRes.json()) as { orders: ShopOrder[] };
         setOrders(data.orders ?? []);
       }
-      if (plansRes.ok) {
-        const data = (await plansRes.json()) as { packages: PlanRow[] };
-        setPlans(data.packages ?? []);
-      }
     } catch (e) {
       logger.error("[shop.dashboard] load failed", e);
     } finally {
       setLoading(false);
+    }
+  }, []);
+
+  // Monetization statement for the state banner — the canonical OQ1 source
+  // (same endpoint the dues screen renders; REST stays canonical, F25).
+  const loadStatement = useCallback(async () => {
+    try {
+      const session = await supabase.auth.getSession();
+      const token = session.data.session?.access_token;
+      if (!token) return;
+      const res = await fetch(`${API_URL}/api/shop/dues`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const data = (await res.json()) as Statement;
+        setStatement(data);
+      } else {
+        setStatement(null);
+      }
+    } catch (e) {
+      logger.error("[shop.dashboard] statement load failed", e);
     }
   }, []);
 
@@ -174,10 +183,17 @@ export default function ShopDashboardScreen() {
     setRefreshing(false);
   }, [load]);
 
+  // OQ1 lifecycle: fetch on focus (covers returning from the packages/dues
+  // screens, i.e. after a purchase or a payment) + a 60s poll while focused.
   useFocusEffect(
     useCallback(() => {
       void load();
-    }, [load]),
+      void loadStatement();
+      const id = setInterval(() => {
+        void loadStatement();
+      }, 60_000);
+      return () => clearInterval(id);
+    }, [load, loadStatement]),
   );
 
   useEffect(() => {
@@ -270,33 +286,14 @@ export default function ShopDashboardScreen() {
     [mine, t],
   );
 
-  const purchasePlan = useCallback(
-    async (plan: PlanRow) => {
-      try {
-        const session = await supabase.auth.getSession();
-        const token = session.data.session?.access_token;
-        if (!token) return;
-        const res = await fetch(`${API_URL}/api/package/purchase`, {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-            "Idempotency-Key": crypto.randomUUID(),
-          },
-          body: JSON.stringify({ package_id: plan.id }),
-        });
-        const body = (await res.json()) as { invoice_url?: string; message?: string };
-        if (res.ok && body.invoice_url) {
-          void Linking.openURL(body.invoice_url);
-        } else {
-          Alert.alert(t("shop.dashboard.purchase_failed"), body.message ?? "");
-        }
-      } catch (e) {
-        logger.error("[shop.dashboard] purchase failed", e);
-      }
-    },
-    [t],
-  );
+  const handleBannerCta = useCallback(() => {
+    if (!statement) return;
+    router.push(
+      statement.state === "NO_PRODUCT" || statement.state === "LAPSED"
+        ? "/(main)/(shop-owner)/packages"
+        : "/(main)/(shop-owner)/dues",
+    );
+  }, [statement]);
 
   const visibleOrders = useMemo(() => {
     return orders.filter((o) => SEGMENTS.some((s) => s.key === o.status && s.label === segment));
@@ -392,6 +389,80 @@ export default function ShopDashboardScreen() {
         {/* STAFF is orders-only (§3): below this line no money/mode controls. */}
         {isOwnerOrManager ? (
           <>
+            {/* Monetization state banner — NO_PRODUCT > LAPSED > OWING > ACTIVE
+                (server states from GET /api/shop/dues; PURCHASE_BLOCKED is
+                client-rendered on the packages screen, where the typed 409
+                lands). Each state carries its recovery CTA. */}
+            {statement ? (
+              <View
+                className="rounded-2xl p-4 mb-4"
+                style={{
+                  backgroundColor: `${
+                    statement.state === "OWING"
+                      ? colors.amber
+                      : statement.state === "ACTIVE"
+                        ? colors.success
+                        : colors.danger
+                  }14`,
+                  borderWidth: 1,
+                  borderColor:
+                    statement.state === "OWING"
+                      ? colors.amber
+                      : statement.state === "ACTIVE"
+                        ? colors.success
+                        : colors.danger,
+                }}
+              >
+                <View className="flex-row items-start">
+                  <Ionicons
+                    name={statement.state === "ACTIVE" ? "checkmark-circle" : "alert-circle"}
+                    size={20}
+                    color={
+                      statement.state === "OWING"
+                        ? colors.amber
+                        : statement.state === "ACTIVE"
+                          ? colors.success
+                          : colors.danger
+                    }
+                  />
+                  <View className="flex-1 ml-2">
+                    <Text
+                      className="text-[13px] font-JakartaSemiBold"
+                      style={{
+                        color:
+                          statement.state === "OWING"
+                            ? colors.amber
+                            : statement.state === "ACTIVE"
+                              ? colors.success
+                              : colors.danger,
+                      }}
+                    >
+                      {t(`monetization.states.${statement.state.toLowerCase()}`)}
+                      {statement.state === "OWING" && statement.total_unpaid_paisa > 0
+                        ? ` · ${formatBDT(statement.total_unpaid_paisa)}`
+                        : ""}
+                    </Text>
+                    <Text className="text-[11px] mt-1" style={{ color: C.sub }}>
+                      {t(`shop.dues.hint_${statement.state.toLowerCase()}`)}
+                    </Text>
+                  </View>
+                </View>
+                <TouchableOpacity
+                  className="rounded-full py-2 items-center mt-3"
+                  style={{ backgroundColor: colors.primary }}
+                  onPress={handleBannerCta}
+ testID="shop-owner.handle-banner-cta">
+                  <Text className="text-[13px] font-JakartaBold" style={{ color: colors.white }}>
+                    {statement.state === "NO_PRODUCT" || statement.state === "LAPSED"
+                      ? t("shop.dashboard.banner_packages_cta")
+                      : statement.state === "OWING"
+                        ? t("shop.dashboard.banner_dues_cta")
+                        : t("shop.dashboard.banner_bills_cta")}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            ) : null}
+
             {/* Availability — open/closed (R5) + busy (F-16 throttle) */}
             <View
               className="rounded-2xl p-4 mb-4"
@@ -504,42 +575,25 @@ export default function ShopDashboardScreen() {
               </TouchableOpacity>
             ) : null}
 
-            {/* Plans (M-2 role-filtered listing) */}
-            {plans.length > 0 ? (
-              <View
-                className="rounded-2xl p-4 mb-4"
-                style={{ backgroundColor: C.surface, borderWidth: 1, borderColor: C.border }}
-              >
-                <Text className="text-[13px] font-JakartaBold mb-2" style={{ color: C.text }}>
-                  {t("shop.dashboard.plans_title")}
+            {/* Shop packages — the postpaid rail lives on the packages screen
+                (Item 11); this card is its entry point. The old inline card
+                POSTed to the driver purchase rail (/api/package/purchase),
+                which is not the shop rail. */}
+            <TouchableOpacity
+              className="rounded-2xl p-4 mb-4 flex-row items-center justify-between"
+              style={{ backgroundColor: C.surface, borderWidth: 1, borderColor: C.border }}
+              onPress={() => router.push("/(main)/(shop-owner)/packages")}
+             testID="shop-owner.push-packages">
+              <View className="flex-1 pr-3">
+                <Text className="text-[13px] font-JakartaBold" style={{ color: C.text }}>
+                  {t("shop.dashboard.packages_card_title")}
                 </Text>
-                {plans.map((p) => (
-                  <View key={p.id} className="flex-row items-center justify-between py-2">
-                    <View className="flex-1 pr-3">
-                      <Text className="text-[13px] font-JakartaBold" style={{ color: C.text }}>
-                        {p.name}
-                      </Text>
-                      <Text className="text-[11px]" style={{ color: C.sub }}>
-                        {t("shop.dashboard.plan_meta", {
-                          calls: p.call_count,
-                          days: p.duration_days,
-                        })}
-                      </Text>
-                    </View>
-                    <TouchableOpacity
-                      className="rounded-lg px-3 py-2"
-                      style={{ backgroundColor: colors.primary }}
-                      onPress={() => void purchasePlan(p)}
-                     
-                     testID="shop-owner.purchase-plan">
-                      <Text className="text-[12px]" style={{ color: colors.white }}>
-                        {taka(p.price_bdt)}
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
-                ))}
+                <Text className="text-[11px] mt-1" style={{ color: C.sub }}>
+                  {t("shop.dashboard.packages_card_hint")}
+                </Text>
               </View>
-            ) : null}
+              <Ionicons name="chevron-forward" size={20} color={C.sub} />
+            </TouchableOpacity>
           </>
         ) : null}
 

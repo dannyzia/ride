@@ -2096,9 +2096,6 @@
       "workshop_pending": "{{n}} workshop request(s) pending",
       "workshop_overdue": "{{n}} past the confirm window",
       "workshop_sla_ok": "Confirm within {{h}}h",
-      "plans_title": "Plans for your account",
-      "plan_meta": "{{calls}} calls · {{days}} days",
-      "purchase_failed": "Purchase failed",
       "no_orders": "No orders here",
       "prep_picker_title": "Preparation time",
       "prep_min": "{{n}} min",
@@ -2116,7 +2113,12 @@
       "segment_new": "New",
       "segment_active": "Active",
       "segment_ready": "Ready",
-      "segment_history": "History"
+      "segment_history": "History",
+      "banner_packages_cta": "Shop packages",
+      "banner_dues_cta": "Settle dues",
+      "banner_bills_cta": "View bills",
+      "packages_card_title": "Shop packages",
+      "packages_card_hint": "Buy a package to keep taking orders"
     },
     "state": {
       "pending": "New order",
@@ -2226,6 +2228,30 @@
       "hint_lapsed": "Your package term ended — dues stay payable.",
       "hint_owing": "Settle your dues to buy another package.",
       "hint_active": "Everything is in order."
+    },
+    "packages": {
+      "title": "Shop packages",
+      "empty_title": "No shop packages on sale",
+      "empty_body": "When a new shop package goes on sale, it will appear here.",
+      "plan_days": "{days} days",
+      "plan_no_expiry": "No expiry",
+      "plan_commission": "{pct}% platform fee per order",
+      "buy": "Activate",
+      "activated_title": "Package activated",
+      "activated_bill": "Bill {amount} — pay now or later.",
+      "activated_no_bill": "This package needs no payment.",
+      "expires_on": "Term ends {date}",
+      "minimum_note": "Below the ৳10 gateway minimum — this rolls into the next bill.",
+      "pay_now": "Pay now",
+      "pay_later": "Pay later",
+      "blocked_title": "Settle dues first",
+      "blocked_body": "You owe {amount}. Settle it to buy a package.",
+      "go_to_dues": "Go to dues",
+      "already_open_title": "You already have an active package",
+      "already_open_body": "Settle the open bill to buy another package.",
+      "purchase_failed": "Could not activate the package",
+      "load_failed": "Could not load the packages.",
+      "retry": "Retry"
     }
   },
   "shops_track": {
