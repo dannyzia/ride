@@ -4,8 +4,9 @@
  * Re-checks winning fleet's gate IN-TX (ruling 10).
  */
 import { db } from "@/src/db";
-import { rentalRequests, rentalBids, awardedBidAssignments, rentalRequestEvents, fleetSubscriptions, fleetSubscriptionPlans, fleets, drivers, vehicles, deliveryLegs, emergencyRequests, ambulanceCertifications } from "@/src/db/schema";
+import { rentalRequests, rentalBids, awardedBidAssignments, rentalRequestEvents, drivers, vehicles, deliveryLegs, emergencyRequests, ambulanceCertifications } from "@/src/db/schema";
 import { requireMemberRoles } from "@/lib/auth";
+import { fleetMarketplaceEntitlements } from "@/lib/marketplaceRbac";
 import { parseJsonBody } from "@/lib/parseBody";
 import { getConfigInt } from "@/lib/platformConfig";
 import { logger } from "@/lib/logger";
@@ -59,29 +60,15 @@ export async function POST(request: Request, { id }: { id: string }) {
         throw Object.assign(new Error("Bid not found or not active"), { status: 404 });
       }
 
-      // Gate re-check at accept (ruling 10): fleet must still be marketplace-qualified
-      const subRows = await tx
-        .select({
-          fleet_status: fleets.status,
-          plan_features: fleetSubscriptionPlans.features,
-          period_end: fleetSubscriptions.current_period_end,
-        })
-        .from(fleetSubscriptions)
-        .innerJoin(fleets, eq(fleetSubscriptions.fleet_id, fleets.id))
-        .innerJoin(fleetSubscriptionPlans, eq(fleetSubscriptions.plan_id, fleetSubscriptionPlans.id))
-        .where(
-          and(
-            eq(fleetSubscriptions.fleet_id, bidRows[0].fleet_id),
-            eq(fleetSubscriptions.status, "ACTIVE"),
-            eq(fleetSubscriptionPlans.active, true),
-          ),
-        )
-        .limit(1);
-
-      const sub = subRows[0];
-      const features = sub?.plan_features as Record<string, unknown> | null;
-      const periodOk = !sub?.period_end || new Date(sub.period_end) >= new Date();
-      if (!sub || sub.fleet_status !== "ACTIVE" || !features?.marketplace_bidding || !periodOk) {
+      // Gate re-check at accept (ruling 10): the fleet must still HOLD a
+      // marketplace-enabled package. Batch-2 Item 10 moved the entitlement from
+      // fleet_subscriptions to operator_packages (role='fleet'), so this re-check
+      // and /api/rental/access-check now ask the same question of the same table
+      // (shared helper, read on the transaction's snapshot).
+      const entitlements = await fleetMarketplaceEntitlements([bidRows[0].fleet_id], {
+        conn: tx,
+      });
+      if (!entitlements.has(bidRows[0].fleet_id)) {
         throw Object.assign(new Error("marketplace_subscription_required"), {
           status: 403,
         });

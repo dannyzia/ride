@@ -1,46 +1,30 @@
 /**
- * Admin Fleet Plan Management.
+ * Admin Fleet Plan Management — READ ONLY since Batch-2 Item 10.
  *
  * GET    /api/admin/fleet-plans           — List all plans (incl. inactive)
- * POST   /api/admin/fleet-plans           — Create a new plan
- * PATCH  /api/admin/fleet-plans?id=...    — Update plan (name, price, limits, active)
+ * POST   /api/admin/fleet-plans           — RETIRED (410) — plan writes moved to packages
+ * PATCH  /api/admin/fleet-plans?id=...    — RETIRED (410)
  *
- * Auth: requireAdminPermission — 'admin.read' for GET, 'catalog.write' for POST/PATCH.
+ * WHY RETIRED: Item 10 folded the fleet catalogue onto `packages`. Creating or
+ * editing a fleet_subscription_plans row post-fold would mint a plan that no
+ * purchase rail can sell (the legacy subscribe route is 410) and that no
+ * possession can ever point at — a dead-end writer. The fleet catalogue is now
+ * maintained on the admin Packages screen (applicable_roles must include
+ * 'fleet'), and a fleet package's capacity profile is the retained plan row
+ * whose id the fold preserved.
+ *
+ * GET stays: it is the history/read surface for the pre-fold catalogue that the
+ * migration read from, and the screens that still show it read only.
+ *
+ * Auth: requireAdminPermission — 'admin.read' for GET.
  * Money fields: integer paisa (BDT) throughout.
  */
 import { db } from "@/src/db";
 import { fleetSubscriptionPlans } from "@/src/db/schema";
-import { asc, eq } from "drizzle-orm";
-import { z } from "zod";
+import { asc } from "drizzle-orm";
 import { requireAdminPermission } from "@/lib/adminRbac";
 import { logger } from "@/lib/logger";
 import * as errors from "@/lib/errors";
-import { parseJsonBody } from "@/lib/parseBody";
-
-const createSchema = z.object({
-  name: z.string().min(2).max(100),
-  description: z.string().max(500).nullable().optional(),
-  billing_period: z.enum(["WEEKLY", "MONTHLY", "YEARLY"]),
-  price_bdt: z.number().int().min(0), // integer paisa
-  vehicle_limit: z.number().int().min(1).nullable().optional(),
-  driver_limit: z.number().int().min(1).nullable().optional(),
-  api_limit: z.number().int().min(1).nullable().optional(),
-  features: z.record(z.unknown()).nullable().optional(),
-  active: z.boolean().default(true),
-});
-
-const updateSchema = z.object({
-  id: z.string().uuid(),
-  name: z.string().min(2).max(100).optional(),
-  description: z.string().max(500).nullable().optional(),
-  billing_period: z.enum(["WEEKLY", "MONTHLY", "YEARLY"]).optional(),
-  price_bdt: z.number().int().min(0).optional(),
-  vehicle_limit: z.number().int().min(1).nullable().optional(),
-  driver_limit: z.number().int().min(1).nullable().optional(),
-  api_limit: z.number().int().min(1).nullable().optional(),
-  features: z.record(z.unknown()).nullable().optional(),
-  active: z.boolean().optional(),
-});
 
 /** GET — list all plans (including inactive for admin). */
 export async function GET(request: Request) {
@@ -75,114 +59,29 @@ export async function GET(request: Request) {
   }
 }
 
-/** POST — create a new fleet plan. */
-export async function POST(request: Request) {
-  try {
-    const { dbUser } = await requireAdminPermission("catalog.write")(request);
-
-    const parsed = await parseJsonBody(request, createSchema);
-    if (!parsed.ok) return parsed.response;
-
-    const data = parsed.data;
-    const [plan] = await db
-      .insert(fleetSubscriptionPlans)
-      .values({
-        name: data.name,
-        description: data.description ?? null,
-        billing_period: data.billing_period,
-        price_bdt: data.price_bdt,
-        vehicle_limit: data.vehicle_limit ?? null,
-        driver_limit: data.driver_limit ?? null,
-        api_limit: data.api_limit ?? null,
-        features: data.features ?? null,
-        active: data.active,
-      })
-      .returning({ id: fleetSubscriptionPlans.id });
-
-    logger.info("[admin/fleet-plans] created", {
-      plan_id: plan.id,
-      by: dbUser.id,
-    });
-
-    return Response.json({ plan }, { status: 201 });
-  } catch (err: unknown) {
-    const status = errors.getErrorStatus(err);
-    if (status === 401) {
-      return Response.json(
-        { error: "unauthorized", message: "Authentication required" },
-        { status: 401 },
-      );
-    }
-    if (status === 403) {
-      return Response.json(
-        { error: "forbidden", message: "Admin write access required" },
-        { status: 403 },
-      );
-    }
-    logger.error("[admin/fleet-plans] POST error", err);
-    return Response.json(
-      { error: "internal_error", message: "An internal server error occurred" },
-      { status: 500 },
-    );
-  }
+/** POST — RETIRED (Batch-2 Item 10): the fleet catalogue is `packages`. */
+export async function POST(_request: Request) {
+  return Response.json(
+    {
+      error: "fleet_plans_write_retired",
+      message: "Fleet plans are packages. Manage fleet-scoped packages on the Packages screen (POST /api/admin/packages).",
+      replacement: "/api/admin/packages",
+    },
+    { status: 410 },
+  );
 }
 
-/** PATCH — update a fleet plan (name, price, limits, active toggle). */
-export async function PATCH(request: Request) {
-  try {
-    const { dbUser } = await requireAdminPermission("catalog.write")(request);
-
-    const parsed = await parseJsonBody(request, updateSchema);
-    if (!parsed.ok) return parsed.response;
-
-    const { id, ...updates } = parsed.data;
-
-    // Build update set from non-undefined fields.
-    const setFields: Record<string, unknown> = { updated_at: new Date() };
-    for (const [key, value] of Object.entries(updates)) {
-      if (value !== undefined) {
-        setFields[key] = value;
-      }
-    }
-
-    const [updated] = await db
-      .update(fleetSubscriptionPlans)
-      .set(setFields)
-      .where(eq(fleetSubscriptionPlans.id, id))
-      .returning({ id: fleetSubscriptionPlans.id });
-
-    if (!updated) {
-      return Response.json(
-        { error: "plan_not_found", message: "Plan not found" },
-        { status: 404 },
-      );
-    }
-
-    logger.info("[admin/fleet-plans] updated", {
-      plan_id: id,
-      by: dbUser.id,
-      fields: Object.keys(setFields).filter((k) => k !== "updated_at"),
-    });
-
-    return Response.json({ plan: updated }, { status: 200 });
-  } catch (err: unknown) {
-    const status = errors.getErrorStatus(err);
-    if (status === 401) {
-      return Response.json(
-        { error: "unauthorized", message: "Authentication required" },
-        { status: 401 },
-      );
-    }
-    if (status === 403) {
-      return Response.json(
-        { error: "forbidden", message: "Admin write access required" },
-        { status: 403 },
-      );
-    }
-    logger.error("[admin/fleet-plans] PATCH error", err);
-    return Response.json(
-      { error: "internal_error", message: "An internal server error occurred" },
-      { status: 500 },
-    );
-  }
+/** PATCH — RETIRED (Batch-2 Item 10): same reason as POST — a fleet_subscription_plans
+ * edit no longer reaches any purchasable product. Capacity edits belong on the
+ * retained plan row until a fleet-capacity admin surface exists (follow-up), and
+ * catalogue edits belong on packages. */
+export async function PATCH(_request: Request) {
+  return Response.json(
+    {
+      error: "fleet_plans_write_retired",
+      message: "Fleet plans are packages. Manage fleet-scoped packages on the Packages screen (PATCH /api/admin/packages).",
+      replacement: "/api/admin/packages",
+    },
+    { status: 410 },
+  );
 }

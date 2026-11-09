@@ -22,10 +22,12 @@ import { db } from "@/src/db";
 import {
   fleets,
   fleetSubscriptionPlans,
+  operatorPackages,
   vehicles,
   drivers,
 } from "@/src/db/schema";
-import { eq, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
+import { isOperatorPackageActive } from "@/lib/monetizationMode";
 import { logger } from "@/lib/logger";
 import type { FleetTx } from "@/lib/fleetAssignment";
 
@@ -106,12 +108,40 @@ async function checkLimit(
       return { ok: false, error: "fleet_not_found", message: "Fleet not found" };
     }
 
-    // No subscription plan — no limit enforced.
-    if (!fleet.subscription_plan_id) {
+    // Batch-2 Item 10 — WHICH plan governs: the one the fleet currently HOLDS.
+    // Fleet possession moved to operator_packages (role='fleet') when the fleet
+    // rail folded onto packages; the legacy fleets.subscription_plan_id pointer is
+    // the fallback for a fleet that has not bought on the unified rail yet (it is
+    // still written by the migration-era rows and points at the same plan id the
+    // fold preserved as a package id). Reading the pointer alone would silently
+    // stop enforcing limits the moment a fleet upgraded through the new rail.
+    const [possession] = await conn
+      .select({
+        package_id: operatorPackages.package_id,
+        status: operatorPackages.status,
+        expires_at: operatorPackages.expires_at,
+      })
+      .from(operatorPackages)
+      .where(
+        and(
+          eq(operatorPackages.operator_role, "fleet"),
+          eq(operatorPackages.operator_id, fleetId),
+          eq(operatorPackages.status, "active"),
+        ),
+      )
+      .limit(1);
+
+    const heldPlanId =
+      possession && isOperatorPackageActive(possession)
+        ? possession.package_id
+        : fleet.subscription_plan_id;
+
+    // No plan held and no legacy pointer — no limit enforced.
+    if (!heldPlanId) {
       return { ok: true };
     }
 
-    // Get the plan limits.
+    // Get the plan limits (the capacity profile — the fold preserved its id).
     const [plan] = await conn
       .select({
         vehicle_limit: fleetSubscriptionPlans.vehicle_limit,
@@ -119,7 +149,7 @@ async function checkLimit(
         name: fleetSubscriptionPlans.name,
       })
       .from(fleetSubscriptionPlans)
-      .where(eq(fleetSubscriptionPlans.id, fleet.subscription_plan_id))
+      .where(eq(fleetSubscriptionPlans.id, heldPlanId))
       .limit(1);
 
     if (!plan) {

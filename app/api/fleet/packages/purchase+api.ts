@@ -78,9 +78,12 @@ export async function POST(request: Request) {
       return Response.json({ error: "unauthorized", message: "Authentication required" }, { status: 401 });
     }
     if (e instanceof OperatorPurchaseError) {
+      // Batch-2 Item 10 §3: a fleet package carrying a commission rate is a
+      // VALIDATION failure (the shape is wrong), not a billing conflict — 422,
+      // matching this route's package_not_found. Everything else stays 409.
       return Response.json(
         { error: e.code, message: e.message, ...e.details },
-        { status: 409 },
+        { status: e.code === "fleet_commission_unsupported" ? 422 : 409 },
       );
     }
     logger.error("[fleet/packages/purchase] error", e);

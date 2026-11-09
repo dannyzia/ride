@@ -7,8 +7,18 @@ import type { User } from '@supabase/supabase-js';
 import { verifySupabaseToken } from './auth';
 import { supabaseAdmin } from './supabaseServer';
 import { db } from '@/src/db';
-import { shops, shopMembers, ambulanceCertifications, drivers } from '@/src/db/schema';
-import { eq, and, isNull, or, gt } from 'drizzle-orm';
+import {
+  shops,
+  shopMembers,
+  ambulanceCertifications,
+  drivers,
+  fleets,
+  fleetSubscriptionPlans,
+  operatorPackages,
+} from '@/src/db/schema';
+import { eq, and, isNull, or, gt, inArray } from 'drizzle-orm';
+import { isOperatorPackageActive } from '@/lib/monetizationMode';
+import type { FleetTx } from '@/lib/fleetAssignment';
 import { logger } from './logger';
 import { serviceLevelSatisfies } from './ambulanceCerts';
 import { membershipForbidden, assertMemberRole } from './membershipGate';
@@ -115,6 +125,90 @@ export interface FleetMarketplaceAuthResult {
  *
  * Usage: const { memberships } = await requireFleetMarketplaceAccess()(request)
  */
+export interface FleetMarketplaceEntitlement {
+  fleet_id: string;
+  fleet_name: string;
+  package_id: string;
+  expires_at: Date | null;
+}
+
+/**
+ * Batch-2 Item 10 — the fleet marketplace entitlement reads POSSESSION.
+ *
+ * Before the fold this guard joined `fleet_subscriptions` → `fleet_subscription_plans`
+ * and required an ACTIVE subscription on a plan whose `features` carried
+ * `marketplace_bidding: true`. Fleet possession now lives in `operator_packages`
+ * (role='fleet', migration 0101), so the same question is asked of that table and
+ * decided by the same predicate every other possession consumer uses
+ * (`isOperatorPackageActive` — status active AND not expired).
+ *
+ * The FLAG itself still lives on the retained `fleet_subscription_plans` row: the
+ * fold preserved the plan id as the package id, which is what makes the feature
+ * lookup a plain left join instead of a join table. A fleet package with no
+ * capacity-profile row therefore grants no marketplace access — no plan ever
+ * granted it, so inventing access would be a silent entitlement widening.
+ *
+ * Returns one entry per qualifying fleet keyed by fleet id. Fleets are filtered
+ * in SQL to the ids the caller asked about (never a global scan).
+ */
+export async function fleetMarketplaceEntitlements(
+  fleetIds: string[],
+  opts?: { conn?: typeof db | FleetTx },
+): Promise<Map<string, FleetMarketplaceEntitlement>> {
+  const out = new Map<string, FleetMarketplaceEntitlement>();
+  if (fleetIds.length === 0) return out;
+
+  const conn = opts?.conn ?? db;
+  const rows = await conn
+    .select({
+      fleet_id: fleets.id,
+      fleet_name: fleets.name,
+      fleet_status: fleets.status,
+      package_id: operatorPackages.package_id,
+      possession_status: operatorPackages.status,
+      expires_at: operatorPackages.expires_at,
+      plan_active: fleetSubscriptionPlans.active,
+      plan_features: fleetSubscriptionPlans.features,
+    })
+    .from(operatorPackages)
+    .innerJoin(fleets, eq(fleets.id, operatorPackages.operator_id))
+    .leftJoin(
+      fleetSubscriptionPlans,
+      eq(fleetSubscriptionPlans.id, operatorPackages.package_id),
+    )
+    .where(
+      and(
+        eq(operatorPackages.operator_role, 'fleet'),
+        inArray(operatorPackages.operator_id, fleetIds),
+      ),
+    );
+
+  for (const row of rows) {
+    if (out.has(row.fleet_id)) continue;
+    if (row.fleet_status !== 'ACTIVE') continue;
+    if (
+      !isOperatorPackageActive({
+        status: row.possession_status,
+        expires_at: row.expires_at,
+      })
+    ) {
+      continue;
+    }
+    if (row.plan_active !== true) continue;
+    const features = row.plan_features as Record<string, unknown> | null;
+    if (features?.marketplace_bidding !== true) continue;
+
+    out.set(row.fleet_id, {
+      fleet_id: row.fleet_id,
+      fleet_name: row.fleet_name,
+      package_id: row.package_id,
+      expires_at: row.expires_at ?? null,
+    });
+  }
+
+  return out;
+}
+
 export function requireFleetMarketplaceAccess() {
   return async (request: Request): Promise<FleetMarketplaceAuthResult> => {
     const supabaseUser = await verifySupabaseToken(request);
@@ -144,26 +238,12 @@ export function requireFleetMarketplaceAccess() {
       });
     }
 
-    // Keep only memberships whose fleet is ACTIVE with a marketplace-enabled plan
+    // Keep only memberships whose fleet is ACTIVE and HOLDS a marketplace-
+    // enabled package (Batch-2 Item 10: possession, not fleet_subscriptions).
     const fleetIds = members.map((m: { fleet_id: string }) => m.fleet_id);
-    const { data: subs } = await supabaseAdmin
-      .from('fleet_subscriptions')
-      .select('fleet_id, current_period_end, fleet: fleets!inner(id, status), plan: fleet_subscription_plans!inner(id, active, features)')
-      .in('fleet_id', fleetIds)
-      .eq('status', 'ACTIVE')
-      .eq('plan.active', true);
-
+    const entitlements = await fleetMarketplaceEntitlements(fleetIds);
     const qualifying = members.filter((m: { fleet_id: string; role: string }) =>
-      subs?.some((s: Record<string, unknown>) => {
-        const fleet = s.fleet as { id: string; status: string } | null;
-        const plan = s.plan as { id: string; active: boolean; features: Record<string, unknown> | null } | null;
-        return (
-          s.fleet_id === m.fleet_id &&
-          fleet?.status === 'ACTIVE' &&
-          plan?.features?.marketplace_bidding === true &&
-          (!s.current_period_end || new Date(s.current_period_end as string) >= new Date())
-        );
-      }),
+      entitlements.has(m.fleet_id),
     );
 
     if (qualifying.length === 0) {

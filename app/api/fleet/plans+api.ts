@@ -1,35 +1,33 @@
 /**
  * GET  /api/fleet/plans              — List active subscription plans (fleet-gated)
- * POST /api/fleet/plans?fleet_id=... — Subscribe fleet to a plan (OWNER only)
+ * POST /api/fleet/plans?fleet_id=... — RETIRED (410) — Batch-2 Item 10
  *
  * GET requires auth + fleet capability (an ACTIVE fleet_members row OR fleet
  * ownership) — the full catalog is never sent to a non-matching client
  * (S5/§14 VISIBILITY; corrected 2026-10-17 — this header previously said
  * "public-ish / no fleet context", which has not been true since the
  * server-side caller gate shipped).
- * POST requires OWNER via requireFleetMember — only the fleet owner can
- * change the fleet's subscription.
+ *
+ * POST is GONE. It was the fleet rail's only writer: it inserted
+ * fleet_subscriptions, moved fleets.subscription_plan_id/status, and appended a
+ * fleet_billing_transactions fee row. Batch-2 Item 10 folded fleet possession
+ * onto operator_packages and retired this writer, so the fleet's purchase
+ * surface is now POST /api/fleet/packages/purchase (Item 6 rail: grant + bill +
+ * settle-first). The 410 body names the replacement.
+ *
+ * INTERIM GAP (accepted within the batch): the fleet panel's Subscription
+ * screen still calls this POST until Item 13 rewires the screen to the package
+ * rail. GET keeps serving the legacy catalog so the screen still renders; the
+ * buy button fails with a named error rather than an unexplained 404.
  *
  * Money fields are integer paisa (BDT) — never floats.
  */
 import { db } from "@/src/db";
-import {
-  fleetMembers,
-  fleetSubscriptionPlans,
-  fleetSubscriptions,
-  fleets,
-  users,
-} from "@/src/db/schema";
-import { and, asc, eq, sql } from "drizzle-orm";
-import { z } from "zod";
-import { requireFleetMember, verifySupabaseToken } from "@/lib/auth";
+import { fleetMembers, fleetSubscriptionPlans, fleets, users } from "@/src/db/schema";
+import { asc, eq, sql } from "drizzle-orm";
+import { verifySupabaseToken } from "@/lib/auth";
 import { logger } from "@/lib/logger";
 import * as errors from "@/lib/errors";
-import { parseJsonBody } from "@/lib/parseBody";
-
-const subscribeSchema = z.object({
-  plan_id: z.string().uuid(),
-});
 
 /**
  * GET — the active fleet-plan catalog. S5/§14 VISIBILITY: the full catalog is
@@ -94,178 +92,29 @@ export async function GET(request: Request) {
 }
 
 /**
- * POST — subscribe fleet to a plan (OWNER only).
+ * POST — RETIRED (Batch-2 Item 10). See the file header.
  *
- * Creates a fleet_subscriptions row and updates fleets.subscription_plan_id
- * + fleets.subscription_status in the same transaction.
- *
- * Idempotent: if fleet already has an ACTIVE subscription to the same plan,
- * returns the existing subscription (no duplicate).
- * If fleet has an ACTIVE subscription to a DIFFERENT plan, cancels the old
- * one and creates a new one (plan change).
+ * 410 rather than 404: the route is known and deliberately withdrawn, and the
+ * body points at the rail that replaced it, so an older client fails loudly
+ * instead of looking like a typo'd URL.
  */
-export async function POST(request: Request) {
-  try {
-    const url = new URL(request.url);
-    const parsedFleet = z
-      .object({ fleet_id: z.string().uuid() })
-      .safeParse({ fleet_id: url.searchParams.get("fleet_id") });
-    if (!parsedFleet.success) {
-      return Response.json(
-        { error: "invalid_param", message: "Valid fleet_id required" },
-        { status: 400 },
-      );
-    }
-    const fleetId = parsedFleet.data.fleet_id;
-
-    // Only OWNER can change subscription.
-    await requireFleetMember(fleetId, ["OWNER"])(request);
-
-    const body = await parseJsonBody(request, subscribeSchema);
-    if (!body.ok) return body.response;
-
-    const planId = body.data.plan_id;
-
-    // Verify the plan exists and is active.
-    const [plan] = await db
-      .select()
-      .from(fleetSubscriptionPlans)
-      .where(
-        and(
-          eq(fleetSubscriptionPlans.id, planId),
-          eq(fleetSubscriptionPlans.active, true),
-        ),
-      )
-      .limit(1);
-
-    if (!plan) {
-      return Response.json(
-        { error: "plan_not_found", message: "Plan not found or inactive" },
-        { status: 404 },
-      );
-    }
-
-    // Check for existing active subscription.
-    const [existing] = await db
-      .select()
-      .from(fleetSubscriptions)
-      .where(
-        and(
-          eq(fleetSubscriptions.fleet_id, fleetId),
-          eq(fleetSubscriptions.status, "ACTIVE"),
-        ),
-      )
-      .limit(1);
-
-    if (existing && existing.plan_id === planId) {
-      // Already subscribed to this plan — idempotent return.
-      return Response.json(
-        { subscription_id: existing.id, status: "ACTIVE", plan_id: planId },
-        { status: 200 },
-      );
-    }
-
-    const now = new Date();
-    const periodEnd = new Date(now);
-
-    // Compute billing period end.
-    switch (plan.billing_period) {
-      case "WEEKLY":
-        periodEnd.setDate(periodEnd.getDate() + 7);
-        break;
-      case "MONTHLY":
-        periodEnd.setMonth(periodEnd.getMonth() + 1);
-        break;
-      case "YEARLY":
-        periodEnd.setFullYear(periodEnd.getFullYear() + 1);
-        break;
-    }
-
-    const result = await db.transaction(async (tx) => {
-      // Cancel existing active subscription if upgrading/downgrading.
-      if (existing) {
-        await tx
-          .update(fleetSubscriptions)
-          .set({
-            status: "CANCELLED",
-            cancelled_at: now,
-            updated_at: now,
-          })
-          .where(eq(fleetSubscriptions.id, existing.id));
-      }
-
-      // Create new subscription.
-      const [sub] = await tx
-        .insert(fleetSubscriptions)
-        .values({
-          fleet_id: fleetId,
-          plan_id: planId,
-          status: "ACTIVE",
-          started_at: now,
-          current_period_start: now,
-          current_period_end: periodEnd,
-        })
-        .returning({ id: fleetSubscriptions.id });
-
-      // Update fleet's subscription pointer.
-      await tx
-        .update(fleets)
-        .set({
-          subscription_plan_id: planId,
-          subscription_status: "ACTIVE",
-          updated_at: now,
-        })
-        .where(eq(fleets.id, fleetId));
-
-      // Create billing transaction record.
-      const { fleetBillingTransactions } = await import("@/src/db/schema");
-      await tx.insert(fleetBillingTransactions).values({
-        fleet_id: fleetId,
-        subscription_id: sub.id,
-        transaction_type: "SUBSCRIPTION",
-        amount_bdt: plan.price_bdt,
-        currency: "BDT",
-        status: "completed",
-      });
-
-      return { id: sub.id };
-    });
-
-    logger.info("[fleet/plans] subscription created", {
-      fleet_id: fleetId,
-      plan_id: planId,
-      subscription_id: result.id,
-    });
-
-    return Response.json(
-      {
-        subscription_id: result.id,
-        status: "ACTIVE",
-        plan_id: planId,
-        plan_name: plan.name,
-        period_start: now.toISOString(),
-        period_end: periodEnd.toISOString(),
-      },
-      { status: 201 },
-    );
-  } catch (err: unknown) {
-    const status = errors.getErrorStatus(err);
-    if (status === 401) {
-      return Response.json(
-        { error: "unauthorized", message: "Authentication required" },
-        { status: 401 },
-      );
-    }
-    if (status === 403) {
-      return Response.json(
-        { error: "forbidden", message: "Only the fleet owner can manage subscriptions" },
-        { status: 403 },
-      );
-    }
-    logger.error("[fleet/plans] POST error", err);
-    return Response.json(
-      { error: "internal_error", message: "An internal server error occurred" },
-      { status: 500 },
-    );
-  }
+export async function POST(_request: Request) {
+  return Response.json(
+    {
+      error: "fleet_plans_purchase_retired",
+      message:
+        "Fleet subscriptions are purchased as packages. Use POST /api/fleet/packages/purchase.",
+      replacement: "/api/fleet/packages/purchase",
+    },
+    { status: 410 },
+  );
 }
+
+/** REMOVED (Batch-2 Item 10): the legacy subscribe writer. Kept as a comment
+ * description only — no code path may recreate it without also re-opening the
+ * fold-in decision.
+ *
+ *   Creates a fleet_subscriptions row and updates fleets.subscription_plan_id
+ *   + fleets.subscription_status in the same transaction; appends a
+ *   fleet_billing_transactions SUBSCRIPTION row.
+ */

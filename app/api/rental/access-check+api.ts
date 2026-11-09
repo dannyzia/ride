@@ -7,9 +7,10 @@
  * Used only for visibility gating; no data mutation, no store import.
  */
 import { db } from "@/src/db";
-import { fleetMembers, fleets, fleetSubscriptions, fleetSubscriptionPlans } from "@/src/db/schema";
+import { fleetMembers } from "@/src/db/schema";
 import { verifySupabaseToken } from "@/lib/auth";
 import { supabaseAdmin } from "@/lib/supabaseServer";
+import { fleetMarketplaceEntitlements } from "@/lib/marketplaceRbac";
 import { logger } from "@/lib/logger";
 import { eq, and, isNull } from "drizzle-orm";
 
@@ -52,38 +53,23 @@ export async function GET(request: Request) {
       );
     }
 
-    // Filter to fleets with active marketplace-enabled subscriptions
+    // Filter to fleets that HOLD a marketplace-enabled package. Batch-2 Item 10:
+    // the entitlement is fleet possession (operator_packages, role='fleet'), not
+    // a fleet_subscriptions row — same predicate the bid-accept gate re-checks,
+    // so the card the bidder sees and the gate that admits the bid cannot disagree.
     const fleetIds = [...new Set(members.map((m) => m.fleet_id))];
+    const entitlements = await fleetMarketplaceEntitlements(fleetIds);
     const qualifying: { fleet_id: string; fleet_name: string; role: string }[] = [];
 
     for (const fleetId of fleetIds) {
-      const { data: sub } = await supabaseAdmin
-        .from("fleet_subscriptions")
-        .select("id, current_period_end, fleet: fleets!inner(id, name, status), plan: fleet_subscription_plans!inner(id, active, features)")
-        .eq("fleet_id", fleetId)
-        .eq("status", "ACTIVE")
-        .eq("plan.active", true)
-        .maybeSingle();
-
-      if (!sub) continue;
-
-       
-      const fleet = sub.fleet as unknown as { id: string; name: string; status: string } | null;
-       
-      const plan = sub.plan as unknown as { id: string; active: boolean; features: Record<string, unknown> | null } | null;
-
-      if (
-        fleet?.status === "ACTIVE" &&
-        plan?.features?.marketplace_bidding === true &&
-        (!sub.current_period_end || new Date(sub.current_period_end as string) >= new Date())
-      ) {
-        const membership = members.find((m) => m.fleet_id === fleetId);
-        qualifying.push({
-          fleet_id: fleetId,
-          fleet_name: fleet?.name ?? "Fleet",
-          role: membership?.role ?? "VIEWER",
-        });
-      }
+      const entitlement = entitlements.get(fleetId);
+      if (!entitlement) continue;
+      const membership = members.find((m) => m.fleet_id === fleetId);
+      qualifying.push({
+        fleet_id: fleetId,
+        fleet_name: entitlement.fleet_name ?? "Fleet",
+        role: membership?.role ?? "VIEWER",
+      });
     }
 
     if (qualifying.length === 0) {

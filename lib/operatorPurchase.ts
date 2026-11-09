@@ -40,7 +40,8 @@ export const LAUNCH_ROLE_BY_OPERATOR_ROLE: Record<NonDriverOperatorRole, LaunchR
 export type OperatorPurchaseErrorCode =
   | 'dues_outstanding_purchase_blocked'
   | 'package_not_applicable_to_role'
-  | 'active_package_exists';
+  | 'active_package_exists'
+  | 'fleet_commission_unsupported';
 
 /** Typed block reasons; routes map these straight onto their HTTP responses. */
 export class OperatorPurchaseError extends Error {
@@ -194,6 +195,29 @@ export async function purchaseOperatorPackage(params: {
       'package_not_applicable_to_role',
       'This package is not available for your operator type',
       { operator_role: operatorRole },
+    );
+  }
+
+  // (b2) Batch-2 Item 10 §3 — FLEET PACKAGES IGNORE commission_percent in v1:
+  // no fleet billing event consumes it (fleet money is the package price on
+  // operator_bills; there is no per-trip commission for a fleet). Leaving a
+  // non-zero rate on a fleet package would be a config-ignored hazard — the
+  // admin sets 5%, nothing ever charges it, and the fleet later disputes a bill
+  // that does not exist — so the purchase is rejected instead. Fleet-shared
+  // packages ({shop,fleet}) are rejected on the fleet rail for the same reason;
+  // the same package remains purchasable on the roles whose leg reads the rate.
+  //
+  // FOLLOW-UP (documented, not built here): allow a non-zero rate once a fleet
+  // billing event exists to consume it.
+  if (
+    operatorRole === 'fleet' &&
+    pkg.commission_percent != null &&
+    Number(pkg.commission_percent) > 0
+  ) {
+    throw new OperatorPurchaseError(
+      'fleet_commission_unsupported',
+      'Fleet packages cannot carry a commission rate',
+      { commission_percent: String(pkg.commission_percent) },
     );
   }
 

@@ -708,6 +708,13 @@
       "when": 1794140000000,
       "tag": "0100_operator_bills_event_scope",
       "breakpoints": true
+    },
+    {
+      "idx": 101,
+      "version": 7,
+      "when": 1794142000000,
+      "tag": "0101_fleet_fold_in",
+      "breakpoints": true
     }
   ]
 }
