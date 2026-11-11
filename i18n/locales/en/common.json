@@ -151,17 +151,7 @@
       "agree_prefix": "I accept the",
       "terms_link": "Terms of Service",
       "privacy_link": "Privacy Policy",
-      "and": "and core data processing required to provide ride and dispatch services",
-      "marketing_opt_in": "I agree to receive promotional discounts, SMS notifications, and marketing updates from Ride. (Optional)"
-    },
-    "location": {
-      "foreground_title": "Enable Location Access",
-      "foreground_body": "Ride uses your location while using the app to show nearby vehicles, pinpoint your pickup spot, and track your trip.",
-      "background_title": "Background Location Required for Dispatch",
-      "background_body": "Ride Driver collects location data in the background (even when the app is closed or not in use) to enable: 1. Receiving nearby passenger ride offers, 2. Live trip tracking for passenger safety, 3. Fare distance calculation.",
-      "enable_all": "Enable Location (Foreground & Background)",
-      "not_now": "Not Now",
-      "inactive_note": "Without background location you will stay inactive and will not receive ride offers."
+      "and": "and core data processing required to provide ride and dispatch services"
     },
     "otp_verify": {
       "title": "Verify OTP",
@@ -1702,10 +1692,7 @@
     "dropoff_address": "Dropoff address",
     "dropoff_placeholder": "Hospital / destination",
     "a11y_call_now": "Call ambulance now",
-    "call_now": "Call Ambulance Now",
-    "health_consent": "I explicitly consent to sharing the patient's medical condition notes with the assigned ambulance team and emergency operators solely for medical triage and trip handling.",
-    "health_consent_required_title": "Health Consent Required",
-    "health_consent_required_body": "Please confirm consent to share patient condition notes with emergency responders."
+    "call_now": "Call Ambulance Now"
   },
   "delivery": {
     "title": "Delivery",
