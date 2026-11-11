@@ -204,6 +204,13 @@ const ALLOWED_KEYS = new Set([
   'women_only_rides_enabled',
   'scooter_vehicle_type_enabled',
 
+  // Node launch (DESIGN-NODE-LAUNCH.md Component A / T1) — ride-vertical
+  // visibility flag. Owner-only (lib/adminRbac.ts OWNER_ONLY_CONFIG_KEYS);
+  // BOOLEAN_KEYS membership keeps validateKeyValue in the boolean branch —
+  // without it a 'true'/'false' flip falls through to the numeric check and
+  // 400s, making the stage-6 flip impossible.
+  'ride_vertical_enabled',
+
   // Fare engine — joma recovery (taka-scale)
   'joma_bike_eco_monthly_bdt',
   'joma_bike_std_monthly_bdt',
@@ -229,6 +236,8 @@ const BOOLEAN_KEYS = new Set([
   'payments_enabled',
   'women_only_rides_enabled',
   'scooter_vehicle_type_enabled',
+  // Node launch (T1): ride-vertical visibility flip accepts 'true'/'false'.
+  'ride_vertical_enabled',
   'zone_multi_active_enabled',
   'pickup_measurement_enabled',
   'pickup_fee_enabled',

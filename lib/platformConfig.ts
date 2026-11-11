@@ -164,6 +164,24 @@ export async function isVerticalEnabled(key: string): Promise<boolean> {
 }
 
 /**
+ * Node launch (DESIGN-NODE-LAUNCH.md Component A) — the single platform_config
+ * key governing ride-vertical visibility. Seeded `true` by
+ * scripts/seed-platform-config.js (fresh databases only); flipped exclusively
+ * via PATCH /api/admin/config (owner-only, BOOLEAN_KEYS).
+ */
+export const RIDE_VERTICAL_ENABLED_KEY = 'ride_vertical_enabled';
+
+/**
+ * Thin wrapper over isVerticalEnabled — no new query path, no cache
+ * (AGENTS.md: never cache platform_config). Fail-closed: a missing key AND a
+ * DB error both read as ride hidden (isVerticalEnabled semantics), so any
+ * database that missed the stage-1 seed renders ride hidden silently.
+ */
+export function isRideVerticalEnabled(): Promise<boolean> {
+  return isVerticalEnabled(RIDE_VERTICAL_ENABLED_KEY);
+}
+
+/**
  * Read a platform_config value, returning the fallback if absent.
  */
 export async function getConfigValue(

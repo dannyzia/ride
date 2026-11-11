@@ -3078,27 +3078,27 @@
     "(main)/(rider)/due-amounts/index.tsx": [
       {
         "id": "rider.due-amounts.el-1",
-        "line": 207
+        "line": 208
       },
       {
         "id": "rider.due-amounts.fetch-data",
-        "line": 238
+        "line": 239
       },
       {
         "id": "rider.due-amounts.push-packages",
-        "line": 375
+        "line": 376
       },
       {
         "id": "rider.due-amounts.push-packages-2",
-        "line": 384
+        "line": 385
       },
       {
         "id": "rider.due-amounts.handle-pay-dues",
-        "line": 412
+        "line": 413
       },
       {
         "id": "rider.due-amounts.handle-pay-dues-2",
-        "line": 440
+        "line": 441
       }
     ],
     "(main)/(rider)/earnings-breakdown/index.tsx": [
@@ -3576,19 +3576,19 @@
     "(main)/(rider)/packages.tsx": [
       {
         "id": "rider.packages.handle-buy",
-        "line": 317
+        "line": 318
       },
       {
         "id": "rider.packages.el-1",
-        "line": 338
+        "line": 339
       },
       {
         "id": "rider.packages.el-2",
-        "line": 422
+        "line": 423
       },
       {
         "id": "rider.packages.set-theme",
-        "line": 437
+        "line": 438
       }
     ],
     "(main)/(rider)/payout-method/index.tsx": [
@@ -4098,19 +4098,19 @@
     "(main)/(rider)/subscription-checkout/index.tsx": [
       {
         "id": "rider.subscription-checkout.el-1",
-        "line": 131
+        "line": 132
       },
       {
         "id": "rider.subscription-checkout.set-plan-loading",
-        "line": 145
+        "line": 146
       },
       {
         "id": "rider.subscription-checkout.handle-pay",
-        "line": 167
+        "line": 168
       },
       {
         "id": "rider.subscription-checkout.set-theme",
-        "line": 182
+        "line": 183
       }
     ],
     "(main)/(rider)/subscription-confirmation/index.tsx": [
@@ -4442,31 +4442,31 @@
     "(main)/(shop-owner)/packages.tsx": [
       {
         "id": "shop-owner.packages.el-1",
-        "line": 292
+        "line": 293
       },
       {
         "id": "shop-owner.packages.load",
-        "line": 312
+        "line": 313
       },
       {
         "id": "shop-owner.packages.go-to-dues",
-        "line": 355
+        "line": 356
       },
       {
         "id": "shop-owner.packages.pay-now",
-        "line": 397
+        "line": 398
       },
       {
         "id": "shop-owner.packages.set-activated",
-        "line": 410
+        "line": 411
       },
       {
         "id": "shop-owner.packages.set-activated-2",
-        "line": 425
+        "line": 426
       },
       {
         "id": "shop-owner.packages.purchase",
-        "line": 477
+        "line": 478
       }
     ],
     "(main)/(shop-owner)/settlement.tsx": [
@@ -5854,7 +5854,7 @@
     "index.tsx": [
       {
         "id": ".run-auth-check",
-        "line": 210
+        "line": 237
       }
     ],
     "track/[rideId].tsx": [

@@ -20,6 +20,12 @@ import { logger } from "@/lib/logger";
 import { useIsDark } from "@/lib/useAppearance";
 import { colors } from "@/theme/goRide";
 import { API_URL } from "@/lib/config";
+import {
+  applyVerifyTokenFlags,
+  fetchRideVerticalFlag,
+  RIDE_FLAG_RESOLVE_TIMEOUT_MS,
+  waitForRideVerticalFlag,
+} from "@/lib/verticalFlags";
 
 interface VerifyTokenResponse {
   exists: boolean;
@@ -27,6 +33,8 @@ interface VerifyTokenResponse {
   /** S2.1 D-1: ACTIVE-only role list — >1 routes to the Login-as chooser. */
   active_roles?: string[];
   phone?: string | null;
+  /** Node launch (Component A): additive boot flags; existing consumers ignore it. */
+  flags?: { ride_vertical_enabled?: boolean };
 }
 
 type CheckStatus = "idle" | "checking" | "error";
@@ -76,6 +84,9 @@ export default function Splash() {
     try {
       // Unconfigured Supabase stub (missing env) — treat as signed out.
       if (!supabase?.auth?.getSession) {
+        // Component A: the flag must be resolved before the login screen
+        // paints — consume the boot fetch (bounded; fail-closed) first.
+        await waitForRideVerticalFlag(RIDE_FLAG_RESOLVE_TIMEOUT_MS);
         redirect("/(auth)/welcome");
         return;
       }
@@ -86,8 +97,15 @@ export default function Splash() {
       logger.info('[splash] runAuthCheck session', { hasSession: !!session, hasUser: !!session?.user });
       if (!session?.user) {
         // §9.3 SPLASH→WELCOME — no session means first-run; the welcome
-        // screen owns onboarding entry.
-        logger.info('[splash] no session, redirecting to welcome');
+        // screen owns onboarding entry. Component A: consume the resolved
+        // flag (bounded; fail-closed) so it is always settled before the
+        // login screen first paints — no flicker.
+        const ride_vertical_enabled = await waitForRideVerticalFlag(
+          RIDE_FLAG_RESOLVE_TIMEOUT_MS,
+        );
+        logger.info('[splash] no session, redirecting to welcome', {
+          ride_vertical_enabled,
+        });
         redirect("/(auth)/welcome");
         return;
       }
@@ -122,6 +140,10 @@ export default function Splash() {
       }
 
       const data: VerifyTokenResponse = await res.json();
+      // Component A: the authenticated boot consumes the verify-token flags
+      // field; the resolver keeps the unconditional mount fetch as the
+      // authoritative boot read. Routing is unchanged in this stage.
+      applyVerifyTokenFlags(data.flags);
       if (!data.exists) {
         // Signed in via Supabase but the users row never landed — the
         // registration flow picks up at phone-entry.
@@ -154,6 +176,11 @@ export default function Splash() {
   // unmount so a navigate-away during the wait never fires a stale check.
   useEffect(() => {
     mountedRef.current = true;
+    // Component A: resolve the ride-hide flag on EVERY boot — fired
+    // unconditionally at mount, in parallel with the 1.5 s hold timer
+    // (session state is only learned after the timer). The resolver caches
+    // the read for the session.
+    void fetchRideVerticalFlag();
     const timer = setTimeout(() => {
       void runAuthCheck();
     }, 1500);

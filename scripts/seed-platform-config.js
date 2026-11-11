@@ -74,6 +74,14 @@ async function seed() {
       ('dpmaps_barikoi_timeout_ms',            '400', now()),
       ('dpmaps_google_spend_cap_usd',          '50.00', now()),
       ('dpmaps_learning_ingest_enabled',       'true', now()),
+      -- Node launch (DESIGN-NODE-LAUNCH.md Component A / T1): ride-vertical
+      -- visibility flag. Seeded TRUE so dev/staging databases stay
+      -- ride-visible through stages 1-5 (fail-closed clients render ride
+      -- hidden on any database that missed this seed). Applies to FRESH
+      -- databases only — ON CONFLICT DO NOTHING never repairs a flipped
+      -- row; flipping (and flipping back) is exclusively
+      -- PATCH /api/admin/config (owner-only, BOOLEAN_KEYS).
+      ('ride_vertical_enabled',                'true', now()),
       // The Stage-3 activation runbook writes the cutover timestamp at
       // activation time; this script does not seed it.
       ('revenue_model',           'subscription_only', now()),
@@ -127,7 +135,7 @@ async function seed() {
     }
   }
 
-  console.log("platform_config seeded (40 keys)");
+  console.log("platform_config seeded (41 keys)");
   await client.end();
 }
 seed().catch(console.error);

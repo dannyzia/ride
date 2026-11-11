@@ -108,6 +108,10 @@ export const OWNER_ONLY_CONFIG_KEYS: ReadonlySet<string> = new Set([
   // they cannot be prematurely activated during staging or deployment.
   'women_only_rides_enabled',
   'scooter_vehicle_type_enabled',
+  // Node launch (DESIGN-NODE-LAUNCH.md T1): ride-vertical visibility is an
+  // owner-level product switch; the owner can downgrade the tier later
+  // without schema impact.
+  'ride_vertical_enabled',
 ]);
 
 /** Pickup free-radius keys guardrailed to ±0.25 km per change (ops_manager scope). */

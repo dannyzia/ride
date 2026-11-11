@@ -1,6 +1,7 @@
 // [public]
 import { supabaseAdmin } from '../../../lib/supabaseServer';
 import { heldRoles } from '@/lib/launchRoles';
+import { isRideVerticalEnabled } from '@/lib/platformConfig';
 import { logger } from '@/lib/logger';
 
 export async function POST(request: Request) {
@@ -117,6 +118,11 @@ export async function POST(request: Request) {
       phone: row.phone,
       name: row.name,
       active_roles: active,
+      // Node launch (DESIGN-NODE-LAUNCH.md Component A): additive boot flags
+      // for the authenticated splash path. Backward compatible — existing
+      // consumers ignore the field. Fresh read, fail-closed
+      // (isVerticalEnabled: missing key / DB error ⇒ ride hidden).
+      flags: { ride_vertical_enabled: await isRideVerticalEnabled() },
     });
   }
 }
