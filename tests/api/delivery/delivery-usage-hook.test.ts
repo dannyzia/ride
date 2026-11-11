@@ -65,10 +65,10 @@ interface PossessionRow {
  *   (3) the courier entity (couriers.id for the user), (4) operator_packages,
  *   then (5) shop_orders + (6) the leg again only when a remittance due applies.
  */
-function makeTx(selectQueue: Row[][]) {
+function makeTx(selectQueue: unknown[][]) {
   const inserts: { table: unknown; values: Row }[] = [];
   let selectIndex = 0;
-  const chain = (rows: Row[]) => {
+  const chain = (rows: unknown[]) => {
     const c: Record<string, unknown> = {
       from: () => c,
       leftJoin: () => c,
@@ -94,7 +94,13 @@ function makeTx(selectQueue: Row[][]) {
       }),
     })),
   };
-  return { tx, inserts };
+  return {
+    // Cast: the hand-rolled stub is deliberately not a drizzle PgTransaction
+    // (its header comment); the writer only touches the chain methods the
+    // stub implements. Same treatment as the repo's documented Drizzle casts.
+    tx: tx as unknown as Parameters<typeof settleDeliveryLeg>[0],
+    inserts,
+  };
 }
 
 function legRow(opts: { fee?: number; courierUser?: string | null } = {}): Row {
@@ -172,8 +178,10 @@ describe("settleDeliveryLeg — platform-fee matrix (Batch-2 Item 9)", () => {
 
     const row = earningsOf(inserts)[0];
     // Exactly one leg carries the platform fee.
+    // (settleDeliveryLeg returns null only for the already-settled no-op —
+    // these tests exercise the settled path, so non-null is exact.)
     const ledgerLeg = Number(row.commission_bdt);
-    const billLeg = Number(out.usage_accrued_bdt);
+    const billLeg = Number(out!.usage_accrued_bdt);
     expect(ledgerLeg === 0 || billLeg === 0).toBe(true);
     expect(ledgerLeg + billLeg).toBe(400);
     // The earnings invariant still holds: net = fee − withheld.
@@ -203,8 +211,8 @@ describe("settleDeliveryLeg — platform-fee matrix (Batch-2 Item 9)", () => {
       expect.objectContaining({ commission_bdt: 800, net_bdt: FEE - 800 }),
     ]);
     expect(accrueUsageBill).not.toHaveBeenCalled();
-    expect(out.commission_bdt).toBe(800);
-    expect(out.usage_accrued_bdt).toBe(0);
+    expect(out!.commission_bdt).toBe(800);
+    expect(out!.usage_accrued_bdt).toBe(0);
   });
 
   it("no possession at all keeps the legacy percent byte-for-byte (unpackaged courier)", async () => {
@@ -220,7 +228,7 @@ describe("settleDeliveryLeg — platform-fee matrix (Batch-2 Item 9)", () => {
     expect(mockRequireInt).toHaveBeenCalledWith("delivery_commission_percent");
     expect(earningsOf(inserts)[0]).toMatchObject({ commission_bdt: 640, net_bdt: FEE - 640 });
     expect(accrueUsageBill).not.toHaveBeenCalled();
-    expect(out.earned_bdt).toBe(FEE - 640);
+    expect(out!.earned_bdt).toBe(FEE - 640);
   });
 
   it("EXHAUSTED possession prices at 0 — no bill, no legacy read, gross earnings", async () => {
@@ -255,7 +263,7 @@ describe("settleDeliveryLeg — platform-fee matrix (Batch-2 Item 9)", () => {
     });
 
     expect(accrueUsageBill).not.toHaveBeenCalled();
-    expect(out.commission_bdt).toBe(640);
+    expect(out!.commission_bdt).toBe(640);
   });
 
   // ── identity: the record's courier, not the caller ───────────────────────
@@ -298,7 +306,7 @@ describe("settleDeliveryLeg — platform-fee matrix (Batch-2 Item 9)", () => {
     // these two increments one row, never a second bill.
     expect(calls[0]).toMatchObject({ operatorRole: "delivery", operatorId: COURIER_ENTITY });
     expect(calls[1]).toMatchObject({ operatorRole: "delivery", operatorId: COURIER_ENTITY });
-    expect(calls.every((c: Row) => Number(c.amountBdt) === 400)).toBe(true);
+    expect(calls.every((c) => Number((c as Row).amountBdt) === 400)).toBe(true);
   });
 
   // ── D7: COD remittance is untouched ──────────────────────────────────────
@@ -324,7 +332,7 @@ describe("settleDeliveryLeg — platform-fee matrix (Batch-2 Item 9)", () => {
     expect(dues).toEqual([
       expect.objectContaining({ amount_bdt: 20_000, status: "pending", remittance_note: null }),
     ]);
-    expect(out.due_bdt).toBe(20_000);
+    expect(out!.due_bdt).toBe(20_000);
     // The fee leg never bills the courier's COD custody.
     expect(accrueUsageBill).not.toHaveBeenCalled();
   });
