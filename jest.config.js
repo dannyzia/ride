@@ -20,7 +20,11 @@ module.exports = {
     "/_reference/",
     "/node_modules/",
     "/admin-test-results/",
-    "/.kilo/",
+    // Anchored to <rootDir> so the pattern matches only THIS project root's
+    // .kilo dir (plans/scratch, no tests). An unanchored "/.kilo/" also
+    // matched git worktrees nested under <mainRoot>/.kilo/worktrees/, which
+    // ignored every test file when jest ran inside such a worktree.
+    "<rootDir>/.kilo/",
     "/tests/e2e/",
     "<rootDir>/website/",
   ],

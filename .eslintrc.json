@@ -1,4 +1,5 @@
 {
+  "root": true,
   "extends": "eslint-config-expo",
   "rules": {
     "no-console": "warn",
