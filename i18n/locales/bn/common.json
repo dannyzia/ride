@@ -20,7 +20,7 @@
     "ceiling_warn": "আপনি ঋণের সীমার {{pct}}% এ পৌঁছেছেন — অফার পেতে পরিশোধ করুন",
     "pay_dues": "পরিশোধ করুন",
     "pay_commission_dues": "কমিশন পরিশোধ করুন",
-    "max_debt_limit": "ঋণের সীমা: {amount}",
+    "max_debt_limit": "ঋণের সীমা: {{amount}}",
     "no_product_prompt": "অফার পেতে একটি পণ্য নির্বাচন করুন",
     "commission_enrollment": "কমিশন (প্রতি রাইডে পরিশোধ)",
     "call_package": "কল প্যাকেজ (পე-পেড লিডস)",
