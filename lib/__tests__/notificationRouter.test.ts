@@ -11,6 +11,10 @@
 import { jest } from "@jest/globals";
 // SUT import above the mock block (babel hoisting keeps this runtime-safe).
 import { routeNotification } from "@/lib/notificationRouter";
+// Stage 3 rideAware: the router consults the ride flag — seed the production
+// state (flag seeded TRUE in dev/staging by Stage 1) so these flag-on
+// expectations hold under the fail-closed default the bare module carries.
+import { applyVerifyTokenFlags } from "@/lib/verticalFlags";
 
 const mockPush = jest.fn();
 jest.mock("expo-router", () => ({ router: { push: (...args: unknown[]) => mockPush(...args) } }));
@@ -21,6 +25,7 @@ jest.mock("@/lib/logger", () => ({
 const LEG = "00000000-0000-4000-8000-0000000000d1";
 
 beforeEach(() => {
+  applyVerifyTokenFlags({ ride_vertical_enabled: true });
   mockPush.mockClear();
 });
 

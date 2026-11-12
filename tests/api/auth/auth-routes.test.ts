@@ -346,6 +346,10 @@ describe("POST /api/auth/verify-token", () => {
       // S2.1 D-1 (§16): the ACTIVE-only role set the auth gate routes on; the
       // suite's heldRoles mock holds one active driver role.
       active_roles: ["driver"],
+      // Stage 4 (Component A): additive boot-flags field. This suite has no
+      // platform_config seed, so isVerticalEnabled fail-closes to false —
+      // the documented missing-key contract.
+      flags: { ride_vertical_enabled: false },
     });
   });
 

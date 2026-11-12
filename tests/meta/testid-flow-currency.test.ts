@@ -147,7 +147,7 @@ describe("testid-flow-currency: live repo selector set (TRAP 1 regression guard)
     }
   });
 
-  it("agrees with the measured pre-commit index-mode count of 175 flow-selected ids", () => {
+  it("agrees with the measured pre-commit index-mode count of 174 flow-selected ids", () => {
     // Exact count is pinned deliberately: it makes a silent parser regression
     // impossible to miss. It moved 91 -> 93 when the B-3 flow rebuild landed
     // (one selector replaced by three, net +2) — a legitimate flow edit must
@@ -183,7 +183,14 @@ describe("testid-flow-currency: live repo selector set (TRAP 1 regression guard)
     // selector set (login-as chooser, P2P, shop-owner surfaces, delivery). Same
     // rule as every prior re-pin: the committed flow set changed, so the pin
     // follows the measurement.
-    expect(gate.flowSelectors().size).toBe(175);
+    // 2026-11-12 (Node launch Stage 4): re-pinned 175 -> 174 (MEASURED) — the
+    // _login-rider.yaml welcome-walkthrough block was REMOVED because the
+    // welcome screen is unrouted after the Stage 4 splash re-point (both
+    // welcome redirect sites now land phone-entry). The removed block held the
+    // flow's only selection of welcome.replace-phone-entry; the testID itself
+    // still exists in welcome.tsx (dormant file, hide-never-delete) but is no
+    // longer flow-selected. Net −1, rename-free; exact assertion unchanged.
+    expect(gate.flowSelectors().size).toBe(174);
   });
 });
 
