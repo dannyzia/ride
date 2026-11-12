@@ -5,6 +5,24 @@ require("dotenv").config({ path: ".env.local" });
 
 async function seed() {
   const client = postgres(process.env.DATABASE_URL, { ssl: "require" });
+  try {
+    await dbSetup(client);
+  } finally {
+    // ISSUE-108: postgres-js end() can linger against Supabase's pooler even
+    // after every query resolves — the pre-fix script hung forever after its
+    // success banner (and leaked the socket entirely on any error path, since
+    // .catch(console.error) never tore the client down). Race the teardown
+    // with a bounded timeout, then force-exit: the banner is printed only
+    // after every write and the D1 assertion pass, so exit 0 here is a true
+    // success exit; the catch below maps any thrown work error to exit 1.
+    await Promise.race([
+      client.end(),
+      new Promise((resolve) => setTimeout(resolve, 3000)),
+    ]).catch(() => {});
+  }
+}
+
+async function dbSetup(client) {
   const db = drizzle(client);
   await db.execute(`
     INSERT INTO platform_config (key, value, updated_at) VALUES
@@ -82,12 +100,12 @@ async function seed() {
       -- row; flipping (and flipping back) is exclusively
       -- PATCH /api/admin/config (owner-only, BOOLEAN_KEYS).
       ('ride_vertical_enabled',                'true', now()),
-      // The Stage-3 activation runbook writes the cutover timestamp at
-      // activation time; this script does not seed it.
+      -- The Stage-3 activation runbook writes the cutover timestamp at
+      -- activation time; this script does not seed it.
       ('revenue_model',           'subscription_only', now()),
       ('max_commission_debt_bdt', '50000',             now()),
-      // Batch-2 Item 5: per-operator-role debt ceilings (paisa). Defaults
-      // mirror the driver ceiling — no invented sizing; admin raises as needed.
+      -- Batch-2 Item 5: per-operator-role debt ceilings (paisa). Defaults
+      -- mirror the driver ceiling — no invented sizing; admin raises as needed.
       ('max_debt_ceiling_shop_bdt',     '50000', now()),
       ('max_debt_ceiling_delivery_bdt', '50000', now()),
       ('max_debt_ceiling_fleet_bdt',    '50000', now())
@@ -136,6 +154,10 @@ async function seed() {
   }
 
   console.log("platform_config seeded (41 keys)");
-  await client.end();
 }
-seed().catch(console.error);
+
+seed()
+  .catch((err) => {
+    console.error(err);
+    process.exit(1);
+  });
