@@ -25,6 +25,7 @@ import { colors } from "@/theme/goRide";
 import * as Location from "expo-location";
 import { logger } from "@/lib/logger";
 import { supabase } from "@/lib/supabase";
+import { getRideVerticalEnabled } from "@/lib/verticalFlags";
 import { enqueueSosAlert } from "@/lib/sosQueue";
 import NetInfo from "@react-native-community/netinfo";
 
@@ -96,6 +97,11 @@ const ADMIN_ITEMS: NavItem[] = [
 ];
 
 const GROUP_ORDER_CUSTOMER = ["Ride", "Activity", "Account"];
+// Stage 3 (#10): flag-off drawer grouping — "Services Hub" re-groups out of
+// the "Ride" heading into "Services" so no "Ride" group label renders.
+const GROUP_ORDER_CUSTOMER_HIDDEN = ["Services", "Activity", "Account"];
+// The ride entries that gate off while ride is hidden (flag on ⇒ all render).
+const RIDE_ITEM_LABELS = new Set(["Home", "Book Ride", "Schedule Ride", "My Rides"]);
 const GROUP_ORDER_DRIVER = ["Main", "Account", "Programs", "Compliance"];
 const GROUP_ORDER_ADMIN = ["Admin"];
 
@@ -271,14 +277,25 @@ export default function GlobalActionButtons() {
 
   // ── Nav items by role ──
   const navItems = useMemo(() => {
-    if (role === "customer") return CUSTOMER_ITEMS;
+    if (role === "customer") {
+      // Stage 3 (#10): ride entries gate off while the flag hides ride;
+      // "Services Hub" re-groups into "Services" (no "Ride" heading).
+      if (!getRideVerticalEnabled()) {
+        return CUSTOMER_ITEMS.filter((i) => !RIDE_ITEM_LABELS.has(i.label)).map(
+          (i) => (i.group === "Ride" ? { ...i, group: "Services" } : i),
+        );
+      }
+      return CUSTOMER_ITEMS;
+    }
     if (role === "driver") return DRIVER_ITEMS;
     if (role === "admin") return ADMIN_ITEMS;
     return [];
   }, [role]);
 
   const groupOrder = useMemo(() => {
-    if (role === "customer") return GROUP_ORDER_CUSTOMER;
+    if (role === "customer") {
+      return getRideVerticalEnabled() ? GROUP_ORDER_CUSTOMER : GROUP_ORDER_CUSTOMER_HIDDEN;
+    }
     if (role === "driver") return GROUP_ORDER_DRIVER;
     if (role === "admin") return GROUP_ORDER_ADMIN;
     return [];

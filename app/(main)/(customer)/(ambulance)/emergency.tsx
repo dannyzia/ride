@@ -23,6 +23,7 @@ import { useEmergencyStore } from "@/store/useEmergencyStore";
 import { useTranslation } from "react-i18next";
 import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
+import { ensureCustomerLocation } from "@/lib/ensureLocation";
 
 const SERVER_URL = process.env.EXPO_PUBLIC_SERVER_URL ?? "http://localhost:8080";
 
@@ -98,6 +99,10 @@ export default function EmergencyAmbulanceScreen() {
     }
     setSubmitting(true);
     try {
+      // Stage 3 (#19/G6): ensure-before-use — request/confirm permission and
+      // take a fix right here on the visible flow (silent fallback to the
+      // Dhaka default below when denied or timed out).
+      const ensured = await ensureCustomerLocation();
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token;
       if (!token) return;
@@ -110,8 +115,8 @@ export default function EmergencyAmbulanceScreen() {
         },
         body: JSON.stringify({
           pickup_address: pickupAddress,
-          pickup_lat: 23.8103, // TODO: use actual GPS
-          pickup_lng: 90.4125,
+          pickup_lat: ensured?.latitude ?? 23.8103,
+          pickup_lng: ensured?.longitude ?? 90.4125,
           dropoff_address: dropoffAddress || undefined,
           patient_condition: patientCondition,
           requires_paramedic: requiresParamedic,

@@ -18,6 +18,18 @@
 
 import { router } from "expo-router";
 import { logger } from "@/lib/logger";
+import { getRideVerticalEnabled } from "@/lib/verticalFlags";
+
+/**
+ * Stage 3 (#15): while the flag hides ride, ride/driver push targets land
+ * on the services hub instead (the central (main) guard backstops any
+ * stragglers). Flag on ⇒ the target passes through unchanged.
+ */
+function rideAware(target: string): string {
+  return getRideVerticalEnabled()
+    ? target
+    : ("/(main)/(customer)/services-hub" as string);
+}
 
 // ── UUID validation ──────────────────────────────────────────────
 const UUID_RE =
@@ -39,7 +51,7 @@ type NotificationHandler = (
 const DRIVER_NOTIFICATION_ROUTES: Record<string, NotificationHandler> = {
   // Ride lifecycle
   "ride:offer": () => {
-    router.push("/(main)/(rider)/d" as never);
+    router.push(rideAware("/(main)/(rider)/d") as never);
     return true;
   },
   "ride:matched": (data) => {
@@ -47,84 +59,84 @@ const DRIVER_NOTIFICATION_ROUTES: Record<string, NotificationHandler> = {
       router.push(`/(main)/(rider)/find-customer` as never);
       return true;
     }
-    router.push("/(main)/(rider)/d" as never);
+    router.push(rideAware("/(main)/(rider)/d") as never);
     return true;
   },
   "ride:cancelled": () => {
-    router.push("/(main)/(rider)/d" as never);
+    router.push(rideAware("/(main)/(rider)/d") as never);
     return true;
   },
   "rider:cancelled": () => {
-    router.push("/(main)/(rider)/d" as never);
+    router.push(rideAware("/(main)/(rider)/d") as never);
     return true;
   },
   "driver:arrived": () => {
-    router.push("/(main)/(rider)/d" as never);
+    router.push(rideAware("/(main)/(rider)/d") as never);
     return true;
   },
 
   // Payment & subscription
   "payment:confirmed": () => {
-    router.push("/(main)/(rider)/d/wallet" as never);
+    router.push(rideAware("/(main)/(rider)/d/wallet") as never);
     return true;
   },
   "package:activated": () => {
-    router.push("/(main)/(rider)/d/wallet" as never);
+    router.push(rideAware("/(main)/(rider)/d/wallet") as never);
     return true;
   },
   "package:expiring": () => {
-    router.push("/(main)/(rider)/packages" as never);
+    router.push(rideAware("/(main)/(rider)/packages") as never);
     return true;
   },
 
   // Documents
   "document:expiry": () => {
-    router.push("/(main)/(rider)/documents" as never);
+    router.push(rideAware("/(main)/(rider)/documents") as never);
     return true;
   },
   "document:rejected": () => {
-    router.push("/(main)/(rider)/documents" as never);
+    router.push(rideAware("/(main)/(rider)/documents") as never);
     return true;
   },
   "document:approved": () => {
-    router.push("/(main)/(rider)/documents" as never);
+    router.push(rideAware("/(main)/(rider)/documents") as never);
     return true;
   },
 
   // Account
   "account:approved": () => {
-    router.push("/(main)/(rider)/d" as never);
+    router.push(rideAware("/(main)/(rider)/d") as never);
     return true;
   },
   "account:suspended": () => {
-    router.push("/(main)/(rider)/contact-support" as never);
+    router.push(rideAware("/(main)/(rider)/contact-support") as never);
     return true;
   },
   "account:rejected": (data) => {
     // If there's a reason in the payload, it's shown by DriverStatusGuard
-    router.push("/(main)/(rider)/d" as never);
+    router.push(rideAware("/(main)/(rider)/d") as never);
     return true;
   },
 
   // Support
   "support:reply": () => {
-    router.push("/(main)/(rider)/contact-support" as never);
+    router.push(rideAware("/(main)/(rider)/contact-support") as never);
     return true;
   },
 
   // SOS
   "sos:acknowledged": () => {
-    router.push("/(main)/(rider)/d" as never);
+    router.push(rideAware("/(main)/(rider)/d") as never);
     return true;
   },
 
   // Incentive
   "incentive:completed": () => {
-    router.push("/(main)/(rider)/incentives" as never);
+    router.push(rideAware("/(main)/(rider)/incentives") as never);
     return true;
   },
   "incentive:expired": () => {
-    router.push("/(main)/(rider)/incentives" as never);
+    router.push(rideAware("/(main)/(rider)/incentives") as never);
     return true;
   },
 
@@ -175,7 +187,7 @@ const DRIVER_NOTIFICATION_ROUTES: Record<string, NotificationHandler> = {
   // Extra-charge resolution → the proposing driver (mirrors the C4-3
   // propose→rider fan-out; PATCH sends this after the commit).
   "ride:extra_charge_resolved": () => {
-    router.push("/(main)/(rider)/d" as never);
+    router.push(rideAware("/(main)/(rider)/d") as never);
     return true;
   },
 };
@@ -184,46 +196,46 @@ const RIDER_NOTIFICATION_ROUTES: Record<string, NotificationHandler> = {
   // Ride lifecycle
   "ride:matched": (data) => {
     if (data.ride_id && isValidUUID(data.ride_id)) {
-      router.push(`/(main)/(customer)/ride-tracking/${data.ride_id}` as never);
+      router.push(rideAware(`/(main)/(customer)/ride-tracking/${data.ride_id}`) as never);
       return true;
     }
-    router.push("/(main)/(customer)/(tabs)/home" as never);
+    router.push(rideAware("/(main)/(customer)/(tabs)/home") as never);
     return true;
   },
   "ride:completed": (data) => {
     if (data.ride_id && isValidUUID(data.ride_id)) {
-      router.push(`/(main)/(customer)/ride-tracking/${data.ride_id}` as never);
+      router.push(rideAware(`/(main)/(customer)/ride-tracking/${data.ride_id}`) as never);
       return true;
     }
-    router.push("/(main)/(customer)/(tabs)/home" as never);
+    router.push(rideAware("/(main)/(customer)/(tabs)/home") as never);
     return true;
   },
   "driver:arrived": () => {
-    router.push("/(main)/(customer)/(tabs)/home" as never);
+    router.push(rideAware("/(main)/(customer)/(tabs)/home") as never);
     return true;
   },
   "ride:cancelled": () => {
-    router.push("/(main)/(customer)/(tabs)/home" as never);
+    router.push(rideAware("/(main)/(customer)/(tabs)/home") as never);
     return true;
   },
   // Phase G: post-cancellation survey invite on driver-cancelled rides —
   // deep-links to the ride screen where the survey prompt is shown.
   "ride:cancel_survey": (data) => {
     if (data.ride_id && isValidUUID(data.ride_id)) {
-      router.push(`/(main)/(customer)/ride-tracking/${data.ride_id}` as never);
+      router.push(rideAware(`/(main)/(customer)/ride-tracking/${data.ride_id}`) as never);
       return true;
     }
-    router.push("/(main)/(customer)/(tabs)/home" as never);
+    router.push(rideAware("/(main)/(customer)/(tabs)/home") as never);
     return true;
   },
   // C4-3: driver-proposed toll/parking charge — deep-links to the active
   // ride, where ExtraChargeApproval renders the approve/dispute card.
   "ride:extra_charge_proposed": (data) => {
     if (data.ride_id && isValidUUID(data.ride_id)) {
-      router.push(`/(main)/(customer)/ride-tracking/${data.ride_id}` as never);
+      router.push(rideAware(`/(main)/(customer)/ride-tracking/${data.ride_id}`) as never);
       return true;
     }
-    router.push("/(main)/(customer)/(tabs)/home" as never);
+    router.push(rideAware("/(main)/(customer)/(tabs)/home") as never);
     return true;
   },
 
@@ -336,68 +348,68 @@ const DEEP_LINK_ROUTES: DeepLinkRoute[] = [
   {
     pattern: /^\/?driver\/ride-tracking\/([0-9a-f-]{36})$/i,
     handler: (m) => {
-      if (isValidUUID(m[1])) router.push("/(main)/(rider)/find-customer" as never);
+      if (isValidUUID(m[1])) router.push(rideAware("/(main)/(rider)/find-customer") as never);
     },
   },
   {
     pattern: /^\/?driver\/wallet\/?$/,
-    handler: () => router.push("/(main)/(rider)/d/wallet" as never),
+    handler: () => router.push(rideAware("/(main)/(rider)/d/wallet") as never),
   },
   {
     pattern: /^\/?driver\/packages\/?$/,
-    handler: () => router.push("/(main)/(rider)/packages" as never),
+    handler: () => router.push(rideAware("/(main)/(rider)/packages") as never),
   },
   {
     pattern: /^\/?driver\/documents\/?$/,
-    handler: () => router.push("/(main)/(rider)/documents" as never),
+    handler: () => router.push(rideAware("/(main)/(rider)/documents") as never),
   },
   {
     pattern: /^\/?driver\/support\/?$/,
-    handler: () => router.push("/(main)/(rider)/contact-support" as never),
+    handler: () => router.push(rideAware("/(main)/(rider)/contact-support") as never),
   },
   {
     pattern: /^\/?driver\/safety\/?$/,
-    handler: () => router.push("/(main)/(rider)/safety" as never),
+    handler: () => router.push(rideAware("/(main)/(rider)/safety") as never),
   },
   {
     pattern: /^\/?driver\/earnings\/?$/,
-    handler: () => router.push("/(main)/(rider)/d/earning" as never),
+    handler: () => router.push(rideAware("/(main)/(rider)/d/earning") as never),
   },
   {
     pattern: /^\/?driver\/activity\/?$/,
-    handler: () => router.push("/(main)/(rider)/d/activity" as never),
+    handler: () => router.push(rideAware("/(main)/(rider)/d/activity") as never),
   },
   {
     pattern: /^\/?driver\/profile\/?$/,
-    handler: () => router.push("/(main)/(rider)/d/profile" as never),
+    handler: () => router.push(rideAware("/(main)/(rider)/d/profile") as never),
   },
   {
     pattern: /^\/?driver\/settings\/?$/,
-    handler: () => router.push("/(main)/(rider)/settings" as never),
+    handler: () => router.push(rideAware("/(main)/(rider)/settings") as never),
   },
   {
     pattern: /^\/?driver\/incentives\/?$/,
-    handler: () => router.push("/(main)/(rider)/incentives" as never),
+    handler: () => router.push(rideAware("/(main)/(rider)/incentives") as never),
   },
   {
     pattern: /^\/?driver\/ratings\/?$/,
-    handler: () => router.push("/(main)/(rider)/ratings" as never),
+    handler: () => router.push(rideAware("/(main)/(rider)/ratings") as never),
   },
   {
     pattern: /^\/?driver\/referral\/?$/,
-    handler: () => router.push("/(main)/(rider)/referral" as never),
+    handler: () => router.push(rideAware("/(main)/(rider)/referral") as never),
   },
 
   // Rider (customer) routes
   {
     pattern: /^\/?rider\/?$/,
-    handler: () => router.push("/(main)/(customer)/(tabs)/home" as never),
+    handler: () => router.push(rideAware("/(main)/(customer)/(tabs)/home") as never),
   },
   {
     pattern: /^\/?rider\/ride-tracking\/([0-9a-f-]{36})$/i,
     handler: (m) => {
       if (isValidUUID(m[1]))
-        router.push(`/(main)/(customer)/ride-tracking/${m[1]}` as never);
+        router.push(rideAware(`/(main)/(customer)/ride-tracking/${m[1]}`) as never);
     },
   },
   {
@@ -407,7 +419,7 @@ const DEEP_LINK_ROUTES: DeepLinkRoute[] = [
   {
     // Legacy alias: the find-ride screen was deleted; old shared links land on home.
     pattern: /^\/?rider\/find-ride\/?$/,
-    handler: () => router.push("/(main)/(customer)/(tabs)/home" as never),
+    handler: () => router.push(rideAware("/(main)/(customer)/(tabs)/home") as never),
   },
 ];
 

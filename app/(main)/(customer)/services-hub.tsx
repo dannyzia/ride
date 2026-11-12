@@ -10,6 +10,8 @@ import { useCustomer } from "@/store";
 import { logger } from "@/lib/logger";
 import { ensureRiderSocket } from "@/lib/riderSocket";
 import { VEHICLE_CATEGORIES } from "@/lib/vehicleTypes";
+import { getRideVerticalEnabled } from "@/lib/verticalFlags";
+import { ensureCustomerLocation } from "@/lib/ensureLocation";
 
 const SERVER_URL = process.env.EXPO_PUBLIC_SERVER_URL ?? "http://localhost:8080";
 
@@ -52,6 +54,10 @@ export default function ServicesHub() {
   const { userAddress } = useCustomer();
   const [greetingKey, setGreetingKey] = useState("services_hub.good_morning");
   const [shopTypes, setShopTypes] = useState<ShopTypeTile[]>([]);
+  // Node launch Stage 3 (#1/#16/#19): the flag is read fresh from the session
+  // cache (resolved during splash). Flag on ⇒ the ride booking block and the
+  // rider socket behave exactly as before; flag off ⇒ they are skipped.
+  const rideVisible = getRideVerticalEnabled();
   const bg = isDark ? colors.bgDark : colors.bgLight;
   const textPrimary = isDark ? colors.textPrimaryDark : colors.textPrimaryLight;
   const textSecondary = isDark ? colors.textSecondaryDark : colors.textSecondaryLight;
@@ -60,9 +66,11 @@ export default function ServicesHub() {
 
   useEffect(() => {
     setGreetingKey(getGreetingKey());
-    // L8: open the rider session's WS singleton here (the driver side opens
-    // its singleton on driver home). Ride screens subscribe per ride.
-    ensureRiderSocket();
+    // #16: no rider WS session while ride is hidden.
+    if (rideVisible) ensureRiderSocket();
+    // #19 (G6): the hub owns the location-permission request — hydrate the
+    // customer store's address here (today only the hidden ride home did).
+    ensureCustomerLocation().catch(() => {});
     // §5 R3: shop-category tiles come from the admin-extensible lookup — a
     // category the admin adds appears here with ZERO client change.
     fetch(`${SERVER_URL}/api/shop/types`)
@@ -120,63 +128,69 @@ export default function ServicesHub() {
 
       {/* Services Grid */}
       <ScrollView className="flex-1 px-6 pt-6">
-        <Text
-          className="text-lg font-JakartaSemiBold mb-4"
-          style={{ color: textPrimary }}
-        >
-          {t("services_hub.what_service")}
-        </Text>
+        {/* #1: the ride heading + tile block gate together so no orphaned
+            heading remains while the flag hides ride. */}
+        {rideVisible && (
+          <>
+            <Text
+              className="text-lg font-JakartaSemiBold mb-4"
+              style={{ color: textPrimary }}
+            >
+              {t("services_hub.what_service")}
+            </Text>
 
-        <View className="flex-row flex-wrap gap-3">
-          {VEHICLE_CATEGORIES.map((cat) => {
-            const label = language === "bn" ? cat.display_bn : cat.display_en;
-            const color =
-              cat.key === "bike"
-                ? colors.primary
-                : cat.key === "cng"
-                  ? colors.blue
-                  : cat.key === "car"
-                    ? colors.amber
-                    : colors.indigo;
-            return (
-              <TouchableOpacity
-                key={cat.key}
-                className="rounded-2xl p-5 items-center"
-                style={{
-                  width: "48%",
-                  backgroundColor: surfaceBg,
-                  borderWidth: 1,
-                  borderColor: borderColor,
-                }}
-                onPress={() => handleSelect(cat.key)}
-                activeOpacity={0.8}
-               testID="customer.services-hub.handle-select">
-                <View
-                  className="w-14 h-14 rounded-full items-center justify-center mb-3"
-                  style={{ backgroundColor: color + "18" }}
-                >
-                  <Ionicons
-                    name={cat.icon}
-                    size={28}
-                    color={color}
-                  />
-                </View>
-                <Text
-                  className="text-base font-JakartaBold"
-                  style={{ color: textPrimary }}
-                >
-                  {label}
-                </Text>
-                <Text
-                  className="text-xs font-Jakarta mt-1 text-center"
-                  style={{ color: textSecondary }}
-                >
-                  {language === "bn" ? cat.subtitle_bn : cat.subtitle_en}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
+            <View className="flex-row flex-wrap gap-3">
+              {VEHICLE_CATEGORIES.map((cat) => {
+                const label = language === "bn" ? cat.display_bn : cat.display_en;
+                const color =
+                  cat.key === "bike"
+                    ? colors.primary
+                    : cat.key === "cng"
+                      ? colors.blue
+                      : cat.key === "car"
+                        ? colors.amber
+                        : colors.indigo;
+                return (
+                  <TouchableOpacity
+                    key={cat.key}
+                    className="rounded-2xl p-5 items-center"
+                    style={{
+                      width: "48%",
+                      backgroundColor: surfaceBg,
+                      borderWidth: 1,
+                      borderColor: borderColor,
+                    }}
+                    onPress={() => handleSelect(cat.key)}
+                    activeOpacity={0.8}
+                   testID="customer.services-hub.handle-select">
+                    <View
+                      className="w-14 h-14 rounded-full items-center justify-center mb-3"
+                      style={{ backgroundColor: color + "18" }}
+                    >
+                      <Ionicons
+                        name={cat.icon}
+                        size={28}
+                        color={color}
+                      />
+                    </View>
+                    <Text
+                      className="text-base font-JakartaBold"
+                      style={{ color: textPrimary }}
+                    >
+                      {label}
+                    </Text>
+                    <Text
+                      className="text-xs font-Jakarta mt-1 text-center"
+                      style={{ color: textSecondary }}
+                    >
+                      {language === "bn" ? cat.subtitle_bn : cat.subtitle_en}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </>
+        )}
 
         {/* Marketplace services */}
         <Text

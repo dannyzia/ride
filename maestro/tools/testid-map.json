@@ -124,35 +124,35 @@
     "(auth)/login-as.tsx": [
       {
         "id": "login-as.handle-row-press",
-        "line": 226
+        "line": 234
       },
       {
         "id": "login-as.deep-link-resubmit",
-        "line": 251
+        "line": 259
       },
       {
         "id": "login-as.enter-rider",
-        "line": 282
+        "line": 290
       },
       {
         "id": "login-as.enter-driver",
-        "line": 283
+        "line": 291
       },
       {
         "id": "login-as.enter-shop-owner",
-        "line": 284
+        "line": 292
       },
       {
         "id": "login-as.enter-fleet-owner",
-        "line": 285
+        "line": 293
       },
       {
         "id": "login-as.enter-delivery-man",
-        "line": 286
+        "line": 294
       },
       {
         "id": "login-as.enter-shop-staff",
-        "line": 287
+        "line": 295
       }
     ],
     "(auth)/login.tsx": [
@@ -410,35 +410,35 @@
     "(main)/(customer)/(ambulance)/emergency.tsx": [
       {
         "id": "customer.ambulance.emergency.el-1",
-        "line": 177
+        "line": 182
       },
       {
         "id": "customer.ambulance.emergency.handle-cancel",
-        "line": 246
+        "line": 251
       },
       {
         "id": "customer.ambulance.emergency.set-service-level",
-        "line": 281
+        "line": 286
       },
       {
         "id": "customer.ambulance.emergency.set-requires-paramedic",
-        "line": 308
+        "line": 313
       },
       {
         "id": "customer.ambulance.emergency.set-patient-condition",
-        "line": 342
+        "line": 347
       },
       {
         "id": "customer.ambulance.emergency.set-pickup-address",
-        "line": 355
+        "line": 360
       },
       {
         "id": "customer.ambulance.emergency.set-dropoff-address",
-        "line": 368
+        "line": 373
       },
       {
         "id": "customer.ambulance.emergency.handle-create",
-        "line": 384
+        "line": 389
       }
     ],
     "(main)/(customer)/(delivery)/index.tsx": [
@@ -462,27 +462,27 @@
     "(main)/(customer)/(delivery)/request-create.tsx": [
       {
         "id": "customer.delivery.request-create.el-1",
-        "line": 95
+        "line": 98
       },
       {
         "id": "customer.delivery.request-create.set-pickup-address",
-        "line": 120
+        "line": 123
       },
       {
         "id": "customer.delivery.request-create.set-dropoff-address",
-        "line": 138
+        "line": 141
       },
       {
         "id": "customer.delivery.request-create.set-item-note",
-        "line": 156
+        "line": 159
       },
       {
         "id": "customer.delivery.request-create.set-receiver-phone",
-        "line": 175
+        "line": 178
       },
       {
         "id": "customer.delivery.request-create.handle-submit",
-        "line": 185
+        "line": 188
       }
     ],
     "(main)/(customer)/(delivery)/request-detail.tsx": [
@@ -2274,31 +2274,31 @@
     "(main)/(customer)/services-hub.tsx": [
       {
         "id": "customer.services-hub.set-theme",
-        "line": 112
+        "line": 120
       },
       {
         "id": "customer.services-hub.handle-select",
-        "line": 153
+        "line": 165
       },
       {
         "id": "customer.services-hub.push-shops",
-        "line": 199
+        "line": 213
       },
       {
         "id": "customer.services-hub.push-rental-marketplace",
-        "line": 230
+        "line": 244
       },
       {
         "id": "customer.services-hub.el-1",
-        "line": 284
+        "line": 298
       },
       {
         "id": "customer.services-hub.push-delivery",
-        "line": 314
+        "line": 328
       },
       {
         "id": "customer.services-hub.push-emergency",
-        "line": 348
+        "line": 362
       }
     ],
     "(main)/(customer)/user-arrived/index.tsx": [

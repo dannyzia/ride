@@ -25,6 +25,7 @@ import { logger } from "@/lib/logger";
 import { colors } from "@/theme/goRide";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useIsDark } from "@/lib/useAppearance";
+import { getRideVerticalEnabled } from "@/lib/verticalFlags";
 
 /** Where each role lands TODAY. S3 added the dedicated shop surface; C8-2
  *  routes fleet_owner at the fleet surface (resolved via GET /api/fleet/mine
@@ -151,10 +152,17 @@ export default function LoginAsScreen() {
   // returns owned fleets BUSINESS-first, so [0] is the role-record fleet
   // (S2.1 D-2 scoping). Any failure (or zero fleets) falls back to the
   // customer home — the universal safe surface — never a throw.
+  // Stage 3 (#3/#4): while the flag hides ride, the USER role landing and
+  // every fallback below land on the services hub instead (flag on ⇒ the
+  // legacy customer home, unchanged).
+  const customerHome = () =>
+    getRideVerticalEnabled()
+      ? "/(main)/(customer)/home"
+      : "/(main)/(customer)/services-hub";
   const enter = (role: string) => {
     AsyncStorage.setItem(STORAGE_KEYS.LAST_USED_ROLE, role).catch(() => {});
     if (role !== "fleet_owner") {
-      router.replace(ROLE_HOME[role] ?? "/(main)/(customer)/home");
+      router.replace(role === "rider" ? customerHome() : ROLE_HOME[role] ?? customerHome());
       return;
     }
     (async () => {
@@ -180,7 +188,7 @@ export default function LoginAsScreen() {
       } catch (e) {
         logger.error("[login-as] fleet context resolve failed", e);
       }
-      router.replace("/(main)/(customer)/home");
+      router.replace(customerHome());
     })();
   };
   const openStatus = () => router.push("/(main)/(customer)/verification-status");

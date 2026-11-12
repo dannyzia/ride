@@ -23,6 +23,7 @@ import { useIsDark } from '@/lib/useAppearance';
 import { colors } from '@/theme/goRide';
 import { supabase } from '@/lib/supabase';
 import { logger } from '@/lib/logger';
+import { ensureCustomerLocation } from '@/lib/ensureLocation';
 import { useTranslation } from 'react-i18next';
 
 export default function RequestCreateScreen() {
@@ -48,13 +49,15 @@ export default function RequestCreateScreen() {
 
     setSubmitting(true);
     try {
+      // Stage 3 (#19/G6): ensure-before-use — permission + fix on this
+      // visible flow (silent fallback to the Dhaka defaults below).
+      const ensured = await ensureCustomerLocation();
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.access_token) {
         Alert.alert(t("common.error"), t("common.not_authenticated"));
         return;
       }
 
-      // Use Dhaka default coordinates (to be replaced with map picker)
       const res = await fetch(`${process.env.EXPO_PUBLIC_SERVER_URL}/api/delivery/parcels`, {
         method: 'POST',
         headers: {
@@ -63,11 +66,11 @@ export default function RequestCreateScreen() {
         },
         body: JSON.stringify({
           pickup_address: pickupAddress,
-          pickup_lat: 23.8103,
-          pickup_lng: 90.4125,
+          pickup_lat: ensured?.latitude ?? 23.8103,
+          pickup_lng: ensured?.longitude ?? 90.4125,
           dropoff_address: dropoffAddress,
-          dropoff_lat: 23.8103,
-          dropoff_lng: 90.4125,
+          dropoff_lat: ensured?.latitude ?? 23.8103,
+          dropoff_lng: ensured?.longitude ?? 90.4125,
           item_note: itemNote,
           receiver_phone: receiverPhone,
         }),
