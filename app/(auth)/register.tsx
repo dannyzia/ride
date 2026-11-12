@@ -262,8 +262,8 @@ export default function RegisterScreen() {
       {/* Stage 4: Register as Operator link + one-account explainer */}
       <TouchableOpacity
         onPress={() => router.push("/(auth)/operator-register")}
-        testID="register.operator-register-link"
-      >
+       
+       testID="register.push-operator-register">
         <Text style={{ color: colors.primary, textDecorationLine: "underline", marginTop: 16 }}>
           {t("auth.register_as_operator")}
         </Text>

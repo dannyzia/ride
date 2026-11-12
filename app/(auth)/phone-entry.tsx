@@ -349,8 +349,8 @@ export default function PhoneEntryScreen(props: { mode?: "user" | "operator" } =
         {isOperatorMode && (
           <TouchableOpacity
             onPress={() => router.push("/(auth)/operator-register")}
-            testID="phone-entry.operator-register-link"
-          >
+           
+           testID="phone-entry.push-operator-register">
             <Text style={{ color: colors.primary, textDecorationLine: "underline" }}>
               {t("auth.register_as_operator")}
             </Text>
@@ -362,8 +362,8 @@ export default function PhoneEntryScreen(props: { mode?: "user" | "operator" } =
         {!isOperatorMode && (
           <TouchableOpacity
             onPress={() => router.push("/(auth)/operator-login")}
-            testID="phone-entry.operator-login-link"
-          >
+           
+           testID="phone-entry.push-operator-login">
             <Text style={{ color: colors.primary, textDecorationLine: "underline" }}>
               {t("auth.login_as_operator")}
             </Text>

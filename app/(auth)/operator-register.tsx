@@ -40,7 +40,7 @@ export default function OperatorRegisterScreen() {
 
   const handleContinue = async () => {
     if (!selectedRole) {
-      Alert.alert(t("common.error"), t("operator_register.err_no_role"));
+      Alert.alert(t("common.error"), t("auth.operator_register.err_no_role"));
       return;
     }
     setLoading(true);
@@ -60,10 +60,10 @@ export default function OperatorRegisterScreen() {
   return (
     <SafeAreaView className="flex-1 px-6 justify-center" style={{ backgroundColor: bg }}>
       <Text className="text-[28px] font-JakartaBold font-bold mb-1" style={{ color: textPrimary }}>
-        {t("operator_register.title")}
+        {t("auth.operator_register.title")}
       </Text>
       <Text className="text-[14px] font-JakartaBold mb-6" style={{ color: textSecondary }}>
-        {t("operator_register.subtitle")}
+        {t("auth.operator_register.subtitle")}
       </Text>
 
       <View className="flex-row flex-wrap gap-2 mb-6">
@@ -77,8 +77,8 @@ export default function OperatorRegisterScreen() {
               borderColor: selectedRole === r.key ? colors.primary : borderColor,
             }}
             onPress={() => handleSelect(r.key)}
-            testID="operator-register.handle-select"
-          >
+           
+           testID="operator-register.handle-select">
             <Ionicons name={r.icon} size={24} color={selectedRole === r.key ? colors.white : textSecondary} />
             <Text
               className="text-[13px] font-JakartaBold font-bold mt-1"
@@ -92,20 +92,20 @@ export default function OperatorRegisterScreen() {
 
       <View className="gap-y-3">
         <CustomButton
-          title={loading ? "Loading..." : t("operator_register.continue")}
+          title={loading ? "Loading..." : t("auth.operator_register.continue")}
           onPress={handleContinue}
           disabled={loading || !selectedRole}
-          testID="operator-register.continue"
-        />
+         
+         testID="operator-register.handle-continue"/>
         <Text className="text-center text-[13px] font-JakartaBold mt-4" style={{ color: textSecondary }}>
-          {t("operator_register.or_login")}
+          {t("auth.operator_register.or_login")}
         </Text>
         <TouchableOpacity
           onPress={() => router.push("/(auth)/operator-login")}
-          testID="operator-register.login-link"
-        >
+         
+         testID="operator-register.push-operator-login">
           <Text style={{ color: colors.primary, textDecorationLine: "underline" }}>
-            {t("operator_register.login_link")}
+            {t("auth.operator_register.login_link")}
           </Text>
         </TouchableOpacity>
       </View>

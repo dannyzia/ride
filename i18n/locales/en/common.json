@@ -111,6 +111,14 @@
     "shop_categories": "Shop by category"
   },
   "auth": {
+    "operator_register": {
+      "title": "Register as Operator",
+      "subtitle": "Choose your operator role to continue",
+      "continue": "Continue",
+      "or_login": "Or login",
+      "login_link": "Login",
+      "err_no_role": "Please select a role to continue"
+    },
     "phone_entry": "Enter your phone number",
     "send_otp": "Send OTP",
     "verify_otp": "Verify OTP",

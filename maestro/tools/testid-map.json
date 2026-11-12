@@ -194,15 +194,15 @@
     "(auth)/operator-register.tsx": [
       {
         "id": "operator-register.handle-select",
-        "line": 80
+        "line": 81
       },
       {
-        "id": "operator-register.continue",
-        "line": 98
+        "id": "operator-register.handle-continue",
+        "line": 99
       },
       {
-        "id": "operator-register.login-link",
-        "line": 105
+        "id": "operator-register.push-operator-login",
+        "line": 106
       }
     ],
     "(auth)/otp-verify.tsx": [
@@ -261,12 +261,12 @@
         "line": 347
       },
       {
-        "id": "phone-entry.operator-register-link",
-        "line": 352
+        "id": "phone-entry.push-operator-register",
+        "line": 353
       },
       {
-        "id": "phone-entry.operator-login-link",
-        "line": 365
+        "id": "phone-entry.push-operator-login",
+        "line": 366
       }
     ],
     "(auth)/register-delivery-man.tsx": [
@@ -357,8 +357,8 @@
         "line": 260
       },
       {
-        "id": "register.operator-register-link",
-        "line": 265
+        "id": "register.push-operator-register",
+        "line": 266
       }
     ],
     "(auth)/walkthrough-1.tsx": [
