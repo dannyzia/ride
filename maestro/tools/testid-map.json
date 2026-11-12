@@ -124,35 +124,35 @@
     "(auth)/login-as.tsx": [
       {
         "id": "login-as.handle-row-press",
-        "line": 231
+        "line": 244
       },
       {
         "id": "login-as.deep-link-resubmit",
-        "line": 256
+        "line": 269
       },
       {
         "id": "login-as.enter-rider",
-        "line": 287
+        "line": 300
       },
       {
         "id": "login-as.enter-driver",
-        "line": 288
+        "line": 301
       },
       {
         "id": "login-as.enter-shop-owner",
-        "line": 289
+        "line": 302
       },
       {
         "id": "login-as.enter-fleet-owner",
-        "line": 290
+        "line": 303
       },
       {
         "id": "login-as.enter-delivery-man",
-        "line": 291
+        "line": 304
       },
       {
         "id": "login-as.enter-shop-staff",
-        "line": 292
+        "line": 305
       }
     ],
     "(auth)/login.tsx": [
@@ -5884,7 +5884,7 @@
     "index.tsx": [
       {
         "id": ".run-auth-check",
-        "line": 242
+        "line": 247
       }
     ],
     "track/[rideId].tsx": [

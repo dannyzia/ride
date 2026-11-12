@@ -24,6 +24,7 @@ import * as Linking from "expo-linking";
 import { routeNotification, routeDeepLink } from "@/lib/notificationRouter";
 import { useOtaBackgroundPolling } from "@/lib/otaBackgroundUpdate";
 import { useInboxStore, type InboxEndpointBase } from "@/lib/notifications/inbox";
+import { getRideVerticalEnabled } from "@/lib/verticalFlags";
 
 const isWeb = Platform.OS === "web";
 
@@ -151,8 +152,12 @@ export default function RootLayout() {
                 );
               } else {
                 router.replace(
+                  // Stage 5 (#8): flag off → services-hub (the (main) mount
+                  // guard backstops (rider) navigation); flag on ⇒ unchanged.
                   data.role === "driver"
-                    ? "/(main)/(rider)"
+                    ? getRideVerticalEnabled()
+                      ? "/(main)/(rider)"
+                      : "/(main)/(customer)/services-hub"
                     : data.role === "shop_owner"
                       ? "/(main)/(shop-owner)"
                       : "/(main)/(customer)/services-hub",

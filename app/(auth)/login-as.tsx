@@ -156,10 +156,18 @@ export default function LoginAsScreen() {
     getRideVerticalEnabled()
       ? "/(main)/(customer)/home"
       : "/(main)/(customer)/services-hub";
+  // Stage 5 (#6): the DRIVER landing is flag-conditional too — services-hub
+  // while the flag hides ride; flag on ⇒ the legacy driver home, unchanged.
+  const driverHome = () =>
+    getRideVerticalEnabled()
+      ? "/(main)/(rider)/home"
+      : "/(main)/(customer)/services-hub";
   const enter = (role: string) => {
     AsyncStorage.setItem(STORAGE_KEYS.LAST_USED_ROLE, role).catch(() => {});
     if (role !== "fleet_owner") {
-      router.replace(role === "rider" ? customerHome() : ROLE_HOME[role] ?? customerHome());
+      router.replace(
+        role === "rider" ? customerHome() : role === "driver" ? driverHome() : ROLE_HOME[role] ?? customerHome(),
+      );
       return;
     }
     (async () => {
@@ -195,6 +203,11 @@ export default function LoginAsScreen() {
   const rowProps = (role: string) => {
     const r = roles[role];
     if (!r) return null;
+    // Stage 5 (#9): the driver row's CONTENT gates off with the ride flag —
+    // hidden while the flag hides ride. The caller's wrapper + testID
+    // `login-as.enter-driver` stay verbatim (D-6: flag-on builds render the
+    // row fully functional, unchanged).
+    if (role === "driver" && !getRideVerticalEnabled()) return null;
     const label = statusLabel(r);
     const enterable = r.status === "active" && authenticated;
     const rejected = r.status !== "active";

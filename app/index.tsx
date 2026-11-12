@@ -24,6 +24,7 @@ import { API_URL } from "@/lib/config";
 import {
   applyVerifyTokenFlags,
   fetchRideVerticalFlag,
+  getRideVerticalEnabled,
   RIDE_FLAG_RESOLVE_TIMEOUT_MS,
   waitForRideVerticalFlag,
 } from "@/lib/verticalFlags";
@@ -157,7 +158,11 @@ export default function Splash() {
           `/(auth)/login-as?phone=${encodeURIComponent(data.phone ?? "")}`,
         );
       } else if (data.role === "driver") {
-        redirect("/(main)/(rider)/d");
+        // Stage 5 (#7): flag off → services-hub (the (main) mount guard also
+        // backstops (rider) navigation); flag on ⇒ unchanged.
+        redirect(
+          getRideVerticalEnabled() ? "/(main)/(rider)/d" : "/(main)/(customer)/services-hub",
+        );
       } else if (data.role === "shop_owner") {
         // S3: the shop surface is live — a single-any-role owner lands here.
         redirect("/(main)/(shop-owner)");
