@@ -1,5 +1,5 @@
 {
-  "total": 1353,
+  "total": 1360,
   "screens": {
     "(auth)/_layout.tsx": [
       {
@@ -124,35 +124,35 @@
     "(auth)/login-as.tsx": [
       {
         "id": "login-as.handle-row-press",
-        "line": 234
+        "line": 231
       },
       {
         "id": "login-as.deep-link-resubmit",
-        "line": 259
+        "line": 256
       },
       {
         "id": "login-as.enter-rider",
-        "line": 290
+        "line": 287
       },
       {
         "id": "login-as.enter-driver",
-        "line": 291
+        "line": 288
       },
       {
         "id": "login-as.enter-shop-owner",
-        "line": 292
+        "line": 289
       },
       {
         "id": "login-as.enter-fleet-owner",
-        "line": 293
+        "line": 290
       },
       {
         "id": "login-as.enter-delivery-man",
-        "line": 294
+        "line": 291
       },
       {
         "id": "login-as.enter-shop-staff",
-        "line": 295
+        "line": 292
       }
     ],
     "(auth)/login.tsx": [
@@ -171,6 +171,10 @@
       {
         "id": "login.push-forgot-password",
         "line": 148
+      },
+      {
+        "id": "login.push-operator-login",
+        "line": 161
       }
     ],
     "(auth)/notifications-permission.tsx": [
@@ -185,6 +189,20 @@
       {
         "id": "notifications-permission.skip",
         "line": 136
+      }
+    ],
+    "(auth)/operator-register.tsx": [
+      {
+        "id": "operator-register.handle-select",
+        "line": 80
+      },
+      {
+        "id": "operator-register.continue",
+        "line": 98
+      },
+      {
+        "id": "operator-register.login-link",
+        "line": 105
       }
     ],
     "(auth)/otp-verify.tsx": [
@@ -208,39 +226,47 @@
     "(auth)/phone-entry.tsx": [
       {
         "id": "phone-entry.set-phone",
-        "line": 194
+        "line": 204
       },
       {
         "id": "phone-entry.set-role",
-        "line": 212
+        "line": 225
       },
       {
         "id": "phone-entry.set-role-2",
-        "line": 229
+        "line": 242
       },
       {
         "id": "phone-entry.set-role-3",
-        "line": 246
+        "line": 259
       },
       {
         "id": "phone-entry.set-role-4",
-        "line": 263
+        "line": 276
       },
       {
         "id": "phone-entry.set-role-5",
-        "line": 280
+        "line": 293
       },
       {
         "id": "phone-entry.terms-checkbox",
-        "line": 295
+        "line": 308
       },
       {
         "id": "phone-entry.handle-login",
-        "line": 328
+        "line": 341
       },
       {
         "id": "phone-entry.handle-register",
-        "line": 334
+        "line": 347
+      },
+      {
+        "id": "phone-entry.operator-register-link",
+        "line": 352
+      },
+      {
+        "id": "phone-entry.operator-login-link",
+        "line": 365
       }
     ],
     "(auth)/register-delivery-man.tsx": [
@@ -308,27 +334,31 @@
     "(auth)/register.tsx": [
       {
         "id": "register.set-name",
-        "line": 177
+        "line": 180
       },
       {
         "id": "register.set-password",
-        "line": 193
+        "line": 196
       },
       {
         "id": "register.set-confirm-password",
-        "line": 209
+        "line": 212
       },
       {
         "id": "register.gender-picker",
-        "line": 219
+        "line": 222
       },
       {
         "id": "register.set-gender",
-        "line": 232
+        "line": 235
       },
       {
         "id": "register.handle-register",
-        "line": 257
+        "line": 260
+      },
+      {
+        "id": "register.operator-register-link",
+        "line": 265
       }
     ],
     "(auth)/walkthrough-1.tsx": [
@@ -5854,7 +5884,7 @@
     "index.tsx": [
       {
         "id": ".run-auth-check",
-        "line": 239
+        "line": 242
       }
     ],
     "track/[rideId].tsx": [

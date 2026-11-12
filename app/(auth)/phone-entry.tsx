@@ -2,21 +2,31 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { API_URL } from "@/lib/config";
 import { View, Text, TextInput, TouchableOpacity, Image } from "react-native";
-import { useRouter } from "expo-router";
+import { useRouter, useLocalSearchParams } from "expo-router";
 import { logger } from "@/lib/logger";
 import { colors } from "@/theme/goRide";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useIsDark } from "@/lib/useAppearance";
 import CustomButton from "@/components/CustomButton";
+import { getRideVerticalEnabled } from "@/lib/verticalFlags";
 
-export default function PhoneEntryScreen() {
+export default function PhoneEntryScreen(props: { mode?: "user" | "operator" } = {}) {
   const router = useRouter();
   const isDark = useIsDark();
   const { t } = useTranslation();
+  const params = useLocalSearchParams<{ mode?: string; role?: string }>();
+
+  // Stage 4: mode prop (from operator-login wrapper) or URL param (from operator-register)
+  const mode = props.mode ?? (params.mode === "operator" ? "operator" : "user");
+  const isOperatorMode = mode === "operator";
 
   const [phone, setPhone] = useState("");
-  // §0 #8: the register screen shows ALL five public roles as visible buttons.
-  const [role, setRole] = useState<"rider" | "driver" | "shop_owner" | "fleet_owner" | "delivery_man">("rider");
+  // Stage 4: role pills render ONLY when flag is on AND in user mode (D-6)
+  const rideVisible = getRideVerticalEnabled();
+  const initialRole = (["rider", "driver", "shop_owner", "fleet_owner", "delivery_man"].includes(params.role as string)
+    ? params.role
+    : "rider") as "rider" | "driver" | "shop_owner" | "fleet_owner" | "delivery_man";
+  const [role, setRole] = useState<"rider" | "driver" | "shop_owner" | "fleet_owner" | "delivery_man">(initialRole);
   // C1-1 (STAGE C1-FIX): T&C + Privacy consent gate — one checkbox between
   // role choice and phone/OTP, covering all five paths (F-01 REG node).
   const [termsAccepted, setTermsAccepted] = useState(false);
@@ -137,7 +147,7 @@ export default function PhoneEntryScreen() {
       {/* Logo */}
       <View className="items-center mb-10">
         <Image
-          source={require("@/assets/logo/logo.png")}
+          source={require("@/assets/logo/node_icon_1024.png")}
           className="w-24 h-24 rounded-xl"
           resizeMode="contain"
         />
@@ -194,10 +204,13 @@ export default function PhoneEntryScreen() {
          testID="phone-entry.set-phone"/>
       </View>
 
-      {/* Role Selector — §0 #8: every public signup role is a visible button. */}
-      <View
-        className="flex-row flex-wrap gap-2 mb-6"
-      >        {/* §0 #8: every public signup role is a visible button. One element
+{/* Role Selector — §0 #8: every public signup role is a visible button.
+          Stage 4: pills render ONLY when flag is on AND in user mode (D-6).
+          Operator mode suppresses pills entirely. */}
+      {!isOperatorMode && rideVisible && (
+        <View
+          className="flex-row flex-wrap gap-2 mb-6"
+        >        {/* §0 #8: every public signup role is a visible button. One element
             per pill (not a .map) so each keeps its own derivable testID —
             driver flows select phone-entry.set-role-2. */}
         <TouchableOpacity
@@ -286,7 +299,7 @@ export default function PhoneEntryScreen() {
           </Text>
         </TouchableOpacity>
       </View>
-
+      )}
       {/* C1-1: T&C + Privacy consent gate — links render LegalDocumentScreen
           (lib/legalContent.ts copy, no new copy per Copy Truth). */}
       <TouchableOpacity
@@ -320,18 +333,42 @@ export default function PhoneEntryScreen() {
         </Text>
       ) : null}
 
-      <View className="gap-y-3">
+<View className="gap-y-3">
         <CustomButton
           title={loading ? "Loading..." : t("auth.login")}
           onPress={handleLogin}
           disabled={loading}
          testID="phone-entry.handle-login"/>
-        <CustomButton
-          title={loading ? "" : t("auth.register")}
-          bgVariant="secondary"
-          onPress={handleRegister}
-          disabled={loading}
-         testID="phone-entry.handle-register"/>
+        {!isOperatorMode && (
+          <CustomButton
+            title={loading ? "Loading..." : t("auth.register")}
+            onPress={handleRegister}
+            disabled={loading}
+           testID="phone-entry.handle-register"/>
+        )}
+        {isOperatorMode && (
+          <TouchableOpacity
+            onPress={() => router.push("/(auth)/operator-register")}
+            testID="phone-entry.operator-register-link"
+          >
+            <Text style={{ color: colors.primary, textDecorationLine: "underline" }}>
+              {t("auth.register_as_operator")}
+            </Text>
+          </TouchableOpacity>
+        )}
+        <Text className="text-center text-[13px] font-JakartaBold mt-4" style={{ color: textSecondary }}>
+          {t("auth.one_account_explainer")}
+        </Text>
+        {!isOperatorMode && (
+          <TouchableOpacity
+            onPress={() => router.push("/(auth)/operator-login")}
+            testID="phone-entry.operator-login-link"
+          >
+            <Text style={{ color: colors.primary, textDecorationLine: "underline" }}>
+              {t("auth.login_as_operator")}
+            </Text>
+          </TouchableOpacity>
+        )}
       </View>
     </SafeAreaView>
   );

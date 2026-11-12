@@ -111,6 +111,10 @@
     "shop_categories": "শপ ক্যাটাগরি অনুযায়ী"
   },
   "auth": {
+    "welcome_back": "Welcome Back",
+    "login_as_operator": "সেবাদাতা (পার্টনার) হিসেবে লগইন করুন",
+    "register_as_operator": "সেবাদাতা (পার্টনার) হিসেবে রেজিস্ট্রেশন করুন",
+    "one_account_explainer": "একটি মোবাইল নম্বর দিয়েই গ্রাহক ও সেবাদাতা—উভয় অ্যাকাউন্ট ব্যবহার করা যাবে।",
     "phone_entry": "আপনার ফোন নম্বর লিখুন",
     "send_otp": "OTP পাঠান",
     "verify_otp": "OTP যাচাই করুন",

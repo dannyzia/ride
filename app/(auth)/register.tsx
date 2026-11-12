@@ -1,12 +1,14 @@
 import { useState } from "react";
 import { API_URL } from "@/lib/config";
 import { setRegistrationHandoff } from "@/lib/registrationHandoff";
-import { View, Text, TextInput, Pressable } from "react-native";
+import { View, Text, TextInput, Pressable, TouchableOpacity } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
 import { colors } from "@/theme/goRide";
 import type { Gender } from "@/src/db/schema";
+import { useTranslation } from "react-i18next";
+import { ROLE_WIZARDS } from "@/lib/roleWizards";
 
 // S8 §4.1: required gender picker. "Prefer not to say" maps to 'unspecified'.
 const GENDER_OPTIONS: { value: Gender; label: string }[] = [
@@ -35,6 +37,7 @@ export default function RegisterScreen() {
   const [error, setError] = useState("");
 
   const isDark = useIsDark();
+  const { t } = useTranslation();
 
   const bg = isDark ? colors.bgDark : colors.bgLight;
   const textPrimary = isDark ? colors.textPrimaryDark : colors.textPrimaryLight;
@@ -83,14 +86,14 @@ export default function RegisterScreen() {
       return;
     }
 
-    if (roleParam && ROLE_WIZARD[roleParam]) {
+    if (roleParam && ROLE_WIZARDS[roleParam]) {
       // M-6 (§16): the password rides the registrationHandoff (never route
       // params — URLs leak into history/devtools/crash reports). A missing
       // handoff on the wizard side re-prompts here.
       // C1-1: consent rides the handoff so the wizard's submit carries it.
       setRegistrationHandoff({ phone: phoneParam ?? "", name, password, terms_accepted: true, gender });
       router.push(
-        `${ROLE_WIZARD[roleParam]}?phone=${encodeURIComponent(phoneParam ?? "")}&role=${encodeURIComponent(roleParam)}`,
+        `${ROLE_WIZARDS[roleParam]}?phone=${encodeURIComponent(phoneParam ?? "")}&role=${encodeURIComponent(roleParam)}`,
       );
       setLoading(false);
       return;
@@ -255,6 +258,19 @@ export default function RegisterScreen() {
         onPress={handleRegister}
         disabled={loading}
        testID="register.handle-register"/>
-    </SafeAreaView>
+    
+      {/* Stage 4: Register as Operator link + one-account explainer */}
+      <TouchableOpacity
+        onPress={() => router.push("/(auth)/operator-register")}
+        testID="register.operator-register-link"
+      >
+        <Text style={{ color: colors.primary, textDecorationLine: "underline", marginTop: 16 }}>
+          {t("auth.register_as_operator")}
+        </Text>
+      </TouchableOpacity>
+      <Text className="text-center text-[13px] font-JakartaBold mt-4" style={{ color: textSecondary }}>
+        {t("auth.one_account_explainer")}
+      </Text>
+</SafeAreaView>
   );
 }

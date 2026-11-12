@@ -26,6 +26,7 @@ import { colors } from "@/theme/goRide";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useIsDark } from "@/lib/useAppearance";
 import { getRideVerticalEnabled } from "@/lib/verticalFlags";
+import { ROLE_WIZARDS } from "@/lib/roleWizards";
 
 /** Where each role lands TODAY. S3 added the dedicated shop surface; C8-2
  *  routes fleet_owner at the fleet surface (resolved via GET /api/fleet/mine
@@ -47,11 +48,7 @@ const ROLE_HOME: Record<string, string> = {
 /** M-5 (§16): the resubmit button deep-links into the role's prefilled
  *  wizard (mode=resubmit) — the attempt is burned by the wizard's submit,
  *  never by merely tapping this button on unchanged documents. */
-const RESUBMIT_WIZARD: Record<string, string> = {
-  shop_owner: "/(auth)/register-shop-owner",
-  fleet_owner: "/(auth)/register-fleet-owner",
-  delivery_man: "/(auth)/register-delivery-man",
-};
+const RESUBMIT_WIZARD = ROLE_WIZARDS;
 
 interface HeldRole {
   role: string;
@@ -301,6 +298,13 @@ export default function LoginAsScreen() {
                 {t("auth.login_as.session_less_hint")}
               </Text>
             ) : null}
+            {/* Stage 4: one-account explainer (D-10) */}
+            <Text
+              className="text-[13px] font-JakartaBold mt-6 text-center"
+              style={{ color: textSecondary }}
+            >
+              {t("auth.one_account_explainer")}
+            </Text>
           </>
         )}
       </ScrollView>

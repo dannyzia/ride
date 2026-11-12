@@ -89,7 +89,7 @@ export default function Splash() {
         // Component A: the flag must be resolved before the login screen
         // paints — consume the boot fetch (bounded; fail-closed) first.
         await waitForRideVerticalFlag(RIDE_FLAG_RESOLVE_TIMEOUT_MS);
-        redirect("/(auth)/welcome");
+        redirect("/(auth)/phone-entry");
         return;
       }
 
@@ -105,10 +105,10 @@ export default function Splash() {
         const ride_vertical_enabled = await waitForRideVerticalFlag(
           RIDE_FLAG_RESOLVE_TIMEOUT_MS,
         );
-        logger.info('[splash] no session, redirecting to welcome', {
+        logger.info('[splash] no session, redirecting to phone-entry', {
           ride_vertical_enabled,
         });
-        redirect("/(auth)/welcome");
+        redirect("/(auth)/phone-entry");
         return;
       }
 
@@ -161,6 +161,9 @@ export default function Splash() {
       } else if (data.role === "shop_owner") {
         // S3: the shop surface is live — a single-any-role owner lands here.
         redirect("/(main)/(shop-owner)");
+      } else if (data.role === "fleet_owner") {
+        // Stage 4: single-role fleet_owner lands on fleet dashboard (asymmetry fix).
+        redirect("/(main)/(fleet)/(tabs)/dashboard");
       } else if (data.role === "delivery_man") {
         // S6: the Delivery Man surface is live — offers inbox is the landing.
         redirect("/(main)/(delivery)");

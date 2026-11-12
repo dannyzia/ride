@@ -120,7 +120,7 @@
     "tagline": "One app for every need.",
     "welcome_title": "Welcome to Node",
     "roles": {
-      "rider": "Customer",
+      "rider": "User",
       "driver": "Driver",
       "shop_owner": "Shop Owner",
       "fleet_owner": "Fleet Owner",
@@ -233,7 +233,11 @@
       "instant": "Instant — no verification",
       "verification_gated": "Needs admin verification"
     },
-    "sign_in": "Sign In"
+    "sign_in": "Sign In",
+    "welcome_back": "Welcome Back",
+    "login_as_operator": "Login as Operator",
+    "register_as_operator": "Register as Operator",
+    "one_account_explainer": "One phone number works for both User and Operator accounts."
   },
   "driver": {
     "home": "Home",

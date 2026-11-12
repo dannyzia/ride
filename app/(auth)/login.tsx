@@ -74,7 +74,7 @@ export default function LoginScreen() {
         className="text-[28px] font-JakartaBold font-bold mb-1"
         style={{ color: textPrimary }}
       >
-        Welcome Back
+        {t("auth.welcome_back")}
       </Text>
       <Text
         className="text-[14px] font-JakartaBold mb-6"
@@ -142,15 +142,28 @@ export default function LoginScreen() {
         disabled={loading}
        testID="login.handle-login"/>
 
-      <TouchableOpacity
+<TouchableOpacity
         onPress={() => router.push("/(auth)/forgot-password")}
         className="items-center mt-4"
        testID="login.push-forgot-password">
+      <Text
+        className="text-[14px] font-JakartaBold"
+        style={{ color: colors.primary }}
+      >
+        Forgot Password?
+      </Text>
+    </TouchableOpacity>
+
+      {/* Stage 4: Login as Operator link on BOTH login paths */}
+      <TouchableOpacity
+        onPress={() => router.push("/(auth)/operator-login")}
+        className="items-center mt-4"
+       testID="login.push-operator-login">
         <Text
           className="text-[14px] font-JakartaBold"
           style={{ color: colors.primary }}
         >
-          Forgot Password?
+          {t("auth.login_as_operator")}
         </Text>
       </TouchableOpacity>
     </SafeAreaView>

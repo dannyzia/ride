@@ -67,7 +67,10 @@ appId: com.node.bd
       # dev menu, once up, covers the app UI so these stay WARNED until the
       # fatal gate below (do NOT dismiss the menu here).
       - assertVisible:
-          id: "welcome.replace-phone-entry"
+          id: "phone-entry.set-phone"
+          optional: true
+      - assertVisible:
+          id: "customer.home.el-2"
           optional: true
       - assertVisible:
           id: "phone-entry.set-phone"
@@ -76,7 +79,10 @@ appId: com.node.bd
           id: "customer.home.el-2"
           optional: true
       - assertVisible:
-          id: "welcome.replace-phone-entry"
+          id: "phone-entry.set-phone"
+          optional: true
+      - assertVisible:
+          id: "customer.home.el-2"
           optional: true
       - assertVisible:
           id: "phone-entry.set-phone"
@@ -84,66 +90,40 @@ appId: com.node.bd
       - assertVisible:
           id: "customer.home.el-2"
           optional: true
-      - assertVisible:
-          id: "welcome.replace-phone-entry"
-          optional: true
-      - assertVisible:
-          id: "phone-entry.set-phone"
-          optional: true
-# FATAL load gate: the menu pops exactly when a load succeeds and stays up.
-# A launcher stuck on blank/error screens (dead URL, poisoned post-clear
-# state) times out here with a clean signal instead of failing downstream.
-- extendedWaitUntil:
-    visible: ".*Runtime version.*"
-    timeout: 150000
-# Dismiss the menu — BACK lands on MainActivity with the app UI under it.
-- pressKey: BACK
-# Two possible app states after a load: logged-out data shows the welcome
-# walkthrough (tap Sign In → phone-entry); an existing session boots straight
-# to the rider home. Drive the walkthrough when present, then settle.
-- repeat:
-    times: 6
-    commands:
+      # FATAL load gate: the menu pops exactly when a load succeeds and stays up.
+      # A launcher stuck on blank/error screens (dead URL, poisoned post-clear
+      # state) times out here with a clean signal instead of failing downstream.
+      - extendedWaitUntil:
+          visible: ".*Runtime version.*"
+          timeout: 150000
+      # Dismiss the menu — BACK lands on MainActivity with the app UI under it.
+      - pressKey: BACK
+      # After load, the app is either at phone-entry (logged-out) or rider home (logged-in).
+      # Drive the login flow when phone-entry is present.
       - runFlow:
           when:
-            visible: "Welcome to Node"
+            visible:
+              id: "phone-entry.set-phone"
           commands:
             - tapOn:
-                id: "welcome.replace-phone-entry"
-      # Bounded non-fatal waits — the round's sleep; each succeeds fast once
-      # its element is on screen, so settled-state rounds are nearly free.
-      - assertVisible:
-          id: "phone-entry.set-phone"
-          optional: true
-      - assertVisible:
-          id: "customer.home.el-2"
-          optional: true
-# Login ONLY when phone-entry is up (logged-out run). A logged-in run skips
-# the whole block.
-- runFlow:
-    when:
-      visible:
-        id: "phone-entry.set-phone"
-    commands:
-      - tapOn:
-          id: "phone-entry.set-phone"
-      - eraseText
-      - inputText: ${PHONE}
-      - tapOn:
-          id: "phone-entry.set-role"
-      - tapOn:
-          id: "phone-entry.handle-login"
+                id: "phone-entry.set-phone"
+              - eraseText
+              - inputText: ${PHONE}
+              - tapOn:
+                  id: "phone-entry.set-role"
+              - tapOn:
+                  id: "phone-entry.handle-login"
+              - extendedWaitUntil:
+                  visible: "Welcome Back"
+                  timeout: 15000
+              - tapOn:
+                  id: "login.set-password"
+              - inputText: ${PASSWORD}
+              - tapOn:
+                  id: "login.handle-login"
+      # Final gate (fatal, unconditional): rider home must be up — either we just
+      # logged in or the session already put us there.
       - extendedWaitUntil:
-          visible: "Welcome Back"
-          timeout: 15000
-      - tapOn:
-          id: "login.set-password"
-      - inputText: ${PASSWORD}
-      - tapOn:
-          id: "login.handle-login"
-# Final gate (fatal, unconditional): rider home must be up — either we just
-# logged in or the session already put us there.
-- extendedWaitUntil:
-    visible:
-      id: "customer.home.el-2"
-    timeout: 30000
+          visible:
+            id: "customer.home.el-2"
+          timeout: 30000
