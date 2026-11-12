@@ -12,8 +12,8 @@ import { useTranslation } from "react-i18next";
 import { formatBDT } from "@/lib/format";
 
 const STATUS_COLORS: Record<string, string> = {
-  reported: "#F59E0B", driver_confirmed: "#0CC25F", photo_provided: "#0CC25F",
-  arranged_return: "#0CC25F", resolved: "#16A34A", unresolved: "#E31D1C",
+  reported: "#F59E0B", driver_confirmed: "#31B86A", photo_provided: "#31B86A",
+  arranged_return: "#31B86A", resolved: "#16A34A", unresolved: "#E31D1C",
 };
 
 const STATUS_LABEL_KEYS: Record<string, string> = {

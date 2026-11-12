@@ -5,7 +5,7 @@
 # With Consent) is NOT a runnable journey on this codebase and is recorded as a
 # blueprint-drift finding in COVERAGE-MANIFEST.md §7.
 # Class: BLOCKED.
-appId: com.ride.bd
+appId: com.node.bd
 ---
 # Runs through the GraalJS helper (maestro/utils/js/counterpart-api.js) — a Maestro
 # step cannot shell out, so the counterpart construct is JS, not curl (2026-10-15).

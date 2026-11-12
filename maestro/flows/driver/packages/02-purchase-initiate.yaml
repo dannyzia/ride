@@ -2,7 +2,7 @@
 # Feature: D-PKG purchase (§4). MANIFEST: BLOCKED — PortPos sandbox WebView (Gap 4,
 # TEST_PAYMENT_BYPASS absent). Initiation UI is authored to blueprint; activation
 # assertion NOT claimed. Class: BLOCKED (payments sandbox).
-appId: com.ride.bd
+appId: com.node.bd
 name: "Driver Packages - Purchase Initiate"
 tags: [driver, packages, blocked]
 ---

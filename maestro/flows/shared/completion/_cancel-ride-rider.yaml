@@ -6,7 +6,7 @@
 # customer.cancel-reason.set-note (L142) and customer.cancel-reason.confirm-cancel
 # (L149). Reason rows are a mapped list with no per-row testID — the index tap
 # stays (G-02 remainder). Class: AUTOMATABLE.
-appId: com.ride.bd
+appId: com.node.bd
 ---
 - tapOn:
     id: "customer.finding-driver.handle-cancel"

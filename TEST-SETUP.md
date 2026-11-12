@@ -53,9 +53,9 @@ adb devices                           # expect the phone, e.g. "9a76528e  device
 adb shell ip addr show wlan0          # phone IP must be on the SAME subnet as the laptop
 
 # 4. Launch + connect
-adb shell am force-stop com.ride.bd
-adb shell monkey -p com.ride.bd 1     # (or execbro android_launch_app)
-# execbro: scan_metro → expect "Connected to com.ride.bd"
+adb shell am force-stop com.node.bd
+adb shell monkey -p com.node.bd 1     # (or execbro android_launch_app)
+# execbro: scan_metro → expect "Connected to com.node.bd"
 ```
 
 **Pass criteria:** app gets past the splash to a real screen (login, or home map) within
@@ -66,7 +66,7 @@ to `:8081`.
 
 | Item | Blocker | Procedure |
 |---|---|---|
-| **R5a deep link** — real `ride://rider/wallet` | Installed APK was built BEFORE the `ride` scheme landed → AndroidManifest has no intent-filter (`am start` → "unable to resolve"). **Needs a fresh dev build** (`npx expo run:android`) — scheme is in `app.config.js`. | After rebuild: `adb shell am start -a android.intent.action.VIEW -d "ride://rider/wallet"` → wallet screen renders |
+| **R5a deep link** — real `node://rider/wallet` | Installed APK was built BEFORE the `node` scheme landed → AndroidManifest has no intent-filter (`am start` → "unable to resolve"). **Needs a fresh dev build** (`npx expo run:android`) — scheme is in `app.config.js`. | After rebuild: `adb shell am start -a android.intent.action.VIEW -d "node://rider/wallet"` → wallet screen renders |
 | **R3.4 nearby-driver markers** | Needs a RIDER login; sessions so far booted into the DRIVER home | Rider home map shows live driver markers; markers update/disappear as drivers move |
 | **R3.3 flag drill** | Needs a `matched` ride | `PATCH /api/admin/config` set `auto_redispatch_enabled='true'` → driver cancels → ride returns to `dispatching`, rider push "finding a new driver", `redispatch_attempts` +1; after 3 attempts → `expired`. **Always flip the flag back to `'false'` afterward.** |
 
@@ -75,7 +75,7 @@ to `:8081`.
 - Metro: port `8081` (API routes ride through it in dev — `EXPO_PUBLIC_SERVER_URL=http://<LAN-IP>:8081`)
 - utils-server: port `3001` (`ws://<LAN-IP>:3001`), `INSTANCE_COUNT=1`
 - Supabase auth is CLOUD (`swzgkhwjvikyfaqnbrix.supabase.co`) — token generation/refresh does NOT depend on the laptop IP. Only the app's own API/WS calls do.
-- App package: `com.ride.bd` (dev build with DevLauncher)
+- App package: `com.node.bd` (dev build with DevLauncher)
 
 ## 5. Failure modes already hit (2026-09-04 session)
 
@@ -83,7 +83,7 @@ to `:8081`.
 |---|---|---|
 | Splash + "↻ Retry" button | `.env.local` had `localhost` — on-device that's the PHONE, not the laptop | `dev-env-sync.js` + restart Metro + relaunch app |
 | Fully black screen after force-stop+relaunch | `EXPO_PUBLIC_DEV_LAN_IP` still pointed at the OLD network's IP (172.27.88.148 while on broadband) — DevLauncher can't fetch a bundle | same: sync → restart Metro → relaunch |
-| `am start … ride://…` → "unable to resolve Intent" | APK predates the `ride` scheme (build-time intent-filter) | rebuild dev client (`npx expo run:android`), reinstall |
+| `am start … node://…` → "unable to resolve Intent" | APK predates the `node` scheme (build-time intent-filter) | rebuild dev client (`npx expo run:android`), reinstall |
 | Metro "Bundler cache is empty, rebuilding… (a minute)" | started with `--clear` | wait ~80s for 2654 modules; don't relaunch the app mid-build |
 | execbro "stale CDP target" | app process dead/JS bridge gone | force-stop app, `scan_metro` again |
 | jest picks up `admin-test-results/admin-panel.spec.ts` | Maestro output dir swept by testMatch | already ignored (jest `testPathIgnorePatterns` + `.gitignore`) — if it reappears, check both |

@@ -18,13 +18,13 @@
 # `shop_owner` (the addable row must render). The chooser step is conditional
 # because a single-role account is routed straight through the gate.
 # Class: AUTOMATABLE. NOT device-verified — the device day is ENV-blocked.
-appId: com.ride.bd
+appId: com.node.bd
 name: "S7 Rider - Add a role (held roles, gated add path)"
 tags: [rider, roles, s7]
 ---
-- stopApp: com.ride.bd
+- stopApp: com.node.bd
 - launchApp:
-    appId: com.ride.bd
+    appId: com.node.bd
     clearState: true
 - extendedWaitUntil:
     visible: "Enter your phone number"

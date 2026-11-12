@@ -11,7 +11,7 @@
 # tab is now addressed like rider/wallet/01 (customer._layout.on-press + label) and
 # the dead alternative is dropped.
 # Class: BLOCKED.
-appId: com.ride.bd
+appId: com.node.bd
 ---
 - tapOn:
     id: "customer._layout.on-press"

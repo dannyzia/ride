@@ -27,7 +27,7 @@
 # Fixtures: rider roster account with a live order (placed here), running
 # utils-server. Class: AUTOMATABLE. NOT device-verified — the device day is
 # ENV-blocked.
-appId: com.ride.bd
+appId: com.node.bd
 name: "S7 Rider - Order tracking: list, timeline, cancel bar, dispute"
 tags: [rider, orders, s7]
 ---

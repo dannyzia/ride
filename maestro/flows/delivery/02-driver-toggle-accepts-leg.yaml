@@ -24,7 +24,7 @@
 # utils-server. Device-verification PENDING — the driver-side tab/row taps below
 # are text-addressed (no testIDs exist on the profile table rows yet; "Settings"
 # is a hard-coded JSX literal in (rider)/d/(tabs)/profile/index.tsx).
-appId: com.ride.bd
+appId: com.node.bd
 name: "S6 Delivery - Driver Toggle Accepts Leg"
 tags: [delivery, s6, counterpart-api]
 ---

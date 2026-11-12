@@ -19,7 +19,7 @@
 #      half-hour — inside the server window by construction — so this flow accepts
 #      the default instead of driving the date/time pickers.
 # Class: AUTOMATABLE. NOT device-verified (device day ENV-blocked).
-appId: com.ride.bd
+appId: com.node.bd
 name: "Rider Booking - Scheduled Ride"
 tags: [rider, booking, scheduling]
 ---

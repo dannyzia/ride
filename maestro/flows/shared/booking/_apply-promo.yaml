@@ -12,7 +12,7 @@
 # Redeeming by typed code is NOT testable until the apply-promos route is wired up;
 # logged to maestro/COVERAGE-MANIFEST.md as a coverage gap, not a selector gap.
 # Class: AUTOMATABLE (chip select); typed-code redemption is GAP-BLOCKED.
-appId: com.ride.bd
+appId: com.node.bd
 ---
 - extendedWaitUntil:
     visible:

@@ -5,7 +5,7 @@
 # testID (G-02 remainder, see _accept-ride header). Debit-on-offer billing is
 # exercised server-side (call_ledger deduction by utils-server leadBilling — not
 # asserted in UI here). Class: AUTOMATABLE (paired-run).
-appId: com.ride.bd
+appId: com.node.bd
 name: "Driver Rides - Accept Offer"
 tags: [driver, dispatch, smoke]
 ---

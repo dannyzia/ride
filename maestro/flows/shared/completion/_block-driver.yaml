@@ -5,7 +5,7 @@
 # TEXT by design: it is an OS Alert.alert (RN modal chrome exposes no testID
 # space) — G-02 remainder, same class as the logout confirm in _logout.yaml.
 # Class: AUTOMATABLE.
-appId: com.ride.bd
+appId: com.node.bd
 ---
 - runFlow:
     when:

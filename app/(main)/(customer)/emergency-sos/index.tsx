@@ -161,7 +161,7 @@ export default function EmergencySOS() {
   }, [resolveAlert]);
 
   const handleShareLocation = () => {
-    Linking.openURL("sms:?body=I need help. My live location is being shared via the Ride app.");
+    Linking.openURL("sms:?body=I need help. My live location is being shared via the Node app.");
   };
 
   const handleReportIssue = () => {

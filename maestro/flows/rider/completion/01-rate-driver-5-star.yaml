@@ -2,7 +2,7 @@
 # Feature: TRUST rating (§4). Requires a completed ride: seeding BLOCKED-GATE (Gate 2);
 # in device-day runs the paired driver flow produces completion (rider-core precedent).
 # Class: AUTOMATABLE (paired-run) / BLOCKED-GATE (standalone).
-appId: com.ride.bd
+appId: com.node.bd
 name: "Rider Completion - Rate Driver 5 Star"
 tags: [rider, completion]
 ---

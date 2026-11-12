@@ -35,7 +35,7 @@ interface Certification {
 }
 
 const STATUS_COLORS: Record<string, string> = {
-  verified: "#0CC25F",
+  verified: "#31B86A",
   pending: "#F59E0B",
   unverified: "#6B7280",
   revoked: colors.danger,

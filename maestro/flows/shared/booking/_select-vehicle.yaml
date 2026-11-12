@@ -12,7 +12,7 @@
 # ("Bike Basic" … "Car XL" per i18n). Mission fare assertions (৳441/৳535/৳589) are
 # asserted in journey flows, NOT here — pricing is DB-driven (manifest G-01).
 # Class: AUTOMATABLE.
-appId: com.ride.bd
+appId: com.node.bd
 ---
 - extendedWaitUntil:
     visible:

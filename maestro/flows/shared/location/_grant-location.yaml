@@ -1,11 +1,11 @@
 # _grant-location — grant location permission to the app (ADB, no UI dependency).
-# §9 Location Subflows. PACKAGE_ID comes from env (default com.ride.bd).
+# §9 Location Subflows. PACKAGE_ID comes from env (default com.node.bd).
 # Class: AUTOMATABLE. Runs on host via Maestro's runScript? No — Maestro has no
 # direct adb; use `launchApp` with permissions already granted by
 # maestro/utils/adb-grant-permissions.sh (§15 Permission Boot Configuration).
 # This subflow therefore asserts the permission CTA is absent and, if present,
 # taps Allow (covers first-run devices).
-appId: com.ride.bd
+appId: com.node.bd
 ---
 - runFlow:
     when:

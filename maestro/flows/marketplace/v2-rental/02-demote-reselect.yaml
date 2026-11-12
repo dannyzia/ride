@@ -7,7 +7,7 @@
 # v2-rental/01 for derivation). Re-select affordance stays TEXT (demotion-state
 # surface, label state-dependent).
 # Class: AUTOMATABLE + COUNTERPART-API (bid). BLOCKED until roster fixtures land.
-appId: com.ride.bd
+appId: com.node.bd
 name: "V2 Rental - Demote and Reselect"
 tags: [marketplace, v2-rental, counterpart-api, negative]
 ---

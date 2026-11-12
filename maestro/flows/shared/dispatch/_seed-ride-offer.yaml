@@ -3,7 +3,7 @@
 # (Gate 3 / Gap 3) does NOT exist on disk (verified 2026-09-27: app/api/test/ absent).
 # Authored-but-unrun per mission ruling; fix F-3 in COVERAGE-MANIFEST.md §8.
 # Class: COUNTERPART-API (state seeding via real HTTP API once it exists).
-appId: com.ride.bd
+appId: com.node.bd
 ---
 # Runs through the GraalJS helper (maestro/utils/js/counterpart-api.js) — a Maestro
 # step cannot shell out, so the counterpart construct is JS, not curl (2026-10-15).

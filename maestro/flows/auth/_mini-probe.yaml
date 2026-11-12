@@ -1,6 +1,6 @@
 ---
-appId: com.ride.bd
+appId: com.node.bd
 ---
 - runFlow: ../shared/util/_open-profile-tab.yaml
 - launchApp:
-    appId: com.ride.bd
+    appId: com.node.bd

@@ -69,7 +69,7 @@ interface AmbulanceRequest {
 
 const BID_COLORS: Record<string, string> = {
   active: "#3B82F6",
-  won: "#0CC25F",
+  won: "#31B86A",
   lost: "#EF4444",
   withdrawn: "#9CA3AF",
   expired: "#9CA3AF",

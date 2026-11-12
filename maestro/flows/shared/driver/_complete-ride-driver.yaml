@@ -10,7 +10,7 @@
 # The completion modal itself still has no testID (G-02 remainder) — the two
 # visible asserts above remain text-based for that reason.
 # Class: AUTOMATABLE.
-appId: com.ride.bd
+appId: com.node.bd
 ---
 - extendedWaitUntil:
     visible: "Slide to Confirm Drop-off"

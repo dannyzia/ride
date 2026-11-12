@@ -6,7 +6,7 @@
 # customer.ambulance.emergency.handle-create (emergency.tsx L367).
 # Class: AUTOMATABLE (customer side) + COUNTERPART-API (provider accept).
 # BLOCKED until roster fixtures land.
-appId: com.ride.bd
+appId: com.node.bd
 name: "V7 Ambulance - Scheduled"
 tags: [marketplace, v7-ambulance, counterpart-api]
 ---

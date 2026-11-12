@@ -21,11 +21,11 @@
 # either way, so the final gate is fatal: a pending shop owner never reaches the
 # dashboard (its own screen renders "No shop yet", index.tsx:~299).
 # Class: AUTOMATABLE. NOT device-verified — the device day is ENV-blocked.
-appId: com.ride.bd
+appId: com.node.bd
 ---
-- stopApp: com.ride.bd
+- stopApp: com.node.bd
 - launchApp:
-    appId: com.ride.bd
+    appId: com.node.bd
     clearState: true
 - extendedWaitUntil:
     visible: "Enter your phone number"

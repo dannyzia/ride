@@ -9,7 +9,7 @@
 # fragment; both are unrenderable now that find-ride/ is deleted (G-02b). Repointed
 # to the query input's own testID — the element this subflow taps next.
 # Class: AUTOMATABLE.
-appId: com.ride.bd
+appId: com.node.bd
 ---
 - tapOn:
     id: "customer.home.set-stops-2"

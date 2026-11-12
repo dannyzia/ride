@@ -9,7 +9,7 @@
 # launch). The first-run assertion below demands the wallet/subscription card
 # shows a live plan on first login — a driver can NEVER hit a purchase dead-end
 # (payments_enabled=false hides all purchase UI). See maestro/COVERAGE-MANIFEST.md §9.
-appId: com.ride.bd
+appId: com.node.bd
 name: "Driver Home - Go Online"
 tags: [driver, smoke]
 ---

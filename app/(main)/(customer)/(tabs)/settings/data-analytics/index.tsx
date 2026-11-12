@@ -95,11 +95,11 @@ export default function SettingsDataAnalytics() {
           <Text className="text-[16px] font-JakartaBold mb-2" style={{ color: textPrimary }}>{t('data_analytics.privacy_settings')}</Text>
           <View className="flex-row items-center justify-between px-[12px] py-[10px] border rounded-[8px] mb-2" style={{ backgroundColor: surfaceBg, borderColor }}>
             <Text className="flex-1 text-[14px] font-Jakarta" style={{ color: textPrimary }}>{t('data_analytics.share_usage')}</Text>
-            <Switch value={controls.share_usage_data} onValueChange={(v) => updateControl("share_usage_data", v)} trackColor={{ false: "#767577", true: "#0CC25F" }} thumbColor={controls.share_usage_data ? "#f5dd4b" : "#f4f3f4"}  testID="customer.settings.data-analytics.update-control"/>
+            <Switch value={controls.share_usage_data} onValueChange={(v) => updateControl("share_usage_data", v)} trackColor={{ false: "#767577", true: "#31B86A" }} thumbColor={controls.share_usage_data ? "#f5dd4b" : "#f4f3f4"}  testID="customer.settings.data-analytics.update-control"/>
           </View>
           <View className="flex-row items-center justify-between px-[12px] py-[10px] border rounded-[8px] mb-2" style={{ backgroundColor: surfaceBg, borderColor }}>
             <Text className="flex-1 text-[14px] font-Jakarta" style={{ color: textPrimary }}>{t('data_analytics.personalized_ads')}</Text>
-            <Switch value={controls.personalized_ads} onValueChange={(v) => updateControl("personalized_ads", v)} trackColor={{ false: "#767577", true: "#0CC25F" }} thumbColor={controls.personalized_ads ? "#f5dd4b" : "#f4f3f4"}  testID="customer.settings.data-analytics.update-control-2"/>
+            <Switch value={controls.personalized_ads} onValueChange={(v) => updateControl("personalized_ads", v)} trackColor={{ false: "#767577", true: "#31B86A" }} thumbColor={controls.personalized_ads ? "#f5dd4b" : "#f4f3f4"}  testID="customer.settings.data-analytics.update-control-2"/>
           </View>
         </View>
         <View className="mt-4">

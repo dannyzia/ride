@@ -7,7 +7,7 @@
 # finish-ride/index.tsx:601 — unlike find-ride/confirm-ride.
 # index = STARS - 1 (caller passes it; default 5-star).
 # Class: AUTOMATABLE.
-appId: com.ride.bd
+appId: com.node.bd
 ---
 - extendedWaitUntil:
     visible:

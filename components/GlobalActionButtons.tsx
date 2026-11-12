@@ -155,7 +155,7 @@ export default function GlobalActionButtons() {
   const textMuted = isDark ? colors.textDisabledDark : colors.textDisabledLight;
   const surfaceBg = isDark ? colors.surfaceElevatedDark : colors.surfaceLight;
   const overlayBg = isDark ? "rgba(0,0,0,0.6)" : "rgba(0,0,0,0.4)";
-  const activeBg = isDark ? "rgba(12,194,95,0.15)" : colors.primaryLight;
+  const activeBg = isDark ? "rgba(16,42,102,0.15)" : colors.primaryLight;
   const activeText = colors.primary;
   const fabBg = isDark ? colors.surfaceElevatedDark : colors.surfaceLight;
   const fabBorder = isDark ? colors.borderDark : colors.borderLight;

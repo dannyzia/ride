@@ -7,7 +7,7 @@
 # ("Stop {{number}}") that no static corpus can witness. Replaced with the live
 # testID each stop row's control carries, so the wait stands on a resolvable ground.
 # Class: AUTOMATABLE.
-appId: com.ride.bd
+appId: com.node.bd
 name: "Rider Booking - Multi-Stop Ride"
 tags: [rider, booking]
 ---

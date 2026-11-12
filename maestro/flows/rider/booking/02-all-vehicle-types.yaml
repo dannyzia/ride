@@ -14,7 +14,7 @@
 # "Car Premium", "Car XL" — verified in en/common.json; car_compact sits between
 # cng and car_economy per AGENTS.md § Vehicle Types).
 # Class: AUTOMATABLE.
-appId: com.ride.bd
+appId: com.node.bd
 name: "Rider Booking - All Vehicle Types"
 tags: [rider, booking]
 ---

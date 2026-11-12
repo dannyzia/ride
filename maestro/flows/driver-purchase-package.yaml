@@ -13,7 +13,7 @@
 #      "Close" button rendered by PaymentWebView (outside the WebView, on the RN modal).
 #   The flow waits (up to 300s) for "Package purchased successfully!" to appear.
 # ==============================================================================
-appId: com.ride.bd
+appId: com.node.bd
 name: "Driver - Purchase Package"
 tags:
   - driver
@@ -21,7 +21,7 @@ tags:
   - package
 ---
 - launchApp:
-    appId: com.ride.bd
+    appId: com.node.bd
 # Step 1: Verify the "Buy a Package to Start" button is present (no active subscription).
 # WARNING: If the driver already has an active subscription, "Calls Remaining" is shown
 # instead and this step fails. Use a driver with 0 calls or no subscription.

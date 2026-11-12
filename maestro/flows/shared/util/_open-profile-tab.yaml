@@ -9,7 +9,7 @@
 # row on the profile (push-appearance, push-faq, ...), so this subflow must stop
 # at the profile. Use _open-settings-hub.yaml when you want the hub itself.
 # Class: AUTOMATABLE.
-appId: com.ride.bd
+appId: com.node.bd
 ---
 - tapOn:
     id: "customer._layout.on-press"

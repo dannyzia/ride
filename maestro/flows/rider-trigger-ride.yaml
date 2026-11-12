@@ -19,7 +19,7 @@
 #   "Request Ride"                      -> customer.home.handle-call-for-ride  (L1288, renders "Call for Ride")
 # Waits that were keyed on dead copy ("Choose Vehicle", "Confirm Ride") now key on the
 # testIDs themselves, which is the point of Gate 1: the flow no longer breaks on copy edits.
-appId: com.ride.bd
+appId: com.node.bd
 name: "Rider - Trigger Ride Request (Savar intercity)"
 tags:
   - rider
@@ -27,7 +27,7 @@ tags:
   - core
 ---
 - launchApp:
-    appId: com.ride.bd
+    appId: com.node.bd
 - extendedWaitUntil:
     visible:
       id: "customer.home.el-2"

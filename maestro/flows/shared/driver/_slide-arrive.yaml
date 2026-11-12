@@ -1,7 +1,7 @@
 # _slide-arrive — slide-to-confirm-arrival gesture on find-customer.
 # §9. Gesture VERIFIED in driver-core.yaml: swipe 10%,93% → 92%,93% (2s), then the
 # "Ride Pin" input appears. Class: AUTOMATABLE.
-appId: com.ride.bd
+appId: com.node.bd
 ---
 - extendedWaitUntil:
     visible: "Slide to Confirm Arrival"

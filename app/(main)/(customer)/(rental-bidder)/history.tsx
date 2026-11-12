@@ -26,7 +26,7 @@ import { formatBDT } from "@/lib/format";
 const SERVER_URL = process.env.EXPO_PUBLIC_SERVER_URL ?? "http://localhost:8080";
 
 const STATUS_COLORS: Record<string, string> = {
-  won: "#0CC25F",
+  won: "#31B86A",
   lost: "#EF4444",
   withdrawn: "#9CA3AF",
   expired: "#9CA3AF",

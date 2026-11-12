@@ -11,7 +11,7 @@
 #     literally rather than .map()-ed so each testID stays a string literal the
 #     Gate 1 manifest tool can record.
 # Class: AUTOMATABLE.
-appId: com.ride.bd
+appId: com.node.bd
 name: "Rider Settings - Appearance Dark"
 tags: [rider, settings, appearance]
 ---

@@ -10,13 +10,13 @@ import { useIsDark } from "@/lib/useAppearance";
 // checkout — those URLs 404'd before this screen existed, so every paying
 // customer ended their purchase on an error page and believed the payment
 // failed. This screen confirms the result and deep-links back into the app via
-// the `ride://` scheme (app.config.js).
+// the `node://` scheme (app.config.js).
 
 interface PaymentResultScreenProps {
   status: "success" | "failure";
 }
 
-const APP_SCHEME = "ride://";
+const APP_SCHEME = "node://";
 
 export default function PaymentResultScreen({ status }: PaymentResultScreenProps) {
   const isDark = useIsDark();
@@ -71,8 +71,8 @@ export default function PaymentResultScreen({ status }: PaymentResultScreenProps
             style={{ color: textSecondary }}
           >
             {success
-              ? "Your payment was received. You can return to the Ride app."
-              : "No money was charged. You can try again from the Ride app."}
+              ? "Your payment was received. You can return to the Node app."
+              : "No money was charged. You can try again from the Node app."}
           </Text>
           <a
             href={APP_SCHEME}
@@ -87,7 +87,7 @@ export default function PaymentResultScreen({ status }: PaymentResultScreenProps
               fontWeight: 600,
             }}
           >
-            Return to Ride
+            Return to Node
           </a>
         </View>
       </SafeAreaView>
@@ -113,8 +113,8 @@ export default function PaymentResultScreen({ status }: PaymentResultScreenProps
           style={{ color: textSecondary }}
         >
           {success
-            ? "Your payment was received. You can return to the Ride app."
-            : "No money was charged. You can try again from the Ride app."}
+            ? "Your payment was received. You can return to the Node app."
+            : "No money was charged. You can try again from the Node app."}
         </Text>
         <TouchableOpacity
           onPress={handleReturn}
@@ -128,7 +128,7 @@ export default function PaymentResultScreen({ status }: PaymentResultScreenProps
           }}
         >
           <Text className="text-[15px] font-JakartaSemiBold" style={{ color: colors.white }}>
-            Return to Ride
+            Return to Node
           </Text>
         </TouchableOpacity>
       </View>

@@ -28,13 +28,13 @@
 # `login-as.enter-rider` is the enterable one. The flow FAILS LOUDLY on a wrong
 # seed rather than skipping — an unseeded run must not read as green.
 # Class: AUTOMATABLE. NOT device-verified — the device day is ENV-blocked.
-appId: com.ride.bd
+appId: com.node.bd
 name: "S7 Auth - Login-as chooser (multi-role, pending not enterable)"
 tags: [auth, roles, s7]
 ---
-- stopApp: com.ride.bd
+- stopApp: com.node.bd
 - launchApp:
-    appId: com.ride.bd
+    appId: com.node.bd
     clearState: true
 - extendedWaitUntil:
     visible: "Enter your phone number"

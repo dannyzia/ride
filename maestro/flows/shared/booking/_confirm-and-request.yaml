@@ -7,7 +7,7 @@
 # onPress={handleCallForRide}, renders rider_home.call_for_ride = "Call for Ride",
 # disabled until a vehicle tier is chosen).
 # Class: AUTOMATABLE (assertion can fail — it demands the finding-driver surface).
-appId: com.ride.bd
+appId: com.node.bd
 ---
 - extendedWaitUntil:
     visible:

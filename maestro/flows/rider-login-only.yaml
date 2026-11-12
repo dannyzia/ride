@@ -1,5 +1,5 @@
 ---
-appId: com.ride.bd
+appId: com.node.bd
 name: Rider Login (no clearState)
 tags: [rider-login]
 ---

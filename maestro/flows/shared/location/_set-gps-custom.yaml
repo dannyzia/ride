@@ -2,7 +2,7 @@
 # §9. Seeding is host-side (maestro/utils/adb-gps-*.sh before the suite;
 # Maestro 2.6.1 cannot exec host processes from inside a flow on Windows).
 # Class: AUTOMATABLE.
-appId: com.ride.bd
+appId: com.node.bd
 ---
 - waitForAnimationToEnd:
     timeout: 2000

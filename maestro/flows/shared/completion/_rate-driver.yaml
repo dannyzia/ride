@@ -5,7 +5,7 @@
 # "★" text match which is fragile across filled/outline icon fonts); submit =
 # customer.rate-driver.handle-submit (L393). STAR_INDEX = STARS - 1 (caller passes
 # it; default 5-star via the rider/completion/01 caller). Class: AUTOMATABLE.
-appId: com.ride.bd
+appId: com.node.bd
 ---
 - extendedWaitUntil:
     visible: ".*Rate.*|.*star.*|.*rating.*"

@@ -32,7 +32,7 @@
 #     Android home screen. Every observed successful load had launcher data intact.
 #     Resetting to logged-out is a device-day OPERATOR step (adb pm clear + one
 #     manual deep-link cycle) — runbook §0 — never part of this subflow.
-#   * maestro's openLink DELIVERS the ride:// VIEW intent but fires it ~40s after
+#   * maestro's openLink DELIVERS the node:// VIEW intent but fires it ~40s after
 #     the command returns (driver pathway, logcat uid shell START). The launcher
 #     then self-relaunches, fetches Metro, and pops the dev menu ~70-100s after
 #     openLink returned. The menu ("Runtime version: 1.0.4"; .* regex because
@@ -56,13 +56,13 @@
 # logged-in account OTHER than ${PHONE} is not detected here — flows needing a
 # specific identity must reset app state out-of-band and accept the launcher's
 # post-pm-clear abort bug (device-day runbook §0).
-appId: com.ride.bd
+appId: com.node.bd
 ---
-- stopApp: com.ride.bd
+- stopApp: com.node.bd
 - repeat:
     times: 2
     commands:
-      - openLink: "ride://expo-development-client/?url=http%3A%2F%2F10.0.2.2%3A8081"
+      - openLink: "node://expo-development-client/?url=http%3A%2F%2F10.0.2.2%3A8081"
       # Pacing only — ~80s while the delayed intent + fetch + load run. The
       # dev menu, once up, covers the app UI so these stay WARNED until the
       # fatal gate below (do NOT dismiss the menu here).
@@ -106,7 +106,7 @@ appId: com.ride.bd
     commands:
       - runFlow:
           when:
-            visible: "Welcome to Ride"
+            visible: "Welcome to Node"
           commands:
             - tapOn:
                 id: "welcome.replace-phone-entry"

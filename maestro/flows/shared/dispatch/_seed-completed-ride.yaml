@@ -3,7 +3,7 @@
 # Class: COUNTERPART-API (once live).
 # Runs through the GraalJS helper (maestro/utils/js/counterpart-api.js) — a Maestro
 # step cannot shell out, so the counterpart construct is JS, not curl (2026-10-15).
-appId: com.ride.bd
+appId: com.node.bd
 ---
 - runScript:
     file: ../../../utils/js/counterpart-api.js

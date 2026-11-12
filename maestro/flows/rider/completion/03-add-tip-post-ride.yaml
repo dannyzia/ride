@@ -2,7 +2,7 @@
 # appears in ride detail (driver-earnings side probed in J-04).
 # Feature: PAYMENT tip (§4). Tip is cash-to-driver per wallet rules (§8 SM-03).
 # Class: AUTOMATABLE (paired-run) / BLOCKED-GATE (standalone).
-appId: com.ride.bd
+appId: com.node.bd
 name: "Rider Completion - Add Tip Post Ride"
 tags: [rider, completion, payment]
 ---

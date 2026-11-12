@@ -8,7 +8,7 @@
 # section), so the journey is driven in-app: Profile -> Settings -> Loyalty.
 # The deep link is gone; the row IDs below all resolve against the map.
 # Class: AUTOMATABLE (render).
-appId: com.ride.bd
+appId: com.node.bd
 name: "Rider Settings - Loyalty Points"
 tags: [rider, settings, growth]
 ---

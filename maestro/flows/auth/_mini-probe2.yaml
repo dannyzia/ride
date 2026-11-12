@@ -1,4 +1,4 @@
 ---
-appId: com.ride.bd
+appId: com.node.bd
 ---
 - assertVisible: ".*"

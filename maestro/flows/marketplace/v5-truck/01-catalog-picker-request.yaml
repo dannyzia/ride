@@ -10,7 +10,7 @@
 # enter-truck-mode (index L666), submit = handle-submit; use-case tabs and variant
 # rows live in TruckPicker (_components, no testIDs — G-02 remainder) → text taps.
 # Class: AUTOMATABLE + COUNTERPART-API. BLOCKED until roster fixtures land.
-appId: com.ride.bd
+appId: com.node.bd
 name: "V5 Truck - Catalog Picker Request"
 tags: [marketplace, v5-truck, counterpart-api]
 ---

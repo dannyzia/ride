@@ -1,14 +1,19 @@
 export const colors = {
-  primary: "#0CC25F",
-  primaryPressed: "#0AA84E",
-  primaryLight: "#E6F7EE",
-  primaryLightDark: "#1A3A2A",
+  // Node launch palette (DESIGN-NODE-LAUNCH.md T2): brand primary is the
+  // owner's Primary navy #102A66 (node_brand_colors.txt). The pressed/light
+  // variants are navy-family derivatives of #102A66 at the same roles the
+  // green family held (flagged in the stage report for design-doc sync).
+  primary: "#102A66",
+  primaryPressed: "#0B1F4F",
+  primaryLight: "#E9EEF9",
+  primaryLightDark: "#1A2740",
 
   danger: "#E31D1C",
   dangerPressed: "#C41A19",
   dangerLight: "#FDE8E8",
 
-  success: "#38A169",
+  // Semantic success — owner palette Green #31B86A (was #38A169).
+  success: "#31B86A",
   successLight: "#F0FFF4",
 
   info: "#2E42A5",
@@ -128,13 +133,13 @@ export const shadows = {
     elevation: 3,
   },
   buttonLight: {
-    shadowColor: "#0CC25F",
+    shadowColor: "#102A66",
     shadowOffset: { width: 0, height: 4 },
     shadowRadius: 12,
     elevation: 4,
   },
   buttonDark: {
-    shadowColor: "#0CC25F",
+    shadowColor: "#102A66",
     shadowOffset: { width: 0, height: 4 },
     shadowRadius: 12,
     elevation: 4,

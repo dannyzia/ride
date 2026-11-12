@@ -14,10 +14,10 @@
 # subflow as its first action (most preceded only by the no-op _set-gps-banani),
 # so a deterministic clearState → phone-entry is safe and removes the previous
 # dependence on the device happening to already sit on a login screen.
-appId: com.ride.bd
+appId: com.node.bd
 ---
 - launchApp:
-    appId: com.ride.bd
+    appId: com.node.bd
     clearState: true
 - extendedWaitUntil:
     visible: "Enter your phone number"

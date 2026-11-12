@@ -3,7 +3,7 @@
 # PortPos sandbox WebView (Gap 4; TEST_PAYMENT_BYPASS absent). The UI part up to the
 # WebView is authored to blueprint; the credit assertion is NOT claimed here.
 # Class: BLOCKED (payments sandbox).
-appId: com.ride.bd
+appId: com.node.bd
 name: "Rider Wallet - Top-Up Initiate"
 tags: [rider, wallet, blocked]
 ---

@@ -13,7 +13,7 @@
 #   - Driver Min-Rate slider: components/MinRateSlider.tsx is imported by ZERO screens; no such UI.
 #   - SOS: components/SOSButton.tsx opens the SYSTEM dialer (tel:); no "Send SOS"/"SOS Sent" text; breaks automation.
 #   - Forced Update: gated by system_config min_app_version; system-level, out of scope here.
-appId: com.ride.bd
+appId: com.node.bd
 name: "Part 5 - Rider Cancellation (other planned cases excluded - see notes)"
 tags:
   - rider
@@ -21,7 +21,7 @@ tags:
   - cancel
 ---
 - launchApp:
-    appId: com.ride.bd
+    appId: com.node.bd
 - extendedWaitUntil:
     visible:
       id: "customer.home.el-2"

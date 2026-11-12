@@ -8,7 +8,7 @@
 # could never match and burned its full timeout. Repointed to the live FARES surface
 # testID — the same ground 02-all-vehicle-types.yaml uses.
 # Class: AUTOMATABLE.
-appId: com.ride.bd
+appId: com.node.bd
 name: "Rider Booking - Destination Search"
 tags: [rider, booking]
 ---

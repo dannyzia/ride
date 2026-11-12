@@ -3,7 +3,7 @@
 # (wrapper) filtered by the "Wallet" tab label. READ-ONLY assertion surface
 # (balance value is env-dependent; exact-value assertion belongs to the reset-API
 # era — Gate 2). Class: AUTOMATABLE (render assertions).
-appId: com.ride.bd
+appId: com.node.bd
 name: "Rider Wallet - Balance"
 tags: [rider, wallet]
 ---

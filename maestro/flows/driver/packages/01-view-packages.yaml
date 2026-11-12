@@ -21,7 +21,7 @@
 # Package scope by vehicle_type (AGENTS.md § Packages) is implicitly exercised:
 # Driver B sees universal + matching packages.
 # Class: AUTOMATABLE (render).
-appId: com.ride.bd
+appId: com.node.bd
 name: "Driver Packages - View Packages"
 tags: [driver, packages, smoke]
 ---

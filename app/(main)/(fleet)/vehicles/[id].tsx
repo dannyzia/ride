@@ -351,7 +351,7 @@ export default function VehicleDetail() {
                     width: 8,
                     height: 8,
                     borderRadius: 4,
-                    backgroundColor: isDriverOnline ? "#0CC25F" : "#9CA3AF",
+                    backgroundColor: isDriverOnline ? "#31B86A" : "#9CA3AF",
                     marginRight: 6,
                   }}
                 />
@@ -359,7 +359,7 @@ export default function VehicleDetail() {
                   style={{
                     fontFamily: "Jakarta-Medium",
                     fontSize: 12,
-                    color: isDriverOnline ? "#0CC25F" : textSecondary,
+                    color: isDriverOnline ? "#31B86A" : textSecondary,
                   }}
                 >
                   {isDriverOnline ? "Online" : "Offline"}

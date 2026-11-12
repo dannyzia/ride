@@ -6,7 +6,7 @@
 # Alert.alert (profile/index.tsx L120) — OS dialogs expose NO testIDs, so the
 # destructive-confirm tap stays TEXT by design (logout-confirmation screen IDs are
 # a different route, settings/logout-confirmation, NOT used here). Class: AUTOMATABLE.
-appId: com.ride.bd
+appId: com.node.bd
 ---
 - tapOn:
     id: "customer._layout.on-press"

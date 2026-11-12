@@ -11,6 +11,7 @@ import Animated, {
 } from "react-native-reanimated";
 import { colors } from "@/theme/goRide";
 import { useIsDark } from "@/lib/useAppearance";
+import { useTranslation } from "react-i18next";
 
 interface SplashAnimationProps {
   // True once auth + fonts have finished loading. The splash stays visible
@@ -22,6 +23,7 @@ interface SplashAnimationProps {
 
 export default function SplashAnimation({ loadComplete, onHidden }: SplashAnimationProps) {
   const isDark = useIsDark();
+  const { t } = useTranslation();
 
   const bg = isDark ? colors.bgDark : colors.bgLight;
   const textPrimary = isDark ? colors.textPrimaryDark : colors.textPrimaryLight;
@@ -119,13 +121,13 @@ export default function SplashAnimation({ loadComplete, onHidden }: SplashAnimat
           className="text-[48px] font-JakartaBold"
           style={{ color: colors.primary }}
         >
-          Ride
+          Node
         </Text>
         <Text
           className="text-[16px] font-Jakarta mt-2"
           style={{ color: textPrimary }}
         >
-          Your ride, your way
+          {t("auth.tagline")}
         </Text>
       </Animated.View>
     </View>

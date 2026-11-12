@@ -3,7 +3,7 @@
 # does NOT exist (verified 2026-09-27: zero references repo-wide); the bypass endpoint
 # (Gate 2 family) is also absent. Authored-but-unrun; fix F-4 in COVERAGE-MANIFEST.md §8.
 # Class: BLOCKED (payments sandbox).
-appId: com.ride.bd
+appId: com.node.bd
 ---
 # Runs through the GraalJS helper (maestro/utils/js/counterpart-api.js) — a Maestro
 # step cannot shell out, so the counterpart construct is JS, not curl (2026-10-15).

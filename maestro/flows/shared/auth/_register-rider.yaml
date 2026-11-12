@@ -21,10 +21,10 @@
 # destination row's testID, the same ground _login-rider.yaml uses.
 # Fixtures: fresh rider phone (Rider B roster), OTP bypass 123456.
 # Class: AUTOMATABLE.
-appId: com.ride.bd
+appId: com.node.bd
 ---
 - launchApp:
-    appId: com.ride.bd
+    appId: com.node.bd
     clearState: true
 - extendedWaitUntil:
     visible: ".*Enter your phone number.*"

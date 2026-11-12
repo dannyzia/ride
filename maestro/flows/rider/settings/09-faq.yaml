@@ -5,7 +5,7 @@
 # screen ground is customer.settings.faq.el-1 (the header back button, so the
 # assertion is "the FAQ screen is mounted" rather than a copy match).
 # Class: READ-ONLY (render assert).
-appId: com.ride.bd
+appId: com.node.bd
 name: "Rider Settings - FAQ"
 tags: [rider, settings]
 ---

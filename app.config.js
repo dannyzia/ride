@@ -3,22 +3,22 @@
 
 export default {
   expo: {
-    name: "Ride",
-    slug: "ride-bd",
+    name: "Node",
+    slug: "node-bd",
     platforms: ["ios", "android"],
     sdkVersion: "53.0.0",
     version: "1.0.4",
     orientation: "portrait",
-    icon: "./assets/logo/logo.png",
+    icon: "./assets/logo/node_icon_1024.png",
     userInterfaceStyle: "automatic",
     // W-4: real deep-link scheme (was the "myapp" tutorial placeholder, which
     // collides with any other default-configured Expo app). Used by the
     // /payment/success|failure web screens to return users into the app.
-    scheme: "ride",
+    scheme: "node",
     splash: {
-      image: "./assets/splash/Splash_Screen_2.png",
+      image: "./assets/splash/node_splash.png",
       resizeMode: "contain",
-      backgroundColor: "#181A20",
+      backgroundColor: "#102A66",
     },
     updates: {
       // 2026-08-31: temporarily disabled — the on-device dev client (com.ride.bd)
@@ -49,7 +49,7 @@ export default {
     ],
     ios: {
       supportsTablet: true,
-      bundleIdentifier: "com.ride.bd",
+      bundleIdentifier: "com.node.bd",
       infoPlist: {
         NSLocationWhenInUseUsageDescription:
           "We need your location to show it on the map",
@@ -58,11 +58,11 @@ export default {
       },
     },
     android: {
-      package: "com.ride.bd",
+      package: "com.node.bd",
       hermesEnabled: true,
       adaptiveIcon: {
-        foregroundImage: "./assets/logo/logo.png",
-        backgroundColor: "#ffffff",
+        foregroundImage: "./assets/images/node_adaptive_foreground.png",
+        backgroundColor: "#F8FBFF",
       },
       permissions: [
         "ACCESS_FINE_LOCATION",
@@ -76,7 +76,7 @@ export default {
       [
         "expo-notifications",
         {
-          icon: "./assets/images/notification_icon.png",
+          icon: "./assets/images/node_notification_icon.png",
           color: "#ffffff",
           defaultChannel: "default",
           sounds: [
@@ -89,7 +89,7 @@ export default {
       [
         "expo-router",
         {
-          origin: "https://ride.expo.app",
+          origin: "https://node.expo.app",
         },
       ],
       [
@@ -104,8 +104,10 @@ export default {
       [
         "expo-location",
         {
+          // Play-policy framing: delivery / ambulance / order tracking — no
+          // ride-hailing or driving wording (Node launch, D-2 scope).
           locationAlwaysAndWhenInUsePermission:
-            "Allow Ride to access your location while driving.",
+            "Allow Node to access your location for deliveries, ambulance pickup, and live order tracking.",
         },
       ],
       "@maplibre/maplibre-react-native",

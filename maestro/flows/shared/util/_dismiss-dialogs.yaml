@@ -1,7 +1,7 @@
 # _dismiss-dialogs — conditionally dismiss OS permission/update dialogs (safety net).
 # §9 Utility Subflows. Non-failing by construction (all `when` + optional).
 # Class: AUTOMATABLE.
-appId: com.ride.bd
+appId: com.node.bd
 ---
 - runFlow:
     when:

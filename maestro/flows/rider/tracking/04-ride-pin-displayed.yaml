@@ -6,7 +6,7 @@
 # (rider-core + driver-core precedent). When run standalone this flow BLOCKS at match
 # wait — tagged accordingly in run evidence.
 # Class: AUTOMATABLE (paired-run) / BLOCKED-GATE (standalone).
-appId: com.ride.bd
+appId: com.node.bd
 name: "Rider Tracking - Ride Pin Displayed"
 tags: [rider, tracking, safety]
 ---

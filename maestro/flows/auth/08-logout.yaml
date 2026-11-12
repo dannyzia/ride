@@ -4,7 +4,7 @@
 # via the OS Alert.alert TEXT — profile/index.tsx:120; the separate
 # settings/logout-confirmation route/id is NOT this path). Fixtures: Rider A.
 # Class: AUTOMATABLE.
-appId: com.ride.bd
+appId: com.node.bd
 name: "Auth - Logout"
 tags: [auth]
 ---

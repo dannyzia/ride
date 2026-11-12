@@ -5,7 +5,7 @@
 #   idempotent on order_id) — mark-ready is a PURE status transition, no
 #   delivery_requests row is created here anymore.
 # Contract: §6.1 step 1 (placement) + mark-ready transition. Class: COUNTERPART-API.
-appId: com.ride.bd
+appId: com.node.bd
 ---
 - runScript:
     file: ../../../utils/js/counterpart-login.js

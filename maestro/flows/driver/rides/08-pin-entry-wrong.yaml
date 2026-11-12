@@ -7,7 +7,7 @@
 # rider.enter-otp.set-pin, and "Start Ride" is rider.enter-otp.handle-verify.
 # The error copy assertion stays TEXT — it is dynamic server/i18n text
 # (enter_otp.incorrect_pin), which is exactly what this negative flow is testing.
-appId: com.ride.bd
+appId: com.node.bd
 name: "Driver Rides - PIN Entry Wrong"
 tags: [driver, in-ride, negative]
 ---

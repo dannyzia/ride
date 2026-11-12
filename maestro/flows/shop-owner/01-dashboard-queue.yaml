@@ -31,7 +31,7 @@
 # Fixtures: rider + shop-owner roster accounts; a running utils-server (the order
 # chain emits live events). Class: AUTOMATABLE. NOT device-verified — the device
 # day is ENV-blocked.
-appId: com.ride.bd
+appId: com.node.bd
 name: "S7 Shop Owner - Dashboard, availability and order queue"
 tags: [shop-owner, s7]
 ---

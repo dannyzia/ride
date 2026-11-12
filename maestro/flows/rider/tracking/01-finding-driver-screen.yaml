@@ -4,7 +4,7 @@
 # (INSTANCE_COUNT=1); without it the finding state persists — which this flow tolerates
 # (assertion is on the finding UI, not on a match).
 # Class: AUTOMATABLE.
-appId: com.ride.bd
+appId: com.node.bd
 name: "Rider Tracking - Finding Driver Screen"
 tags: [rider, tracking, smoke]
 ---

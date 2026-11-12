@@ -6,7 +6,7 @@
 #   API-only by design, not by workaround).
 # Contract: §C.3; delivery_status transitions §B.4 (cancel rules before picked_up).
 # Class: COUNTERPART-API.
-appId: com.ride.bd
+appId: com.node.bd
 ---
 - runScript:
     file: ../../../utils/js/counterpart-login.js

@@ -11,7 +11,7 @@
 # Renew branch (device-day precondition; the unsubscribed Browse-Packages branch is
 # not asserted here). Package select/buy taps below stay as authored (BLOCKED flow).
 # Class: BLOCKED.
-appId: com.ride.bd
+appId: com.node.bd
 ---
 - tapOn: ".*Today.*"
 - extendedWaitUntil:

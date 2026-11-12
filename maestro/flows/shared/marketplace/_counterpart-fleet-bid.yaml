@@ -11,7 +11,7 @@
 # §B.2 (bids hidden from other bidders; award is customer-side).
 # Also seeds marketplace exclusivity (§B.7) naturally via the API's own guards.
 # Class: COUNTERPART-API.
-appId: com.ride.bd
+appId: com.node.bd
 ---
 # 1) Real counterpart login (Supabase OTP-bypass password login via live auth API).
 - runScript:

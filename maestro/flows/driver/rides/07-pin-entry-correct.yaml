@@ -2,7 +2,7 @@
 # PIN enforced before IN_PROGRESS). PIN is read from the paired rider device
 # (dual-device coordination is manual per §11 architecture decision).
 # Class: AUTOMATABLE (paired-run, PIN passed via env).
-appId: com.ride.bd
+appId: com.node.bd
 name: "Driver Rides - PIN Entry Correct"
 tags: [driver, in-ride, smoke]
 ---

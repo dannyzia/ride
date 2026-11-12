@@ -30,13 +30,13 @@
 # wizard's contract (mirrors auth/10 and auth/11).
 # Fixtures: FRESH phone, OTP bypass 123456.
 # Class: AUTOMATABLE. NOT device-verified — the device day is ENV-blocked.
-appId: com.ride.bd
+appId: com.node.bd
 name: "S7 Auth - Register Delivery Man wizard"
 tags: [auth, delivery, s7]
 ---
-- stopApp: com.ride.bd
+- stopApp: com.node.bd
 - launchApp:
-    appId: com.ride.bd
+    appId: com.node.bd
     clearState: true
 - extendedWaitUntil:
     visible: "Enter your phone number"

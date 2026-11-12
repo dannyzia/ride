@@ -1,5 +1,5 @@
 ---
-appId: com.ride.bd
+appId: com.node.bd
 ---
 # Gate 1 REWIRE PASS 2 — text taps replaced with the testIDs verified in
 # maestro/tools/testid-map.json (app/(auth)/phone-entry.tsx, app/(auth)/login.tsx).

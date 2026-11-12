@@ -28,13 +28,13 @@
 # the wizard screen renders, which it only does after that call returns ok
 # (verification-status.tsx:113).
 # Class: AUTOMATABLE. NOT device-verified — the device day is ENV-blocked.
-appId: com.ride.bd
+appId: com.node.bd
 name: "S7 Rider - Verification status timeline and resubmit"
 tags: [rider, roles, s7]
 ---
-- stopApp: com.ride.bd
+- stopApp: com.node.bd
 - launchApp:
-    appId: com.ride.bd
+    appId: com.node.bd
     clearState: true
 - extendedWaitUntil:
     visible: "Enter your phone number"

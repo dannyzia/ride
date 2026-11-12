@@ -150,7 +150,7 @@ export default function AmbulanceDriverScreen() {
           Emergency Calls
         </Text>
         <View style={{ flexDirection: "row", alignItems: "center" }} accessibilityLabel={socketReady ? "Emergency feed connected" : "Emergency feed connecting"}>
-          <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: socketReady ? "#0CC25F" : "#F59E0B", marginRight: 6 }} />
+          <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: socketReady ? "#31B86A" : "#F59E0B", marginRight: 6 }} />
           <Text style={{ fontSize: 12, fontFamily: "JakartaMedium", color: textSecondary }}>
             {socketReady ? "Live" : "…"}
           </Text>

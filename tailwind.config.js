@@ -52,7 +52,7 @@ module.exports = {
         goBorderDark: '#35383F',
         goTextPrimaryDark: '#FFFFFF',
         goTextSecondaryDark: '#9CA3AF',
-        goPrimary: '#0CC25F',
+        goPrimary: '#102A66',
         goWhite: '#FFFFFF',
         goInfo: '#2E42A5',
         goDarkSecondary: '#1A1C22',
@@ -81,10 +81,12 @@ module.exports = {
         goTextDisabledLight: '#D1D5DB',
         goTextDisabledDark: '#555555',
 
+        // Node launch (T2): primary ramp re-anchored on the owner navy
+        // #102A66 at 500 — derived tints/shades of the same hue (225°).
         primary: {
-          100: "#F0FDF8", 200: "#D1FAE5", 300: "#A7F3D0",
-          400: "#6EE7B7", 500: "#0CC25F", 600: "#08843E",
-          700: "#047857", 800: "#065F46", 900: "#064E3B",
+          100: "#E9EEF9", 200: "#CCD8F0", 300: "#A3B8E6",
+          400: "#5F7FD0", 500: "#102A66", 600: "#0D234F",
+          700: "#0A1C3D", 800: "#08152E", 900: "#060F22",
         },
         secondary: {
           100: "#F8F9FA", 200: "#F1F2F4", 300: "#D9DBE0",
@@ -93,7 +95,7 @@ module.exports = {
         },
         success: {
           100: "#F0FFF4", 200: "#C6F6D5", 300: "#9AE6B4",
-          400: "#68D391", 500: "#38A169", 600: "#2F855A",
+          400: "#68D391", 500: "#31B86A", 600: "#2F855A",
           700: "#276749", 800: "#22543D", 900: "#1C4532",
         },
         danger: {
@@ -108,7 +110,7 @@ module.exports = {
         },
         general: {
           100: "#CED1DD", 200: "#858585", 300: "#EEEEEE",
-          400: "#0CC25F", 500: "#F6F8FA", 600: "#E6F3FF",
+          400: "#102A66", 500: "#F6F8FA", 600: "#E6F3FF",
           700: "#EBEBEB", 800: "#ADADAD",
         },
       },
@@ -116,7 +118,7 @@ module.exports = {
         'go-sm': '0 2px 4px 0 rgba(15, 23, 42, 0.05)',
         'go-md': '0 4px 12px 0 rgba(15, 23, 42, 0.07)',
         'go-lg': '0 8px 24px 0 rgba(15, 23, 42, 0.09)',
-        'go-glow-primary': '0 4px 20px 0 rgba(12, 194, 95, 0.35)',
+        'go-glow-primary': '0 4px 20px 0 rgba(16, 42, 102, 0.35)',
         'go-glow-danger': '0 4px 20px 0 rgba(227, 29, 28, 0.30)',
       },
     },

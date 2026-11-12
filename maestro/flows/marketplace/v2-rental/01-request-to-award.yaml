@@ -22,7 +22,7 @@
 # customer.rental-marketplace.handle-submit; customer bid accept =
 # customer.rental-marketplace.request-detail.handle-accept (bidding.tsx exposes the
 # fleet-facing variant — customer accepts on request-detail).
-appId: com.ride.bd
+appId: com.node.bd
 name: "V2 Rental - Request to Award"
 tags: [marketplace, v2-rental, counterpart-api]
 ---

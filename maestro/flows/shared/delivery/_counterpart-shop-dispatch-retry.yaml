@@ -11,7 +11,7 @@
 #   self-deliver (status transition to `self_delivered`) and cancel
 #   (`cancelled` on /status).
 # Class: COUNTERPART-API.
-appId: com.ride.bd
+appId: com.node.bd
 ---
 - runScript:
     file: ../../../utils/js/counterpart-login.js

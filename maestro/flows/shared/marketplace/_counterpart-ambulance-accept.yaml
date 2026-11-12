@@ -7,7 +7,7 @@
 # Contract: §C.6/§B.5 — first-accept-wins via conditional UPDATE WHERE status='broadcasting'
 # inside the §B.0 atomic transition; broadcasting→failed via scheduler job 53 on expiry.
 # Class: COUNTERPART-API.
-appId: com.ride.bd
+appId: com.node.bd
 ---
 - runScript:
     file: ../../../utils/js/counterpart-login.js

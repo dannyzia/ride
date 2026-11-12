@@ -612,9 +612,9 @@ const styles = StyleSheet.create({
   sidebarScroll: { flex: 1 },
   sidebarHeader: { paddingHorizontal: 20, paddingVertical: 16, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   roleBadge: {
-    backgroundColor: "rgba(12, 194, 95, 0.15)",
+    backgroundColor: "rgba(16, 42, 102, 0.15)",
     borderWidth: 1,
-    borderColor: "rgba(12, 194, 95, 0.30)",
+    borderColor: "rgba(16, 42, 102, 0.30)",
     borderRadius: 6,
     paddingHorizontal: 8,
     paddingVertical: 3,

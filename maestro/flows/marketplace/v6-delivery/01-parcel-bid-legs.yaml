@@ -8,7 +8,7 @@
 # (customer.delivery.request-create.handle-submit, request-create.tsx L216);
 # mid-flow screen sequence unverifiable without device run → text taps retained.
 # Class: AUTOMATABLE + COUNTERPART-API. BLOCKED until roster fixtures land.
-appId: com.ride.bd
+appId: com.node.bd
 name: "V6 Delivery - Parcel Bid Legs"
 tags: [marketplace, v6-delivery, counterpart-api]
 ---

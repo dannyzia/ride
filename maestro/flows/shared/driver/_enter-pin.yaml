@@ -8,7 +8,7 @@
 # hitting a non-interactive element. Start Ride = rider.enter-otp.handle-verify.
 # PIN is passed from the caller (read from the rider device screen — dual-device
 # coordination is manual per §11 architecture decision). Class: AUTOMATABLE.
-appId: com.ride.bd
+appId: com.node.bd
 ---
 - extendedWaitUntil:
     visible:

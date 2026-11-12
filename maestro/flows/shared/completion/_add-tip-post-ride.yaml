@@ -4,7 +4,7 @@
 # set-tip-amount (L108, preset chips incl. ৳ amounts — text filter picks AMOUNT,
 # 0 renders as add_tip.no_tip); submit = customer.add-tip.handle-add-tip (L135,
 # label t('ride.add_tip')). Class: AUTOMATABLE.
-appId: com.ride.bd
+appId: com.node.bd
 ---
 - extendedWaitUntil:
     visible: ".*Tip.*|.*tip.*"

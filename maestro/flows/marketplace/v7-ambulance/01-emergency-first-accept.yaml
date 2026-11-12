@@ -12,7 +12,7 @@
 # emergency request = customer.ambulance.emergency.handle-create (emergency.tsx
 # L367) with its set-* inputs. Vertical entry chip stays text (mapping unverified).
 # Class: AUTOMATABLE + COUNTERPART-API. BLOCKED until roster fixtures land.
-appId: com.ride.bd
+appId: com.node.bd
 name: "V7 Ambulance - Emergency First Accept"
 tags: [marketplace, v7-ambulance, counterpart-api]
 ---

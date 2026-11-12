@@ -1,6 +1,6 @@
 {
   "app": {
-    "name": "Ride"
+    "name": "Node"
   },
   "monetization": {
     "states": {
@@ -117,8 +117,8 @@
     "register": "Create Account",
     "login": "Log In",
     "get_started": "Get Started",
-    "tagline": "Your ride, your way",
-    "welcome_title": "Welcome to Ride",
+    "tagline": "One app for every need.",
+    "welcome_title": "Welcome to Node",
     "roles": {
       "rider": "Customer",
       "driver": "Driver",
@@ -1219,7 +1219,7 @@
     "failed": "Couldn't submit the request",
     "error_occurred": "An error occurred — please try again.",
     "title": "Request Your Data",
-    "description": "Get a copy of the data Ride keeps about your account.",
+    "description": "Get a copy of the data Node keeps about your account.",
     "what_you_receive": "What you'll receive",
     "item_profile": "• Profile and account details",
     "item_rides": "• Ride history",
@@ -1239,7 +1239,7 @@
     "failed": "Couldn't submit the request",
     "error_occurred": "An error occurred — please try again.",
     "title": "Delete My Data",
-    "description": "Permanently delete the data Ride keeps about your account. This cannot be undone.",
+    "description": "Permanently delete the data Node keeps about your account. This cannot be undone.",
     "will_delete": "What will be deleted:",
     "item_rides": "• Ride history",
     "item_payments": "• Payment records",
@@ -1303,7 +1303,7 @@
     "fee_amount": "Return fee: ৳{{amount}}",
     "report": "Report Lost Item",
     "select_ride": "Select the ride",
-    "ride_fallback": "Ride",
+    "ride_fallback": "Node",
     "describe_item": "Describe the item",
     "placeholder": "e.g. Black umbrella in the back seat",
     "submitting": "Submitting...",
@@ -1626,7 +1626,7 @@
   "logout_confirmation": {
     "title": "Log out?",
     "message": "You'll need to verify your phone number to sign back in.",
-    "log_out_a11y": "Log out of Ride"
+    "log_out_a11y": "Log out of Node"
   },
   "no_drivers_available": {
     "title": "No Drivers Available",

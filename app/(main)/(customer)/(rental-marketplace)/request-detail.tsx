@@ -28,7 +28,7 @@ import { formatBDT } from "@/lib/format";
 const SERVER_URL = process.env.EXPO_PUBLIC_SERVER_URL ?? "http://localhost:8080";
 
 const RANK_COLORS: Record<string, string> = {
-  Best: "#0CC25F",
+  Best: "#31B86A",
   "2nd": "#3B82F6",
   "3rd": "#F59E0B",
 };

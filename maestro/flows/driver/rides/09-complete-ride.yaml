@@ -4,7 +4,7 @@
 # Slide + completed-modal steps stay TEXT (device-proven contract; modal surface has
 # no testID — G-02 remainder, see _complete-ride-driver header). Class: AUTOMATABLE
 # (paired-run).
-appId: com.ride.bd
+appId: com.node.bd
 name: "Driver Rides - Complete Ride"
 tags: [driver, in-ride, smoke]
 ---

@@ -13,14 +13,14 @@
 # ride-tracking and activity-completed). The trailing "Back to Home" tap was driver-side
 # copy on the shared finish surface; the rider simply lands back on Home, so the flow now
 # asserts that directly via customer.home.el-2.
-appId: com.ride.bd
+appId: com.node.bd
 name: "Part 4 - Rider Core Loop (request + track + complete + rate)"
 tags:
   - rider
   - core
 ---
 - launchApp:
-    appId: com.ride.bd
+    appId: com.node.bd
 - extendedWaitUntil:
     visible:
       id: "customer.home.el-2"

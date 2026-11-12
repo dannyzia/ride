@@ -29,7 +29,7 @@
 # (rider 8801613249520, shop 8801700000201, delivery agent 8801700000301) and a
 # running utils-server (the dispatch tick) — the tick is the only thing that
 # advances the chain, so a stopped server fails at the offer-card gate.
-appId: com.ride.bd
+appId: com.node.bd
 name: "S6 Delivery - Dispatched Offer to Delivered"
 tags: [delivery, s6, counterpart-api]
 ---
@@ -64,9 +64,9 @@ tags: [delivery, s6, counterpart-api]
     commands:
       - runFlow: ../shared/delivery/_counterpart-shop-prep-order.yaml
 # ── Delivery Man side (UI): log in as the delivery agent → offers inbox ──────
-- stopApp: com.ride.bd
+- stopApp: com.node.bd
 - launchApp:
-    appId: com.ride.bd
+    appId: com.node.bd
     clearState: true
 - extendedWaitUntil:
     visible: "Enter your phone number"

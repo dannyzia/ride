@@ -9,7 +9,7 @@
 # For the profile tab itself (tap a customer.profile.* row), use
 # _open-profile-tab.yaml instead — that is what most callers want.
 # Class: AUTOMATABLE.
-appId: com.ride.bd
+appId: com.node.bd
 ---
 - tapOn:
     id: "customer._layout.on-press"

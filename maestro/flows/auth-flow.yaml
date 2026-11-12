@@ -11,16 +11,16 @@
 # Existing accounts use PASSWORD login (test1234). OTP 123456 is only for new-account registration.
 # Precondition: emulators running; .env.local has DEV_OTP_BYPASS=true (only matters for the commented registration path).
 
-appId: com.ride.bd
+appId: com.node.bd
 name: "Part 1 - Auth (existing account, password login)"
 tags:
   - auth
   - rider
   - driver
 ---
-- clearState: com.ride.bd
+- clearState: com.node.bd
 - launchApp:
-    appId: com.ride.bd
+    appId: com.node.bd
 - extendedWaitUntil:
     visible: "Enter your phone number"
     timeout: 20000

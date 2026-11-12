@@ -8,6 +8,7 @@ import {
   View,
 } from "react-native";
 import { useRouter } from "expo-router";
+import { useTranslation } from "react-i18next";
 import Animated, {
   Easing,
   useAnimatedStyle,
@@ -47,6 +48,7 @@ const LOGO = require("../assets/logo/logo.png");
 export default function Splash() {
   const router = useRouter();
   const isDark = useIsDark();
+  const { t } = useTranslation();
 
   const bg = isDark ? colors.bgDark : colors.bgLight;
   const textPrimary = isDark ? colors.textPrimaryDark : colors.textPrimaryLight;
@@ -212,7 +214,7 @@ export default function Splash() {
           className="text-[16px] font-Jakarta mt-4"
           style={{ color: textPrimary }}
         >
-          Your ride, your way
+          {t("auth.tagline")}
         </Text>
       </Animated.View>
 

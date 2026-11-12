@@ -13,7 +13,7 @@
 # unselectored. Tagged blocked so a device run is not mistaken for a selector
 # failure. See maestro/COVERAGE-MANIFEST.md round note 2026-10-04.
 # Class: BLOCKED (no in-app entry point — evidence above).
-appId: com.ride.bd
+appId: com.node.bd
 name: "Fleet Portal - Dashboard and Drivers"
 tags: [fleet, cross-cutting, blocked]
 ---

@@ -26,7 +26,7 @@ const SERVER_URL = process.env.EXPO_PUBLIC_SERVER_URL ?? "http://localhost:8080"
 const STATUS_COLORS: Record<string, string> = {
   broadcasting: "#3B82F6",
   collecting: "#F59E0B",
-  awarded: "#0CC25F",
+  awarded: "#31B86A",
   confirmed: "#8B5CF6",
   completed: "#6B7280",
   cancelled: "#EF4444",

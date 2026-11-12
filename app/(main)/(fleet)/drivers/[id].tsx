@@ -237,7 +237,7 @@ export default function DriverDetail() {
             style={{
               flexDirection: "row",
               alignItems: "center",
-              backgroundColor: isOnline ? "#0CC25F15" : "#9CA3AF15",
+              backgroundColor: isOnline ? "#31B86A15" : "#9CA3AF15",
               paddingHorizontal: 10,
               paddingVertical: 4,
               borderRadius: 20,
@@ -249,14 +249,14 @@ export default function DriverDetail() {
                 width: 6,
                 height: 6,
                 borderRadius: 3,
-                backgroundColor: isOnline ? "#0CC25F" : "#9CA3AF",
+                backgroundColor: isOnline ? "#31B86A" : "#9CA3AF",
               }}
             />
             <Text
               style={{
                 fontFamily: "Jakarta-Medium",
                 fontSize: 11,
-                color: isOnline ? "#0CC25F" : textSecondary,
+                color: isOnline ? "#31B86A" : textSecondary,
               }}
             >
               {isOnline ? "Online" : "Offline"}

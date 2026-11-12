@@ -11,9 +11,9 @@
  *   { type: string; ride_id?: string; ... }
  *
  * Deep-link URL contract:
- *   ride://driver/home
- *   ride://driver/ride-tracking/{uuid}
- *   ride://rider
+ *   node://driver/home
+ *   node://driver/ride-tracking/{uuid}
+ *   node://rider
  */
 
 import { router } from "expo-router";
@@ -324,7 +324,7 @@ interface DeepLinkRoute {
 }
 
 /**
- * Valid deep-link routes. The `ride://` scheme is used.
+ * Valid deep-link routes. The `node://` scheme is used.
  * Patterns use named capture groups for clarity but are matched positionally.
  */
 const DEEP_LINK_ROUTES: DeepLinkRoute[] = [
@@ -414,15 +414,15 @@ const DEEP_LINK_ROUTES: DeepLinkRoute[] = [
 /**
  * Route a deep-link URL to the correct screen.
  *
- * Accepts either a full URL (`ride://driver/wallet`) or a path
+ * Accepts either a full URL (`node://driver/wallet`) or a path
  * (`/driver/wallet` or `driver/wallet`).
  *
  * @returns true if routed, false if unknown
  */
 export function routeDeepLink(url: string): boolean {
   try {
-    // Strip scheme and host if present. For custom schemes (ride://) the
-    // first path segment lands in `hostname` — e.g. ride://rider/wallet has
+    // Strip scheme and host if present. For custom schemes (node://) the
+    // first path segment lands in `hostname` — e.g. node://rider/wallet has
     // host 'rider' and path '/wallet'. Reconstruct host + path so the
     // role-prefixed patterns below match full scheme links.
     let path = url;

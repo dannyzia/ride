@@ -145,7 +145,7 @@ export default function PhoneEntryScreen() {
           className="text-[28px] font-JakartaBold font-bold mb-3 leading-[1.2] tracking-[-0.5px]"
           style={{ color: textPrimary }}
         >
-          Ride
+          Node
         </Text>
         <Text
           className="text-[15px] font-JakartaBold mb-1"

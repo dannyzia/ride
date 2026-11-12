@@ -4,7 +4,7 @@
 # WS injection (Gate 3 BLOCKED). Device-day pairing (rider requests → driver receives)
 # is the running mode — evidence recorded in run report.
 # Class: AUTOMATABLE (paired-run) / BLOCKED-GATE standalone (inject endpoint absent).
-appId: com.ride.bd
+appId: com.node.bd
 name: "Driver Rides - Offer Sheet Renders"
 tags: [driver, dispatch, smoke]
 ---

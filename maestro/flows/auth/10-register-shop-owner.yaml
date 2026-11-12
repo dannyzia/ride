@@ -27,13 +27,13 @@
 # surface is an auth-gate decision, not this wizard's contract.
 # Fixtures: FRESH phone (a used one is rejected), OTP bypass 123456.
 # Class: AUTOMATABLE. NOT device-verified — the device day is ENV-blocked.
-appId: com.ride.bd
+appId: com.node.bd
 name: "S7 Auth - Register Shop Owner wizard"
 tags: [auth, shop-owner, s7]
 ---
-- stopApp: com.ride.bd
+- stopApp: com.node.bd
 - launchApp:
-    appId: com.ride.bd
+    appId: com.node.bd
     clearState: true
 - extendedWaitUntil:
     visible: "Enter your phone number"

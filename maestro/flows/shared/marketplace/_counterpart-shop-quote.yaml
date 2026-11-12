@@ -5,7 +5,7 @@
 #   requireShopMember §E.2 enforces shops.status==='active').
 # Contract: §C.1; RFQ state machine §B.6.
 # Class: COUNTERPART-API.
-appId: com.ride.bd
+appId: com.node.bd
 ---
 - runScript:
     file: ../../../utils/js/counterpart-login.js

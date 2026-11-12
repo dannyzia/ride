@@ -5,7 +5,7 @@
 # rider.d.toggle-online-2 is its online-state counterpart (:1163). The OS
 # "While using the app" tap stays TEXT (G-02 remainder, OS dialog).
 # Class: AUTOMATABLE.
-appId: com.ride.bd
+appId: com.node.bd
 ---
 - extendedWaitUntil:
     visible: ".*Go Online.*|.*Go Offline.*"

@@ -14,7 +14,7 @@
 # customer.shops.order-create.id.set-cart-fulfillment (order-create/[id].tsx L124);
 # order submit = customer.shops.order-create.id.handle-submit (L254).
 # Class: AUTOMATABLE + COUNTERPART-API. BLOCKED until shop roster fixtures land.
-appId: com.ride.bd
+appId: com.node.bd
 name: "V3 Shops - Order RFQ Accept"
 tags: [marketplace, v3-shops, counterpart-api]
 ---

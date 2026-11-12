@@ -3,7 +3,7 @@
 # B-1: the wait alternated a dead branch (".*Search destination.*" — home.search_destination
 # is "Where to?") against a live one; the dead half is dropped in favour of the el-2 testID.
 # Class: AUTOMATABLE.
-appId: com.ride.bd
+appId: com.node.bd
 name: "Rider Home - Map Loads"
 tags: [rider, smoke]
 ---

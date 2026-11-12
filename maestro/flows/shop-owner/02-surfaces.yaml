@@ -28,7 +28,7 @@
 # silent omission.
 # Fixtures: shop-owner OWNER account. Class: AUTOMATABLE. NOT device-verified —
 # the device day is ENV-blocked.
-appId: com.ride.bd
+appId: com.node.bd
 name: "S7 Shop Owner - Catalog, workshop, staff and settlement"
 tags: [shop-owner, s7]
 ---

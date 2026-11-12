@@ -7,12 +7,12 @@
 # derived them from setRole('rider'|'driver'); only the *_meta note in
 # flow-testid-map.json still called them text-only, and it is corrected in this
 # pass. Class: AUTOMATABLE.
-appId: com.ride.bd
+appId: com.node.bd
 name: "Auth - Role Selector"
 tags: [auth]
 ---
 - launchApp:
-    appId: com.ride.bd
+    appId: com.node.bd
     clearState: true
 - extendedWaitUntil:
     visible: "Enter your phone number"

@@ -1,5 +1,5 @@
 ---
-appId: com.ride.bd
+appId: com.node.bd
 ---
 - launchApp:
-    appId: com.ride.bd
+    appId: com.node.bd

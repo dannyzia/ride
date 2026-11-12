@@ -533,7 +533,7 @@ function VehicleCard({
                   width: 6,
                   height: 6,
                   borderRadius: 3,
-                  backgroundColor: isOnline ? "#0CC25F" : "#9CA3AF",
+                  backgroundColor: isOnline ? "#31B86A" : "#9CA3AF",
                 }}
               />
               <Text
@@ -668,14 +668,14 @@ function DriverCard({
                 width: 6,
                 height: 6,
                 borderRadius: 3,
-                backgroundColor: isOnline ? "#0CC25F" : "#9CA3AF",
+                backgroundColor: isOnline ? "#31B86A" : "#9CA3AF",
               }}
             />
             <Text
               style={{
                 fontFamily: "Jakarta-Medium",
                 fontSize: 11,
-                color: isOnline ? "#0CC25F" : textSecondary,
+                color: isOnline ? "#31B86A" : textSecondary,
               }}
             >
               {isOnline ? "Online" : "Offline"}
