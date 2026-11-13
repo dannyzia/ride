@@ -41,10 +41,12 @@ interface VerifyTokenResponse {
 
 type CheckStatus = "idle" | "checking" | "error";
 
-// Logo asset: assets/logo/logo.png — the app icon / Android adaptive-icon
-// foreground referenced from app.config.js. SplashAnimation.tsx renders a
-// text lockup (no image), so this is the canonical brand asset.
-const LOGO = require("../assets/logo/logo.png");
+// Logo asset: assets/logo/node_icon_1024.png — the Node mark (Stage 2 T2
+// asset mapping; was the pre-launch GoRide logo.png, which T3 dispositioned
+// for text only — this require is the image side of that same defect,
+// found live by the device walk). SplashAnimation.tsx renders a text lockup
+// (no image), so this is the canonical brand asset render.
+const LOGO = require("../assets/logo/node_icon_1024.png");
 
 export default function Splash() {
   const router = useRouter();

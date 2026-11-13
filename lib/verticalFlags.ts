@@ -25,14 +25,30 @@ export const DEFAULT_RIDE_VERTICAL_ENABLED = false;
  * Bounded consume window for the splash routing path: the no-session branch
  * awaits the boot fetch up to this long before routing (fail-closed if still
  * unresolved), so the flag is always resolved before the login screen first
- * paints. The boot fetch carries its own shorter abort window
- * (FETCH_TIMEOUT_MS), so on a dead network this bound is never the wait —
- * the fetch fail-closes first.
+ * paints. G3 coherence rule: this bound MUST exceed the boot fetch's total
+ * window (FETCH_TIMEOUT_MS + RETRY_TIMEOUT_MS = 7500) or the splash would
+ * fail-closed on every healthy-but-slow device — the exact defect the
+ * device walk found (consume 3000 < device path ~4000 ⇒ hidden despite the
+ * flag being true).
  */
-export const RIDE_FLAG_RESOLVE_TIMEOUT_MS = 3000;
+export const RIDE_FLAG_RESOLVE_TIMEOUT_MS = 8000;
 
-/** The boot fetch's own abort window (mirrors the heldRoles splash timeout). */
-const FETCH_TIMEOUT_MS = 2500;
+/**
+ * First-attempt abort window for the boot fetch (G3 fix, ISSUE-111): the
+ * device path (adb-reverse → Metro → DB) measured >2.5s while the same
+ * endpoint answered 0.7s from the host and auth calls on the same base URL
+ * succeeded on-device — the 2500ms budget, not the fail-closed logic, was
+ * wrong. Ordered range 5000-8000ms; 5000 covers the measured device path
+ * with margin.
+ */
+export const FETCH_TIMEOUT_MS = 5000;
+
+/**
+ * One bounded retry after a failed first attempt (transient blips answer
+ * fast; a healthy slow path completes attempt 1). Exactly ONE retry —
+ * never more — so the total fetch window stays bounded at 7500ms.
+ */
+export const RETRY_TIMEOUT_MS = 2500;
 
 interface VerticalFlagFetchOptions {
   /** Test seam — overrides API_URL (empty string exercises the unconfigured-env path). */
@@ -58,10 +74,51 @@ function strictFlag(payload: unknown): boolean {
   );
 }
 
+type AttemptResult = { ok: true; value: boolean } | { ok: false };
+
+/**
+ * One bounded GET /api/app-config attempt. Distinguishes a SUCCESSFUL read
+ * (value may legitimately be false — no retry warranted) from a FAILED
+ * attempt (network error / timeout / non-OK / unparseable — retryable).
+ * Never throws; fail-closed lives in the caller.
+ */
+async function attemptFetch(baseUrl: string, timeoutMs: number): Promise<AttemptResult> {
+  const controller = new AbortController();
+  let raceTimer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    const abortTimer = setTimeout(() => controller.abort(), timeoutMs);
+    let res: Response;
+    try {
+      res = await Promise.race([
+        fetch(`${baseUrl}/api/app-config`, { signal: controller.signal }),
+        new Promise<never>((_, reject) => {
+          raceTimer = setTimeout(() => reject(new Error('app-config timeout')), timeoutMs);
+        }),
+      ]);
+    } finally {
+      clearTimeout(abortTimer);
+      if (raceTimer !== undefined) clearTimeout(raceTimer);
+    }
+    if (!res.ok) {
+      throw new Error(`app-config responded ${res.status}`);
+    }
+    const data: unknown = await res.json();
+    return { ok: true, value: strictFlag(data) };
+  } catch (err) {
+    logger.warn('[verticalFlags] app-config attempt failed', {
+      message: err instanceof Error ? err.message : String(err),
+    });
+    return { ok: false };
+  }
+}
+
 /**
  * Start (or join) the once-per-boot GET /api/app-config read. Resolves the
  * session cache; later calls in the same session rejoin the first read —
- * the flag is fetched exactly once per cold boot.
+ * the flag is fetched exactly once per cold boot. A FAILED first attempt is
+ * retried exactly once (RETRY_TIMEOUT_MS); a successful read is never
+ * retried (an explicit false is a value, not a failure). Both attempts
+ * failing ⇒ fail-closed default (ISSUE-111: fail-closed semantics unchanged).
  */
 export function fetchRideVerticalFlag(options: VerticalFlagFetchOptions = {}): Promise<boolean> {
   if (pending) return pending;
@@ -72,36 +129,17 @@ export function fetchRideVerticalFlag(options: VerticalFlagFetchOptions = {}): P
       cached = DEFAULT_RIDE_VERTICAL_ENABLED;
       return cached;
     }
-    const timeoutMs = options.timeoutMs ?? FETCH_TIMEOUT_MS;
-    const controller = new AbortController();
-    let raceTimer: ReturnType<typeof setTimeout> | undefined;
-    try {
-      const abortTimer = setTimeout(() => controller.abort(), timeoutMs);
-      let res: Response;
-      try {
-        res = await Promise.race([
-          fetch(`${baseUrl}/api/app-config`, { signal: controller.signal }),
-          new Promise<never>((_, reject) => {
-            raceTimer = setTimeout(() => reject(new Error('app-config timeout')), timeoutMs);
-          }),
-        ]);
-      } finally {
-        clearTimeout(abortTimer);
-        if (raceTimer !== undefined) clearTimeout(raceTimer);
-      }
-      if (!res.ok) {
-        throw new Error(`app-config responded ${res.status}`);
-      }
-      const data: unknown = await res.json();
-      cached = strictFlag(data);
-      return cached;
-    } catch (err) {
-      logger.warn('[verticalFlags] app-config fetch failed — fail-closed', {
-        message: err instanceof Error ? err.message : String(err),
-      });
-      cached = DEFAULT_RIDE_VERTICAL_ENABLED;
-      return cached;
+    // Test seam: when timeoutMs is injected it drives BOTH windows (keeps
+    // the suite fast); production uses FETCH then RETRY.
+    const firstWindow = options.timeoutMs ?? FETCH_TIMEOUT_MS;
+    const retryWindow = options.timeoutMs ?? RETRY_TIMEOUT_MS;
+    let attempt = await attemptFetch(baseUrl, firstWindow);
+    if (!attempt.ok) {
+      logger.warn('[verticalFlags] retrying app-config read once');
+      attempt = await attemptFetch(baseUrl, retryWindow);
     }
+    cached = attempt.ok ? attempt.value : DEFAULT_RIDE_VERTICAL_ENABLED;
+    return cached;
   })();
   return pending;
 }

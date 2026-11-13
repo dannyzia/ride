@@ -62,9 +62,12 @@ import { supabaseAdmin } from "@/lib/supabaseServer";
 import {
   applyVerifyTokenFlags,
   DEFAULT_RIDE_VERTICAL_ENABLED,
+  FETCH_TIMEOUT_MS,
   fetchRideVerticalFlag,
   getRideVerticalEnabled,
   resetVerticalFlagCacheForTests,
+  RETRY_TIMEOUT_MS,
+  RIDE_FLAG_RESOLVE_TIMEOUT_MS,
   waitForRideVerticalFlag,
 } from "@/lib/verticalFlags";
 import { GET as appConfigGET } from "@/app/api/app-config+api";
@@ -187,6 +190,59 @@ describe("lib/verticalFlags — client resolver (Component A)", () => {
       DEFAULT_RIDE_VERTICAL_ENABLED,
     );
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  // ── G3 / ISSUE-111: fetch-window bounds + one bounded retry ──
+  it("retries exactly once after a failed first attempt and succeeds", async () => {
+    let calls = 0;
+    const fetchMock = jest.fn(async () => {
+      calls += 1;
+      if (calls === 1) throw new Error("transient network blip");
+      return okResponse({ flags: { ride_vertical_enabled: true } });
+    });
+    global.fetch = fetchMock as unknown as typeof fetch;
+    await expect(
+      fetchRideVerticalFlag({ baseUrl: "http://test.local", timeoutMs: 20 }),
+    ).resolves.toBe(true);
+    expect(getRideVerticalEnabled()).toBe(true);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("bounded: gives up after exactly ONE retry when every attempt fails", async () => {
+    const fetchMock = jest.fn(async () => {
+      throw new Error("network down");
+    });
+    global.fetch = fetchMock as unknown as typeof fetch;
+    await expect(
+      fetchRideVerticalFlag({ baseUrl: "http://test.local", timeoutMs: 20 }),
+    ).resolves.toBe(DEFAULT_RIDE_VERTICAL_ENABLED);
+    // Exactly two attempts (first + one retry) — never a retry loop.
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(getRideVerticalEnabled()).toBe(false);
+  });
+
+  it("does NOT retry on a successful read whose value is false", async () => {
+    const fetchMock = jest.fn(async () =>
+      okResponse({ flags: { ride_vertical_enabled: false } }),
+    );
+    global.fetch = fetchMock as unknown as typeof fetch;
+    await expect(
+      fetchRideVerticalFlag({ baseUrl: "http://test.local", timeoutMs: 20 }),
+    ).resolves.toBe(false);
+    // A valid false is a VALUE, not a failure — one call only.
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("G3 bounds are coherent: consume window exceeds the total fetch window, first attempt in the ordered 5000-8000ms range", () => {
+    // Ordered range for the device-path fix (ISSUE-111).
+    expect(FETCH_TIMEOUT_MS).toBeGreaterThanOrEqual(5000);
+    expect(FETCH_TIMEOUT_MS).toBeLessThanOrEqual(8000);
+    expect(RETRY_TIMEOUT_MS).toBeGreaterThan(0);
+    // The consume window must exceed the worst-case fetch (first + retry) or
+    // the splash fail-closes on every healthy-but-slow device (the G3 defect).
+    expect(RIDE_FLAG_RESOLVE_TIMEOUT_MS).toBeGreaterThan(
+      FETCH_TIMEOUT_MS + RETRY_TIMEOUT_MS,
+    );
   });
 
   describe("applyVerifyTokenFlags — authenticated boot path", () => {
