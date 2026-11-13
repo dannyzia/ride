@@ -111,6 +111,12 @@ export default {
         },
       ],
       "@maplibre/maplibre-react-native",
+      // ISSUE-112: pin enableOnBackInvokedCallback=false — targetSdk 36's
+      // default-true on Android 16 skips Activity.onBackPressed, so hardware
+      // back finished the activity to the launcher instead of popping.
+      // Registered LAST so its manifest mod runs after every other
+      // manifest-touching plugin and cannot be clobbered.
+      "./plugins/withLegacyBackDispatch.js",
     ],
     extra: {
       eas: {
