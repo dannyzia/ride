@@ -16,44 +16,26 @@ const { withAndroidManifest, AndroidConfig } = require("@expo/config-plugins");
  * Config-level fix — no per-screen BackHandlers; RideSurfaceGuard and the
  * mount guards are JS-layer and unaffected.
  *
- * Implementation note: the mutation is registered as the android FINALIZED
- * mod (runs after every other manifest-touching mod — early withAndroidManifest
- * child mods run against a manifest whose application element isn't fully
- * materialized and their attribute writes do not survive). DEBUG logs kept
- * until the orchestrator re-verifies on device, then removed.
+ * Implementation: the mutation runs as a withAndroidManifest CHILD mod
+ * (the same mechanism expo-notifications meta-data and the MFS queries
+ * use — child-mod mutations persist into the written manifest).
+ * r2 fixes: (a) the android FINALIZED slot cannot write the manifest at
+ * all (modResults.manifest is undefined there, after the file write) —
+ * dropped; (b) getMainApplication expects the modResults WRAPPER
+ * ({manifest: ...}), not the manifest node — passing the node short-
+ * circuited the helper to null and every set was silently skipped.
+ * The element's $ map may be null on the template; created on demand.
  */
 module.exports = function withLegacyBackDispatch(config) {
-  console.log("[withLegacyBackDispatch] plugin function invoked");
-  // Early attempt (kept as belt-and-braces for pipeline variants where it runs late).
-  config = withAndroidManifest(config, (modConfig) => {
-    const application =
-      AndroidConfig.Manifest.getMainApplication(modConfig.modResults.manifest);
-    if (application && application.$) {
+  return withAndroidManifest(config, (modConfig) => {
+    const application = AndroidConfig.Manifest.getMainApplication(
+      modConfig.modResults,
+    );
+    if (application) {
+      // $ can be null on the template element — create it before assigning.
+      application.$ = application.$ ?? {};
       application.$["android:enableOnBackInvokedCallback"] = "false";
-      console.log("[withLegacyBackDispatch] early mod set attribute");
     }
     return modConfig;
   });
-
-  // Finalized slot — runs LAST in the android mod order (sortMods: finalized: 1).
-  config.mods = config.mods ?? {};
-  config.mods.android = config.mods.android ?? {};
-  config.mods.android.finalized = async (modConfig) => {
-    console.log(
-      "[withLegacyBackDispatch] finalized modResults.manifest:",
-      JSON.stringify(modConfig.modResults.manifest).slice(0, 800),
-    );
-    const application =
-      AndroidConfig.Manifest.getMainApplication(modConfig.modResults.manifest);
-    if (application && application.$) {
-      application.$["android:enableOnBackInvokedCallback"] = "false";
-      console.log("[withLegacyBackDispatch] finalized mod set attribute");
-    } else {
-      console.log(
-        "[withLegacyBackDispatch] finalized mod: no application element",
-      );
-    }
-    return modConfig;
-  };
-  return config;
 };
