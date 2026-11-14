@@ -1942,7 +1942,8 @@
     "package_placeholder": "What are you sending?",
     "receiver_phone": "Receiver phone",
     "receiver_phone_placeholder": "Who pays cash on delivery?",
-    "submit_parcel": "Place Delivery"
+    "submit_parcel": "Place Delivery",
+    "confirm_location": "Confirm location"
   },
   "delivery_detail": {
     "title": "Delivery Detail",

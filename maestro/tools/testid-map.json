@@ -1,5 +1,5 @@
 {
-  "total": 1402,
+  "total": 1404,
   "screens": {
     "(auth)/_layout.tsx": [
       {
@@ -2032,27 +2032,35 @@
     "(main)/(customer)/parcel/request-create.tsx": [
       {
         "id": "customer.parcel.request-create.el-1",
-        "line": 98
+        "line": 210
       },
       {
-        "id": "customer.parcel.request-create.set-pickup-address",
-        "line": 123
+        "id": "customer.parcel.request-create.open-pickup-picker",
+        "line": 231
       },
       {
-        "id": "customer.parcel.request-create.set-dropoff-address",
-        "line": 141
+        "id": "customer.parcel.request-create.open-dropoff-picker",
+        "line": 260
       },
       {
         "id": "customer.parcel.request-create.set-item-note",
-        "line": 159
+        "line": 293
       },
       {
         "id": "customer.parcel.request-create.set-receiver-phone",
-        "line": 178
+        "line": 312
       },
       {
         "id": "customer.parcel.request-create.handle-submit",
-        "line": 188
+        "line": 322
+      },
+      {
+        "id": "customer.parcel.request-create.close-picker",
+        "line": 341
+      },
+      {
+        "id": "customer.parcel.request-create.confirm-picked",
+        "line": 390
       }
     ],
     "(main)/(customer)/parcel/request-detail.tsx": [

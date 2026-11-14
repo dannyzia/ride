@@ -1942,7 +1942,8 @@
     "package_placeholder": "কী পাঠাচ্ছেন?",
     "receiver_phone": "প্রাপকের ফোন নম্বর",
     "receiver_phone_placeholder": "ডেলিভারির সময় নগদ কে দেবে?",
-    "submit_parcel": "ডেলিভারি বুক করুন"
+    "submit_parcel": "ডেলিভারি বুক করুন",
+    "confirm_location": "অবস্থান নিশ্চিত করুন"
   },
   "delivery_detail": {
     "title": "ডেলিভারির বিবরণ",
