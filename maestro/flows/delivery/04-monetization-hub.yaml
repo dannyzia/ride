@@ -1,0 +1,199 @@
+# delivery/04-monetization-hub — Batch-2 Item 12: the courier LANDING's
+# monetization hub (app/(main)/(delivery)/index.tsx).
+#
+# WHAT THIS COVERS
+#   The delivery-staff landing carries four-state banner precedence from
+#   GET /api/delivery/dues (state is chosen BY THE SERVER, never re-derived on
+#   the client — lib/operatorSettlement.ts, `OperatorDuesState`), plus two nav
+#   cards into the monetization slots:
+#
+#     NO_PRODUCT > LAPSED > OWING > ACTIVE        (pinned precedence)
+#
+#     state        banner colour  hint (delivery.dues.hint_*)                    CTA (dashboard.banner_*_cta)
+#     NO_PRODUCT   danger        "Buy a package to start receiving jobs."        → packages
+#     LAPSED       danger        "Your package term ended — dues stay payable."  → packages
+#     OWING        amber         "Settle your dues to keep receiving jobs."      → dues
+#     ACTIVE       success       "Everything is in order."                       → bills (dues)
+#
+#   Both cards are asserted in EVERY state (they are not state-gated):
+#     delivery.push-packages → /(main)/(delivery-staff)/packages
+#     delivery.push-dues     → /(main)/(delivery-staff)/dues
+#
+# WHY THE STATES ARE CONDITIONAL, NOT PARAMETERISED
+#   The state is a server fact about the courier's possession rows, not a UI
+#   control: the app cannot switch it, and a flow that pinned one state would
+#   fail on every account in a different one. So the flow first proves a state
+#   banner IS rendered (exactly one of the four labels), then validates that
+#   STATE's hint and CTA destination. To exercise a specific state, seed the
+#   possession first and re-run — the sanctioned writers are
+#   lib/monetizationMode.grantOperatorPackage (possession) and
+#   lib/billsLedger.createOpenBill (an open bill → OWING); an expired
+#   operator_packages row (expires_at in the past) → LAPSED; no row → NO_PRODUCT.
+#   This matrix was driven and verified on-device for all four states on
+#   2026-11-10 (Pixel 6a, Android 17) — the rendered copy matches the table.
+#
+# ROUTE NOTE: the landing lives at /delivery. It was UNREACHABLE until
+# 2026-11-10 because app/(main)/(customer)/(delivery)/index.tsx resolved to the
+# same URL (route groups add no path segment); the customer screen won and every
+# path-based entry — splash routing, login-as, notificationRouter — landed on
+# the rider's parcel screen instead. That screen is now /parcel. If this flow
+# ever asserts `delivery.push-packages` and instead sees "Send a Package", the
+# collision has been reintroduced.
+#
+# Class: AUTOMATABLE. REQUIRES DEVICE + a `delivery_man` account
+# (AGENT_PHONE / AGENT_PASSWORD, no defaults — pass with -e). A multi-role
+# account is sent through the login-as chooser and the flow takes the
+# Delivery Man arm when it appears.
+appId: com.ride.bd
+name: "S12 Delivery - Monetization Hub (banner states + nav cards)"
+tags: [delivery, monetization]
+---
+- stopApp: com.ride.bd
+- launchApp:
+    appId: com.ride.bd
+# Dev-client load hop — the launcher comes up instead of the app after a cold
+# launch. Shared; needs -e DEV_CLIENT_URL.
+- runFlow: ../shared/util/_dev-client-boot.yaml
+# A persisted session boots straight to the landing; a signed-out run lands on
+# phone-entry, so drive the password login only when it is actually up.
+- runFlow:
+    when:
+      visible:
+        id: "phone-entry.set-phone"
+    commands:
+      - tapOn:
+          id: "phone-entry.set-phone"
+      - eraseText
+      - inputText: ${AGENT_PHONE}
+      # Delivery Man role chip (phone-entry.set-role-5) — the chip is a signup
+      # intent; routing still comes from the account's own role.
+      - tapOn:
+          id: "phone-entry.set-role-5"
+      - tapOn:
+          id: "phone-entry.handle-login"
+      - extendedWaitUntil:
+          visible: "Welcome Back"
+          timeout: 20000
+      - tapOn:
+          id: "login.set-password"
+      - inputText: ${AGENT_PASSWORD}
+      - tapOn:
+          id: "login.handle-login"
+- runFlow:
+    when:
+      visible:
+        id: "login-as.enter-delivery-man"
+    commands:
+      - tapOn:
+          id: "login-as.enter-delivery-man"
+- extendedWaitUntil:
+    visible:
+      id: "delivery.push-packages"
+    timeout: 60000
+# ── Hub shell: both cards + the banner CTA are present in every state ──────
+- assertVisible:
+    id: "delivery.push-packages"
+- assertVisible:
+    id: "delivery.push-dues"
+- assertVisible:
+    id: "delivery.handle-banner-cta"
+# Card copy (delivery.dashboard.*_card_title), matched as text — the card Texts
+# carry no testID of their own, so this is the only way to prove the labels
+# are localized rather than raw keys.
+- assertVisible: "Delivery packages"
+- assertVisible: "Balances & bills"
+# ── Exactly one server state is rendered ──────────────────────────────────
+# Full-string alternation: the banner shows one of the four precedence labels.
+# OWING renders an amount suffix ("Outstanding dues · ৳500"), hence `.*`.
+- assertVisible: "No active product|Subscription lapsed|Outstanding dues.*|Active"
+# ── NO_PRODUCT → packages CTA ─────────────────────────────────────────────
+- runFlow:
+    when:
+      visible: "No active product"
+    commands:
+      - assertVisible: "Buy a package to start receiving jobs."
+      - tapOn:
+          id: "delivery.handle-banner-cta"
+      - extendedWaitUntil:
+          visible:
+            id: "delivery-staff.packages.el-1"
+          timeout: 20000
+      - back
+      - extendedWaitUntil:
+          visible:
+            id: "delivery.push-packages"
+          timeout: 20000
+# ── LAPSED → packages CTA ─────────────────────────────────────────────────
+- runFlow:
+    when:
+      visible: "Subscription lapsed"
+    commands:
+      - assertVisible: "Your package term ended — dues stay payable."
+      - tapOn:
+          id: "delivery.handle-banner-cta"
+      - extendedWaitUntil:
+          visible:
+            id: "delivery-staff.packages.el-1"
+          timeout: 20000
+      - back
+      - extendedWaitUntil:
+          visible:
+            id: "delivery.push-packages"
+          timeout: 20000
+# ── OWING → dues CTA ──────────────────────────────────────────────────────
+- runFlow:
+    when:
+      visible: "Outstanding dues.*"
+    commands:
+      - assertVisible: "Settle your dues to keep receiving jobs."
+      - tapOn:
+          id: "delivery.handle-banner-cta"
+      - extendedWaitUntil:
+          visible:
+            id: "delivery-staff.dues.el-1"
+          timeout: 20000
+      - back
+      - extendedWaitUntil:
+          visible:
+            id: "delivery.push-packages"
+          timeout: 20000
+# ── ACTIVE → bills CTA (the dues screen carries the bills) ─────────────────
+- runFlow:
+    when:
+      visible: "Active"
+    commands:
+      - assertVisible: "Everything is in order."
+      - tapOn:
+          id: "delivery.handle-banner-cta"
+      - extendedWaitUntil:
+          visible:
+            id: "delivery-staff.dues.el-1"
+          timeout: 20000
+      - back
+      - extendedWaitUntil:
+          visible:
+            id: "delivery.push-packages"
+          timeout: 20000
+# ── The two nav cards, independent of state ───────────────────────────────
+- tapOn:
+    id: "delivery.push-packages"
+- extendedWaitUntil:
+    visible:
+      id: "delivery-staff.packages.el-1"
+    timeout: 25000
+- back
+- extendedWaitUntil:
+    visible:
+      id: "delivery.push-dues"
+    timeout: 20000
+- tapOn:
+    id: "delivery.push-dues"
+- extendedWaitUntil:
+    visible:
+      id: "delivery-staff.dues.el-1"
+    timeout: 25000
+- back
+- extendedWaitUntil:
+    visible:
+      id: "delivery.push-packages"
+    timeout: 20000

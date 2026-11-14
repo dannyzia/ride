@@ -1,0 +1,238 @@
+# delivery/05-packages-dues-payment — Batch-2 Item 12: the two monetization
+# DESTINATIONS behind flow 04's hub cards.
+#
+# WHAT THIS COVERS
+#   app/(main)/(delivery-staff)/packages.tsx — the package shelf. Shell
+#   (header + title), the loaded list vs the empty state, and the per-package
+#   "Activate" CTA that starts POST /api/delivery/packages/purchase.
+#
+#   app/(main)/(delivery-staff)/dues.tsx — the statement. Shell, the ONE
+#   server-chosen state label, the two receivable slots (package bill /
+#   commission dues) with their own copy, "Pay all dues" when BOTH slots clear
+#   the ৳10 gateway minimum, and the all-clear / no-product panels.
+#
+# WHY EVERY PANEL IS CONDITIONAL, NOT SEQUENCED
+#   Both screens render from the courier's server-side possession + bill rows
+#   (GET /api/delivery/dues → lib/operatorSettlement.ts; state is chosen BY THE
+#   SERVER, never re-derived on the client). The app cannot switch that from the
+#   UI, so a flow that pinned one shape would fail on every account in another.
+#   This flow therefore proves the shell always, then validates whichever state
+#   is actually rendered. To exercise a specific one, seed it first — the
+#   sanctioned writers are lib/monetizationMode.grantOperatorPackage (possession),
+#   lib/billsLedger.createOpenBill (an open bill → OWING), an expired
+#   operator_packages row (→ LAPSED), no row (→ NO_PRODUCT).
+#
+# MONEY-SAFE BY CONSTRUCTION — READ BEFORE EDITING
+#   Every payable affordance below is asserted, NEVER tapped:
+#     delivery-staff.packages.purchase   → POST …/packages/purchase, which
+#                                          ACTIVATES a package and opens a bill
+#     delivery-staff.dues.pay-package-bill
+#     delivery-staff.dues.pay-commission-dues
+#     delivery-staff.dues.begin-sequence → walks both slots in order
+#   A tap on any of them starts a real PortPos invoice (or a real grant). The
+#   flow stops at "the button exists and reads its localized label". Payment
+#   execution is verified against PaymentWebView + /api/payment/portpos
+#   callbacks, not by a device flow spending the owner's money.
+#
+# WHAT THIS FLOW CANNOT REACH (stated, not skipped silently)
+#   - The activated banner (activated_title / activated_bill / pay_now /
+#     pay_later / go_to_dues) and the purchase-blocked banner (blocked_title /
+#     blocked_body / blocked_go_to_dues) appear ONLY after a purchase attempt
+#     returns OK or dues_outstanding_purchase_blocked. Both need a real
+#     purchase → out of scope for the reasons above.
+#   - The below-minimum note (packages.minimum_note / dues.minimum_note) needs a
+#     sub-৳10 receivable, which no fixture produces deterministically.
+#   - Any actual receipt/handover of money.
+#
+# DEVICE-VERIFIED 2026-11-10 (Pixel 6a, Android 17, Metro 192.168.0.206:8081) in
+# all THREE reachable shapes, each run exit 0, fixture seeded through the
+# sanctioned writers (an insert into `packages` + `operator_packages`, then
+# lib/billsLedger.createOpenBill) and deleted again afterwards:
+#   1. NO_PRODUCT + empty shelf — the empty-state copy branch ran; every payable
+#      branch skipped (nothing is owed); the `go-to-packages-2` CTA was tapped
+#      and popped back correctly.
+#   2. OWING, both slots ≥৳10 — the packages `purchase`/"Activate" branch AND all
+#      three dues branches (package bill, commission dues, Pay all) ran.
+#   3. ACTIVE, nothing payable — the all-clear panel + `go-to-packages` CTA ran.
+# A single run covers whichever of those the account is in; the flow is written
+# so no state can make it assert something that is not rendered for that state.
+#
+# Class: AUTOMATABLE. REQUIRES DEVICE + a `delivery_man` account
+# (AGENT_PHONE / AGENT_PASSWORD) and DEV_CLIENT_URL — no defaults, pass all three
+# with -e (see the load-hop note above). A multi-role account is sent through the
+# login-as chooser; the flow takes the Delivery Man arm when it appears (same
+# login block as delivery/04).
+appId: com.ride.bd
+name: "S12 Delivery - Packages shelf + Dues statement (copy + affordances)"
+tags: [delivery, monetization]
+---
+- stopApp: com.ride.bd
+- launchApp:
+    appId: com.ride.bd
+# ── DEV-BUILD LOAD HOP (shared) ──────────────────────────────────────────
+# stopApp + launchApp leaves this dev client on its own launcher instead of the
+# app; the hop (and the rejected alternatives it replaced) now lives in
+# shared/util/_dev-client-boot.yaml, driven by -e DEV_CLIENT_URL:
+#   -e DEV_CLIENT_URL='ride://expo-development-client/?url=http%3A%2F%2F192.168.0.206%3A8081'
+- runFlow: ../shared/util/_dev-client-boot.yaml
+# The readiness gate stays here: it is THIS flow's first surface, and a shared
+# gate would have to guess between phone-entry and the delivery landing.
+- extendedWaitUntil:
+    visible: ".*Enter your phone number.*|Delivery packages"
+    timeout: 120000
+# A persisted session boots straight to the landing; a signed-out run lands on
+# phone-entry, so drive the password login only when it is actually up.
+- runFlow:
+    when:
+      visible:
+        id: "phone-entry.set-phone"
+    commands:
+      - tapOn:
+          id: "phone-entry.set-phone"
+      - eraseText
+      - inputText: ${AGENT_PHONE}
+      - tapOn:
+          id: "phone-entry.set-role-5"
+      - tapOn:
+          id: "phone-entry.handle-login"
+      - extendedWaitUntil:
+          visible: "Welcome Back"
+          timeout: 20000
+      - tapOn:
+          id: "login.set-password"
+      - inputText: ${AGENT_PASSWORD}
+      - tapOn:
+          id: "login.handle-login"
+- runFlow:
+    when:
+      visible:
+        id: "login-as.enter-delivery-man"
+    commands:
+      - tapOn:
+          id: "login-as.enter-delivery-man"
+- extendedWaitUntil:
+    visible:
+      id: "delivery.push-packages"
+    timeout: 60000
+# ══ PACKAGES ══════════════════════════════════════════════════════════════
+- tapOn:
+    id: "delivery.push-packages"
+- extendedWaitUntil:
+    visible:
+      id: "delivery-staff.packages.el-1"
+    timeout: 25000
+# The catalog is a second fetch (GET /api/delivery/packages), so wait for it to
+# settle before branching — the header renders while the list is still loading.
+- extendedWaitUntil:
+    visible: "Activate|No delivery packages on sale|Retry"
+    timeout: 25000
+# Header title (delivery.packages.title) — proves the copy is localized and is
+# not the raw key.
+- assertVisible: "Delivery packages"
+# ── Loaded shelf: the purchase affordance + its label ─────────────────────
+# NOT tapped: this purchase activates a package and opens a real bill.
+- runFlow:
+    when:
+      visible:
+        id: "delivery-staff.packages.purchase"
+    commands:
+      - assertVisible: "Activate"
+# ── Empty shelf: the empty-state copy ─────────────────────────────────────
+- runFlow:
+    when:
+      visible: "No delivery packages on sale"
+    commands:
+      - assertVisible: "When a new delivery package goes on sale, it will appear here."
+# Back to the hub (packages was pushed from the card, so back pops to it).
+- back
+- extendedWaitUntil:
+    visible:
+      id: "delivery.push-dues"
+    timeout: 20000
+# ══ DUES ══════════════════════════════════════════════════════════════════
+- tapOn:
+    id: "delivery.push-dues"
+- extendedWaitUntil:
+    visible:
+      id: "delivery-staff.dues.el-1"
+    timeout: 25000
+- extendedWaitUntil:
+    visible: "No active product|Subscription lapsed|Outstanding dues.*|Active|Retry"
+    timeout: 25000
+- assertVisible: "Dues & bills"
+# The statement banner's own field label, then exactly one state label from the
+# server's precedence (NO_PRODUCT > LAPSED > OWING > ACTIVE).
+- assertVisible: "Account status"
+- assertVisible: "No active product|Subscription lapsed|Outstanding dues.*|Active"
+# ── NO_PRODUCT: hint + the CTA that opens the shelf ───────────────────────
+- runFlow:
+    when:
+      visible: "No active product"
+    commands:
+      - assertVisible: "Buy a package to start receiving jobs."
+      - tapOn:
+          id: "delivery-staff.dues.go-to-packages-2"
+      - extendedWaitUntil:
+          visible:
+            id: "delivery-staff.packages.el-1"
+          timeout: 25000
+      - back
+      - extendedWaitUntil:
+          visible:
+            id: "delivery-staff.dues.el-1"
+          timeout: 20000
+# ── ACTIVE with nothing payable: the all-clear panel + its CTA ────────────
+- runFlow:
+    when:
+      visible:
+        id: "delivery-staff.dues.go-to-packages"
+    commands:
+      - assertVisible: "Nothing owed — every bill is settled."
+      - tapOn:
+          id: "delivery-staff.dues.go-to-packages"
+      - extendedWaitUntil:
+          visible:
+            id: "delivery-staff.packages.el-1"
+          timeout: 25000
+      - back
+      - extendedWaitUntil:
+          visible:
+            id: "delivery-staff.dues.el-1"
+          timeout: 20000
+# ── Package-bill slot, payable (≥৳10): label, hint, Pay ───────────────────
+# NOT tapped: starts a real PortPos invoice against driver_bills.
+- runFlow:
+    when:
+      visible:
+        id: "delivery-staff.dues.pay-package-bill"
+    commands:
+      - assertVisible: "Package bill"
+      - assertVisible: "The unpaid purchase bill for your current package."
+      - assertVisible: "Pay"
+# ── Commission slot, payable (≥৳10): label, hint, Pay ─────────────────────
+# NOT tapped, same rail.
+- runFlow:
+    when:
+      visible:
+        id: "delivery-staff.dues.pay-commission-dues"
+    commands:
+      - assertVisible: "Commission dues"
+      - assertVisible: "Platform commission accrued from your delivered orders."
+      - assertVisible: "Payable anytime"
+      - assertVisible: "Pay"
+# ── Both slots payable: the sequential "Pay all" walk ─────────────────────
+- runFlow:
+    when:
+      visible:
+        id: "delivery-staff.dues.begin-sequence"
+    commands:
+      - assertVisible: "Pay all dues"
+      - assertVisible: "Pays the package bill first, then commission dues."
+# ══ back to the hub ═══════════════════════════════════════════════════════
+- back
+- extendedWaitUntil:
+    visible:
+      id: "delivery.push-packages"
+    timeout: 20000
+- assertVisible:
+    id: "delivery.push-dues"

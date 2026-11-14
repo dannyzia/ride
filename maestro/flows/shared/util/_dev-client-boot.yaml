@@ -1,0 +1,96 @@
+# ==============================================================================
+# Subflow: dev-client load hop — launcher → JS bundle (shared)
+#
+# WHY THIS EXISTS. Every FLOW that cold-boots the app used to fail before its
+# first real step: after `stopApp` + `launchApp` (and always after a
+# `clearState` launch) this project's Expo DEVELOPMENT BUILD comes up on its own
+# launcher (`com.ride.bd` DevLauncherActivity / the dev menu) instead of the
+# app, so nothing downstream can find a single app testID. Measured 2026-11-10
+# on a Pixel 6a (Android 17, Metro :8081): delivery/05 failed at its first wait
+# until this hop was added, then ran green in three separate states.
+#
+# The shape below is not invented here — it is `shared/auth/_login-rider.yaml`'s
+# hop, lifted verbatim so the twelve cold-boot flows share ONE implementation
+# instead of nine of them having none and two having different ones.
+#
+# Two cheaper shapes were already measured and rejected (do not retry them):
+#   (a) tapping the launcher's "Recently opened" row — the row is often not
+#       rendered when the tap fires, and once tapped it loaded nothing at all
+#       while the identical URL via deep link loaded fine (a stale recents
+#       entry). A flow built on it is a coin flip.
+#   (b) gating on the launcher's own resource-id (`DevLauncherURLToggle`) —
+#       flow-xcheck rejects it, correctly: it belongs to expo-dev-launcher, not
+#       app/ source, so it is absent from maestro/tools/testid-map.json.
+#
+# CONTRACT — the caller supplies the dev-server URL, because only the runner
+# knows whether the device reaches the host as an emulator alias or a LAN IP:
+#   -e DEV_CLIENT_URL='ride://expo-development-client/?url=http%3A%2F%2F192.168.0.206%3A8081'
+# URL-encode the inner URL. On an emulator use the host loopback alias instead:
+#   -e DEV_CLIENT_URL='ride://expo-development-client/?url=http%3A%2F%2F10.0.2.2%3A8081'
+# When the laptop's LAN IP moves (wifi ↔ hotspot) run `node scripts/dev-env-sync.js`
+# (see TEST-SETUP.md) before the run — a stale IP here is the #1 boot failure.
+#
+# WHAT IT DOES NOT DO — and must not: it makes no readiness assertion. The app
+# can boot signed-out (phone-entry / the welcome walkthrough) or signed-in
+# (whatever screen the caller expects), so a gate here would either be wrong or
+# be a coin flip. EVERY caller owns its first wait (`extendedWaitUntil` on its
+# own first element / id) immediately after this subflow. `_login-rider.yaml`
+# additionally waits for the dev menu's "Runtime version" and presses BACK —
+# that stays with that caller, not here.
+#
+# Pacing is load-bearing, not decoration: two rounds cover a launcher poisoned
+# by `pm clear` (the documented post-clear abort bug, device-day runbook §0),
+# and the eight optional asserts pace ~80s/round while the delayed intent, the
+# bundle fetch and the Hermes load run. `assertVisible` takes no timeout prop and
+# `waitForAnimationToEnd` returns instantly on a static screen, so optional
+# asserts on ids that exist in some app states are the pacing primitive. They
+# stay WARNED, never fatal — a mismatch here only means "not that screen yet".
+# ==============================================================================
+appId: com.ride.bd
+name: "util - dev-client load hop (launcher -> JS bundle)"
+tags: [util, boot]
+---
+- repeat:
+    times: 2
+    commands:
+      - openLink: ${DEV_CLIENT_URL}
+      - assertVisible:
+          id: "welcome.replace-phone-entry"
+          optional: true
+      - assertVisible:
+          id: "phone-entry.set-phone"
+          optional: true
+      - assertVisible:
+          id: "customer.home.el-2"
+          optional: true
+      - assertVisible:
+          id: "welcome.replace-phone-entry"
+          optional: true
+      - assertVisible:
+          id: "phone-entry.set-phone"
+          optional: true
+      - assertVisible:
+          id: "customer.home.el-2"
+          optional: true
+      - assertVisible:
+          id: "welcome.replace-phone-entry"
+          optional: true
+      - assertVisible:
+          id: "phone-entry.set-phone"
+          optional: true
+# ── DEV-MENU DISMISSAL ─────────────────────────────────────────────────────
+# The menu pops exactly when a load SUCCEEDS and stays up, covering the app UI,
+# so every caller's first wait would fail on a screen that is actually loaded.
+# Measured 2026-11-10 (Pixel 6a): the fleet flow sat on "Runtime version: 1.0.4 /
+# Connected to http://192.168.0.206:8081" with nothing under it addressable.
+# BACK lands on MainActivity with the app underneath.
+#
+# Conditional on purpose: a warm load can skip the menu entirely, and an
+# unconditional wait would then burn its timeout and fail the run.
+# "Runtime version" is expo-dev-menu's own copy (not app/ source) — one of the
+# five entries in flow-xcheck-suppressions.json.
+- runFlow:
+    when:
+      visible: ".*Runtime version.*"
+    commands:
+      - pressKey: BACK

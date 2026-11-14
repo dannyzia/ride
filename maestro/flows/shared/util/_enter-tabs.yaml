@@ -1,0 +1,44 @@
+# ==============================================================================
+# Subflow: enter the rider tab stack (services hub → (tabs))
+#
+# WHY THIS EXISTS. A signed-in rider now lands on the SERVICES HUB
+# (app/index.tsx:156 → /(main)/(customer)/services-hub), which sits OUTSIDE the
+# (tabs) group. The tab bar — `customer._layout.on-press`, (customer)/(tabs)/_layout.tsx
+# — is therefore NOT rendered on the rider's first screen. Every tab-tapping
+# subflow (_logout, _open-profile-tab, _open-settings-hub, _wallet-topup) assumed
+# it was, which is why they all failed together.
+#
+# MEASURED 2026-11-11 on a Pixel 6a: auth/08-logout, rider/activity/01 and
+# rider/orders/01 each died on
+#   Element not found: Id matching regex: customer._layout.on-press
+# after 168 s, with the services hub visible underneath. Tapping the Bike tile
+# (customer.services-hub.handle-select → router.push("(tabs)/home")) renders the
+# tab bar; the same tile tap is what shared/booking/_select-destination.yaml and
+# the post-login ground in _login-rider.yaml already use, so this adds no new
+# entry path to the suite.
+#
+# CONTRACT. Idempotent and state-tolerant: inside the tab stack it is a no-op,
+# on the services hub it enters the stack, and on neither surface it fails at the
+# final gate rather than pretending to have navigated. Callers own whatever they
+# select once inside (a tab, a row) — this only guarantees the bar exists.
+# Class: AUTOMATABLE.
+# ==============================================================================
+appId: com.ride.bd
+name: "util - enter rider tabs"
+tags: [util, nav]
+---
+- runFlow:
+    when:
+      visible:
+        id: "customer.services-hub.handle-select"
+    commands:
+      - tapOn:
+          id: "customer.services-hub.handle-select"
+      - extendedWaitUntil:
+          visible:
+            id: "customer._layout.on-press"
+          timeout: 25000
+- extendedWaitUntil:
+    visible:
+      id: "customer._layout.on-press"
+    timeout: 25000

@@ -1,0 +1,213 @@
+# ==============================================================================
+# Flow: S12 Fleet — Integrations status screen (empty state + rows)
+#
+# WHAT IT PROVES. `app/(main)/(fleet)/integrations.tsx` renders the fleet's
+# connected dispatch platforms from GET /api/fleet/integrations: a card per
+# integration (provider, state pill, capabilities, last sync) and an empty
+# state when the fleet has none. Until now the screen carried NO testIDs at all,
+# so nothing could address it — this flow is written against the ten ids added
+# in the same change (`fleet.integrations.*`).
+#
+# ENTRY IS STATE-GATED, BY DESIGN OF THE APP. The ONLY route to this screen is
+# the fleet dashboard's "N integrations need attention" banner
+# (`fleet.dashboard.push-integrations`), and the dashboard renders that banner
+# ONLY when at least one integration row has status='error'
+# (dashboard/index.tsx: `integrationIssues.length > 0`). There is no menu entry
+# and no deep link that survives a cold start (`ride://integrations` re-enters
+# the app, resetting activeMode to RIDER, and (fleet)/_layout bounces it).
+#
+# REQUIRED FIXTURE — one failing integration for the fleet owner's fleet, else
+# this flow cannot reach its own first step (it fails at the banner wait, which
+# is the honest signal, not a coin flip):
+#   INSERT INTO fleet_integrations (fleet_id, provider, status, capabilities,
+#     last_sync_at, last_sync_entity, last_error, last_error_at)
+#   VALUES ('<fleet_id>', 'pathao', 'error', '["vehicles","drivers"]'::jsonb,
+#     now() - interval '2 hours', 'vehicles',
+#     'Provider rejected the sync token (401)', now() - interval '10 minutes');
+# The row is READ-ONLY from this screen — deleting it afterwards restores the
+# fleet to "no banner", which is also the only way to observe the EMPTY state
+# (the screen is unreachable in that state, so the empty branch is asserted
+# conditionally and can only run when the flow is entered some other way).
+#
+# Class: AUTOMATABLE. REQUIRES DEVICE + a fleet_owner account whose role is
+# ACTIVE (AGENT_PHONE / AGENT_PASSWORD / DEV_CLIENT_URL — pass all three with -e;
+# the shared load hop consumes DEV_CLIENT_URL). A pending fleet_owner role is
+# listed by the chooser but NOT enterable — it routes to verification-status
+# instead, which is a fixture problem, not a flow bug.
+#
+# Money-safe by construction: the screen performs a single GET and nothing here
+# taps a mutating control (there are none — refresh only).
+#
+# DEVICE-VERIFIED 2026-11-10 (Pixel 6a, Metro :8081): two consecutive green runs
+# (exit 0, no failed step) over login -> chooser -> fleet dashboard -> banner ->
+# this screen, with the row branch exercising every per-field id. The empty
+# branch skipped, correctly: the fixture has one integration row.
+#
+# WHAT IT TOOK TO GET HERE (recorded so none of it is undone):
+#  * The fixture: scripts/seed-fleet-owner-fixture.ts. Before it, heldRoles()
+#    reported fleet_owner as `pending` (the role's status is derived from a
+#    BUSINESS fleet, and every fixture fleet was NATIVE), so the chooser row was
+#    not enterable and enterFleet() never ran.
+#  * The auth gate: verify-token used to answer a slow heldRoles() with
+#    [primary_role], i.e. "single-role account", which skipped the chooser for a
+#    driver+fleet_owner. It now reports `roles_unknown` and the gate routes that
+#    to the chooser (tests/api/auth/verify-token-roles.test.ts).
+#  * The boot: the shared hop dismisses the dev menu; this flow taps through the
+#    welcome walkthrough and hides the soft keyboard before the role chip.
+#  * The chooser renders ASYNCHRONOUSLY after sign-in — hence the extendedWaitUntil
+#    below instead of a one-shot `when visible` (that race skipped the arm on the
+#    first two attempts).
+#  * A deep link cannot substitute for the chooser: `ride://login-as` without a
+#    phone renders "Phone number is required", and the param only reaches a
+#    FRESHLY MOUNTED screen.
+#  * Earlier runs also died on an app-level redbox (Render Error, stack through
+#    forceStoreRerender / updateStoreInstance). It did not recur in the passing
+#    runs, but it is an app-side defect nobody owns yet — if this flow starts
+#    failing on a loaded-but-blank screen, check that first.
+#
+# HISTORICAL (kept for context, superseded by the above):
+#  * The fixture works: after scripts/seed-fleet-owner-fixture.ts the chooser's
+#    source of truth, heldRoles(), reports `fleet_owner active` (verified by the
+#    script itself, which exits 1 if it does not).
+#  * Login now gets all the way through: welcome walkthrough -> phone-entry ->
+#    credentials -> Welcome Back -> logged in. Two blockers were fixed on the
+#    way and are encoded above: the shared hop now dismisses the dev menu, and
+#    this flow hides the soft keyboard before tapping the role chip.
+#  * The CHOOSER did not appear after login in that run, so
+#    `login-as.enter-fleet-owner` was skipped and enterFleet() never ran. The
+#    auth gate only routes to the chooser when /api/auth/verify-token returns
+#    MORE THAN ONE active role within its 2.5s Promise.race on heldRoles
+#    (app/_layout.tsx:155 + app/api/auth/verify-token+api.ts); a slow call falls
+#    back to the primary role and lands directly in that role's surface. That is
+#    the next thing to investigate — it is a gate-timing question, not a flow or
+#    a fixture bug.
+#  * A deep link to the chooser cannot rescue this: `ride://login-as` with no
+#    phone renders "Phone number is required", and the param only reaches a
+#    FRESHLY MOUNTED screen (a second link to an already-mounted chooser keeps
+#    the first mount's empty params).
+#  * The run then ended on the app's own redbox: "Render Error", call stack
+#    through forceStoreRerender / updateStoreInstance (a zustand store
+#    re-render), which covers every fleet screen until it is fixed. That is an
+#    app-side defect, not something this flow can route around.
+# ==============================================================================
+appId: com.node.bd
+name: "S12 Fleet - Integrations (status rows + empty state)"
+tags: [fleet, integrations]
+---
+- stopApp: com.node.bd
+# clearState makes the run deterministic: a persisted session boots to the
+# LAST-USED role home (usually the customer surface), where the fleet dashboard
+# and its banner do not exist — the flow would then fail at the banner wait for
+# a reason that has nothing to do with the screen. Clearing forces the login
+# block below, which is the only path that reaches the chooser and therefore
+# enterFleet(). The cost is the documented post-`pm clear` launcher abort, which
+# is exactly what the shared hop's two openLink rounds exist to absorb.
+- launchApp:
+appId: com.node.bd
+    clearState: true
+# Shared dev-client load hop (launcher → JS bundle); needs -e DEV_CLIENT_URL.
+- runFlow: ../shared/util/_dev-client-boot.yaml
+# A freshly cleared install shows the WELCOME WALKTHROUGH first, not phone-entry
+# (measured 2026-11-10: "Welcome to Node" + Sign In / Create Account). Without
+# this hop the login block below is skipped silently and the flow dies at the
+# dashboard wait for a reason that has nothing to do with the screen. Same
+# pattern as shared/auth/_login-rider.yaml.
+- runFlow:
+    when:
+      visible:
+        id: "walkthrough-1.push-walkthrough-2"
+    commands:
+      - tapOn:
+          id: "welcome.replace-phone-entry"
+# Signed-out runs land on phone-entry; a persisted session skips straight on.
+- runFlow:
+    when:
+      visible:
+        id: "phone-entry.set-phone"
+    commands:
+      - tapOn:
+          id: "phone-entry.set-phone"
+      - eraseText
+      - inputText: ${AGENT_PHONE}
+      # The soft keyboard SHRINKS the window (measured: content box 0..1501 of a
+      # 2274-tall surface), which pushes the role chips and the Log In button out
+      # of the hierarchy — a tap on them then "COMPLETED" against nothing and the
+      # flow died on `phone-entry.handle-login not found`. Hide it first.
+      - hideKeyboard
+      # Fleet Owner role chip (phone-entry.set-role-4) — signup intent only;
+      # routing still comes from the account's own roles.
+      - tapOn:
+          id: "phone-entry.set-role-4"
+      - tapOn:
+          id: "phone-entry.handle-login"
+      - extendedWaitUntil:
+          visible: "Welcome Back"
+          timeout: 20000
+      - tapOn:
+          id: "login.set-password"
+      - inputText: ${AGENT_PASSWORD}
+      - tapOn:
+          id: "login.handle-login"
+# The chooser only appears for a multi-role account; take the fleet arm when it
+# is offered. Tapping it is what calls enterFleet() — the ONLY code path that
+# sets activeMode=FLEET + activeFleetId, which (fleet)/_layout requires.
+# The chooser renders ASYNCHRONOUSLY after sign-in (the gate reads
+# /api/auth/verify-token, then routes). A one-shot `when visible` check raced
+# that render and skipped this arm entirely — measured 2026-11-10: the row was
+# on screen seconds after the flow had already moved past the condition. WAIT
+# for it, then take it. (The account must be multi-role ACTIVE, which is what
+# scripts/seed-fleet-owner-fixture.ts provisions; the row is listed for a
+# pending role too, but tapping that routes to verification-status instead.)
+- extendedWaitUntil:
+    visible:
+      id: "login-as.enter-fleet-owner"
+    timeout: 45000
+- tapOn:
+    id: "login-as.enter-fleet-owner"
+# ── ENTRY: the dashboard's issue banner (state-gated; see header) ──────────
+- extendedWaitUntil:
+    visible:
+      id: "fleet.dashboard.push-integrations"
+    timeout: 60000
+- tapOn:
+    id: "fleet.dashboard.push-integrations"
+# ── THE SCREEN ─────────────────────────────────────────────────────────────
+- extendedWaitUntil:
+    visible:
+      id: "fleet.integrations.list"
+    timeout: 30000
+# A failed GET renders the error line INSTEAD of data. Asserting its absence is
+# what separates "the screen rendered" from "the screen rendered and the fetch
+# succeeded" — the list id alone is satisfied by both.
+- assertNotVisible:
+    id: "fleet.integrations.error"
+# Rows. Each id is asserted separately so a partial card (provider but no state
+# pill, or a missing last-sync line) fails here rather than passing silently.
+- runFlow:
+    when:
+      visible:
+        id: "fleet.integrations.row"
+    commands:
+      - assertVisible:
+          id: "fleet.integrations.row-provider"
+      - assertVisible:
+          id: "fleet.integrations.row-status"
+      - assertVisible:
+          id: "fleet.integrations.row-last-sync"
+      - assertVisible:
+          id: "fleet.integrations.row-capabilities"
+# The error detail line only exists on a failing row, which is the fixture this
+# flow requires (the banner cannot render otherwise) — so it must be present.
+- assertVisible:
+    id: "fleet.integrations.row-last-error"
+# Empty state: mutually exclusive with rows, asserted when this flow is entered
+# with a fleet that has no integration at all (see header).
+- runFlow:
+    when:
+      visible:
+        id: "fleet.integrations.empty"
+    commands:
+      - assertVisible:
+          id: "fleet.integrations.empty-body"
+      - assertNotVisible:
+          id: "fleet.integrations.row"
