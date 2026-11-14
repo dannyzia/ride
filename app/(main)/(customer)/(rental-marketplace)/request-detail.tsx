@@ -20,12 +20,12 @@ import { useIsDark } from "@/lib/useAppearance";
 import { colors } from "@/theme/goRide";
 import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
+import { API_URL } from "@/lib/config";
 import { useTranslation } from "react-i18next";
 import CargoSummary from "./_components/CargoSummary";
 import { describeVehicleType } from "@/constants/truckCatalog";
 import { formatBDT } from "@/lib/format";
 
-const SERVER_URL = process.env.EXPO_PUBLIC_SERVER_URL ?? "http://localhost:8080";
 
 const RANK_COLORS: Record<string, string> = {
   Best: "#31B86A",
@@ -106,7 +106,7 @@ export default function RequestDetailScreen() {
       const token = session?.access_token;
       if (!token) return;
 
-      const res = await fetch(`${SERVER_URL}/api/rental/requests/${id}`, {
+      const res = await fetch(`${API_URL}/api/rental/requests/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.ok) {
@@ -141,7 +141,7 @@ export default function RequestDetailScreen() {
       const token = session?.access_token;
       if (!token) return;
 
-      const res = await fetch(`${SERVER_URL}/api/rental/requests/${id}/accept-bid`, {
+      const res = await fetch(`${API_URL}/api/rental/requests/${id}/accept-bid`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

@@ -22,10 +22,10 @@ import { useIsDark } from "@/lib/useAppearance";
 import { colors } from "@/theme/goRide";
 import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
+import { API_URL } from "@/lib/config";
 import { formatBDT } from "@/lib/format";
 import { useTranslation } from "react-i18next";
 
-const SERVER_URL = process.env.EXPO_PUBLIC_SERVER_URL ?? "http://localhost:8080";
 
 const STATUS_COLORS: Record<string, string> = {
   broadcasting: "#3B82F6",
@@ -108,7 +108,7 @@ export default function BidderRequestsScreen() {
 
       // Fleet discovery feed — eligible open requests for caller's qualifying fleets
       const res = await fetch(
-        `${SERVER_URL}/api/rental/requests/broadcasts?page=${pageNum}`,
+        `${API_URL}/api/rental/requests/broadcasts?page=${pageNum}`,
         { headers: { Authorization: `Bearer ${token}` } },
       );
       if (!res.ok) {

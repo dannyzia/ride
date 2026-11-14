@@ -174,10 +174,6 @@
       "reason": "Surfaced 2026-10-05 when the dead-copy extractor was widened to block-style text: matchers (this claim was unchecked before). Truck tonnage chip label (asserted as .*ton.*), maestro/flows/marketplace/v5-truck/01-catalog-picker-request.yaml. Owner ruling 2026-10-05: catalog/data labels are baselined, not force-wired to t(). DELETE this entry if the label is ever moved to a t() locale key - the baseline is a ratchet and must only ever shrink."
     },
     {
-      "lit": "furniture",
-      "reason": "Surfaced 2026-10-05 when the dead-copy extractor was widened to block-style text: matchers (this claim was unchecked before). Truck cargo-type chip label (asserted as .*Furniture.*|.*Goods.*|.*cargo chip.*; hit candidate is furniture), maestro/flows/marketplace/v5-truck/01-catalog-picker-request.yaml. Owner ruling 2026-10-05: catalog/data labels are baselined, not force-wired to t(). DELETE this entry if the label is ever moved to a t() locale key - the baseline is a ratchet and must only ever shrink."
-    },
-    {
       "lit": "bls",
       "reason": "Surfaced 2026-10-05 when the dead-copy extractor was widened to block-style text: matchers (this claim was unchecked before). Ambulance-class chip label (asserted as .*BLS.*|.*Basic.*), maestro/flows/marketplace/v7-ambulance/02-scheduled-ambulance.yaml. Owner ruling 2026-10-05: catalog/data labels are baselined, not force-wired to t(). DELETE this entry if the label is ever moved to a t() locale key - the baseline is a ratchet and must only ever shrink."
     }

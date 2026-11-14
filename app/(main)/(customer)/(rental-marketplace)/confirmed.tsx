@@ -20,9 +20,9 @@ import { colors } from "@/theme/goRide";
 import { useRentalStore } from "@/store/useRentalStore";
 import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
+import { API_URL } from "@/lib/config";
 import { useTranslation } from "react-i18next";
 
-const SERVER_URL = process.env.EXPO_PUBLIC_SERVER_URL ?? "http://localhost:8080";
 
 export default function RentalConfirmedScreen() {
   const { t } = useTranslation();
@@ -43,7 +43,7 @@ export default function RentalConfirmedScreen() {
       if (!token) return;
 
       const res = await fetch(
-        `${SERVER_URL}/api/rental/requests/${activeRequest.id}`,
+        `${API_URL}/api/rental/requests/${activeRequest.id}`,
         { headers: { Authorization: `Bearer ${token}` } },
       );
       if (res.ok) {

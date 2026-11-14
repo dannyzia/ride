@@ -26,10 +26,10 @@ import { useIsDark } from "@/lib/useAppearance";
 import { colors } from "@/theme/goRide";
 import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
+import { API_URL } from "@/lib/config";
 import { useTranslation } from "react-i18next";
 import { describeVehicleType } from "@/constants/truckCatalog";
 
-const SERVER_URL = process.env.EXPO_PUBLIC_SERVER_URL ?? "http://localhost:8080";
 
 /** Vehicle types available for bidding, grouped by category. */
 const CAR_VEHICLE_TYPES = [
@@ -107,7 +107,7 @@ export default function BidSubmitScreen() {
         const token = session?.access_token;
         if (!token) return;
 
-        const res = await fetch(`${SERVER_URL}/api/rental/requests/${requestId}`, {
+        const res = await fetch(`${API_URL}/api/rental/requests/${requestId}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (res.ok) {
@@ -165,7 +165,7 @@ export default function BidSubmitScreen() {
       // (this is handled on the assignment screen after the bid is accepted)
       // For non-tracking: just the price + vehicle type
 
-      const res = await fetch(`${SERVER_URL}/api/rental/bids`, {
+      const res = await fetch(`${API_URL}/api/rental/bids`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

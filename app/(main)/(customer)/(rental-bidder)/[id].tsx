@@ -21,9 +21,9 @@ import { useIsDark } from "@/lib/useAppearance";
 import { colors } from "@/theme/goRide";
 import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
+import { API_URL } from "@/lib/config";
 import { useTranslation } from "react-i18next";
 
-const SERVER_URL = process.env.EXPO_PUBLIC_SERVER_URL ?? "http://localhost:8080";
 const SLA_MINUTES = 5;
 
 interface Assignment {
@@ -83,7 +83,7 @@ export default function AssignmentDetailScreen() {
       if (!token) return;
 
       // Fetch assignment detail
-      const assignRes = await fetch(`${SERVER_URL}/api/rental/assignments/${id}`, {
+      const assignRes = await fetch(`${API_URL}/api/rental/assignments/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (assignRes.ok) {
@@ -94,7 +94,7 @@ export default function AssignmentDetailScreen() {
       // Fetch fleet drivers and vehicles (need fleet_id from assignment)
       if (assignment?.fleet_id) {
         const driversRes = await fetch(
-          `${SERVER_URL}/api/fleet/${assignment.fleet_id}/drivers`,
+          `${API_URL}/api/fleet/${assignment.fleet_id}/drivers`,
           { headers: { Authorization: `Bearer ${token}` } },
         );
         if (driversRes.ok) {
@@ -103,7 +103,7 @@ export default function AssignmentDetailScreen() {
         }
 
         const vehiclesRes = await fetch(
-          `${SERVER_URL}/api/fleet/${assignment.fleet_id}/vehicles`,
+          `${API_URL}/api/fleet/${assignment.fleet_id}/vehicles`,
           { headers: { Authorization: `Bearer ${token}` } },
         );
         if (vehiclesRes.ok) {
@@ -141,7 +141,7 @@ export default function AssignmentDetailScreen() {
       const token = session?.access_token;
       if (!token) return;
 
-      const res = await fetch(`${SERVER_URL}/api/rental/assignments/${id}/pick`, {
+      const res = await fetch(`${API_URL}/api/rental/assignments/${id}/pick`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -185,7 +185,7 @@ export default function AssignmentDetailScreen() {
             if (!token) return;
 
             // Use the bid withdraw endpoint
-            const res = await fetch(`${SERVER_URL}/api/rental/bids/${assignment?.bid_id}/withdraw`, {
+            const res = await fetch(`${API_URL}/api/rental/bids/${assignment?.bid_id}/withdraw`, {
               method: "POST",
               headers: {
                 "Content-Type": "application/json",

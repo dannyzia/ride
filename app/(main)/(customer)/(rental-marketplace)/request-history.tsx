@@ -19,9 +19,9 @@ import { useIsDark } from "@/lib/useAppearance";
 import { colors } from "@/theme/goRide";
 import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
+import { API_URL } from "@/lib/config";
 import { useTranslation } from "react-i18next";
 
-const SERVER_URL = process.env.EXPO_PUBLIC_SERVER_URL ?? "http://localhost:8080";
 
 const STATUS_COLORS: Record<string, string> = {
   broadcasting: "#3B82F6",
@@ -70,7 +70,7 @@ export default function RequestHistoryScreen() {
       const token = session?.access_token;
       if (!token) return;
 
-      const res = await fetch(`${SERVER_URL}/api/rental/requests/history`, {
+      const res = await fetch(`${API_URL}/api/rental/requests/history`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.ok) {

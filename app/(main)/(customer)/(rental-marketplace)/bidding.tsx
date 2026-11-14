@@ -19,12 +19,12 @@ import { colors } from "@/theme/goRide";
 import { useRentalStore } from "@/store/useRentalStore";
 import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
+import { API_URL } from "@/lib/config";
 import { useTranslation } from "react-i18next";
 import { describeVehicleType } from "@/constants/truckCatalog";
 import CargoSummary from "./_components/CargoSummary";
 import { formatBDT } from "@/lib/format";
 
-const SERVER_URL = process.env.EXPO_PUBLIC_SERVER_URL ?? "http://localhost:8080";
 
 const RANK_COLORS: Record<string, string> = {
   Best: "#31B86A",
@@ -65,7 +65,7 @@ const fetchBids = useCallback(async () => {
        if (!token) return;
 
        const res = await fetch(
-         `${SERVER_URL}/api/rental/requests/${activeRequest.id}`,
+         `${API_URL}/api/rental/requests/${activeRequest.id}`,
          { headers: { Authorization: `Bearer ${token}` } },
        );
        if (!res.ok) return;
@@ -98,7 +98,7 @@ const fetchBids = useCallback(async () => {
       if (!token) return;
 
       const res = await fetch(
-        `${SERVER_URL}/api/rental/requests/${activeRequest.id}/accept-bid`,
+        `${API_URL}/api/rental/requests/${activeRequest.id}/accept-bid`,
         {
           method: "POST",
           headers: {

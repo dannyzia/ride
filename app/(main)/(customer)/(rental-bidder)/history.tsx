@@ -20,10 +20,10 @@ import { useIsDark } from "@/lib/useAppearance";
 import { colors } from "@/theme/goRide";
 import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
+import { API_URL } from "@/lib/config";
 import { useTranslation } from "react-i18next";
 import { formatBDT } from "@/lib/format";
 
-const SERVER_URL = process.env.EXPO_PUBLIC_SERVER_URL ?? "http://localhost:8080";
 
 const STATUS_COLORS: Record<string, string> = {
   won: "#31B86A",
@@ -64,7 +64,7 @@ export default function BidHistoryScreen() {
       const token = session?.access_token;
       if (!token) return;
 
-      const res = await fetch(`${SERVER_URL}/api/rental/bids/history`, {
+      const res = await fetch(`${API_URL}/api/rental/bids/history`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.ok) {

@@ -27,6 +27,16 @@
       "reason": "truckCatalog labelBn — the Bengali alternate of the same Freight tab, asserted together with the EN label. Also seed/catalog data, not t() copy."
     },
     {
+      "match": "furniture",
+      "category": "external-data",
+      "reason": "truckCatalog cargo-type chip label (CARGO_TYPE_CHIPS 'Furniture/Household') and cargoHint text, rendered via label={opt} from catalog constants in marketplace/v5-truck (asserted as \".*Furniture.*|.*Goods.*|.*cargo chip.*\"). Catalog data per the 2026-10-05 owner ruling — baselined, not force-wired to t(). The old locale-side rescue (rental_marketplace.truck_entry_body) was purged with the ISSUE-117 rental split; this entry replaces that rescue."
+    },
+    {
+      "match": "goods",
+      "category": "external-data",
+      "reason": "truckCatalog cargoHint text ('Cargo goods, furniture, hardware') asserted together with the furniture chip label in marketplace/v5-truck. Also seed/catalog data, not t() copy."
+    },
+    {
       "match": "runtime version",
       "category": "device-dependent",
       "reason": "Expo dev-launcher screen during the DEV-BUILD LOAD HOP (auth/_login-rider, measured 2026-10-07): the native launcher renders the update's runtime version while resolving the dev bundle. Rendered by expo-dev-launcher, never by app source or locale files."

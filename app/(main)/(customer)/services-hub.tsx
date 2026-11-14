@@ -235,6 +235,9 @@ export default function ServicesHub() {
             </Text>
           </TouchableOpacity>
 
+          {/* ISSUE-117: three separate rental entries, each opening its own
+              dedicated screen (was: one Rental tile → single category-tab
+              form). testIDs derive from the router.push target leaf. */}
           <TouchableOpacity
             className="rounded-2xl p-5 items-center"
             style={{
@@ -243,20 +246,82 @@ export default function ServicesHub() {
               borderWidth: 1,
               borderColor: borderColor,
             }}
-            onPress={() => router.push("/(main)/(customer)/(rental-marketplace)")}
+            onPress={() => router.push("/(main)/(customer)/(rental-marketplace)/car")}
             activeOpacity={0.8}
-           testID="customer.services-hub.push-rental-marketplace">
+           testID="customer.services-hub.push-car">
             <View
               className="w-14 h-14 rounded-full items-center justify-center mb-3"
-              style={{ backgroundColor: colors.amber + "18" }}
+              style={{ backgroundColor: colors.primary + "18" }}
             >
-              <Ionicons name="car-sport" size={28} color={colors.amber} />
+              <Ionicons name="car-sport" size={28} color={colors.primary} />
             </View>
             <Text
               className="text-base font-JakartaBold"
               style={{ color: textPrimary }}
             >
-              {t("services_hub.rental")}
+              {t("rental_marketplace.cat_car")}
+            </Text>
+            <Text
+              className="text-xs font-Jakarta mt-1 text-center"
+              style={{ color: textSecondary }}
+            >
+              {t("services_hub.rental_subtitle")}
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            className="rounded-2xl p-5 items-center"
+            style={{
+              width: "48%",
+              backgroundColor: surfaceBg,
+              borderWidth: 1,
+              borderColor: borderColor,
+            }}
+            onPress={() => router.push("/(main)/(customer)/(rental-marketplace)/truck")}
+            activeOpacity={0.8}
+           testID="customer.services-hub.push-truck">
+            <View
+              className="w-14 h-14 rounded-full items-center justify-center mb-3"
+              style={{ backgroundColor: colors.blue + "18" }}
+            >
+              <Ionicons name="bus" size={28} color={colors.blue} />
+            </View>
+            <Text
+              className="text-base font-JakartaBold"
+              style={{ color: textPrimary }}
+            >
+              {t("rental_marketplace.cat_truck")}
+            </Text>
+            <Text
+              className="text-xs font-Jakarta mt-1 text-center"
+              style={{ color: textSecondary }}
+            >
+              {t("services_hub.rental_subtitle")}
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            className="rounded-2xl p-5 items-center"
+            style={{
+              width: "48%",
+              backgroundColor: surfaceBg,
+              borderWidth: 1,
+              borderColor: borderColor,
+            }}
+            onPress={() => router.push("/(main)/(customer)/(rental-marketplace)/ambulance")}
+            activeOpacity={0.8}
+           testID="customer.services-hub.push-ambulance">
+            <View
+              className="w-14 h-14 rounded-full items-center justify-center mb-3"
+              style={{ backgroundColor: colors.danger + "18" }}
+            >
+              <Ionicons name="medkit" size={28} color={colors.danger} />
+            </View>
+            <Text
+              className="text-base font-JakartaBold"
+              style={{ color: textPrimary }}
+            >
+              {t("rental_marketplace.title_ambulance")}
             </Text>
             <Text
               className="text-xs font-Jakarta mt-1 text-center"

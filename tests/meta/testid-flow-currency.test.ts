@@ -190,7 +190,22 @@ describe("testid-flow-currency: live repo selector set (TRAP 1 regression guard)
     // flow's only selection of welcome.replace-phone-entry; the testID itself
     // still exists in welcome.tsx (dormant file, hide-never-delete) but is no
     // longer flow-selected. Net −1, rename-free; exact assertion unchanged.
-    expect(gate.flowSelectors().size).toBe(174);
+    // 2026-11-14 (ISSUE-117 rental split): re-pinned 174 -> 204 (MEASURED with
+    // the flow edits staged). TWO components, disclosed separately:
+    // (a) 174 was STALE AT HEAD — the merged tip (1d6b4bb2 WIP merge lineage,
+    // 0e9e0314) landed new/rewired flows (dev-client-boot family, v6-delivery,
+    // fleet lane) that moved the committed selector set 174 -> 202 without
+    // re-pinning. Proven pre-existing, not a side effect of this task:
+    // flowSelectors() reads `git grep --cached` and the 202 measurement was
+    // taken BEFORE any flow file was staged (index = HEAD, working-tree flow
+    // edits invisible to it).
+    // (b) This task's flow rewires contribute +2 on top: the old
+    // rental-marketplace set-start-mode / handle-submit ids are replaced
+    // one-for-one by the _components/RentalRequestForm-prefixed ids (net 0),
+    // and the new services-hub rental tiles add push-car + push-truck (+2;
+    // push-ambulance is selected by no flow yet). Exact assertion unchanged;
+    // the canary keeps its force.
+    expect(gate.flowSelectors().size).toBe(204);
   });
 });
 

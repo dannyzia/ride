@@ -1,5 +1,5 @@
 {
-  "total": 1404,
+  "total": 1410,
   "screens": {
     "(auth)/_layout.tsx": [
       {
@@ -563,6 +563,72 @@
         "line": 442
       }
     ],
+    "(main)/(customer)/(rental-marketplace)/_components/RentalRequestForm.tsx": [
+      {
+        "id": "customer.rental-marketplace._components.RentalRequestForm.on-press",
+        "line": 90
+      },
+      {
+        "id": "customer.rental-marketplace._components.RentalRequestForm.set-cargo-weight",
+        "line": 458
+      },
+      {
+        "id": "customer.rental-marketplace._components.RentalRequestForm.set-cargo-volume",
+        "line": 480
+      },
+      {
+        "id": "customer.rental-marketplace._components.RentalRequestForm.set-cargo-description",
+        "line": 506
+      },
+      {
+        "id": "customer.rental-marketplace._components.RentalRequestForm.set-service-level",
+        "line": 538
+      },
+      {
+        "id": "customer.rental-marketplace._components.RentalRequestForm.set-requires-paramedic",
+        "line": 562
+      },
+      {
+        "id": "customer.rental-marketplace._components.RentalRequestForm.set-patient-condition",
+        "line": 595
+      },
+      {
+        "id": "customer.rental-marketplace._components.RentalRequestForm.set-start-mode",
+        "line": 624
+      },
+      {
+        "id": "customer.rental-marketplace._components.RentalRequestForm.el-1",
+        "line": 693
+      },
+      {
+        "id": "customer.rental-marketplace._components.RentalRequestForm.set-selected-car-class",
+        "line": 756
+      },
+      {
+        "id": "customer.rental-marketplace._components.RentalRequestForm.open-pickup-picker",
+        "line": 811
+      },
+      {
+        "id": "customer.rental-marketplace._components.RentalRequestForm.open-dropoff-picker",
+        "line": 840
+      },
+      {
+        "id": "customer.rental-marketplace._components.RentalRequestForm.set-tracking-required",
+        "line": 869
+      },
+      {
+        "id": "customer.rental-marketplace._components.RentalRequestForm.handle-submit",
+        "line": 898
+      },
+      {
+        "id": "customer.rental-marketplace._components.RentalRequestForm.close-picker",
+        "line": 917
+      },
+      {
+        "id": "customer.rental-marketplace._components.RentalRequestForm.confirm-picked",
+        "line": 974
+      }
+    ],
     "(main)/(customer)/(rental-marketplace)/_components/TruckPicker.tsx": [
       {
         "id": "customer.rental-marketplace._components.TruckPicker.set-active-tab-id",
@@ -599,68 +665,20 @@
     ],
     "(main)/(customer)/(rental-marketplace)/index.tsx": [
       {
-        "id": "customer.rental-marketplace.on-press",
-        "line": 78
-      },
-      {
-        "id": "customer.rental-marketplace.set-cargo-weight",
-        "line": 362
-      },
-      {
-        "id": "customer.rental-marketplace.set-cargo-volume",
-        "line": 384
-      },
-      {
-        "id": "customer.rental-marketplace.set-cargo-description",
-        "line": 410
-      },
-      {
-        "id": "customer.rental-marketplace.set-service-level",
-        "line": 442
-      },
-      {
-        "id": "customer.rental-marketplace.set-requires-paramedic",
-        "line": 466
-      },
-      {
-        "id": "customer.rental-marketplace.set-patient-condition",
-        "line": 499
-      },
-      {
-        "id": "customer.rental-marketplace.set-start-mode",
-        "line": 528
-      },
-      {
         "id": "customer.rental-marketplace.el-1",
-        "line": 597
+        "line": 48
       },
       {
-        "id": "customer.rental-marketplace.enter-truck-mode",
-        "line": 670
+        "id": "customer.rental-marketplace.push-car",
+        "line": 72
       },
       {
-        "id": "customer.rental-marketplace.set-category",
-        "line": 714
+        "id": "customer.rental-marketplace.push-truck",
+        "line": 112
       },
       {
-        "id": "customer.rental-marketplace.set-selected-car-class",
-        "line": 773
-      },
-      {
-        "id": "customer.rental-marketplace.set-pickup-address",
-        "line": 837
-      },
-      {
-        "id": "customer.rental-marketplace.set-dropoff-address",
-        "line": 858
-      },
-      {
-        "id": "customer.rental-marketplace.set-tracking-required",
-        "line": 873
-      },
-      {
-        "id": "customer.rental-marketplace.handle-submit",
-        "line": 902
+        "id": "customer.rental-marketplace.push-ambulance",
+        "line": 152
       }
     ],
     "(main)/(customer)/(rental-marketplace)/request-detail.tsx": [
@@ -2335,20 +2353,28 @@
         "line": 217
       },
       {
-        "id": "customer.services-hub.push-rental-marketplace",
-        "line": 248
+        "id": "customer.services-hub.push-car",
+        "line": 251
+      },
+      {
+        "id": "customer.services-hub.push-truck",
+        "line": 282
+      },
+      {
+        "id": "customer.services-hub.push-ambulance",
+        "line": 313
       },
       {
         "id": "customer.services-hub.el-1",
-        "line": 302
+        "line": 367
       },
       {
         "id": "customer.services-hub.push-parcel",
-        "line": 332
+        "line": 397
       },
       {
         "id": "customer.services-hub.push-emergency",
-        "line": 366
+        "line": 431
       }
     ],
     "(main)/(customer)/user-arrived/index.tsx": [

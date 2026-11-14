@@ -3,9 +3,10 @@
 # Contract: §B.1 demotion on ack-SLA expiry; re-select is a customer-side UI action.
 # COUNTERPART-API call: none for the demotion itself — scheduler job enforces it
 # server-side; the flow waits past the SLA window and asserts the re-select surface.
-# Gate 1 REWIRE: home chip / NOW chip / submit / accept = semantic IDs (see
-# v2-rental/01 for derivation). Re-select affordance stays TEXT (demotion-state
-# surface, label state-dependent).
+# Gate 1 REWIRE: services-hub car tile / NOW chip / submit / accept = semantic IDs
+# (see v2-rental/01 for derivation; ISSUE-117 split — form lives in
+# _components/RentalRequestForm on the dedicated car screen). Re-select
+# affordance stays TEXT (demotion-state surface, label state-dependent).
 # Class: AUTOMATABLE + COUNTERPART-API (bid). BLOCKED until roster fixtures land.
 appId: com.node.bd
 name: "V2 Rental - Demote and Reselect"
@@ -18,15 +19,13 @@ tags: [marketplace, v2-rental, counterpart-api, negative]
     commands:
       - runFlow: ../../shared/auth/_login-rider.yaml
 - tapOn:
-    id: "customer.home.set-selected-category"
-    text: ".*Rental.*"
-- tapOn: ".*Request.*|.*New.*"
+    id: "customer.services-hub.push-car"
 - tapOn:
-    id: "customer.rental-marketplace.set-start-mode"
+    id: "customer.rental-marketplace._components.RentalRequestForm.set-start-mode"
     text: ".*Now.*"
     optional: true
 - tapOn:
-    id: "customer.rental-marketplace.handle-submit"
+    id: "customer.rental-marketplace._components.RentalRequestForm.handle-submit"
 - runFlow:
     env:
       FLEET_PHONE: "8801700000101"
