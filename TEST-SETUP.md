@@ -48,7 +48,15 @@ cd utils-server; npm run dev          # expect: "[ws] dispatch server listening 
 # 2. Metro (port 8081) — MUST start AFTER env sync (env inlined at bundle time)
 cd ..; npx expo start --port 8081
 
-# 3. Device
+# 3. MANDATORY: warm the dev endpoints (ISSUE-113)
+# Metro's manifest endpoint answers in ~64-105s COLD and the JS bundle ~103s
+# cold (19 MB) — both exceed the dev-client's ~10-30s OkHttp timeout, so the
+# FIRST dev-client load aborts before the app boots. After warm-up:
+# manifest ~2.7s steady, bundle ~0.4s.
+node scripts/warm-dev-endpoints.cjs
+# expect: "endpoints warm — the dev-client can load within its OkHttp budget"
+
+# 4. Device
 adb devices                           # expect the phone, e.g. "9a76528e  device"
 adb shell ip addr show wlan0          # phone IP must be on the SAME subnet as the laptop
 
@@ -84,6 +92,7 @@ to `:8081`.
 | Splash + "↻ Retry" button | `.env.local` had `localhost` — on-device that's the PHONE, not the laptop | `dev-env-sync.js` + restart Metro + relaunch app |
 | Fully black screen after force-stop+relaunch | `EXPO_PUBLIC_DEV_LAN_IP` still pointed at the OLD network's IP (172.27.88.148 while on broadband) — DevLauncher can't fetch a bundle | same: sync → restart Metro → relaunch |
 | `am start … node://…` → "unable to resolve Intent" | APK predates the `node` scheme (build-time intent-filter) | rebuild dev client (`npx expo run:android`), reinstall |
+| Dev client shows "request timed out"/load spinner, then aborts — the app never boots | Metro's manifest endpoint answers in ~64-105s COLD and the JS bundle ~103s cold (19 MB) — both exceed the dev-client's ~10-30s OkHttp timeout (measured 2026-11-13, ISSUE-113; Metro was freshly started) | run `node scripts/warm-dev-endpoints.cjs` (§2 step 3) until "endpoints warm", THEN launch the dev client; warm state: manifest ~2.7s, bundle ~0.4s |
 | Metro "Bundler cache is empty, rebuilding… (a minute)" | started with `--clear` | wait ~80s for 2654 modules; don't relaunch the app mid-build |
 | execbro "stale CDP target" | app process dead/JS bridge gone | force-stop app, `scan_metro` again |
 | jest picks up `admin-test-results/admin-panel.spec.ts` | Maestro output dir swept by testMatch | already ignored (jest `testPathIgnorePatterns` + `.gitignore`) — if it reappears, check both |
