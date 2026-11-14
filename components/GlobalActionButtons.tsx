@@ -18,7 +18,7 @@ import {
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router, usePathname, useSegments } from "expo-router";
-import { useIsDark } from "@/lib/useAppearance";
+import { useIsDark, useAppearance } from "@/lib/useAppearance";
 import LanguageToggle from "@/components/LanguageToggle";
 import { API_URL } from "@/lib/config";
 import { colors } from "@/theme/goRide";
@@ -125,14 +125,15 @@ const SOS_API_URL = API_URL;
 const SOS_COOLDOWN_SECONDS = 5;
 
 // ─── Floating button stack geometry / drag ─────────────────────────
-// Three members in one draggable stack (top → bottom): LANGUAGE,
+// Four members in one draggable stack (top → bottom): THEME, LANGUAGE,
 // hamburger, SOS — fixed BTN_GAP between them. The stack position is
-// the top-left of the LANGUAGE button (the topmost member); dragging
-// any button moves the whole stack. The language member is native-only
-// (hasLang, Platform-gated) — admin web renders hamburger + SOS only.
-// Crowning language on top (smallest `top` offset) preserves the
-// pixel positions of hamburger and SOS for existing users, because RN
-// `top` grows DOWNWARD and the cached offset anchors bottom-right.
+// the top-left of the THEME button (the topmost member); dragging
+// any button moves the whole stack. The theme and language members are
+// native-only (showTheme/hasLang, Platform-gated) — admin web renders
+// hamburger + SOS only. Crowning theme on top (smallest `top` offset)
+// keeps the BOTTOM-anchored offset cache valid: the cached offset is
+// from the bottom-right corner, so adding a member grows the stack
+// upward and SOS keeps its pixel position.
 const BTN_SIZE = 48;
 const BTN_GAP = 12;
 const EDGE_RIGHT = 16; // default distance from the right screen edge
@@ -154,6 +155,9 @@ export default function GlobalActionButtons() {
   const pathname = usePathname();
   const insets = useSafeAreaInsets();
   const isDark = useIsDark();
+  // Same store/setter the hub header's sun icon and the (auth) layout's
+  // circular toggle use — no new theme system (ISSUE-115).
+  const { setTheme } = useAppearance();
 
   // ── Theme tokens (Pattern A) ──
   const textPrimary = isDark ? colors.textPrimaryDark : colors.textPrimaryLight;
@@ -195,7 +199,10 @@ export default function GlobalActionButtons() {
   // Language toggle is native-only (plan D5): the web GAB member is
   // Platform-gated off for admin web; no web floating toggle anywhere.
   const hasLang = Platform.OS !== "web";
-  const memberCount = 1 + (hasLang ? 1 : 0) + (hasSos ? 1 : 0);
+  // Theme rides the same native-only gate as language (the issue frames the
+  // toggle as sitting directly above বাং/EN; admin web keeps its two-button stack).
+  const showTheme = hasLang;
+  const memberCount = 1 + (showTheme ? 1 : 0) + (hasLang ? 1 : 0) + (hasSos ? 1 : 0);
   const stackHeight = BTN_SIZE * memberCount + BTN_GAP * (memberCount - 1);
 
   // The buttons must clear the system nav bar (Android 3-button / gesture).
@@ -473,6 +480,12 @@ export default function GlobalActionButtons() {
   const showSos = hasSos;
   const showLang = hasLang;
 
+  // Cumulative top offsets from the stack anchor (theme crowns the stack).
+  const STACK_STEP = BTN_SIZE + BTN_GAP;
+  const langTop = showTheme ? STACK_STEP : 0;
+  const hamburgerTop = langTop + (showLang ? STACK_STEP : 0);
+  const sosTop = hamburgerTop + STACK_STEP;
+
   // ── Menu title by role ──
   const menuTitle = role === "customer" ? "Menu" : role === "driver" ? "Driver Menu" : "Admin Menu";
 
@@ -481,11 +494,43 @@ export default function GlobalActionButtons() {
 
   return (
     <>
-      {/* ═══ LANGUAGE BUTTON (topmost member of the draggable stack) ═══ */}
-      {showLang && (
+      {/* ═══ THEME BUTTON (topmost member of the draggable stack) ═══ */}
+      {showTheme && (
         <View
           {...panResponder.panHandlers}
           style={[styles.dragWrapper, { left: stackPos.x, top: stackPos.y }]}
+        >
+          <Pressable
+            onPress={() => setTheme(isDark ? "light" : "dark")}
+            accessibilityRole="button"
+            accessibilityLabel="Switch theme"
+            testID="floating.theme-toggle"
+            style={[
+              styles.hamburgerBtn,
+              {
+                backgroundColor: fabBg,
+                borderColor: fabBorder,
+              },
+            ]}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+          >
+            <Ionicons
+              name={isDark ? "sunny-outline" : "moon-outline"}
+              size={24}
+              color={textPrimary}
+            />
+          </Pressable>
+        </View>
+      )}
+
+      {/* ═══ LANGUAGE BUTTON (below theme, top of the native-only pair) ═══ */}
+      {showLang && (
+        <View
+          {...panResponder.panHandlers}
+          style={[
+            styles.dragWrapper,
+            { left: stackPos.x, top: stackPos.y + langTop },
+          ]}
         >
           <LanguageToggle />
         </View>
@@ -498,9 +543,7 @@ export default function GlobalActionButtons() {
           styles.dragWrapper,
           {
             left: stackPos.x,
-            top:
-              stackPos.y +
-              (showLang ? BTN_SIZE + BTN_GAP : 0),
+            top: stackPos.y + hamburgerTop,
           },
         ]}
       >
@@ -529,11 +572,7 @@ export default function GlobalActionButtons() {
             styles.dragWrapper,
             {
               left: stackPos.x,
-              top:
-                stackPos.y +
-                (showLang ? BTN_SIZE + BTN_GAP : 0) +
-                BTN_SIZE +
-                BTN_GAP,
+              top: stackPos.y + sosTop,
             },
           ]}
         >
