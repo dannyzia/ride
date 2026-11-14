@@ -3,6 +3,13 @@
  * request (POST /api/emergency/requests), then poll its status until
  * assigned/en-route/completed. Cancel allowed until terminal (§B.5).
  * patient_condition is stored but never broadcast (F41).
+ *
+ * ISSUE-118: pickup (+ optional dropoff) are POI/map location pickers reusing
+ * the ride home's machinery (components/Map + components/BarikoiAutocomplete
+ * + Barikoi v2 reverse geocode) — no new map system. The Stage-3 ensure
+ * helper STAYS the default: on mount the pickup pre-fills from the ensured
+ * GPS fix (+ reverse geocoded address); the picker is the explicit-adjust
+ * path. Fetches use API_URL from @/lib/config (ISSUE-119 failure class).
  */
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
@@ -13,6 +20,7 @@ import {
   TextInput,
   ActivityIndicator,
   Alert,
+  Modal,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Ionicons from "@expo/vector-icons/Ionicons";
@@ -24,8 +32,17 @@ import { useTranslation } from "react-i18next";
 import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
 import { ensureCustomerLocation } from "@/lib/ensureLocation";
+import { API_URL } from "@/lib/config";
+import { getBarikoiReverseGeocodeUrl } from "@/lib/useBarikoiMapStyle";
+import Map from "@/components/Map";
+import BarikoiAutocomplete from "@/components/BarikoiAutocomplete";
 
-const SERVER_URL = process.env.EXPO_PUBLIC_SERVER_URL ?? "http://localhost:8080";
+/** A picked location — the shape the emergency legs carry into the request. */
+interface PickedPlace {
+  address: string;
+  lat: number;
+  lng: number;
+}
 
 // Labels resolved at render time via ambulance.status_* — t() inside the map
 // component body, not at module scope.
@@ -54,11 +71,40 @@ export default function EmergencyAmbulanceScreen() {
   // §7: explicit health consent for patient condition notes (required
   // whenever notes are entered — never transmitted without it).
   const [healthConsent, setHealthConsent] = useState(false);
-  const [pickupAddress, setPickupAddress] = useState("");
-  const [dropoffAddress, setDropoffAddress] = useState("");
+  // ISSUE-118: pickup/dropoff are picked places (POI/map), not free text.
+  const [pickup, setPickup] = useState<PickedPlace | null>(null);
+  const [dropoff, setDropoff] = useState<PickedPlace | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // ── Location picker (same machinery as the ride home / parcel screens) ──
+  const [pickerTarget, setPickerTarget] = useState<"pickup" | "dropoff" | null>(null);
+  const [pickerPin, setPickerPin] = useState<{ lat: number; lng: number } | null>(null);
+  const [pickerPinAddress, setPickerPinAddress] = useState("");
+  const [pickerPinLoading, setPickerPinLoading] = useState(false);
+
+  // Stage-3 ensure stays the DEFAULT: pre-fill the pickup from the ensured
+  // GPS fix (+ reverse geocoded address) once on mount; the picker is the
+  // explicit-adjust path (silent-fallback contract — denied permission just
+  // leaves the row empty for an explicit pick).
+  useEffect(() => {
+    let active = true;
+    ensureCustomerLocation().then((ensured) => {
+      if (active && ensured) {
+        setPickup((prev) =>
+          prev ?? {
+            address: ensured.address,
+            lat: ensured.latitude,
+            lng: ensured.longitude,
+          },
+        );
+      }
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const stopPolling = useCallback(() => {
     if (pollRef.current) {
@@ -77,7 +123,7 @@ export default function EmergencyAmbulanceScreen() {
         const { data: { session } } = await supabase.auth.getSession();
         const token = session?.access_token;
         if (!token) return;
-        const res = await fetch(`${SERVER_URL}/api/emergency/requests/${emergencyId}`, {
+        const res = await fetch(`${API_URL}/api/emergency/requests/${emergencyId}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (!res.ok) return;
@@ -95,8 +141,85 @@ export default function EmergencyAmbulanceScreen() {
     return stopPolling;
   }, [emergencyId, setActiveEmergency, stopPolling]);
 
+  // Ride-home reverse geocode (Barikoi v2) — silent-failure contract.
+  const reverseGeocode = useCallback(async (lat: number, lng: number): Promise<string> => {
+    try {
+      const res = await fetch(getBarikoiReverseGeocodeUrl(lat, lng));
+      if (!res.ok) return "";
+      const data = await res.json();
+      return data?.place?.address || data?.place?.name || "";
+    } catch {
+      return ""; // non-blocking
+    }
+  }, []);
+
+  // Ensure-before-use on picker open too (Stage 3 #19/G6) — hydrates the
+  // customer store so the map centers on the user's area.
+  const openPicker = useCallback((target: "pickup" | "dropoff") => {
+    setPickerTarget(target);
+    setPickerPin(null);
+    setPickerPinAddress("");
+    ensureCustomerLocation();
+  }, []);
+
+  const closePicker = useCallback(() => {
+    setPickerTarget(null);
+    setPickerPin(null);
+    setPickerPinAddress("");
+  }, []);
+
+  const commitPicked = useCallback(
+    (place: PickedPlace) => {
+      if (pickerTarget === "pickup") setPickup(place);
+      else if (pickerTarget === "dropoff") setDropoff(place);
+      closePicker();
+    },
+    [pickerTarget, closePicker],
+  );
+
+  // Named handlers — the testID codemod derives ids from handler identifier
+  // references (slug of the function name), so keep the names canonical.
+  const openPickupPicker = useCallback(() => openPicker("pickup"), [openPicker]);
+  const openDropoffPicker = useCallback(() => openPicker("dropoff"), [openPicker]);
+  const clearDropoff = useCallback(() => setDropoff(null), []);
+
+  const handleSuggestionPicked = useCallback(
+    (location: { latitude: number; longitude: number; address: string }) => {
+      commitPicked({
+        lat: location.latitude,
+        lng: location.longitude,
+        address: location.address,
+      });
+    },
+    [commitPicked],
+  );
+
+  const handlePickerMapPress = useCallback(
+    async (coords: { lat: number; lng: number }) => {
+      setPickerPin(coords);
+      setPickerPinLoading(true);
+      setPickerPinAddress("");
+      try {
+        const address = await reverseGeocode(coords.lat, coords.lng);
+        if (address) setPickerPinAddress(address);
+      } finally {
+        setPickerPinLoading(false);
+      }
+    },
+    [reverseGeocode],
+  );
+
+  const confirmPicked = useCallback(() => {
+    if (!pickerPin) return;
+    commitPicked({
+      lat: pickerPin.lat,
+      lng: pickerPin.lng,
+      address: pickerPinAddress || `${pickerPin.lat.toFixed(4)}, ${pickerPin.lng.toFixed(4)}`,
+    });
+  }, [pickerPin, pickerPinAddress, commitPicked]);
+
   const handleCreate = async () => {
-    if (!pickupAddress || !patientCondition) {
+    if (!pickup || !patientCondition) {
       Alert.alert(t("ambulance.err_missing_title"), t("ambulance.err_missing_body"));
       return;
     }
@@ -107,25 +230,40 @@ export default function EmergencyAmbulanceScreen() {
     }
     setSubmitting(true);
     try {
-      // Stage 3 (#19/G6): ensure-before-use — request/confirm permission and
-      // take a fix right here on the visible flow (silent fallback to the
-      // Dhaka default below when denied or timed out).
-      const ensured = await ensureCustomerLocation();
+      // Stage 3 (#19/G6): ensure-before-use kept as the fallback path — if
+      // the mount pre-fill was denied/empty the user must pick explicitly
+      // (the old hardcoded Dhaka fallback is gone: wrong coordinates on an
+      // emergency request are worse than a required explicit pick).
+      const ensured = pickup ? null : await ensureCustomerLocation();
+      const pickupFinal: PickedPlace | null = pickup ??
+        (ensured
+          ? { address: ensured.address, lat: ensured.latitude, lng: ensured.longitude }
+          : null);
+      if (!pickupFinal) {
+        Alert.alert(t("ambulance.err_missing_title"), t("ambulance.err_missing_body"));
+        return;
+      }
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token;
       if (!token) return;
 
-      const res = await fetch(`${SERVER_URL}/api/emergency/requests`, {
+      const res = await fetch(`${API_URL}/api/emergency/requests`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          pickup_address: pickupAddress,
-          pickup_lat: ensured?.latitude ?? 23.8103,
-          pickup_lng: ensured?.longitude ?? 90.4125,
-          dropoff_address: dropoffAddress || undefined,
+          pickup_address: pickupFinal.address,
+          pickup_lat: pickupFinal.lat,
+          pickup_lng: pickupFinal.lng,
+          ...(dropoff
+            ? {
+                dropoff_address: dropoff.address,
+                dropoff_lat: dropoff.lat,
+                dropoff_lng: dropoff.lng,
+              }
+            : {}),
           patient_condition: patientCondition,
           requires_paramedic: requiresParamedic,
           service_level: serviceLevel,
@@ -156,7 +294,7 @@ export default function EmergencyAmbulanceScreen() {
       const token = session?.access_token;
       if (!token) return;
       const res = await fetch(
-        `${SERVER_URL}/api/emergency/requests/${activeEmergency.id}/cancel`,
+        `${API_URL}/api/emergency/requests/${activeEmergency.id}/cancel`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
@@ -355,31 +493,71 @@ export default function EmergencyAmbulanceScreen() {
               accessibilityLabel={t("ambulance.patient_condition")}
              testID="customer.ambulance.emergency.set-patient-condition"/>
 
-            {/* Pickup */}
+            {/* Pickup — POI/map picker (Stage-3 ensure prefills the default;
+                the picker is the explicit-adjust path) */}
             <Text style={{ fontSize: 15, fontFamily: "JakartaSemiBold", color: textPrimary, marginBottom: 8 }}>
               {t("ambulance.pickup_location")}
             </Text>
-            <TextInput
-              style={{ backgroundColor: surfaceBg, borderWidth: 1, borderColor, borderRadius: 12, padding: 14, color: textPrimary, fontSize: 15, marginBottom: 16 }}
-              placeholder={t("ambulance.pickup_placeholder")}
-              placeholderTextColor={textSecondary}
-              value={pickupAddress}
-              onChangeText={setPickupAddress}
+            <TouchableOpacity
+              onPress={openPickupPicker}
+              accessibilityRole="button"
               accessibilityLabel={t("ambulance.pickup_address")}
-             testID="customer.ambulance.emergency.set-pickup-address"/>
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                backgroundColor: surfaceBg,
+                borderWidth: 1,
+                borderColor,
+                borderRadius: 12,
+                padding: 14,
+                marginBottom: 16,
+              }}
+             testID="customer.ambulance.emergency.open-pickup-picker">
+              <Ionicons name="locate-outline" size={20} color={colors.danger} />
+              <View style={{ flex: 1, marginLeft: 12 }}>
+                <Text style={{ fontSize: 15, fontFamily: "Jakarta", color: pickup ? textPrimary : textSecondary }} numberOfLines={1}>
+                  {pickup?.address || t("ambulance.pickup_placeholder")}
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={16} color={textSecondary} />
+            </TouchableOpacity>
 
-            {/* Dropoff (optional) */}
+            {/* Dropoff (optional — POI/map picker, clearable) */}
             <Text style={{ fontSize: 15, fontFamily: "JakartaSemiBold", color: textPrimary, marginBottom: 8 }}>
               {t("ambulance.dropoff_optional")}
             </Text>
-            <TextInput
-              style={{ backgroundColor: surfaceBg, borderWidth: 1, borderColor, borderRadius: 12, padding: 14, color: textPrimary, fontSize: 15, marginBottom: 20 }}
-              placeholder={t("ambulance.dropoff_placeholder")}
-              placeholderTextColor={textSecondary}
-              value={dropoffAddress}
-              onChangeText={setDropoffAddress}
+            <TouchableOpacity
+              onPress={openDropoffPicker}
+              accessibilityRole="button"
               accessibilityLabel={t("ambulance.dropoff_address")}
-             testID="customer.ambulance.emergency.set-dropoff-address"/>
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                backgroundColor: surfaceBg,
+                borderWidth: 1,
+                borderColor,
+                borderRadius: 12,
+                padding: 14,
+                marginBottom: 20,
+              }}
+             testID="customer.ambulance.emergency.open-dropoff-picker">
+              <Ionicons name="location" size={20} color={colors.danger} />
+              <View style={{ flex: 1, marginLeft: 12 }}>
+                <Text style={{ fontSize: 15, fontFamily: "Jakarta", color: dropoff ? textPrimary : textSecondary }} numberOfLines={1}>
+                  {dropoff?.address || t("ambulance.dropoff_placeholder")}
+                </Text>
+              </View>
+              {dropoff ? (
+                <TouchableOpacity
+                  onPress={clearDropoff}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                 testID="customer.ambulance.emergency.clear-dropoff">
+                  <Ionicons name="close-circle" size={18} color={textSecondary} />
+                </TouchableOpacity>
+              ) : (
+                <Ionicons name="chevron-forward" size={16} color={textSecondary} />
+              )}
+            </TouchableOpacity>
 
             {/* §7 explicit health consent — required when notes are entered. */}
             <TouchableOpacity
@@ -410,14 +588,14 @@ export default function EmergencyAmbulanceScreen() {
 
             <TouchableOpacity
               onPress={handleCreate}
-              disabled={submitting || !pickupAddress || !patientCondition}
+              disabled={submitting || !pickup || !patientCondition}
               style={{
                 backgroundColor: colors.danger,
                 borderRadius: 12,
                 height: 56,
                 alignItems: "center",
                 justifyContent: "center",
-                opacity: submitting || !pickupAddress || !patientCondition ? 0.5 : 1,
+                opacity: submitting || !pickup || !patientCondition ? 0.5 : 1,
                 marginBottom: 40,
               }}
               accessibilityRole="button"
@@ -434,6 +612,82 @@ export default function EmergencyAmbulanceScreen() {
           </>
         )}
       </ScrollView>
+
+      {/* ── Location picker modal (POI search + map pin, ride-home machinery) ── */}
+      <Modal
+        visible={pickerTarget !== null}
+        animationType="slide"
+        onRequestClose={closePicker}
+      >
+        <SafeAreaView style={{ flex: 1, backgroundColor: isDark ? colors.bgDark : colors.bgLight }}>
+          <View style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: 20, paddingTop: 8, paddingBottom: 12 }}>
+            <TouchableOpacity onPress={closePicker} testID="customer.ambulance.emergency.close-picker">
+              <Ionicons name="close" size={24} color={textPrimary} />
+            </TouchableOpacity>
+            <Text style={{ fontSize: 18, fontFamily: "JakartaBold", color: textPrimary, marginLeft: 12 }}>
+              {pickerTarget === "pickup"
+                ? t("ambulance.pickup_location")
+                : t("ambulance.dropoff_optional")}
+            </Text>
+          </View>
+
+          {/* POI search — resolves to a commit on selection. */}
+          <View style={{ paddingHorizontal: 20 }}>
+            <BarikoiAutocomplete
+              initialLocation={
+                pickerTarget === "pickup"
+                  ? t("ambulance.pickup_placeholder")
+                  : t("ambulance.dropoff_placeholder")
+              }
+              handlePress={handleSuggestionPicked}
+            />
+          </View>
+
+          {/* Map pin selection — tap to drop a pin, reverse geocode it. */}
+          <View style={{ paddingHorizontal: 20 }}>
+            <View style={{ borderRadius: 16, overflow: "hidden", height: 300 }}>
+              <Map onMapPress={handlePickerMapPress} />
+            </View>
+            <View
+              style={{
+                marginTop: 12,
+                borderRadius: 12,
+                paddingHorizontal: 16,
+                paddingVertical: 12,
+                backgroundColor: surfaceBg,
+                borderWidth: 1,
+                borderColor,
+              }}
+            >
+              <Text style={{ fontSize: 13, fontFamily: "Jakarta", color: textSecondary }} numberOfLines={2}>
+                {pickerPinLoading
+                  ? t("rider_home.getting_address")
+                  : pickerPin
+                    ? pickerPinAddress || `${pickerPin.lat.toFixed(4)}, ${pickerPin.lng.toFixed(4)}`
+                    : t("rider_home.tap_location")}
+              </Text>
+            </View>
+
+            {/* Confirm the dropped pin into the target field */}
+            <TouchableOpacity
+              style={{
+                marginTop: 16,
+                backgroundColor: pickerPin ? colors.danger : colors.danger + "40",
+                borderRadius: 12,
+                height: 52,
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+              onPress={confirmPicked}
+              disabled={!pickerPin}
+             testID="customer.ambulance.emergency.confirm-picked">
+              <Text style={{ color: "#FFFFFF", fontSize: 16, fontFamily: "JakartaSemiBold" }}>
+                {t("delivery_create.confirm_location")}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </SafeAreaView>
+      </Modal>
     </SafeAreaView>
   );
 }

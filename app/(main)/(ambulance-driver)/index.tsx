@@ -25,8 +25,6 @@ import {
   sendEmergencyMessage,
 } from "@/lib/emergencySocket";
 
-const SERVER_URL = process.env.EXPO_PUBLIC_SERVER_URL ?? "http://localhost:8080";
-void SERVER_URL;
 
 /** RN WebSocket message event shape (not exported by this RN version's types). */
 interface WsMessageEvent {

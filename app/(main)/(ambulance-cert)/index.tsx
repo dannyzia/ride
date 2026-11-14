@@ -20,8 +20,8 @@ import { useIsDark } from "@/lib/useAppearance";
 import { colors } from "@/theme/goRide";
 import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
+import { API_URL } from "@/lib/config";
 
-const SERVER_URL = process.env.EXPO_PUBLIC_SERVER_URL ?? "http://localhost:8080";
 
 interface Certification {
   id: string;
@@ -68,7 +68,7 @@ export default function AmbulanceCertScreen() {
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token;
       if (!token) return;
-      const res = await fetch(`${SERVER_URL}/api/ambulance/certifications/me`, {
+      const res = await fetch(`${API_URL}/api/ambulance/certifications/me`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.ok) {
@@ -129,8 +129,8 @@ export default function AmbulanceCertScreen() {
       if (!token) return;
 
       const url = renewingId
-        ? `${SERVER_URL}/api/ambulance/certifications/${renewingId}/renew`
-        : `${SERVER_URL}/api/ambulance/certifications`;
+        ? `${API_URL}/api/ambulance/certifications/${renewingId}/renew`
+        : `${API_URL}/api/ambulance/certifications`;
 
       const res = await fetch(url, {
         method: renewingId ? "PATCH" : "POST",

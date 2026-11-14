@@ -1,5 +1,5 @@
 {
-  "total": 1410,
+  "total": 1413,
   "screens": {
     "(auth)/_layout.tsx": [
       {
@@ -434,53 +434,65 @@
     "(main)/(ambulance-driver)/index.tsx": [
       {
         "id": "ambulance-driver.el-1",
-        "line": 146
+        "line": 144
       },
       {
         "id": "ambulance-driver.handle-status",
-        "line": 213
+        "line": 211
       },
       {
         "id": "ambulance-driver.handle-accept",
-        "line": 281
+        "line": 279
       }
     ],
     "(main)/(customer)/(ambulance)/emergency.tsx": [
       {
         "id": "customer.ambulance.emergency.el-1",
-        "line": 191
+        "line": 329
       },
       {
         "id": "customer.ambulance.emergency.handle-cancel",
-        "line": 260
+        "line": 398
       },
       {
         "id": "customer.ambulance.emergency.set-service-level",
-        "line": 295
+        "line": 433
       },
       {
         "id": "customer.ambulance.emergency.set-requires-paramedic",
-        "line": 322
+        "line": 460
       },
       {
         "id": "customer.ambulance.emergency.set-patient-condition",
-        "line": 356
+        "line": 494
       },
       {
-        "id": "customer.ambulance.emergency.set-pickup-address",
-        "line": 369
+        "id": "customer.ambulance.emergency.open-pickup-picker",
+        "line": 515
       },
       {
-        "id": "customer.ambulance.emergency.set-dropoff-address",
-        "line": 382
+        "id": "customer.ambulance.emergency.open-dropoff-picker",
+        "line": 543
+      },
+      {
+        "id": "customer.ambulance.emergency.clear-dropoff",
+        "line": 554
       },
       {
         "id": "customer.ambulance.emergency.set-health-consent",
-        "line": 400
+        "line": 578
       },
       {
         "id": "customer.ambulance.emergency.handle-create",
-        "line": 425
+        "line": 603
+      },
+      {
+        "id": "customer.ambulance.emergency.close-picker",
+        "line": 624
+      },
+      {
+        "id": "customer.ambulance.emergency.confirm-picked",
+        "line": 683
       }
     ],
     "(main)/(customer)/(rental-bidder)/[id].tsx": [
