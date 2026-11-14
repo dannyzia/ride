@@ -12,8 +12,12 @@ import { ensureRiderSocket } from "@/lib/riderSocket";
 import { VEHICLE_CATEGORIES } from "@/lib/vehicleTypes";
 import { getRideVerticalEnabled } from "@/lib/verticalFlags";
 import { ensureCustomerLocation } from "@/lib/ensureLocation";
-
-const SERVER_URL = process.env.EXPO_PUBLIC_SERVER_URL ?? "http://localhost:8080";
+// Canonical dev/prod resolver (DEV_LAN_IP -> emulator -> prod). The local
+// `EXPO_PUBLIC_SERVER_URL ?? localhost:8080` fallback this replaces is wrong
+// on-device (phone's own localhost, and Metro serves API routes on 8081) and
+// is inlined at bundle time with no IP re-sync — it silently killed the
+// shop-types fetch, so the category strip never rendered (ISSUE-119).
+import { API_URL } from "@/lib/config";
 
 interface ShopTypeTile {
   id: string;
@@ -73,7 +77,7 @@ export default function ServicesHub() {
     ensureCustomerLocation().catch(() => {});
     // §5 R3: shop-category tiles come from the admin-extensible lookup — a
     // category the admin adds appears here with ZERO client change.
-    fetch(`${SERVER_URL}/api/shop/types`)
+    fetch(`${API_URL}/api/shop/types`)
       .then((res) => (res.ok ? res.json() : { shop_types: [] }))
       .then((data) =>
         setShopTypes(Array.isArray(data.shop_types) ? data.shop_types : []),

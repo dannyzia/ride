@@ -2316,31 +2316,31 @@
     "(main)/(customer)/services-hub.tsx": [
       {
         "id": "customer.services-hub.set-theme",
-        "line": 120
+        "line": 124
       },
       {
         "id": "customer.services-hub.handle-select",
-        "line": 165
+        "line": 169
       },
       {
         "id": "customer.services-hub.push-shops",
-        "line": 213
+        "line": 217
       },
       {
         "id": "customer.services-hub.push-rental-marketplace",
-        "line": 244
+        "line": 248
       },
       {
         "id": "customer.services-hub.el-1",
-        "line": 298
+        "line": 302
       },
       {
         "id": "customer.services-hub.push-parcel",
-        "line": 328
+        "line": 332
       },
       {
         "id": "customer.services-hub.push-emergency",
-        "line": 362
+        "line": 366
       }
     ],
     "(main)/(customer)/user-arrived/index.tsx": [
