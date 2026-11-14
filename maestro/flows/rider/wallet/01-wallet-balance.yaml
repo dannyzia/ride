@@ -13,6 +13,9 @@ tags: [rider, wallet]
       PASSWORD: "test1234"
     commands:
       - runFlow: ../../shared/auth/_login-rider.yaml
+# Riders land on the services hub, outside (tabs) — no tab bar there. No-op
+# when the bar is already rendered.
+- runFlow: ../../shared/util/_enter-tabs.yaml
 - tapOn:
     id: "customer._layout.on-press"
     text: ".*Wallet.*"

@@ -10,14 +10,17 @@ import { useIsDark } from "@/lib/useAppearance";
 import CustomButton from "@/components/CustomButton";
 
 export default function OtpVerifyScreen() {
-  const { phone: phoneParam, role: roleParam, terms: termsParam } = useLocalSearchParams<{
+  const { phone: phoneParam, role: roleParam, terms: termsParam, mkt: mktParam } = useLocalSearchParams<{
     phone?: string;
     role?: string;
     terms?: string;
+    mkt?: string;
   }>();
   const phone = phoneParam ?? "";
   // C1-1: consent flag carried from the phone-entry gate → register.
   const termsCarried = termsParam === "1";
+  // §6: optional marketing opt-in rides alongside (default OFF).
+  const marketingCarried = mktParam === "1";
   // C1-9: bilingual copy (D3 rider) — no hardcoded screen strings.
   const { t } = useTranslation();
 
@@ -142,7 +145,7 @@ export default function OtpVerifyScreen() {
 
       // C1-1: carry the consent flag forward — register+api 400s without it.
       router.push(
-        `/(auth)/register?phone=${encodeURIComponent(phone)}&role=${roleParam ?? "rider"}${termsCarried ? "&terms=1" : ""}`,
+        `/(auth)/register?phone=${encodeURIComponent(phone)}&role=${roleParam ?? "rider"}${termsCarried ? "&terms=1" : ""}${marketingCarried ? "&mkt=1" : ""}`,
       );
     } catch (e) {
       setError(t("auth.otp_verify.err_failed"));

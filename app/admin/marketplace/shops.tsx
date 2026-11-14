@@ -6,6 +6,7 @@ import { useState, useEffect, useCallback } from "react";
 import { View, Text, ActivityIndicator, Pressable, Alert } from "react-native";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { AdminTable, type AdminColumn } from "@/components/admin/AdminTable";
+import { useAdminToast } from "@/components/admin/AdminToast";
 import { adminFetch } from "@/lib/adminFetch";
 import { colors } from "@/theme/goRide";
 
@@ -35,7 +36,7 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
-function ShopActions({ shop, onStatusChange }: { shop: ShopRow; onStatusChange: (id: string, status: string) => void }) {
+function ShopActions({ shop, onStatusChange, onError }: { shop: ShopRow; onStatusChange: (id: string, status: string) => void; onError: (message: string) => void }) {
   const [loading, setLoading] = useState(false);
 
   const toggleStatus = async (newStatus: string) => {
@@ -46,7 +47,7 @@ function ShopActions({ shop, onStatusChange }: { shop: ShopRow; onStatusChange: 
         body: JSON.stringify({ status: newStatus }),
       });
       if (res.error) {
-        Alert.alert("Error", res.message ?? res.error);
+        onError(res.message ?? res.error);
       } else {
         onStatusChange(shop.id, newStatus);
       }
@@ -83,6 +84,7 @@ function ShopActions({ shop, onStatusChange }: { shop: ShopRow; onStatusChange: 
 }
 
 export default function MarketplaceShops() {
+  const toast = useAdminToast();
   const [shops, setShops] = useState<ShopRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -100,12 +102,13 @@ export default function MarketplaceShops() {
     params.set("limit", String(PAGE_SIZE));
 
     const res = await adminFetch<{ shops: ShopRow[]; total: number }>(`/api/admin/marketplace/shops?${params.toString()}`);
-    if (res.data) {
-      setShops(res.data.shops ?? []);
-      setTotal(res.data.total ?? 0);
+    if (res.error) toast.show(res.message ?? res.error, "error");
+    else {
+      setShops(res.data?.shops ?? []);
+      setTotal(res.data?.total ?? 0);
     }
     setLoading(false);
-  }, [search, statusFilter, page]);
+  }, [search, statusFilter, page, toast]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -131,7 +134,7 @@ export default function MarketplaceShops() {
         {new Date(r.created_at).toLocaleDateString()}
       </Text>
     )},
-    { key: "actions", header: "Actions", width: 120, render: (r) => <ShopActions shop={r} onStatusChange={handleStatusChange} /> },
+    { key: "actions", header: "Actions", width: 120, render: (r) => <ShopActions shop={r} onStatusChange={handleStatusChange} onError={(message) => toast.show(message, "error")} /> },
   ];
 
   return (

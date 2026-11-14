@@ -27,13 +27,23 @@ appId: com.node.bd
 - launchApp:
     appId: com.node.bd
     clearState: true
+# Dev-client load hop — after a clearState launch the dev client comes up on
+# its own launcher, not the app. Shared; needs -e DEV_CLIENT_URL.
+- runFlow: ../util/_dev-client-boot.yaml
 - extendedWaitUntil:
     visible: "Enter your phone number"
     timeout: 20000
 - tapOn:
     id: "phone-entry.set-phone"
+# Device-measured 2026-11-11: eraseText on an empty field hangs the driver (120 s
+# DEADLINE_EXCEEDED, fatal) — seed a digit first; the fixed "+880" prefix means the
+# 10-digit NATIONAL part must be typed (13-digit input truncates, phone-entry.tsx:47);
+# keyboard up hides the Log In button → hideKeyboard before the taps.
+- inputText: "1"
 - eraseText
-- inputText: ${PHONE}
+- evalScript: ${output.national = String(PHONE).replace(/^\+?880/, "").replace(/^0+/, "").slice(0, 10)}
+- inputText: ${output.national}
+- hideKeyboard
 # chip 3 = shop_owner (phone-entry.tsx:232).
 - tapOn:
     id: "phone-entry.set-role-3"
@@ -45,6 +55,7 @@ appId: com.node.bd
 - tapOn:
     id: "login.set-password"
 - inputText: ${PASSWORD}
+- hideKeyboard
 - tapOn:
     id: "login.handle-login"
 - runFlow:

@@ -24,6 +24,9 @@ const createSchema = z.object({
   patient_condition: z.string().min(1).max(500),
   requires_paramedic: z.boolean().default(false),
   service_level: z.enum(["BLS", "ALS"]),
+  // §7: explicit health consent for patient notes (health data). Required
+  // whenever patient_condition is non-empty; stored with its timestamp.
+  health_consent_granted: z.boolean().default(false),
 });
 
 export async function POST(request: Request) {
@@ -52,6 +55,15 @@ export async function POST(request: Request) {
     if (!result.ok) return result.response;
     const body = result.data;
 
+    // §7: patient notes are health data — refuse to process them without
+    // explicit consent (client also gates, this is the enforcing barrier).
+    if (body.patient_condition.trim().length > 0 && body.health_consent_granted !== true) {
+      return Response.json(
+        { error: "health_consent_required", message: "Explicit consent is required to process patient medical condition notes" },
+        { status: 400 },
+      );
+    }
+
     // S5/F-19 equipment filter: a paramedic request REQUIRES ALS — BLS units
     // are not equipped. Mirrors the rental route's paramedic_requires_als.
     if (body.requires_paramedic && body.service_level !== "ALS") {
@@ -78,6 +90,8 @@ export async function POST(request: Request) {
         patient_condition: body.patient_condition,
         requires_paramedic: body.requires_paramedic,
         service_level: body.service_level,
+        healthConsentGranted: body.health_consent_granted,
+        healthConsentAt: body.health_consent_granted ? new Date() : null,
         status: "broadcasting",
         expires_at: expiresAt,
       })

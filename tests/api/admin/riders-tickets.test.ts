@@ -6,7 +6,7 @@
  *  - rider refund: bounded (৳50,000 = topup cap ceiling, U-3), credits the
  *    wallet and books the ledger row inside one tx; the U-3 journal entry is
  *    non-blocking (a missing journal never undoes the credit)
- *  - tickets: finance.write guard on every action; reply requires an existing
+ *  - tickets: support.write guard on every action; reply requires an existing
  *    ticket and moves it to in_progress with the admin as author
  */
 /* eslint-disable import/first */
@@ -52,9 +52,14 @@ function getJson(res: Response): Promise<Record<string, unknown>> {
   return res.json() as Promise<Record<string, unknown>>;
 }
 
+// Additive: several routes in this file need different permissions
+// (refund → finance.write, tickets → support.write).
+const grantedPerms = new Set<string>();
 function grant(permission: string, allowed: boolean): void {
+  if (allowed) grantedPerms.add(permission);
+  else grantedPerms.delete(permission);
   (requireAdminPermission as jest.Mock).mockImplementation((perm: string) =>
-    perm === permission && allowed
+    grantedPerms.has(perm)
       ? jest.fn(async () => ({ supabaseUser: { id: "admin-supabase" }, dbUser: { id: ADMIN_ID, role: "admin" } }))
       : jest.fn(async () => {
           throw { status: 401 };
@@ -71,7 +76,9 @@ beforeEach(() => {
   directUpdates.length = 0;
   txUpdates.length = 0;
   txInserts.length = 0;
+  grantedPerms.clear();
   grant("finance.write", true);
+  grant("support.write", true);
   (recordAdminRefund as jest.Mock).mockResolvedValue(undefined);
   (db.update as jest.Mock).mockImplementation((table: unknown) => ({
     set: jest.fn((setObj: Row) => ({
@@ -123,7 +130,7 @@ describe("POST /api/admin/riders/[id]/suspend", () => {
     grant("safety.write", true);
     const res = await riderSuspend(jsonRequest({ reason: "abuse" }), { id: RIDER_ID });
     expect(res.status).toBe(200);
-    expect(await getJson(res)).toEqual({ success: true });
+    expect(await getJson(res)).toEqual({ success: true, account_status: "suspended" });
 
     expect(directUpdates).toHaveLength(1);
     expect(directUpdates[0].table).toBe(users);
@@ -137,6 +144,21 @@ describe("POST /api/admin/riders/[id]/suspend", () => {
     const rendered = new PgDialect().sqlToQuery(directUpdates[0].where as SQL);
     expect(rendered.sql).toContain('"users"."id" = $');
     expect(rendered.sql).toContain('"users"."role" = $');
+    expect(rendered.params).toContain(RIDER_ID);
+    expect(rendered.params).toContain("rider");
+  });
+
+  test("restore clears the suspension reason and only updates the rider", async () => {
+    grant("safety.write", true);
+    const res = await riderSuspend(jsonRequest({ account_status: "active" }), { id: RIDER_ID });
+    expect(res.status).toBe(200);
+    expect(await getJson(res)).toEqual({ success: true, account_status: "active" });
+    expect(directUpdates[0].set).toEqual({
+      account_status: "active",
+      suspension_reason: null,
+      updated_at: expect.any(Date),
+    });
+    const rendered = new PgDialect().sqlToQuery(directUpdates[0].where as SQL);
     expect(rendered.params).toContain(RIDER_ID);
     expect(rendered.params).toContain("rider");
   });
@@ -184,8 +206,8 @@ describe("POST /api/admin/riders/[id]/refund", () => {
 });
 
 describe("GET /api/admin/tickets", () => {
-  test("401 when the finance.write guard rejects", async () => {
-    grant("finance.write", false);
+  test("401 when the support.write guard rejects", async () => {
+    grant("support.write", false);
     const res = await ticketsGET(jsonRequest(undefined));
     expect(res.status).toBe(401);
   });

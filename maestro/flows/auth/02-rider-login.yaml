@@ -22,4 +22,4 @@ tags: [auth, smoke]
       - runFlow: ../shared/auth/_login-rider.yaml
 - runFlow: ../shared/util/_dismiss-dialogs.yaml
 - assertVisible:
-    id: "customer.home.el-2"
+    id: "customer.services-hub.handle-select"

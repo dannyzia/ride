@@ -1,18 +1,49 @@
-# _add-stop — multi-stop input: tap "+ Add stop" → autocomplete → select STOP_NAME.
+# _add-stop — multi-stop input: tap "+ Add stop" → open the new stop row → autocomplete → select STOP_NAME.
 # §9 Booking Subflows. Gate 1 REWIRE (semantic IDs via testid-map.json): add-stop
 # button = customer.home.set-stops-2 (app/(main)/(customer)/(tabs)/home/index.tsx
-# L867, "rider_home.add_stop_button"); stop entry reuses the same autocomplete
+# L995, "rider_home.add_stop_button"); stop entry reuses the same autocomplete
 # surface (type=stop mode) → customer.autocomplete.set-query input + text-filtered
 # customer.autocomplete.handle-place-select result row.
 # STALE-FLOW AUDIT 2026-10-04: the open-wait's alternatives included "Enter or choose
 # a location" (ORPHANED find_ride.enter_or_choose_location) and a "search_stop"
 # fragment; both are unrenderable now that find-ride/ is deleted (G-02b). Repointed
 # to the query input's own testID — the element this subflow taps next.
-# Class: AUTOMATABLE.
+#
+# TWO DEVICE-MEASURED DEFECTS FIXED HERE (2026-11-11, Pixel 6a):
+#  1. STEP BACK TO LOCATIONS — `customer.home.set-stops-2` is rendered by
+#     renderLocations() only (L994-1002), and _select-destination now advances the
+#     sheet to FARES, so booking/09 arrived here on FARES and failed with
+#     "Element with Id matching regex: customer.home.set-stops-2 not found". The
+#     FARES step's back control (customer.home.set-booking-step, L1165-1171) sets
+#     bookingStep back to LOCATIONS. Conditional, so a LOCATIONS caller is untouched.
+#  2. THE ROW OPENS THE SEARCH, NOT THE BUTTON — `set-stops-2` only APPENDS an empty
+#     stop (L997 `setStops([...stops, { lat: 0, lng: 0, address: "" }])`); the
+#     autocomplete is pushed by the row itself (customer.home.string-el, L948-966,
+#     `router.push({ pathname: "/(customer)/autocomplete", params: { type: "stop",
+#     stopIndex } })`). Waiting for customer.autocomplete.set-query right after the
+#     button tapped nothing and burned its 15 s. The caller passes STOP_INDEX — the
+#     0-based position of the empty row it just created (0 for a first stop, 1 for a
+#     second), because rows are appended and every row shares that one testID.
 appId: com.node.bd
 ---
+- runFlow:
+    when:
+      notVisible:
+        id: "customer.home.set-stops-2"
+    commands:
+      - tapOn:
+          id: "customer.home.set-booking-step"
+      - waitForAnimationToEnd:
+          timeout: 3000
 - tapOn:
     id: "customer.home.set-stops-2"
+- extendedWaitUntil:
+    visible:
+      id: "customer.home.string-el"
+    timeout: 10000
+- tapOn:
+    id: "customer.home.string-el"
+    index: ${STOP_INDEX}
 - extendedWaitUntil:
     visible:
       id: "customer.autocomplete.set-query"

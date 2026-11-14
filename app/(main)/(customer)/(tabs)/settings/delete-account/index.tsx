@@ -18,6 +18,7 @@ import { colors } from "@/theme/goRide";
 import { useAppearance, useIsDark } from "@/lib/useAppearance";
 import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
+import { formatBdt } from "@/lib/money";
 import { authCleanup } from "@/lib/authCleanup";
 import { useTranslation } from "react-i18next";
 
@@ -70,7 +71,12 @@ export default function SettingsDeleteAccount() {
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        setError(data.message || data.error || t('delete_account.failed'));
+        // A dues block carries the outstanding amount in integer paisa; show it
+        // in BDT so the user knows exactly what to settle before retrying.
+        const amount =
+          typeof data.amount_bdt === "number" ? formatBdt(data.amount_bdt) : null;
+        const message = data.message || data.error || t('delete_account.failed');
+        setError(amount ? `${message} (${amount})` : message);
         return;
       }
       await authCleanup();

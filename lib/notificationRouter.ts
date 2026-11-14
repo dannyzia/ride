@@ -172,7 +172,7 @@ const DRIVER_NOTIFICATION_ROUTES: Record<string, NotificationHandler> = {
   // lands on the parcel tracking screen, not the courier inbox.
   "delivery:status": (data) => {
     if (data.leg_id && isValidUUID(data.leg_id)) {
-      router.push(`/(main)/(customer)/(delivery)/request-detail?id=${data.leg_id}` as never);
+      router.push(`/(main)/(customer)/parcel/request-detail?id=${data.leg_id}` as never);
       return true;
     }
     router.push("/(main)/(delivery)" as never);
@@ -282,10 +282,10 @@ const RIDER_NOTIFICATION_ROUTES: Record<string, NotificationHandler> = {
   // the sender's parcel list (riders cannot open the courier inbox).
   "delivery:status": (data) => {
     if (data.leg_id && isValidUUID(data.leg_id)) {
-      router.push(`/(main)/(customer)/(delivery)/request-detail?id=${data.leg_id}` as never);
+      router.push(`/(main)/(customer)/parcel/request-detail?id=${data.leg_id}` as never);
       return true;
     }
-    router.push("/(main)/(customer)/(delivery)" as never);
+    router.push("/(main)/(customer)/parcel" as never);
     return true;
   },
   // Staff lane (Flow 15): the invitee lands on the shop surface.

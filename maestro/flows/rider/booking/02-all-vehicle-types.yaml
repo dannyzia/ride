@@ -1,8 +1,8 @@
 # rider/booking/02-all-vehicle-types — all 9 vehicle tiers render on the fare screen
 # and each tier card is selectable.
 # Feature: R-BOOK-04 (§4). Gate 1 REWIRE: tier asserts use id+text pairs on
-# customer.home.set-selected-vehicle-type (tier card testID + tier label) —
-# exact-card identity, not just any matching text on screen. B-2: the card was addressed as
+# customer.home.set-selected-vehicle-type (tier card testID + tier label) — exact-card
+# identity, not just any matching text on screen. B-2: the card was addressed as
 # customer.find-ride.set-selected-vehicle-type, but find-ride/ is unreachable (see
 # _select-vehicle.yaml for the route-deadness proof) — the fare sheet now lives in
 # (tabs)/home renderFares(), gated on bookingStep === "FARES". The leading wait was keyed on
@@ -13,6 +13,19 @@
 # "Bike Standard", "Bike Plus", "CNG", "Car Compact", "Car Economy", "Car Comfort",
 # "Car Premium", "Car XL" — verified in en/common.json; car_compact sits between
 # cng and car_economy per AGENTS.md § Vehicle Types).
+#
+# TWO DEVICE-MEASURED DEFECTS FIXED HERE (2026-11-11, Pixel 6a):
+#  1. SCROLL — nine cards exceed one sheet viewport. `assertVisible` passed for
+#     Bike Basic/Standard/Plus and FAILED on CNG purely because the 4th card was
+#     below the fold. Every tier is now reached with `scrollUntilVisible` first (a
+#     blocking find: an absent tier still fails), then asserted.
+#  2. CATEGORY GATING — renderFares() maps `categoryEstimates`, which is filtered
+#     by `selectedCategory`; the pills come from VEHICLE_CATEGORIES in
+#     lib/vehicleTypes.ts, sorted bike(0) → cng(1) → car(2) → large_car(3). Bike
+#     is the default, so CNG/Car tiers were not in the tree at all until their pill
+#     was tapped — no amount of scrolling could find them. Pills are selected by
+#     INDEX rather than by label so this flow adds no new copy literals.
+# The flow ends on the Car pill because the final step selects "Car Comfort".
 # Class: AUTOMATABLE.
 appId: com.node.bd
 name: "Rider Booking - All Vehicle Types"
@@ -34,33 +47,129 @@ tags: [rider, booking]
     visible:
       id: "customer.home.set-selected-vehicle-type"
     timeout: 30000
+# ── BIKE (default category, pill index 0) ───────────────────────────────────
+- scrollUntilVisible:
+    element:
+      id: "customer.home.set-selected-vehicle-type"
+      text: ".*Bike Basic.*"
+    direction: DOWN
 - assertVisible:
     id: "customer.home.set-selected-vehicle-type"
     text: ".*Bike Basic.*"
+- scrollUntilVisible:
+    element:
+      id: "customer.home.set-selected-vehicle-type"
+      text: ".*Bike Standard.*"
+    direction: DOWN
 - assertVisible:
     id: "customer.home.set-selected-vehicle-type"
     text: ".*Bike Standard.*"
+- scrollUntilVisible:
+    element:
+      id: "customer.home.set-selected-vehicle-type"
+      text: ".*Bike Plus.*"
+    direction: DOWN
 - assertVisible:
     id: "customer.home.set-selected-vehicle-type"
     text: ".*Bike Plus.*"
+# ── CNG (pill index 1) ──────────────────────────────────────────────────────
+- scrollUntilVisible:
+    element:
+      id: "customer.home.set-selected-category"
+    direction: UP
+- tapOn:
+    id: "customer.home.set-selected-category"
+    index: 1
+- waitForAnimationToEnd:
+    timeout: 3000
+- scrollUntilVisible:
+    element:
+      id: "customer.home.set-selected-vehicle-type"
+      text: ".*CNG.*"
+    direction: DOWN
 - assertVisible:
     id: "customer.home.set-selected-vehicle-type"
     text: ".*CNG.*"
+# ── CAR (pill index 2) ──────────────────────────────────────────────────────
+- scrollUntilVisible:
+    element:
+      id: "customer.home.set-selected-category"
+    direction: UP
+- tapOn:
+    id: "customer.home.set-selected-category"
+    index: 2
+- waitForAnimationToEnd:
+    timeout: 3000
+- scrollUntilVisible:
+    element:
+      id: "customer.home.set-selected-vehicle-type"
+      text: ".*Car Compact.*"
+    direction: DOWN
 - assertVisible:
     id: "customer.home.set-selected-vehicle-type"
     text: ".*Car Compact.*"
+- scrollUntilVisible:
+    element:
+      id: "customer.home.set-selected-vehicle-type"
+      text: ".*Car Economy.*"
+    direction: DOWN
 - assertVisible:
     id: "customer.home.set-selected-vehicle-type"
     text: ".*Car Economy.*"
+- scrollUntilVisible:
+    element:
+      id: "customer.home.set-selected-vehicle-type"
+      text: ".*Car Comfort.*"
+    direction: DOWN
 - assertVisible:
     id: "customer.home.set-selected-vehicle-type"
     text: ".*Car Comfort.*"
+- scrollUntilVisible:
+    element:
+      id: "customer.home.set-selected-vehicle-type"
+      text: ".*Car Premium.*"
+    direction: DOWN
 - assertVisible:
     id: "customer.home.set-selected-vehicle-type"
     text: ".*Car Premium.*"
+# ── LARGE CARS (pill index 3) ───────────────────────────────────────────────
+# Car XL is the one tier whose category is `large_car`, not `car`
+# (lib/vehicleTypes.ts L216-227), so it is not in the Car list at all: the first
+# run of this flow spent its entire 420 s budget scrolling for it under Car and
+# had to be killed. Its own pill is the only place it renders.
+- scrollUntilVisible:
+    element:
+      id: "customer.home.set-selected-category"
+    direction: UP
+- tapOn:
+    id: "customer.home.set-selected-category"
+    index: 3
+- waitForAnimationToEnd:
+    timeout: 3000
+- scrollUntilVisible:
+    element:
+      id: "customer.home.set-selected-vehicle-type"
+      text: ".*Car XL.*"
+    direction: DOWN
 - assertVisible:
     id: "customer.home.set-selected-vehicle-type"
     text: ".*Car XL.*"
+# Back to the Car pill, where the tier this flow selects (Car Comfort) lives, so
+# _select-vehicle's own wait/tap see it.
+- scrollUntilVisible:
+    element:
+      id: "customer.home.set-selected-category"
+    direction: UP
+- tapOn:
+    id: "customer.home.set-selected-category"
+    index: 2
+- waitForAnimationToEnd:
+    timeout: 3000
+- scrollUntilVisible:
+    element:
+      id: "customer.home.set-selected-vehicle-type"
+      text: ".*Car Comfort.*"
+    direction: DOWN
 - runFlow:
     env:
       VEHICLE_TYPE: "Car Comfort"

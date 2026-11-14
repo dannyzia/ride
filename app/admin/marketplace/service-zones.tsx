@@ -6,6 +6,7 @@ import { useState, useEffect, useCallback } from "react";
 import { View, Text, ActivityIndicator, Pressable, Alert, TextInput } from "react-native";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { AdminTable, type AdminColumn } from "@/components/admin/AdminTable";
+import { useAdminToast } from "@/components/admin/AdminToast";
 import { adminFetch } from "@/lib/adminFetch";
 import { colors } from "@/theme/goRide";
 
@@ -24,6 +25,7 @@ interface FleetOption {
 }
 
 export default function MarketplaceServiceZones() {
+  const toast = useAdminToast();
   const [zones, setZones] = useState<ServiceZone[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedFleetId, setSelectedFleetId] = useState<string>("");
@@ -37,9 +39,10 @@ export default function MarketplaceServiceZones() {
     const params = new URLSearchParams();
     if (selectedFleetId) params.set("fleet_id", selectedFleetId);
     const res = await adminFetch<{ zones: ServiceZone[]; count: number }>(`/api/admin/marketplace/service-zones?${params.toString()}`);
-    if (res.data) setZones(res.data.zones ?? []);
+    if (res.error) toast.show(res.message ?? res.error, "error");
+    else setZones(res.data?.zones ?? []);
     setLoading(false);
-  }, [selectedFleetId]);
+  }, [selectedFleetId, toast]);
 
   useEffect(() => { fetchZones(); }, [fetchZones]);
 
@@ -47,13 +50,14 @@ export default function MarketplaceServiceZones() {
   useEffect(() => {
     (async () => {
       const res = await adminFetch<{ fleets: FleetOption[] }>(`/api/admin/fleets?limit=100`);
-      if (res.data) setFleetOptions(res.data.fleets ?? []);
+      if (res.error) toast.show(res.message ?? res.error, "error");
+      else setFleetOptions(res.data?.fleets ?? []);
     })();
-  }, []);
+  }, [toast]);
 
   const handleBulkAdd = async () => {
     if (!selectedFleetId || !bulkInput.trim()) {
-      Alert.alert("Missing", "Select a fleet and enter at least one H3 cell");
+      toast.show("Select a fleet and enter at least one H3 cell", "error");
       return;
     }
 
@@ -67,9 +71,9 @@ export default function MarketplaceServiceZones() {
         body: JSON.stringify({ fleet_id: selectedFleetId, h3_cells: cells }),
       });
       if (res.error) {
-        Alert.alert("Error", res.message ?? res.error);
+        toast.show(res.message ?? res.error, "error");
       } else {
-        Alert.alert("Done", `Inserted ${res.data?.inserted ?? 0}, skipped ${res.data?.duplicates_skipped ?? 0} duplicates`);
+        toast.show(`Inserted ${res.data?.inserted ?? 0}, skipped ${res.data?.duplicates_skipped ?? 0} duplicates`, "success");
         setBulkInput("");
         fetchZones();
       }
@@ -90,7 +94,7 @@ export default function MarketplaceServiceZones() {
             body: JSON.stringify({ id: zone.id }),
           });
           if (res.error) {
-            Alert.alert("Error", res.message ?? res.error);
+            toast.show(res.message ?? res.error, "error");
           } else {
             setZones((prev) => prev.filter((z) => z.id !== zone.id));
           }

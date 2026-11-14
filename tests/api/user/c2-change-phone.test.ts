@@ -16,8 +16,20 @@ jest.mock("@/src/db", () => ({
   db: {
     select: jest.fn(),
     update: jest.fn(() => ({ set: jest.fn(() => ({ where: jest.fn(async () => undefined) })) })),
+    // The debt-evasion guard runs inside a transaction. Empty rows = no dues,
+    // no live booking (the clean-account case these tests exercise).
+    transaction: jest.fn(async (fn: (tx: unknown) => unknown) => fn(mockGuardTx())),
   },
 }));
+
+function mockGuardTx(): Record<string, unknown> {
+  const c: Record<string, unknown> = {};
+  c.from = () => c;
+  c.where = () => c;
+  c.limit = async () => [];
+  c.then = (res: (v: unknown) => void) => Promise.resolve([]).then(res);
+  return { select: () => c };
+}
 
 import { db } from "@/src/db";
 import { supabaseAdmin } from "@/lib/supabaseServer";
@@ -77,6 +89,31 @@ describe("C2-2 change-phone", () => {
     expect(res.status).toBe(409);
     expect((await res.json()).error).toBe("phone_exists");
     expect(db.update).not.toHaveBeenCalled();
+  });
+
+  it("unpaid dues block the change before the OTP is consumed", async () => {
+    markVerified(NEW_PHONE);
+    mockSelects([[{ id: "u1", phone: OLD_PHONE, auth_uid: "sup-1" }], []]);
+    // Guard transaction reports an outstanding courier remittance.
+    (db.transaction as jest.Mock).mockImplementationOnce(async (fn: (tx: unknown) => unknown) =>
+      fn({
+        select: () => {
+          const c: Record<string, unknown> = {};
+          c.from = () => c;
+          c.where = () => c;
+          c.limit = async () => [];
+          c.then = (res: (v: unknown) => void) =>
+            Promise.resolve([{ total: 7500 }]).then(res);
+          return c;
+        },
+      }),
+    );
+    const res = await POST(jsonRequest({ new_phone: NEW_PHONE }));
+    expect(res.status).toBe(409);
+    const body = await res.json();
+    expect(body.error).toBe("dues_outstanding");
+    expect(body.amount_bdt).toBe(7500);
+    expect(supabaseAdmin.auth.admin.updateUserById).not.toHaveBeenCalled();
   });
 
   it("same phone is a no-op success", async () => {

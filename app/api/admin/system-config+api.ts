@@ -92,7 +92,8 @@ function validateValue(key: string, value: string): string | null {
 
 export async function GET(request: Request) {
   try {
-    await requireAdminPermission('catalog.write')(request);
+    // Read is open to every admin role; only the write below needs catalog.write.
+    await requireAdminPermission('admin.read')(request);
     const rows = await db.select().from(systemConfig);
     return Response.json({ config: rows });
   } catch (err: unknown) {

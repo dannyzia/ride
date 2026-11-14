@@ -38,6 +38,9 @@ tags: [auth, delivery, s7]
 - launchApp:
     appId: com.node.bd
     clearState: true
+# Dev-client load hop — after a clearState launch the dev client comes up on
+# its own launcher, not the app. Shared; needs -e DEV_CLIENT_URL.
+- runFlow: ../shared/util/_dev-client-boot.yaml
 - extendedWaitUntil:
     visible: "Enter your phone number"
     timeout: 20000

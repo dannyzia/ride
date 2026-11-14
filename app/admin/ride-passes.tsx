@@ -5,6 +5,7 @@ import { AdminModal } from "@/components/admin/AdminModal";
 import { AdminTable, type AdminColumn } from "@/components/admin/AdminTable";
 import { useAdminToast } from "@/components/admin/AdminToast";
 import { adminFetch } from "@/lib/adminFetch";
+import { takaToPaisa } from "@/lib/money";
 
 interface RidePass {
   id: string; name: string; description: string | null; price_bdt: number;
@@ -22,9 +23,10 @@ export default function RidePassesAdmin() {
   const fetchPasses = useCallback(async () => {
     setLoading(true);
     const res = await adminFetch<{ passes: RidePass[] }>("/api/admin/rider-passes");
-    if (res.data) setPasses(res.data.passes ?? []);
+    if (res.error) toast.show(res.message ?? res.error, "error");
+    else setPasses(res.data?.passes ?? []);
     setLoading(false);
-  }, []);
+  }, [toast]);
 
   useEffect(() => { fetchPasses(); }, [fetchPasses]);
 
@@ -39,13 +41,18 @@ export default function RidePassesAdmin() {
     setForm({
       name: pass.name, description: pass.description ?? "",
       price_bdt: String(pass.price_bdt / 100), discount_percent: String(pass.discount_percent),
-      max_rides: pass.max_rides ? String(pass.max_rides) : "", validity_days: String(pass.validity_days),
+      max_rides: pass.max_rides != null ? String(pass.max_rides) : "", validity_days: String(pass.validity_days),
     });
     setModalVisible(true);
   };
 
   const save = async () => {
-    const body = { name: form.name, description: form.description || undefined, price_bdt: parseInt(form.price_bdt, 10) * 100, discount_percent: parseInt(form.discount_percent, 10), max_rides: form.max_rides ? parseInt(form.max_rides, 10) : undefined, validity_days: parseInt(form.validity_days, 10) };
+    const pricePaisa = takaToPaisa(form.price_bdt);
+    if (!Number.isFinite(pricePaisa)) {
+      toast.show("Price must be a number", "error");
+      return;
+    }
+    const body = { name: form.name, description: form.description || undefined, price_bdt: pricePaisa, discount_percent: parseInt(form.discount_percent, 10), max_rides: form.max_rides ? parseInt(form.max_rides, 10) : undefined, validity_days: parseInt(form.validity_days, 10) };
     if (editId) {
       const res = await adminFetch("/api/admin/rider-passes", { method: "PATCH", body: JSON.stringify({ id: editId, ...body }), headers: { "Content-Type": "application/json" } });
       if (res.data) { toast.show("Pass updated", "success"); setModalVisible(false); fetchPasses(); }

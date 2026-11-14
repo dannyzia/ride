@@ -1,3 +1,4 @@
+import { adminErrorResponse } from '@/lib/adminRoute';
 import { db } from '@/src/db';
 import { taxRates } from '@/src/db/schema';
 import { eq } from 'drizzle-orm';
@@ -9,7 +10,13 @@ import * as errors from '@/lib/errors';
 
 const updateSchema = z.object({
   id: z.string().uuid(),
-  rate_percent: z.string().optional(),
+  // Human-entered percent, stored as text. Bounded and shape-checked here so a
+  // half-typed or cleared field can never reach tax_rates.
+  rate_percent: z
+    .string()
+    .regex(/^\d{1,3}(\.\d{1,2})?$/, 'rate_percent must be 0-100 with up to 2 decimals')
+    .refine((v) => Number(v) >= 0 && Number(v) <= 100, 'rate_percent must be between 0 and 100')
+    .optional(),
   is_active: z.boolean().optional(),
 });
 
@@ -20,8 +27,7 @@ export async function GET(request: Request) {
     return Response.json({ rates: rows });
   } catch (err: unknown) {
     if (errors.getErrorStatus(err) === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
-    logger.error('[admin/tax/config] GET error', err);
-    return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
+    return adminErrorResponse(err, '[admin/tax/config] GET error');
   }
 }
 
@@ -39,7 +45,6 @@ export async function POST(request: Request) {
     return Response.json({ success: true });
   } catch (err: unknown) {
     if (errors.getErrorStatus(err) === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
-    logger.error('[admin/tax/config] POST error', err);
-    return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
+    return adminErrorResponse(err, '[admin/tax/config] POST error');
   }
 }

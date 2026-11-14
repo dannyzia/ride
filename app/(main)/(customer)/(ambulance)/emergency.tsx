@@ -51,6 +51,9 @@ export default function EmergencyAmbulanceScreen() {
   const [serviceLevel, setServiceLevel] = useState<"BLS" | "ALS">("BLS");
   const [requiresParamedic, setRequiresParamedic] = useState(false);
   const [patientCondition, setPatientCondition] = useState("");
+  // §7: explicit health consent for patient condition notes (required
+  // whenever notes are entered — never transmitted without it).
+  const [healthConsent, setHealthConsent] = useState(false);
   const [pickupAddress, setPickupAddress] = useState("");
   const [dropoffAddress, setDropoffAddress] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -97,6 +100,11 @@ export default function EmergencyAmbulanceScreen() {
       Alert.alert(t("ambulance.err_missing_title"), t("ambulance.err_missing_body"));
       return;
     }
+    // §7: patient notes are health data — block submission without consent.
+    if (patientCondition.trim().length > 0 && !healthConsent) {
+      Alert.alert(t("ambulance.health_consent_required_title"), t("ambulance.health_consent_required_body"));
+      return;
+    }
     setSubmitting(true);
     try {
       // Stage 3 (#19/G6): ensure-before-use — request/confirm permission and
@@ -121,6 +129,7 @@ export default function EmergencyAmbulanceScreen() {
           patient_condition: patientCondition,
           requires_paramedic: requiresParamedic,
           service_level: serviceLevel,
+          health_consent_granted: healthConsent,
         }),
       });
 
@@ -371,6 +380,33 @@ export default function EmergencyAmbulanceScreen() {
               onChangeText={setDropoffAddress}
               accessibilityLabel={t("ambulance.dropoff_address")}
              testID="customer.ambulance.emergency.set-dropoff-address"/>
+
+            {/* §7 explicit health consent — required when notes are entered. */}
+            <TouchableOpacity
+              onPress={() => setHealthConsent((v) => !v)}
+              style={{
+                flexDirection: "row",
+                alignItems: "flex-start",
+                padding: 14,
+                backgroundColor: surfaceBg,
+                borderWidth: 1,
+                borderColor: healthConsent ? colors.danger : borderColor,
+                borderRadius: 12,
+                marginBottom: 16,
+              }}
+              accessibilityRole="checkbox"
+              accessibilityState={{ checked: healthConsent }}
+              accessibilityLabel={t("ambulance.health_consent")}
+             testID="customer.ambulance.emergency.set-health-consent">
+              <Ionicons
+                name={healthConsent ? "checkmark-circle" : "ellipse-outline"}
+                size={24}
+                color={healthConsent ? colors.danger : textSecondary}
+              />
+              <Text style={{ fontSize: 14, fontFamily: "JakartaMedium", color: textPrimary, marginLeft: 12, flex: 1 }}>
+                {t("ambulance.health_consent")}
+              </Text>
+            </TouchableOpacity>
 
             <TouchableOpacity
               onPress={handleCreate}

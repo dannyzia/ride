@@ -24,6 +24,9 @@ const schema = z
     // phone-entry checkbox gate. Optional at the Zod layer so a missing
     // flag surfaces as 400 terms_required (not a generic validation error).
     terms_accepted: z.boolean().optional(),
+    // §6: optional marketing opt-in (default OFF). Carried from the
+    // phone-entry marketing checkbox through otp-verify/register/wizards.
+    marketing_opt_in: z.boolean().default(false),
     password: z.string().min(6, "Password must be at least 6 characters"),
     // S8 §4.1: self-declared gender from the signup picker. Optional at the
     // API layer so legacy clients still register (as 'unspecified'); the UI
@@ -62,7 +65,7 @@ export async function POST(request: Request) {
   const result = await parseJsonBody(request, schema);
   if (!result.ok) return result.response;
 
-  const { phone, name, role, password, gender, vehicle_type, shop, fleet, delivery, terms_accepted } = result.data;
+  const { phone, name, role, password, gender, vehicle_type, shop, fleet, delivery, terms_accepted, marketing_opt_in } = result.data;
 
   // C1-1: new registrations must carry explicit T&C + Privacy consent.
   if (terms_accepted !== true)
@@ -140,7 +143,17 @@ export async function POST(request: Request) {
       // their own tx instead — see those routes.
       const [user] = await tx
         .insert(users)
-        .values({ auth_uid: authUid, phone, name, role, gender: gender ?? "unspecified", terms_accepted_at: new Date() })
+        .values({
+          auth_uid: authUid,
+          phone,
+          name,
+          role,
+          gender: gender ?? "unspecified",
+          terms_accepted_at: new Date(),
+          termsVersion: "v1.0",
+          marketingOptIn: marketing_opt_in,
+          marketingOptInAt: marketing_opt_in ? new Date() : null,
+        })
         .returning();
 
       // §1/§2: every signup path records the account's membership role.

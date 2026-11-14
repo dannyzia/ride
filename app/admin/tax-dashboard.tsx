@@ -1,44 +1,112 @@
 import { useEffect, useState } from "react";
-import { View, Text, TextInput, Pressable, ActivityIndicator, ScrollView, StyleSheet, Alert } from "react-native";
+import { View, Text, TextInput, Pressable, ActivityIndicator, ScrollView, StyleSheet } from "react-native";
 import { AdminShell } from "@/components/admin/AdminShell";
+import { useAdminToast } from "@/components/admin/AdminToast";
 import { adminFetch } from "@/lib/adminFetch";
+import { formatBdt } from "@/lib/money";
+import { supabase } from "@/lib/supabase";
+import { API_URL } from "@/lib/config";
 import { colors } from "@/theme/goRide";
 
 interface TaxRate { id: string; name: string; code: string; rate_percent: string; is_active: boolean; }
 interface SummaryRow { tax_code: string; transaction_count: number; total_base_amount_bdt: number; total_tax_amount_bdt: number; }
 
+// Mirrors the server-side rule in app/api/admin/tax/config+api.ts.
+const RATE_RE = /^\d{1,3}(\.\d{1,2})?$/;
+
 export default function TaxDashboard() {
+  const toast = useAdminToast();
   const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
   const [rates, setRates] = useState<TaxRate[]>([]);
   const [summary, setSummary] = useState<SummaryRow[]>([]);
   const [totalBase, setTotalBase] = useState(0);
   const [totalTax, setTotalTax] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [rateDrafts, setRateDrafts] = useState<Record<string, string>>({});
 
-  useEffect(() => { fetchData(); }, []);
+  useEffect(() => { void fetchData(); }, []);
 
   const fetchData = async () => {
     setLoading(true);
     const cfg = await adminFetch<{ rates: TaxRate[] }>("/api/admin/tax/config");
-    if (cfg.data) setRates(cfg.data.rates ?? []);
+    if (cfg.error) toast.show(cfg.message ?? cfg.error, "error");
+    else setRates(cfg.data?.rates ?? []);
+
     const dly = await adminFetch<{ breakdown: SummaryRow[]; totalBaseAmountBdt: number; totalTaxAmountBdt: number }>(`/api/admin/tax/daily?date=${date}`);
-    if (dly.data) { setSummary(dly.data.breakdown ?? []); setTotalBase(dly.data.totalBaseAmountBdt); setTotalTax(dly.data.totalTaxAmountBdt); }
+    if (dly.error) toast.show(dly.message ?? dly.error, "error");
+    else {
+      setSummary(dly.data?.breakdown ?? []);
+      setTotalBase(dly.data?.totalBaseAmountBdt ?? 0);
+      setTotalTax(dly.data?.totalTaxAmountBdt ?? 0);
+    }
     setLoading(false);
   };
 
-  const updateRate = async (id: string, rateStr: string) => {
-    await adminFetch("/api/admin/tax/config", { method: "POST", body: JSON.stringify({ id, rate_percent: rateStr }), headers: { "Content-Type": "application/json" } });
-    fetchData();
+  /**
+   * Rates are saved explicitly, never per keystroke: typing "12" fired a POST
+   * for "1" and then "12", and out-of-order responses could leave the live
+   * rate at 1%.
+   */
+  const saveRate = async (rate: TaxRate) => {
+    const draft = rateDrafts[rate.id];
+    if (draft === undefined || draft === rate.rate_percent) return;
+    if (!RATE_RE.test(draft.trim()) || Number(draft) > 100) {
+      toast.show("Rate must be 0-100 with up to 2 decimals", "error");
+      return;
+    }
+    const res = await adminFetch("/api/admin/tax/config", {
+      method: "POST",
+      body: JSON.stringify({ id: rate.id, rate_percent: draft.trim() }),
+      headers: { "Content-Type": "application/json" },
+    });
+    if (res.error || !res.data) {
+      toast.show(res.message ?? res.error ?? "Save failed", "error");
+      return;
+    }
+    toast.show(`${rate.code} set to ${draft.trim()}%`, "success");
+    setRateDrafts((prev) => {
+      const next = { ...prev };
+      delete next[rate.id];
+      return next;
+    });
+    void fetchData();
   };
 
-  const toggleRate = async (id: string, is_active: boolean) => {
-    await adminFetch("/api/admin/tax/config", { method: "POST", body: JSON.stringify({ id, is_active: !is_active }), headers: { "Content-Type": "application/json" } });
-    fetchData();
+  const toggleRate = async (rate: TaxRate) => {
+    const res = await adminFetch("/api/admin/tax/config", {
+      method: "POST",
+      body: JSON.stringify({ id: rate.id, is_active: !rate.is_active }),
+      headers: { "Content-Type": "application/json" },
+    });
+    if (res.error) toast.show(res.message ?? res.error, "error");
+    else {
+      toast.show(`${rate.code} ${rate.is_active ? "disabled" : "enabled"}`, "success");
+      void fetchData();
+    }
   };
 
   const exportCsv = async () => {
-    const res = await adminFetch<Response>(`/api/admin/tax/report?start=${date}&end=${date}&format=csv`);
-    if ((res as any).data) { Alert.alert("CSV Generated", "Report ready for download"); }
+    // The endpoint returns text/csv, so it cannot go through adminFetch (JSON-only).
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      toast.show("Not authenticated", "error");
+      return;
+    }
+    const res = await fetch(`${API_URL}/api/admin/tax/report?start=${date}&end=${date}&format=csv`, {
+      headers: { Authorization: `Bearer ${session.access_token}` },
+    });
+    if (!res.ok) {
+      toast.show(`Export failed (${res.status})`, "error");
+      return;
+    }
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `tax-report-${date}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.show("CSV downloaded", "success");
   };
 
   return (
@@ -47,18 +115,18 @@ export default function TaxDashboard() {
         <View style={styles.dateRow}>
           <TextInput style={styles.dateInput} value={date} onChangeText={setDate} placeholder="YYYY-MM-DD"  testID="admin.tax-dashboard.set-date"/>
           <Pressable style={styles.loadBtn} onPress={fetchData} testID="admin.tax-dashboard.fetch-data"><Text style={styles.loadBtnText}>Refresh</Text></Pressable>
-          <Pressable style={styles.csvBtn} onPress={exportCsv} testID="admin.tax-dashboard.export-csv"><Text style={styles.csvBtnText}>Export CSV</Text></Pressable>
+          <Pressable style={styles.csvBtn} onPress={() => void exportCsv()} testID="admin.tax-dashboard.export-csv"><Text style={styles.csvBtnText}>Export CSV</Text></Pressable>
         </View>
         {loading ? <ActivityIndicator size="large" color={colors.adminAccent} style={{ marginTop: 40 }} /> : (
           <>
             <View style={styles.cardsRow}>
               <View style={[styles.statCard, { borderLeftColor: colors.primary }]}>
                 <Text style={styles.statLabel}>Total Base</Text>
-                <Text style={styles.statValue}>৳{(totalBase / 100).toFixed(2)}</Text>
+                <Text style={styles.statValue}>{formatBdt(totalBase)}</Text>
               </View>
               <View style={[styles.statCard, { borderLeftColor: colors.amber }]}>
                 <Text style={styles.statLabel}>Total Tax</Text>
-                <Text style={styles.statValue}>৳{(totalTax / 100).toFixed(2)}</Text>
+                <Text style={styles.statValue}>{formatBdt(totalTax)}</Text>
               </View>
             </View>
             <Text style={styles.sectionTitle}>Daily Breakdown</Text>
@@ -66,25 +134,40 @@ export default function TaxDashboard() {
               <View key={i} style={styles.summaryRow}>
                 <Text style={styles.summaryCode}>{r.tax_code}</Text>
                 <Text style={styles.summaryCount}>{r.transaction_count} txns</Text>
-                <Text style={styles.summaryAmt}>Base: ৳{((r.total_base_amount_bdt ?? 0) / 100).toFixed(2)}</Text>
-                <Text style={[styles.summaryAmt, { color: colors.amber }]}>Tax: ৳{((r.total_tax_amount_bdt ?? 0) / 100).toFixed(2)}</Text>
+                <Text style={styles.summaryAmt}>Base: {formatBdt(r.total_base_amount_bdt ?? 0)}</Text>
+                <Text style={[styles.summaryAmt, { color: colors.amber }]}>Tax: {formatBdt(r.total_tax_amount_bdt ?? 0)}</Text>
               </View>
             ))}
             <Text style={styles.sectionTitle}>Tax Rates</Text>
-            {rates.map((r) => (
-              <View key={r.id} style={styles.rateRow}>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.rateName}>{r.name}</Text>
-                  <Text style={styles.rateCode}>{r.code}</Text>
+            {rates.map((r) => {
+              const draft = rateDrafts[r.id];
+              const dirty = draft !== undefined && draft !== r.rate_percent;
+              return (
+                <View key={r.id} style={styles.rateRow}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.rateName}>{r.name}</Text>
+                    <Text style={styles.rateCode}>{r.code}</Text>
+                  </View>
+                  <TextInput
+                    style={styles.rateInput}
+                    value={draft ?? r.rate_percent}
+                    onChangeText={(v) => setRateDrafts((prev) => ({ ...prev, [r.id]: v }))}
+                    keyboardType="decimal-pad"
+                   
+                   testID="admin.tax-dashboard.set-rate-drafts"/>
+                  <Text style={styles.ratePercent}>%</Text>
+                  {dirty ? (
+                    <Pressable onPress={() => void saveRate(r)} style={styles.saveBtn} testID="admin.tax-dashboard.save-rate">
+                      <Text style={styles.saveBtnText}>Save</Text>
+                    </Pressable>
+                  ) : null}
+                  <Pressable onPress={() => void toggleRate(r)}
+                    style={[styles.toggleBtn, { backgroundColor: r.is_active ? colors.primary : colors.darkSecondary }]} testID="admin.tax-dashboard.toggle-rate">
+                    <Text style={{ color: "#FFF", fontSize: 11, fontFamily: "Jakarta-Bold" }}>{r.is_active ? "ON" : "OFF"}</Text>
+                  </Pressable>
                 </View>
-                <TextInput style={styles.rateInput} value={String(parseFloat(r.rate_percent || "0"))} onChangeText={(v) => updateRate(r.id, v)} keyboardType="decimal-pad"  testID="admin.tax-dashboard.update-rate"/>
-                <Text style={styles.ratePercent}>%</Text>
-                <Pressable onPress={() => toggleRate(r.id, r.is_active)}
-                  style={[styles.toggleBtn, { backgroundColor: r.is_active ? colors.primary : colors.darkSecondary }]} testID="admin.tax-dashboard.toggle-rate">
-                  <Text style={{ color: "#FFF", fontSize: 11, fontFamily: "Jakarta-Bold" }}>{r.is_active ? "ON" : "OFF"}</Text>
-                </Pressable>
-              </View>
-            ))}
+              );
+            })}
           </>
         )}
       </ScrollView>
@@ -113,5 +196,7 @@ const styles = StyleSheet.create({
   rateCode: { color: colors.textSecondaryDark, fontFamily: "Jakarta-Regular", fontSize: 11 },
   rateInput: { backgroundColor: colors.darkSurface, color: colors.textPrimaryDark, borderRadius: 6, padding: 6, fontFamily: "Jakarta-Bold", fontSize: 14, width: 60, textAlign: "center" },
   ratePercent: { color: colors.textPrimaryDark, fontFamily: "Jakarta-Regular", fontSize: 14 },
+  saveBtn: { backgroundColor: colors.adminAccent, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
+  saveBtnText: { color: "#000", fontFamily: "Jakarta-Bold", fontSize: 11 },
   toggleBtn: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6 },
 });

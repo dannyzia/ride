@@ -1,3 +1,4 @@
+import { adminErrorResponse } from '@/lib/adminRoute';
 import { db } from '@/src/db';
 import { users } from '@/src/db/schema';
 import { eq, desc, like, and, sql } from 'drizzle-orm';
@@ -36,7 +37,6 @@ export async function GET(request: Request) {
     return Response.json({ riders: rows, total: Number(countResult?.count ?? 0) });
   } catch (err: unknown) {
     if (errors.getErrorStatus(err) === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
-    logger.error('[admin/riders] error', err);
-    return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
+    return adminErrorResponse(err, '[admin/riders] error');
   }
 }

@@ -97,7 +97,7 @@ export default function DueAmounts() {
       } = await supabase.auth.getSession();
       const token = session?.access_token;
       if (!token) {
-        setError("Not authenticated");
+        setError(t("common.not_authenticated"));
         return;
       }
       const res = await fetch(`${API_URL}/api/driver/dues`, {
@@ -105,18 +105,18 @@ export default function DueAmounts() {
       });
       const json = await res.json();
       if (!res.ok) {
-        setError(json.error || "Failed");
+        setError(json.error || t("monetization.failed"));
         return;
       }
       setData(json);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Network error");
+      setError(err instanceof Error ? err.message : t("monetization.network_error"));
       logger.error("DueAmounts fetch failed", err);
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     fetchData();
@@ -131,7 +131,10 @@ export default function DueAmounts() {
       } = await supabase.auth.getSession();
       const token = session?.access_token;
       if (!token) {
-        Alert.alert("Payment failed", "Not authenticated");
+        Alert.alert(
+          t("monetization.payment_failed_title"),
+          t("common.not_authenticated"),
+        );
         return;
       }
       const body: Record<string, unknown> = {};
@@ -148,8 +151,8 @@ export default function DueAmounts() {
       const json = await res.json();
       if (!res.ok || !json.payment_url) {
         Alert.alert(
-          "Payment failed",
-          json.message || json.error || "Could not start payment",
+          t("monetization.payment_failed_title"),
+          json.message || json.error || t("monetization.could_not_start_payment"),
         );
         return;
       }
@@ -157,11 +160,14 @@ export default function DueAmounts() {
       setPaymentID(json.payment_event_id);
     } catch (err) {
       logger.error("DueAmounts pay failed", err);
-      Alert.alert("Payment failed", "Network error");
+      Alert.alert(
+        t("monetization.payment_failed_title"),
+        t("monetization.network_error"),
+      );
     } finally {
       setPaying(false);
     }
-  }, [data]);
+  }, [data, t]);
 
   const handlePaymentSuccess = useCallback(() => {
     setPaymentURL(null);
@@ -173,23 +179,29 @@ export default function DueAmounts() {
     (message: string) => {
       setPaymentURL(null);
       setPaymentID(null);
-      Alert.alert("Payment not completed", message);
+      Alert.alert(t("monetization.payment_not_completed"), message);
       fetchData(true);
     },
-    [fetchData],
+    [fetchData, t],
   );
 
-  const stateLabel = (s: MonetizationState | undefined) => {
-    switch (s) {
-      case "NO_PRODUCT": return t('monetization.states.NO_PRODUCT');
-      case "CEILING_LOCKED": return t('monetization.states.CEILING_LOCKED');
-      case "LAPSED": return t('monetization.states.LAPSED');
-      case "OWING": return t('monetization.states.OWING');
-      case "PRODUCT_FROZEN": return t('monetization.states.PRODUCT_FROZEN');
-      case "ACTIVE": return t('monetization.states.ACTIVE');
-      default: return "-";
-    }
-  };
+  // The enum is UPPERCASE (OperatorDuesState); the locale keys are lowercase
+  // (monetization.states.no_product, …) and are shared with the shop, delivery
+  // and driver surfaces. Lowercasing here is what those screens do — keying on
+  // the raw enum value resolved no key and rendered the literal key text.
+  const stateLabel = (s: MonetizationState | undefined) =>
+    s ? t(`monetization.states.${s.toLowerCase()}`) : "-";
+
+  // "· due 12 Nov" — the separator stays in code, only the phrase is localized.
+  const billDueText = (dueAt: string | null) =>
+    dueAt
+      ? ` · ${t("monetization.bill_due", {
+          date: new Date(dueAt).toLocaleDateString("en-GB", {
+            day: "2-digit",
+            month: "short",
+          }),
+        })}`
+      : "";
 
   return (
     <SafeAreaView className="flex-1" style={{ backgroundColor: bg }}>
@@ -241,7 +253,7 @@ export default function DueAmounts() {
               className="text-[14px] font-JakartaBold"
               style={{ color: colors.primary }}
             >
-              Retry
+              {t("common.retry")}
             </Text>
           </TouchableOpacity>
         </View>
@@ -310,7 +322,7 @@ export default function DueAmounts() {
                 {formatBDT(data.credit_headroom_paisa)}
               </Text>
               <Text className="text-[12px] font-Jakarta mt-1" style={{ color: textSecondary }}>
-                Before debt ceiling lockout
+                {t("monetization.before_ceiling")}
               </Text>
             </View>
           )}
@@ -322,21 +334,30 @@ export default function DueAmounts() {
               style={{ backgroundColor: `${colors.amber}14`, borderColor: colors.amber }}
             >
               <Text className="text-[12px] font-JakartaSemiBold mb-1" style={{ color: colors.amber }}>
-                Frozen Call Package
+                {t("monetization.frozen_package_title")}
               </Text>
               <Text className="text-[16px] font-JakartaBold" style={{ color: textPrimary }}>
-                {data.frozen_subscription.package_name ?? "Frozen Plan"}
+                {data.frozen_subscription.package_name ?? t("monetization.frozen_plan")}
               </Text>
               <View className="flex-row justify-between mt-2">
                 <Text className="text-[13px] font-Jakarta" style={{ color: textSecondary }}>
-                  Calls remaining: {data.frozen_subscription.calls_remaining}
+                  {t("monetization.calls_remaining", {
+                    count: data.frozen_subscription.calls_remaining,
+                  })}
                 </Text>
                 <Text className="text-[13px] font-Jakarta" style={{ color: textSecondary }}>
-                  Expires: {new Date(data.frozen_subscription.expires_at ?? 0).toLocaleDateString("en-GB", { day: "2-digit", month: "short" })}
+                  {t("monetization.expires_on", {
+                    date: new Date(
+                      data.frozen_subscription.expires_at ?? 0,
+                    ).toLocaleDateString("en-GB", {
+                      day: "2-digit",
+                      month: "short",
+                    }),
+                  })}
                 </Text>
               </View>
               <Text className="text-[13px] font-Jakarta mt-2" style={{ color: textSecondary }}>
-                Your calls are frozen. Switch to commission mode or settle dues to unfreeze.
+                {t("monetization.frozen_body")}
               </Text>
             </View>
           )}
@@ -348,18 +369,26 @@ export default function DueAmounts() {
               style={{ backgroundColor: surfaceBg, borderColor }}
             >
               <Text className="text-[12px] font-JakartaSemiBold mb-1" style={{ color: textSecondary }}>
-                SUBSCRIPTION
+                {t("monetization.subscription_label")}
               </Text>
               <Text className="text-[18px] font-JakartaBold" style={{ color: textPrimary }}>
-                {data.subscription.package_name ?? "Active Plan"}
+                {data.subscription.package_name ?? t("monetization.active_plan")}
               </Text>
               <View className="flex-row justify-between mt-2">
                 <Text className="text-[13px] font-Jakarta" style={{ color: textSecondary }}>
-                  Calls remaining: {data.subscription.calls_remaining}
+                  {t("monetization.calls_remaining", {
+                    count: data.subscription.calls_remaining,
+                  })}
                 </Text>
                 <Text className="text-[13px] font-Jakarta" style={{ color: textSecondary }}>
-                  Expires:{" "}
-                  {new Date(data.subscription.expires_at ?? 0).toLocaleDateString("en-GB", { day: "2-digit", month: "short" })}
+                  {t("monetization.expires_on", {
+                    date: new Date(
+                      data.subscription.expires_at ?? 0,
+                    ).toLocaleDateString("en-GB", {
+                      day: "2-digit",
+                      month: "short",
+                    }),
+                  })}
                 </Text>
               </View>
               <View className="flex-row mt-2">
@@ -375,15 +404,15 @@ export default function DueAmounts() {
                 onPress={() => router.push("/(main)/(rider)/packages")}
                testID="rider.due-amounts.push-packages">
                 <Text className="text-[15px] font-JakartaBold text-white">
-                  Renew
+                  {t("monetization.renew")}
                 </Text>
               </TouchableOpacity>
             </View>
           ) : (
             <View className="p-[16px] border rounded-[12px] mb-4" style={{ backgroundColor: surfaceBg, borderColor }}>
-              <Text className="text-[14px] font-Jakarta" style={{ color: textSecondary }}>No active subscription</Text>
+              <Text className="text-[14px] font-Jakarta" style={{ color: textSecondary }}>{t("monetization.no_active_subscription")}</Text>
               <TouchableOpacity className="rounded-full w-full py-[12px] items-center mt-3" style={{ backgroundColor: colors.primary }} onPress={() => router.push("/(main)/(rider)/packages")} testID="rider.due-amounts.push-packages-2">
-                <Text className="text-[15px] font-JakartaBold text-white">Browse Packages</Text>
+                <Text className="text-[15px] font-JakartaBold text-white">{t("monetization.browse_packages")}</Text>
               </TouchableOpacity>
             </View>
           )}
@@ -402,7 +431,8 @@ export default function DueAmounts() {
                         {formatBDT(bill.amount_bdt)}
                       </Text>
                       <Text className="text-[12px] font-Jakarta mt-1" style={{ color: textSecondary }}>
-                        Subscription bill{dueText(bill.due_at)}
+                        {t("monetization.subscription_bill")}
+                        {billDueText(bill.due_at)}
                       </Text>
                     </View>
                     <TouchableOpacity
@@ -411,7 +441,7 @@ export default function DueAmounts() {
                       className="rounded-full px-[16px] py-[4px] items-center"
                       style={{ backgroundColor: colors.primary }}
                       testID="rider.due-amounts.handle-pay-dues">
-                      <Text className="text-[12px] font-JakartaBold text-white">Pay</Text>
+                      <Text className="text-[12px] font-JakartaBold text-white">{t("monetization.pay")}</Text>
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -423,14 +453,14 @@ export default function DueAmounts() {
           {data.commission_due_bdt > 0 && (
             <View className="p-[16px] border rounded-[12px] mb-4" style={{ backgroundColor: surfaceBg, borderColor }}>
               <Text className="text-[12px] font-JakartaSemiBold mb-1" style={{ color: textSecondary }}>
-                COMMISSION DUE
+                {t("monetization.commission_due_label")}
               </Text>
               <Text className="text-[20px] font-JakartaBold" style={{ color: textPrimary }}>
                 {formatBDT(data.commission_due_bdt)}
               </Text>
               <View className="flex-row mt-2">
                 <View className="rounded-full px-[10px] py-[2px]" style={{ backgroundColor: `${colors.danger}1A` }}>
-                  <Text className="text-[11px] font-JakartaBold" style={{ color: colors.danger }}>UNSETTLED</Text>
+                  <Text className="text-[11px] font-JakartaBold" style={{ color: colors.danger }}>{t("monetization.unsettled")}</Text>
                 </View>
               </View>
               <TouchableOpacity
@@ -453,7 +483,9 @@ export default function DueAmounts() {
             <View className="p-[16px] border rounded-[12px] mb-4 flex-row items-start" style={{ backgroundColor: `${colors.danger}14`, borderColor: colors.danger }}>
               <Ionicons name="lock-closed-outline" size={20} color={colors.danger} />
               <Text className="text-[13px] font-Jakarta ml-2 flex-1" style={{ color: colors.danger }}>
-                Account locked for new rides: your unpaid commission has reached the {formatBDT(data.max_debt_limit_bdt ?? 0)} limit. Pay now to resume receiving ride offers.
+                {t("monetization.locked_body", {
+                  amount: formatBDT(data.max_debt_limit_bdt ?? 0),
+                })}
               </Text>
             </View>
           )}
@@ -461,7 +493,7 @@ export default function DueAmounts() {
           {/* ── Total outstanding ── */}
           <View className="p-[16px] rounded-[12px]" style={{ backgroundColor: isDark ? colors.primaryLightDark : colors.primaryLight }}>
             <View className="flex-row justify-between items-center">
-              <Text className="text-[14px] font-JakartaSemiBold" style={{ color: textPrimary }}>TOTAL OUTSTANDING</Text>
+              <Text className="text-[14px] font-JakartaSemiBold" style={{ color: textPrimary }}>{t("monetization.total_outstanding_label")}</Text>
               <Text className="text-[20px] font-JakartaBold" style={{ color: colors.danger }}>{formatBDT(data.total_outstanding_bdt)}</Text>
             </View>
           </View>
@@ -473,9 +505,4 @@ export default function DueAmounts() {
       ) : null}
     </SafeAreaView>
   );
-}
-
-function dueText(dueAt: string | null): string {
-  if (!dueAt) return "";
-  return ` · due ${new Date(dueAt).toLocaleDateString("en-GB", { day: "2-digit", month: "short" })}`;
 }

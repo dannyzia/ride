@@ -56,9 +56,14 @@ appId: com.node.bd
 - tapOn:
     id: "register.set-confirm-password"
 - inputText: ${PASSWORD}
+- hideKeyboard
 - tapOn:
     id: "register.handle-register"
+# Post-registration ground = the SERVICES HUB, not the booking sheet's "Where to?"
+# row (same repoint as _login-rider.yaml, device-measured 2026-11-11: a fresh rider
+# lands on app/(main)/(customer)/services-hub, and `customer.home.el-2` is not
+# rendered until a service tile opens the booking surface).
 - extendedWaitUntil:
     visible:
-      id: "customer.home.el-2"
+      id: "customer.services-hub.handle-select"
     timeout: 30000

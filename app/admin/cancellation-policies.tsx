@@ -1,10 +1,11 @@
 import { useState, useEffect, useCallback } from "react";
-import { View, Text, Pressable, ActivityIndicator } from "react-native";
+import { View, Text, Pressable, ActivityIndicator, TextInput } from "react-native";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { AdminTable, type AdminColumn } from "@/components/admin/AdminTable";
 import { AdminModal } from "@/components/admin/AdminModal";
 import { useAdminToast } from "@/components/admin/AdminToast";
 import { adminFetch } from "@/lib/adminFetch";
+import { takaToPaisa, formatBdt } from "@/lib/money";
 import { colors } from "@/theme/goRide";
 
 interface Policy {
@@ -23,14 +24,21 @@ export default function CancellationPolicies() {
   const fetchPolicies = useCallback(async () => {
     setLoading(true);
     const res = await adminFetch<{ policies: Policy[] }>("/api/admin/cancellation-policies");
-    if (res.data) setPolicies(res.data.policies ?? []);
+    if (res.error) toast.show(res.message ?? res.error, "error");
+    else setPolicies(res.data?.policies ?? []);
     setLoading(false);
-  }, []);
+  }, [toast]);
 
   useEffect(() => { fetchPolicies(); }, [fetchPolicies]);
 
   const save = async () => {
-    const body = { ...form, time_threshold_seconds: parseInt(form.time_threshold_seconds, 10), fee_amount_bdt: parseInt(form.fee_amount_bdt, 10) * 100, max_fee_bdt: parseInt(form.max_fee_bdt, 10) * 100, priority: 1 };
+    const feePaisa = takaToPaisa(form.fee_amount_bdt);
+    const maxFeePaisa = takaToPaisa(form.max_fee_bdt);
+    if (!Number.isFinite(feePaisa) || !Number.isFinite(maxFeePaisa)) {
+      toast.show("Fee amounts must be numbers", "error");
+      return;
+    }
+    const body = { ...form, time_threshold_seconds: parseInt(form.time_threshold_seconds, 10), fee_amount_bdt: feePaisa, max_fee_bdt: maxFeePaisa, priority: 1 };
     const res = await adminFetch("/api/admin/cancellation-policies", {
       method: "POST", body: JSON.stringify(body), headers: { "Content-Type": "application/json" },
     });
@@ -38,13 +46,39 @@ export default function CancellationPolicies() {
     else { toast.show(res.error ?? "Failed", "error"); }
   };
 
+  const toggleActive = async (p: Policy) => {
+    const res = await adminFetch("/api/admin/cancellation-policies", {
+      method: "PATCH",
+      body: JSON.stringify({ id: p.id, is_active: !p.is_active }),
+      headers: { "Content-Type": "application/json" },
+    });
+    if (res.error) {
+      toast.show(res.message ?? res.error, "error");
+    } else {
+      toast.show(p.is_active ? "Policy deactivated" : "Policy activated", "success");
+      fetchPolicies();
+    }
+  };
+
   const columns: AdminColumn<Policy>[] = [
     { key: "name", header: "Name", width: 140 },
     { key: "canceller_role", header: "Role", width: 70 },
     { key: "ride_status", header: "Ride Status", width: 100 },
-    { key: "fee_amount_bdt", header: "Fee (BDT)", render: (r) => `৳${(r.fee_amount_bdt / 100).toFixed(0)}`, width: 80 },
+    { key: "fee_amount_bdt", header: "Fee", render: (r) => formatBdt(r.fee_amount_bdt), width: 80 },
     { key: "time_threshold_seconds", header: "Grace (s)", width: 70 },
-    { key: "is_active", header: "Active", render: (r) => r.is_active ? "Yes" : "No", width: 60 },
+    { key: "is_active", header: "Active", render: (r) => (r.is_active ? "Yes" : "No"), width: 60 },
+    {
+      key: "toggle",
+      header: "",
+      width: 100,
+      render: (r) => (
+        <Pressable onPress={() => void toggleActive(r)} testID="admin.cancellation-policies.toggle-active">
+          <Text style={{ color: r.is_active ? colors.danger : colors.success, fontFamily: "Jakarta-Bold", fontSize: 11 }}>
+            {r.is_active ? "Deactivate" : "Activate"}
+          </Text>
+        </Pressable>
+      ),
+    },
   ];
 
   return (
@@ -61,8 +95,8 @@ export default function CancellationPolicies() {
             <View key={f}>
               <Text style={{ color: colors.textSecondaryDark, fontSize: 12, fontFamily: "Jakarta-Regular" }}>{f}</Text>
               <View style={{ backgroundColor: colors.darkSecondary, borderRadius: 8, padding: 8 }}>
-                <input type="text" value={(form as any)[f]} onChange={(e) => setForm({ ...form, [f]: e.target.value })}
-                  style={{ background: "transparent", color: colors.textPrimaryDark, border: "none", outline: "none", width: "100%", fontFamily: "Jakarta-Regular", fontSize: 14 }} />
+                <TextInput value={(form as any)[f]} onChangeText={(v) => setForm({ ...form, [f]: v })}
+                  style={{ color: colors.textPrimaryDark, width: "100%", fontFamily: "Jakarta-Regular", fontSize: 14 }}  testID="admin.cancellation-policies.set-form-2"/>
               </View>
             </View>
           ))}

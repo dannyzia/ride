@@ -9,9 +9,24 @@
 # a location", is the value of ORPHANED find_ride.enter_or_choose_location and
 # renders nowhere (find-ride/ deleted, G-02b). Repointed to the query input's own
 # testID — the very element this subflow taps next, so it is provably present.
-# Class: AUTOMATABLE.
+# OPEN THE BOOKING SURFACE FIRST (2026-11-11, device-measured): the rider lands on the
+# SERVICES HUB, not on a booking form — `customer.home.el-2` (the "Where to?" row) lives
+# in /(main)/(customer)/(tabs)/home, which only renders once a service tile has pushed it
+# with a `service` param (services-hub.tsx:77). Tapping el-2 straight from the hub
+# reported "Element not found". When el-2 is not already on screen, tap the hub's first
+# service tile (services-hub.tsx:153 — one shared testID, so index 0 = Bike) and the
+# booking surface opens; the conditional is a no-op for flows that arrive with it open.
 appId: com.node.bd
 ---
+- runFlow:
+    when:
+      notVisible:
+        id: "customer.home.el-2"
+    commands:
+      - tapOn:
+          id: "customer.services-hub.handle-select"
+      - waitForAnimationToEnd:
+          timeout: 3000
 - tapOn:
     id: "customer.home.el-2"
 - extendedWaitUntil:
@@ -30,3 +45,26 @@ appId: com.node.bd
     index: 0
 - waitForAnimationToEnd:
     timeout: 3000
+# ADVANCE TO THE FARE SHEET (2026-11-11, device-measured). Picking a place only
+# writes dropoff coords and triggers fetchEstimates — it does NOT move the
+# booking sheet off LOCATIONS. `bookingStep` reaches "FARES" in exactly three
+# places in (tabs)/home/index.tsx: handleNext (L772), the rebook path (L347) and
+# the FARES back button (L1168), and the sheet's snap index is
+# `bookingStep === "LOCATIONS" ? 0 : 1` (L1538) — so every fare-tier assert in
+# the suite (customer.home.set-selected-vehicle-type) was invisible after this
+# subflow, with a 200 estimate already in hand. Tap the LOCATIONS step's own
+# Next control (customer.home.handle-next, L1152, disabled until hasRoute).
+# Conditional so flows that arrive already on FARES are untouched.
+- runFlow:
+    when:
+      notVisible:
+        id: "customer.home.set-selected-vehicle-type"
+    commands:
+      - scrollUntilVisible:
+          element:
+            id: "customer.home.handle-next"
+          direction: DOWN
+      - tapOn:
+          id: "customer.home.handle-next"
+      - waitForAnimationToEnd:
+          timeout: 3000

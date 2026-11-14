@@ -584,7 +584,9 @@ export default function RideOfferSheet() {
             color: textSecondary,
           }}
         >
-          Lead: {leadCost} call{leadCost === 1 ? "" : "s"}
+          {leadCost === 0
+            ? "Lead: commission-based"
+            : `Lead: ${leadCost} call${leadCost === 1 ? "" : "s"}`}
         </Text>
         <Text
           style={{
@@ -602,9 +604,11 @@ export default function RideOfferSheet() {
             color: textPrimary,
           }}
         >
-          {balanceAfter === -1
-            ? "Unlimited calls"
-            : `${balanceAfter} call${balanceAfter === 1 ? "" : "s"} left`}
+          {leadCost === 0
+            ? "No call deducted"
+            : balanceAfter === -1
+              ? "Unlimited calls"
+              : `${balanceAfter} call${balanceAfter === 1 ? "" : "s"} left`}
         </Text>
       </View>
 

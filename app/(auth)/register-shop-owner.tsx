@@ -174,6 +174,8 @@ export default function RegisterShopOwnerScreen() {
                 shop,
                 // C1-1: consent carried via the handoff from the phone-entry gate.
                 terms_accepted: creds.terms_accepted,
+                // §6: optional marketing opt-in carried via the handoff.
+                marketing_opt_in: creds.marketing_opt_in,
               };
 
       const res = await fetch(url, {

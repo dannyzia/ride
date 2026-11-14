@@ -8,9 +8,9 @@ import {
   Text,
   ActivityIndicator,
   Pressable,
-  Alert,
 } from "react-native";
 import { AdminShell } from "@/components/admin/AdminShell";
+import { useAdminToast } from "@/components/admin/AdminToast";
 import { AdminTable, type AdminColumn } from "@/components/admin/AdminTable";
 import { adminFetch } from "@/lib/adminFetch";
 import { colors } from "@/theme/goRide";
@@ -46,10 +46,12 @@ function PlanForm({
   initial,
   onClose,
   onSaved,
+  onError,
 }: {
   initial?: PlanRow | null;
   onClose: () => void;
   onSaved: () => void;
+  onError: (message: string) => void;
 }) {
   const [name, setName] = useState(initial?.name ?? "");
   const [description, setDescription] = useState(initial?.description ?? "");
@@ -71,12 +73,12 @@ function PlanForm({
 
   const handleSave = async () => {
     if (!name.trim()) {
-      Alert.alert("Error", "Plan name is required");
+      onError("Plan name is required");
       return;
     }
     const priceNum = parseFloat(priceBdt);
     if (isNaN(priceNum) || priceNum < 0) {
-      Alert.alert("Error", "Price must be a non-negative number");
+      onError("Price must be a non-negative number");
       return;
     }
 
@@ -97,7 +99,7 @@ function PlanForm({
           body: JSON.stringify({ id: initial.id, ...body }),
         });
         if (res.error) {
-          Alert.alert("Error", res.message ?? res.error);
+          onError(res.message ?? res.error);
           return;
         }
       } else {
@@ -106,7 +108,7 @@ function PlanForm({
           body: JSON.stringify(body),
         });
         if (res.error) {
-          Alert.alert("Error", res.message ?? res.error);
+          onError(res.message ?? res.error);
           return;
         }
       }
@@ -269,7 +271,7 @@ function PlanForm({
               marginBottom: 4,
             }}
           >
-            Vehicle Limit
+            Vehicle Limit (blank or -1 = Unlimited)
           </Text>
           <input
             type="number"
@@ -278,7 +280,7 @@ function PlanForm({
               setVehicleLimit(e.target.value)
             }
             style={inputStyle}
-            placeholder="Unlimited"
+            placeholder="Unlimited (blank or -1)"
           />
         </View>
         <View style={{ flex: 1 }}>
@@ -290,7 +292,7 @@ function PlanForm({
               marginBottom: 4,
             }}
           >
-            Driver Limit
+            Driver Limit (blank or -1 = Unlimited)
           </Text>
           <input
             type="number"
@@ -299,7 +301,7 @@ function PlanForm({
               setDriverLimit(e.target.value)
             }
             style={inputStyle}
-            placeholder="Unlimited"
+            placeholder="Unlimited (blank or -1)"
           />
         </View>
       </View>
@@ -360,6 +362,7 @@ function PlanForm({
 // ── Main screen ───────────────────────────────────────────────────────────
 
 export default function AdminFleetPlans() {
+  const toast = useAdminToast();
   const [plans, setPlans] = useState<PlanRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -370,9 +373,10 @@ export default function AdminFleetPlans() {
     const res = await adminFetch<{ plans: PlanRow[] }>(
       "/api/admin/fleet-plans",
     );
-    if (res.data) setPlans(res.data.plans ?? []);
+    if (res.error) toast.show(res.message ?? res.error, "error");
+    else setPlans(res.data?.plans ?? []);
     setLoading(false);
-  }, []);
+  }, [toast]);
 
   useEffect(() => {
     fetchPlans();
@@ -383,7 +387,8 @@ export default function AdminFleetPlans() {
       method: "PATCH",
       body: JSON.stringify({ id: plan.id, active: !plan.active }),
     });
-    if (!res.error) {
+    if (res.error) toast.show(res.message ?? res.error, "error");
+    else {
       setPlans((prev) =>
         prev.map((p) => (p.id === plan.id ? { ...p, active: !p.active } : p)),
       );
@@ -469,7 +474,7 @@ export default function AdminFleetPlans() {
             fontSize: 12,
           }}
         >
-          {r.vehicle_limit ?? "∞"}
+          {r.vehicle_limit == null || r.vehicle_limit === -1 ? "Unlimited (∞)" : r.vehicle_limit}
         </Text>
       ),
     },
@@ -485,7 +490,7 @@ export default function AdminFleetPlans() {
             fontSize: 12,
           }}
         >
-          {r.driver_limit ?? "∞"}
+          {r.driver_limit == null || r.driver_limit === -1 ? "Unlimited (∞)" : r.driver_limit}
         </Text>
       ),
     },
@@ -595,7 +600,8 @@ export default function AdminFleetPlans() {
             setShowForm(false);
             setEditingPlan(null);
           }}
-          onSaved={fetchPlans}
+          onSaved={() => { void fetchPlans(); }}
+          onError={(message) => toast.show(message, "error")}
         />
       )}
 

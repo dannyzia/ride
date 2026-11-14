@@ -6,10 +6,14 @@ export function getBarikoiAutocompleteUrl(
   lat?: number,
   lng?: number,
 ): string {
+  // Barikoi v2 answers HTTP 400 when `city` arrives without `district`
+  // ("city filter will not work without district"), which killed this fallback
+  // silently in both autocomplete screens. Measured 2026-11-11.
   const params = new URLSearchParams({
     q: query,
     api_key: BARIKOI_API_KEY,
     city: "dhaka",
+    district: "dhaka",
     sub_area: "true",
     sub_district: "true",
   });

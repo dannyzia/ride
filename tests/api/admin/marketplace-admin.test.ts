@@ -12,7 +12,7 @@
  */
 import { jest, describe, it, expect, beforeEach } from "@jest/globals";
 import { POST as serviceZonesPost, DELETE as serviceZonesDelete } from "@/app/api/admin/marketplace/service-zones+api";
-import { PATCH as couriersPatch } from "@/app/api/admin/marketplace/couriers+api";
+import { PATCH as couriersPatch } from "@/app/api/admin/marketplace/couriers/[id]/status+api";
 import { GET as overviewGet } from "@/app/api/admin/marketplace/overview+api";
 
 // ─── Tests ──────────────────────────────────────────────────────────────────
@@ -324,7 +324,7 @@ describe("Service-zones writer surface", () => {
   });
 
   it("DELETE by fleet_id + h3_cell works", async () => {
-    pushDeleteRows([{ id: "zone-1" }]); // returning from delete
+    pushSelectRows([{ id: "zone-1" }]); // existing row before deactivation
     const req = makeRequest("DELETE", {
       fleet_id: "550e8400-e29b-41d4-a716-446655440000",
       h3_cell: "891e2f4a8b7c3d0",
@@ -332,7 +332,7 @@ describe("Service-zones writer surface", () => {
     const res = await serviceZonesDelete(req);
     expect(res.status).toBe(200);
     const body = await res.json();
-    expect(body.deleted).toBe(1);
+    expect(body.deactivated).toBe(1);
   });
 
   it("duplicate (fleet_id, h3_cell) → onConflictDoNothing returns 0 inserted", async () => {

@@ -8,6 +8,11 @@
 # a different route, settings/logout-confirmation, NOT used here). Class: AUTOMATABLE.
 appId: com.node.bd
 ---
+# A signed-in rider lands on the services hub, OUTSIDE (tabs), so the tab bar does
+# not exist yet — measured 2026-11-11: this subflow's first tap failed on
+# customer._layout.on-press with the hub on screen. _enter-tabs is a no-op when
+# the bar is already present.
+- runFlow: ../util/_enter-tabs.yaml
 - tapOn:
     id: "customer._layout.on-press"
     text: ".*Profile.*|.*More.*"

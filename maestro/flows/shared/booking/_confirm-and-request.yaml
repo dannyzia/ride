@@ -9,6 +9,15 @@
 # Class: AUTOMATABLE (assertion can fail — it demands the finding-driver surface).
 appId: com.node.bd
 ---
+# SCROLL BEFORE TAPPING (2026-11-11, device-measured): handle-call-for-ride is the
+# LAST element of the FARES BottomSheetScrollView (home/index.tsx L1513), below the
+# tier cards, the schedule button and the payment row — on a Pixel 6a it sits off
+# the sheet's visible area, so a bare `extendedWaitUntil visible` failed with the
+# button merely scrolled out (booking/01 burned its full 15 s). Scroll to it.
+- scrollUntilVisible:
+    element:
+      id: "customer.home.handle-call-for-ride"
+    direction: DOWN
 - extendedWaitUntil:
     visible:
       id: "customer.home.handle-call-for-ride"

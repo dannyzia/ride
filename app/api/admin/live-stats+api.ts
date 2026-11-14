@@ -1,3 +1,4 @@
+import { adminErrorResponse } from '@/lib/adminRoute';
 import { db } from '@/src/db';
 import { rides, drivers } from '@/src/db/schema';
 import { eq, and, sql, gte } from 'drizzle-orm';
@@ -44,7 +45,6 @@ export async function GET(request: Request) {
     });
   } catch (err: unknown) {
     if (errors.getErrorStatus(err) === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
-    logger.error('[admin/live-stats] error', err);
-    return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
+    return adminErrorResponse(err, '[admin/live-stats] error');
   }
 }

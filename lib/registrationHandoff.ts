@@ -22,6 +22,8 @@ export interface RegistrationHandoff {
   password: string;
   // C1-1: T&C + Privacy consent carried from the phone-entry checkbox gate.
   terms_accepted: true;
+  // §6: optional marketing opt-in carried alongside (default OFF).
+  marketing_opt_in: boolean;
   // S8 §4.1: self-declared gender picked on register.tsx (Prefer not to say
   // maps to 'unspecified'); the wizard forwards it as `gender: creds.gender`.
   gender: Gender;

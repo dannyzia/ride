@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { View, Text, Pressable, ActivityIndicator, ScrollView, StyleSheet } from "react-native";
 import { AdminShell } from "@/components/admin/AdminShell";
+import { useAdminToast } from "@/components/admin/AdminToast";
 import { adminFetch } from "@/lib/adminFetch";
 import { colors } from "@/theme/goRide";
 
@@ -21,41 +22,44 @@ interface ZonePnLData {
 type Period = "7d" | "30d" | "90d";
 
 export default function ZonePnL() {
+  const toast = useAdminToast();
   const [zones, setZones] = useState<{ id: string; name: string }[]>([]);
   const [selectedZone, setSelectedZone] = useState<string>("");
   const [period, setPeriod] = useState<Period>("30d");
   const [pnl, setPnL] = useState<ZonePnLData | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetchZones();
-  }, []);
-
-  useEffect(() => {
-    if (selectedZone) {
-      fetchPnL();
-    }
-  }, [selectedZone, period]);
-
-  const fetchZones = async () => {
+  const fetchZones = useCallback(async () => {
     const res = await adminFetch<{ zones: { id: string; name: string; lifecycle_stage: string }[] }>("/api/admin/zone-pnl");
+    if (res.error) {
+      toast.show(res.message ?? res.error, "error");
+      return;
+    }
     if (res.data?.zones) {
       const zoneList = res.data.zones.map((z) => ({ id: z.id, name: z.name }));
       setZones(zoneList);
-      if (!selectedZone && zoneList.length > 0) setSelectedZone(zoneList[0].id);
+      if (zoneList.length > 0) setSelectedZone((current) => current || zoneList[0].id);
     }
-  };
+  }, [toast]);
 
-  const fetchPnL = async () => {
+  useEffect(() => { void fetchZones(); }, [fetchZones]);
+
+  const fetchPnL = useCallback(async () => {
     setLoading(true);
     const res = await adminFetch<{ zone_pnl: ZonePnLData }>(
       `/api/admin/zone-pnl?zone_id=${selectedZone}&period=${period}`
     );
-    if (res.data?.zone_pnl) setPnL(res.data.zone_pnl);
+    if (res.error) toast.show(res.message ?? res.error, "error");
+    else setPnL(res.data?.zone_pnl ?? null);
     setLoading(false);
-  };
+  }, [selectedZone, period, toast]);
 
-  const fmtBdt = (paisa: number) => (paisa / 100).toFixed(2);
+  useEffect(() => {
+    if (selectedZone) void fetchPnL();
+  }, [selectedZone, period, fetchPnL]);
+
+  // Call sites already render the ৳ glyph, so this returns the bare amount.
+  const fmtBdt = (paisa: number) => (Math.round(paisa) / 100).toFixed(2);
 
   const periodDays = (p: Period) => {
     if (p === "7d") return 7;

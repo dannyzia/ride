@@ -53,10 +53,23 @@ const COURIER_USER = "44444444-4444-4444-8444-444444444444";
 const COURIER_ENTITY = "77777777-7777-4777-8777-777777777777";
 const FEE = 8_000; // ৳80 delivery fee
 
-interface PossessionRow {
+interface PossessionRow extends Row {
   status: string;
   expires_at: Date | null;
   commission_percent: string | null;
+}
+
+type TxArg = Parameters<typeof settleDeliveryLeg>[0];
+
+/** settleDeliveryLeg, but asserting a settlement actually happened (the SUT
+ * returns null for an already-settled leg, which every case here rejects). */
+async function settle(
+  tx: TxArg,
+  opts: Parameters<typeof settleDeliveryLeg>[1],
+) {
+  const out = await settleDeliveryLeg(tx, opts);
+  if (!out) throw new Error("expected a settlement, got the already-settled no-op");
+  return out;
 }
 
 /**
@@ -94,13 +107,10 @@ function makeTx(selectQueue: unknown[][]) {
       }),
     })),
   };
-  return {
-    // Cast: the hand-rolled stub is deliberately not a drizzle PgTransaction
-    // (its header comment); the writer only touches the chain methods the
-    // stub implements. Same treatment as the repo's documented Drizzle casts.
-    tx: tx as unknown as Parameters<typeof settleDeliveryLeg>[0],
-    inserts,
-  };
+  // Cast: the hand-rolled stub is deliberately not a drizzle PgTransaction
+  // (its header comment); the writer only touches the chain methods the
+  // stub implements. Same treatment as the repo's documented Drizzle casts.
+  return { tx: tx as unknown as TxArg, inserts };
 }
 
 function legRow(opts: { fee?: number; courierUser?: string | null } = {}): Row {
@@ -137,7 +147,7 @@ describe("settleDeliveryLeg — platform-fee matrix (Batch-2 Item 9)", () => {
       [], // no shop order → no remittance due
     ]);
 
-    const out = await settleDeliveryLeg(tx, {
+    const out = await settle(tx, {
       legId: LEG_ID,
       orderId: ORDER_ID,
       courierUserId: COURIER_USER,
@@ -170,7 +180,7 @@ describe("settleDeliveryLeg — platform-fee matrix (Batch-2 Item 9)", () => {
   it("XOR: the package path never holds the fee at source AND bills it", async () => {
     const { tx, inserts } = makeTx([[], [legRow()], [{ id: COURIER_ENTITY }], [PACKAGE_5], []]);
 
-    const out = await settleDeliveryLeg(tx, {
+    const out = await settle(tx, {
       legId: LEG_ID,
       orderId: ORDER_ID,
       courierUserId: COURIER_USER,
@@ -200,7 +210,7 @@ describe("settleDeliveryLeg — platform-fee matrix (Batch-2 Item 9)", () => {
       [],
     ]);
 
-    const out = await settleDeliveryLeg(tx, {
+    const out = await settle(tx, {
       legId: LEG_ID,
       orderId: ORDER_ID,
       courierUserId: COURIER_USER,
@@ -219,7 +229,7 @@ describe("settleDeliveryLeg — platform-fee matrix (Batch-2 Item 9)", () => {
     mockRequireInt.mockResolvedValue(8);
     const { tx, inserts } = makeTx([[], [legRow()], [{ id: COURIER_ENTITY }], [], []]);
 
-    const out = await settleDeliveryLeg(tx, {
+    const out = await settle(tx, {
       legId: LEG_ID,
       orderId: ORDER_ID,
       courierUserId: COURIER_USER,
@@ -240,7 +250,7 @@ describe("settleDeliveryLeg — platform-fee matrix (Batch-2 Item 9)", () => {
       [],
     ]);
 
-    const out = await settleDeliveryLeg(tx, {
+    const out = await settle(tx, {
       legId: LEG_ID,
       orderId: ORDER_ID,
       courierUserId: COURIER_USER,
@@ -256,7 +266,7 @@ describe("settleDeliveryLeg — platform-fee matrix (Batch-2 Item 9)", () => {
     mockRequireInt.mockResolvedValue(8);
     const { tx } = makeTx([[], [legRow()], [], []]); // no couriers row for this user
 
-    const out = await settleDeliveryLeg(tx, {
+    const out = await settle(tx, {
       legId: LEG_ID,
       orderId: ORDER_ID,
       courierUserId: COURIER_USER,
@@ -300,13 +310,13 @@ describe("settleDeliveryLeg — platform-fee matrix (Batch-2 Item 9)", () => {
       await settleDeliveryLeg(tx, { legId, orderId: ORDER_ID, courierUserId: COURIER_USER });
     }
 
-    const calls = (accrueUsageBill as jest.Mock).mock.calls.map((c) => c[1]);
+    const calls = (accrueUsageBill as jest.Mock).mock.calls.map((c) => c[1] as Row);
     expect(calls).toHaveLength(2);
     // Same (role, id) both times → the writer's lock + partial unique index make
     // these two increments one row, never a second bill.
     expect(calls[0]).toMatchObject({ operatorRole: "delivery", operatorId: COURIER_ENTITY });
     expect(calls[1]).toMatchObject({ operatorRole: "delivery", operatorId: COURIER_ENTITY });
-    expect(calls.every((c) => Number((c as Row).amountBdt) === 400)).toBe(true);
+    expect(calls.every((c) => Number(c.amountBdt) === 400)).toBe(true);
   });
 
   // ── D7: COD remittance is untouched ──────────────────────────────────────
@@ -322,7 +332,7 @@ describe("settleDeliveryLeg — platform-fee matrix (Batch-2 Item 9)", () => {
       [{ amount_collected_bdt: 28_000, delivery_fee_bdt: FEE }],
     ]);
 
-    const out = await settleDeliveryLeg(tx, {
+    const out = await settle(tx, {
       legId: LEG_ID,
       orderId: ORDER_ID,
       courierUserId: COURIER_USER,

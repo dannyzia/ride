@@ -199,6 +199,17 @@ jest.mock("@/lib/marketplaceRbac", () => ({
       dbUser: mockAuthUser,
       memberships: [{ fleet_id: mockFleetUuid, role: "OWNER" }],
     }),
+  // Batch-2 Item 10: the accept-side gate re-check now goes through this helper
+  // (possession, not fleet_subscriptions). These suites pin bid/award mechanics,
+  // not the entitlement itself, so it is stubbed as satisfied for every fleet.
+  fleetMarketplaceEntitlements: jest.fn(async (fleetIds: string[]) =>
+    new Map(
+      fleetIds.map((id) => [
+        id,
+        { fleet_id: id, fleet_name: "Fleet", package_id: "pkg-1", expires_at: null },
+      ]),
+    ),
+  ),
 }));
 
 jest.mock("@/lib/platformConfig", () => ({

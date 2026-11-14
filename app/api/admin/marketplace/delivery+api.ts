@@ -1,6 +1,6 @@
 /**
- * GET /api/admin/marketplace/delivery/requests — list delivery requests
- * GET /api/admin/marketplace/delivery/legs     — list delivery legs
+ * GET /api/admin/marketplace/delivery            — list delivery requests
+ * GET /api/admin/marketplace/delivery?type=legs  — list delivery legs
  *
  * Auth: requireAdminPermission('marketplace.write').
  */
@@ -23,7 +23,8 @@ export async function GET(request: Request) {
     await requireAdminPermission("marketplace.write")(request);
 
     const url = new URL(request.url);
-    const isLegs = url.pathname.endsWith("/legs");
+    const isLegs =
+      url.pathname.endsWith("/legs") || url.searchParams.get("type") === "legs";
 
     const parsed = querySchema.safeParse({
       status: url.searchParams.get("status"),

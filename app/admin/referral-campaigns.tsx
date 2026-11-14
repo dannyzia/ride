@@ -151,19 +151,19 @@ export default function ReferralCampaignsScreen() {
     }
     if (
       !Number.isFinite(maxPerReferrer) ||
-      maxPerReferrer < 1 ||
+      (maxPerReferrer !== -1 && maxPerReferrer < 1) ||
       !Number.isInteger(maxPerReferrer)
     ) {
-      toast.show("Max/referrer must be a positive integer", "error");
+      toast.show("Max/referrer must be a positive integer or -1 for unlimited", "error");
       return null;
     }
     if (
       maxPerCampaignNum !== null &&
       (!Number.isFinite(maxPerCampaignNum) ||
-        maxPerCampaignNum < 1 ||
+        (maxPerCampaignNum !== -1 && maxPerCampaignNum < 1) ||
         !Number.isInteger(maxPerCampaignNum))
     ) {
-      toast.show("Max total must be a positive integer or blank", "error");
+      toast.show("Max total must be a positive integer, -1 for unlimited, or blank", "error");
       return null;
     }
 
@@ -310,15 +310,16 @@ export default function ReferralCampaignsScreen() {
     },
     {
       name: "max_uses_per_referrer",
-      label: "Max Uses / Referrer",
+      label: "Max Uses / Referrer (-1 = Unlimited)",
       type: "number",
       required: true,
+      helpText: "Enter -1 for unlimited uses per referrer.",
     },
     {
       name: "max_uses_per_campaign",
-      label: "Max Uses Total (blank = ∞)",
+      label: "Max Uses Total (-1 or blank = Unlimited)",
       type: "number",
-      helpText: "Leave blank for unlimited campaign-wide redemptions.",
+      helpText: "Enter -1 or leave blank for unlimited campaign-wide redemptions.",
     },
     {
       name: "is_active",
@@ -358,7 +359,12 @@ export default function ReferralCampaignsScreen() {
       key: "max_uses_per_referrer",
       header: "Max/Referrer",
       sortable: true,
-      width: 120,
+      width: 150,
+      render: (c) => (
+        <Text style={styles.cellText}>
+          {c.max_uses_per_referrer === -1 ? "Unlimited (∞)" : c.max_uses_per_referrer}
+        </Text>
+      ),
     },
     {
       key: "max_uses_per_campaign",
@@ -367,7 +373,9 @@ export default function ReferralCampaignsScreen() {
       width: 110,
       render: (c) => (
         <Text style={styles.cellText}>
-          {c.max_uses_per_campaign == null ? "∞" : c.max_uses_per_campaign}
+          {c.max_uses_per_campaign === -1 || c.max_uses_per_campaign == null
+            ? "Unlimited (∞)"
+            : c.max_uses_per_campaign}
         </Text>
       ),
     },

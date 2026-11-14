@@ -14,6 +14,11 @@ tags: [auth]
 - launchApp:
     appId: com.node.bd
     clearState: true
+# Dev-client load hop — after a clearState launch the dev client comes up on its
+# own launcher, not the app (the 09/10/11/12 flows already do this). Measured
+# 2026-11-11: without it this flow died at the wait below, on the launcher's
+# "Runtime version" screen. Needs -e DEV_CLIENT_URL.
+- runFlow: ../shared/util/_dev-client-boot.yaml
 - extendedWaitUntil:
     visible: "Enter your phone number"
     timeout: 20000

@@ -1,3 +1,4 @@
+import { adminErrorResponse } from '@/lib/adminRoute';
 import { db } from '@/src/db';
 import { sosAlerts } from '@/src/db/schema';
 import { eq } from 'drizzle-orm';
@@ -28,7 +29,6 @@ export async function POST(request: Request, { id }: { id: string }) {
     return Response.json({ success: true, alert: updated });
   } catch (err: unknown) {
     if (errors.getErrorStatus(err) === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
-    logger.error('[admin/sos-alerts/ack] error', err);
-    return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
+    return adminErrorResponse(err, '[admin/sos-alerts/ack] error');
   }
 }

@@ -35,7 +35,7 @@ describe("delivery:status parcel linkage", () => {
       routeNotification({ type: "delivery:status", leg_id: LEG, status: "accepted" }, "rider"),
     ).toBe(true);
     expect(mockPush).toHaveBeenCalledWith(
-      `/(main)/(customer)/(delivery)/request-detail?id=${LEG}`,
+      `/(main)/(customer)/parcel/request-detail?id=${LEG}`,
     );
   });
 
@@ -44,13 +44,13 @@ describe("delivery:status parcel linkage", () => {
       routeNotification({ type: "delivery:status", leg_id: LEG, status: "delivered" }, "driver"),
     ).toBe(true);
     expect(mockPush).toHaveBeenCalledWith(
-      `/(main)/(customer)/(delivery)/request-detail?id=${LEG}`,
+      `/(main)/(customer)/parcel/request-detail?id=${LEG}`,
     );
   });
 
   it("rider fallback without a leg id is the parcel list, not the courier inbox", () => {
     expect(routeNotification({ type: "delivery:status" }, "rider")).toBe(true);
-    expect(mockPush).toHaveBeenCalledWith("/(main)/(customer)/(delivery)");
+    expect(mockPush).toHaveBeenCalledWith("/(main)/(customer)/parcel");
   });
 
   it("driver fallback without a leg id stays the courier inbox", () => {
@@ -62,7 +62,7 @@ describe("delivery:status parcel linkage", () => {
     expect(
       routeNotification({ type: "delivery:status", leg_id: "not-a-uuid" }, "rider"),
     ).toBe(true);
-    expect(mockPush).toHaveBeenCalledWith("/(main)/(customer)/(delivery)");
+    expect(mockPush).toHaveBeenCalledWith("/(main)/(customer)/parcel");
   });
 });
 

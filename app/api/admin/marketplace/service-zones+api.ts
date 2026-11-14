@@ -1,12 +1,17 @@
 /**
- * GET    /api/admin/marketplace/service-zones — list service zones (fleet filter)
+ * GET    /api/admin/marketplace/service-zones — list ACTIVE service zones (fleet filter)
  * POST   /api/admin/marketplace/service-zones — bulk add cells (fleet_id + h3_cells[])
- * DELETE /api/admin/marketplace/service-zones — remove by id or {fleet_id, h3_cell}
+ * DELETE /api/admin/marketplace/service-zones — deactivate by id or {fleet_id, h3_cell}
  *
  * SOLE writer of fleet_service_zones (spec §C.7).
  * Auth: requireAdminPermission('marketplace.write').
  *
  * Validates: h3_cells must be res-8 strings (res-9 rejected in v1).
+ *
+ * Retirement is a soft delete (`is_active = false`): a removed cell keeps its
+ * row so the history of where a fleet could operate survives, and re-adding
+ * the same cell reactivates it (the (fleet_id, h3_cell) unique index makes a
+ * plain insert a no-op, which would otherwise leave a cell permanently dark).
  */
 import { db } from "@/src/db";
 import { fleetServiceZones } from "@/src/db/schema";
@@ -15,7 +20,7 @@ import { parseJsonBody } from "@/lib/parseBody";
 import { logger } from "@/lib/logger";
 import * as errors from "@/lib/errors";
 import { z } from "zod";
-import { eq, and, sql } from "drizzle-orm";
+import { eq, and, inArray, sql } from "drizzle-orm";
 
 // H3 res-8 cells are 15 chars; res-9 are 16 chars. Reject res-9 in v1.
 const H3_RES8_LENGTH = 15;
@@ -39,7 +44,9 @@ export async function GET(request: Request) {
     const url = new URL(request.url);
     const fleetId = url.searchParams.get("fleet_id");
 
-    const where = fleetId ? eq(fleetServiceZones.fleet_id, fleetId) : undefined;
+    const where = fleetId
+      ? and(eq(fleetServiceZones.fleet_id, fleetId), eq(fleetServiceZones.is_active, true))
+      : eq(fleetServiceZones.is_active, true);
 
     const rows = await db
       .select()
@@ -81,6 +88,19 @@ export async function POST(request: Request) {
     if (validCells.length === 0) {
       return Response.json({ error: "no_valid_cells", message: "No valid res-8 H3 cells provided" }, { status: 400 });
     }
+
+    // Reactivate cells that were previously retired — the unique index makes
+    // the insert below a no-op for them, which would leave them inactive.
+    await db
+      .update(fleetServiceZones)
+      .set({ is_active: true })
+      .where(
+        and(
+          eq(fleetServiceZones.fleet_id, body.fleet_id),
+          inArray(fleetServiceZones.h3_cell, validCells),
+          eq(fleetServiceZones.is_active, false),
+        ),
+      );
 
     // Bulk upsert — ON CONFLICT DO NOTHING (unique on fleet_id + h3_cell)
     const rows = validCells.map((cell) => ({
@@ -133,15 +153,21 @@ export async function DELETE(request: Request) {
       ? eq(fleetServiceZones.id, body.id)
       : and(eq(fleetServiceZones.fleet_id, body.fleet_id!), eq(fleetServiceZones.h3_cell, body.h3_cell!));
 
-    const deleted = await db.delete(fleetServiceZones).where(where).returning({ id: fleetServiceZones.id });
+    const existing = await db
+      .select({ id: fleetServiceZones.id })
+      .from(fleetServiceZones)
+      .where(where)
+      .limit(1);
 
-    if (deleted.length === 0) {
+    if (existing.length === 0) {
       return Response.json({ error: "not_found", message: "Service zone not found" }, { status: 404 });
     }
 
-    logger.info("[admin/marketplace/service-zones DELETE]", { deleted: deleted.length });
+    await db.update(fleetServiceZones).set({ is_active: false }).where(where);
 
-    return Response.json({ deleted: deleted.length });
+    logger.info("[admin/marketplace/service-zones DELETE]", { deactivated: existing.length });
+
+    return Response.json({ deactivated: existing.length });
   } catch (err: unknown) {
     const status = errors.getErrorStatus(err);
     if (status === 401)

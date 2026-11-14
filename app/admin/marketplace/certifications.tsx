@@ -7,6 +7,7 @@ import { useState, useEffect, useCallback } from "react";
 import { View, Text, ActivityIndicator, Pressable, Alert } from "react-native";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { AdminTable, type AdminColumn } from "@/components/admin/AdminTable";
+import { useAdminToast } from "@/components/admin/AdminToast";
 import { adminFetch } from "@/lib/adminFetch";
 import { colors } from "@/theme/goRide";
 
@@ -29,6 +30,7 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 export default function MarketplaceCertifications() {
+  const toast = useAdminToast();
   const [certs, setCerts] = useState<CertRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
@@ -40,12 +42,13 @@ export default function MarketplaceCertifications() {
     // Fetch from ambulance certifications endpoint (shared with admin)
     const params = new URLSearchParams({ page: String(page), limit: String(PAGE_SIZE) });
     const res = await adminFetch<{ certifications: CertRow[]; total: number }>(`/api/admin/marketplace/certifications?${params.toString()}`);
-    if (res.data) {
-      setCerts(res.data.certifications ?? []);
-      setTotal(res.data.total ?? 0);
+    if (res.error) toast.show(res.message ?? res.error, "error");
+    else {
+      setCerts(res.data?.certifications ?? []);
+      setTotal(res.data?.total ?? 0);
     }
     setLoading(false);
-  }, [page]);
+  }, [page, toast]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -61,7 +64,7 @@ export default function MarketplaceCertifications() {
             body: JSON.stringify({ status }),
           });
           if (res.error) {
-            Alert.alert("Error", res.message ?? res.error);
+            toast.show(res.message ?? res.error, "error");
           } else {
             setCerts((prev) => prev.map((c) => c.id === certId ? { ...c, certification_status: status } : c));
           }

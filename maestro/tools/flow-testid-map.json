@@ -124,8 +124,8 @@
     "fleetAcceptBid": "customer.rental-marketplace.bidding.handle-accept"
   },
   "customer.delivery": {
-    "requestSubmit": "customer.delivery.request-create.handle-submit",
-    "acceptBid": "customer.delivery.request-detail.handle-accept-bid"
+    "requestSubmit": "customer.parcel.request-create.handle-submit",
+    "acceptBid": "customer.parcel.request-detail.handle-accept-bid"
   },
   "customer.ambulance.emergency": {
     "serviceLevel": "customer.ambulance.emergency.set-service-level",

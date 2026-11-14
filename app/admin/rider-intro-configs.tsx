@@ -6,6 +6,7 @@ import { AdminModal } from "@/components/admin/AdminModal";
 import { AdminTable, type AdminColumn } from "@/components/admin/AdminTable";
 import { useAdminToast } from "@/components/admin/AdminToast";
 import { adminFetch } from "@/lib/adminFetch";
+import { takaToPaisa } from "@/lib/money";
 import { colors } from "@/theme/goRide";
 import { useIsDark } from "@/lib/useAppearance";
 
@@ -49,14 +50,16 @@ const IntroConfigAdmin = () => {
   const fetchConfigs = useCallback(async () => {
     setLoading(true);
     const res = await adminFetch<{ configs: IntroConfig[] }>("/api/admin/rider-intro-configs");
-    if (res.data) setConfigs(res.data.configs ?? []);
+    if (res.error) toast.show(res.message ?? res.error, "error");
+    else setConfigs(res.data?.configs ?? []);
     setLoading(false);
-  }, []);
+  }, [toast]);
 
   const fetchZones = useCallback(async () => {
     const res = await adminFetch<{ zones: ZoneOption[] }>("/api/admin/zones");
-    if (res.data) setZones(res.data.zones ?? []);
-  }, []);
+    if (res.error) toast.show(res.message ?? res.error, "error");
+    else setZones(res.data?.zones ?? []);
+  }, [toast]);
 
   useEffect(() => { fetchConfigs(); fetchZones(); }, [fetchConfigs, fetchZones]);
 
@@ -103,8 +106,8 @@ const IntroConfigAdmin = () => {
       zone_id: form.zone_id,
       ride_number: parseInt(form.ride_number, 10),
       discount_percent: parseInt(form.discount_percent, 10),
-      max_discount_bdt: form.max_discount_bdt ? parseInt(form.max_discount_bdt, 10) * 100 : null,
-      daily_cap_bdt: parseInt(form.daily_cap_bdt, 10) * 100,
+      max_discount_bdt: form.max_discount_bdt ? takaToPaisa(form.max_discount_bdt) : null,
+      daily_cap_bdt: takaToPaisa(form.daily_cap_bdt),
       effective_from: form.effective_from ? new Date(form.effective_from).toISOString() : undefined,
       effective_to: form.effective_to ? new Date(form.effective_to).toISOString() : null,
       is_active: form.is_active,

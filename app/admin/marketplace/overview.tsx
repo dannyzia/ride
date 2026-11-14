@@ -6,6 +6,7 @@ import { useState, useEffect, useCallback } from "react";
 import { View, Text, ActivityIndicator } from "react-native";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { AdminTable, type AdminColumn } from "@/components/admin/AdminTable";
+import { useAdminToast } from "@/components/admin/AdminToast";
 import { adminFetch } from "@/lib/adminFetch";
 import { colors } from "@/theme/goRide";
 
@@ -50,14 +51,17 @@ function VerticalCard({ title, counts, color }: { title: string; counts: StatusC
 }
 
 export default function MarketplaceOverview() {
+  const toast = useAdminToast();
   const [data, setData] = useState<OverviewData | null>(null);
   const [loading, setLoading] = useState(true);
 
   const fetchData = useCallback(async () => {
+    setLoading(true);
     const res = await adminFetch<OverviewData>("/api/admin/marketplace/overview");
-    if (res.data) setData(res.data);
+    if (res.error) toast.show(res.message ?? res.error, "error");
+    else setData(res.data);
     setLoading(false);
-  }, []);
+  }, [toast]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 

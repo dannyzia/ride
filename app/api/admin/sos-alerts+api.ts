@@ -1,6 +1,7 @@
+import { adminErrorResponse } from '@/lib/adminRoute';
 import { db } from '@/src/db';
 import { sosAlerts } from '@/src/db/schema';
-import { desc, eq, count, sql, and, gte } from 'drizzle-orm';
+import { desc, eq, count, sql } from 'drizzle-orm';
 import { requireAdminPermission } from '@/lib/adminRbac';
 import { logger } from '@/lib/logger';
 import * as errors from '@/lib/errors';
@@ -69,7 +70,6 @@ export async function GET(request: Request) {
     return Response.json({ alerts: enriched, total: totalRow?.total ?? 0 });
   } catch (err: unknown) {
     if (errors.getErrorStatus(err) === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
-    logger.error('[admin/sos-alerts] error', err);
-    return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
+    return adminErrorResponse(err, '[admin/sos-alerts] error');
   }
 }

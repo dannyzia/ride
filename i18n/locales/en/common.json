@@ -24,7 +24,30 @@
     "no_product_prompt": "Choose a product to start receiving offers",
     "commission_enrollment": "Commission (pay per ride)",
     "call_package": "Call Package (prepaid leads)",
-    "switch_to_call_package": "Switch to Call Package"
+    "switch_to_call_package": "Switch to Call Package",
+    "failed": "Failed",
+    "network_error": "Network error",
+    "payment_failed_title": "Payment failed",
+    "could_not_start_payment": "Could not start payment",
+    "payment_not_completed": "Payment not completed",
+    "frozen_plan": "Frozen Plan",
+    "active_plan": "Active Plan",
+    "calls_remaining": "Calls remaining: {{count}}",
+    "expires_on": "Expires: {{date}}",
+    "bill_due": "due {{date}}",
+    "subscription_bill": "Subscription bill",
+    "frozen_package_title": "Frozen Call Package",
+    "frozen_body": "Your calls are frozen. Switch to commission mode or settle dues to unfreeze.",
+    "subscription_label": "SUBSCRIPTION",
+    "no_active_subscription": "No active subscription",
+    "renew": "Renew",
+    "browse_packages": "Browse Packages",
+    "pay": "Pay",
+    "commission_due_label": "COMMISSION DUE",
+    "unsettled": "UNSETTLED",
+    "before_ceiling": "Before debt ceiling lockout",
+    "locked_body": "Account locked for new rides: your unpaid commission has reached the {{amount}} limit. Pay now to resume receiving ride offers.",
+    "total_outstanding_label": "TOTAL OUTSTANDING"
   },
   "common": {
     "back": "Back",
@@ -58,7 +81,8 @@
     "not_authenticated": "Not authenticated",
     "something_went_wrong": "Something went wrong",
     "network_error": "Network error. Please try again.",
-    "all": "All"
+    "all": "All",
+    "unnamed": "Unnamed"
   },
   "change_password": {
     "title": "Change Password",
@@ -159,7 +183,17 @@
       "agree_prefix": "I accept the",
       "terms_link": "Terms of Service",
       "privacy_link": "Privacy Policy",
-      "and": "and core data processing required to provide the app's services"
+      "and": "and core data processing required to provide the app's services",
+      "marketing_opt_in": "I agree to receive promotional discounts, SMS notifications, and marketing updates from Ride. (Optional)"
+    },
+    "location": {
+      "foreground_title": "Enable Location Access",
+      "foreground_body": "Ride uses your location while using the app to show nearby vehicles, pinpoint your pickup spot, and track your trip.",
+      "background_title": "Background Location Required for Dispatch",
+      "background_body": "Ride Driver collects location data in the background (even when the app is closed or not in use) to enable: 1. Receiving nearby passenger ride offers, 2. Live trip tracking for passenger safety, 3. Fare distance calculation.",
+      "enable_all": "Enable Location (Foreground & Background)",
+      "not_now": "Not Now",
+      "inactive_note": "Without background location you will stay inactive and will not receive ride offers."
     },
     "otp_verify": {
       "title": "Verify OTP",
@@ -1704,7 +1738,10 @@
     "dropoff_address": "Dropoff address",
     "dropoff_placeholder": "Hospital / destination",
     "a11y_call_now": "Call ambulance now",
-    "call_now": "Call Ambulance Now"
+    "call_now": "Call Ambulance Now",
+    "health_consent": "I explicitly consent to sharing the patient's medical condition notes with the assigned ambulance team and emergency operators solely for medical triage and trip handling.",
+    "health_consent_required_title": "Health Consent Required",
+    "health_consent_required_body": "Please confirm consent to share patient condition notes with emergency responders."
   },
   "delivery": {
     "title": "Delivery",
@@ -1803,6 +1840,94 @@
       "workshop_product": "Workshop product",
       "workshop_booking": "Workshop booking",
       "parcel": "Parcel"
+    },
+      "dashboard": {
+        "packages_card_title": "Delivery packages",
+        "packages_card_hint": "Buy a package to keep receiving jobs",
+        "dues_card_title": "Balances & bills",
+        "dues_card_hint": "Package bills and platform commission",
+        "banner_packages_cta": "Delivery packages",
+        "banner_dues_cta": "Settle dues",
+        "banner_bills_cta": "View bills"
+      },
+      "dues": {
+        "hint_no_product": "Buy a package to start receiving jobs.",
+        "hint_lapsed": "Your package term ended — dues stay payable.",
+        "hint_owing": "Settle your dues to keep receiving jobs.",
+        "hint_active": "Everything is in order.",
+        "title": "Dues & bills",
+        "state": {
+          "label": "Account status",
+          "no_product": "No active product",
+          "lapsed": "Subscription lapsed",
+          "owing": "Outstanding dues",
+          "active": "Active",
+          "active_package": "Active package: {{name}}"
+        },
+        "package_bill": "Package bill",
+        "subscription_hint": "The unpaid purchase bill for your current package.",
+        "commission_dues": "Commission dues",
+        "commission_hint": "Platform commission accrued from your delivered orders.",
+        "due_on": "Due {{date}}",
+        "no_due_date": "No due date",
+        "payable_anytime": "Payable anytime",
+        "pay": "Pay",
+        "pay_all": "Pay all dues",
+        "pay_all_hint": "Pays the package bill first, then commission dues.",
+        "payment_start_failed": "Could not start the payment",
+        "payments_disabled": "Payments open soon — dues settlement is not live yet.",
+        "payment_failed": "Payment not completed",
+        "closed_by_user": "The payment window closed before it completed.",
+        "minimum_note": "Below the ৳10 gateway minimum — this rolls into the next bill.",
+        "all_clear": "Nothing owed — every bill is settled.",
+        "go_to_packages": "Go to packages",
+        "load_failed": "Could not load your dues.",
+        "retry": "Retry"
+      },
+    "staff": {
+      "title": "Delivery",
+      "state": {
+        "label": "Account status",
+        "unknown": "Unknown",
+        "no_product": "No active product",
+        "lapsed": "Subscription lapsed",
+        "owing": "Outstanding dues",
+        "active": "Active",
+        "active_package": "Active package: {{name}}"
+      },
+      "nav": {
+        "packages": {
+          "label": "Packages",
+          "count": "View"
+        },
+        "dues": {
+          "label": "Dues & bills",
+          "count": "View"
+        }
+      }
+    },
+    "packages": {
+      "title": "Delivery packages",
+      "empty_title": "No delivery packages on sale",
+      "empty_body": "When a new delivery package goes on sale, it will appear here.",
+      "plan_days": "{{days}} days",
+      "plan_no_expiry": "No expiry",
+      "plan_commission": "{{pct}}% platform fee per order",
+      "buy": "Activate",
+      "activated_title": "Package activated",
+      "activated_bill": "Bill {{amount}} — pay now or later.",
+      "activated_no_bill": "This package needs no payment.",
+      "minimum_note": "Below the ৳10 gateway minimum — this rolls into the next bill.",
+      "pay_now": "Pay now",
+      "pay_later": "Pay later",
+      "blocked_title": "Settle dues first",
+      "blocked_body": "You owe {{amount}}. Settle it to buy a package.",
+      "go_to_dues": "Go to dues",
+      "already_open_title": "You already have an active package",
+      "already_open_body": "Settle the open bill to buy another package.",
+      "purchase_failed": "Could not activate the package",
+      "load_failed": "Could not load the packages.",
+      "retry": "Retry"
     }
   },
   "delivery_create": {

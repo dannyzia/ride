@@ -991,30 +991,49 @@ Ride reserves the right to amend this Privacy Notice to reflect operational, tec
 
 **Suggested public URL:** `https://ride.digital-papyrus.com/delete-account`
 
+**Last Updated:** 6 November 2026
+
+**Effective Date:** 6 November 2026
+
 ## Request deletion of your Ride account
 
-You can request deletion of your Ride account and associated personal data from the Ride app or through this webpage.
+Request deletion of your Ride account and the associated personal data from the Ride app, or from this page without reinstalling or opening the app.
 
-### Option 1 — From the app
+### Option 1 — From the Ride app
 
 1. Open Ride and sign in.
-2. Open `[EXACT MENU PATH — e.g. Profile > Settings > Account > Delete Account]`.
-3. Read the deletion information and submit the request.
-4. Complete any reasonable identity-verification step shown in the app.
+2. Go to **Profile → Settings → Delete account**.
+3. Read the deletion notice on the screen, type the confirmation word and confirm.
 
-### Option 2 — From this website
+### Option 2 — From this page (no app required)
 
-Email `privacy@ride.digital-papyrus.com` with the subject **Ride account deletion request**. Include the mobile number registered to the Ride account and the country code. Do not include your password, OTP or full payment-card details.
+1. Enter the mobile number registered to your Ride account, including the country code `+880`.
+2. Enter the 6-digit code we send to that number by SMS.
+3. Confirm the request. The code proves you control the number; Ride never asks for your password, PIN or card details.
 
-Alternatively, complete the web request form on this page. The page must work without requiring the user to reinstall the app or sign in to the app.
+You may also email **privacy@ride.digital-papyrus.com** with the subject **Ride account deletion request**, quoting the number registered to your account. Never send your password, an OTP, or full card or MFS PIN details by email.
 
-### What happens next
+### When deletion cannot proceed yet
 
-Ride will acknowledge the request through `email`, verify that the requester controls the account, and process the request in accordance with applicable law. Ride may need to retain limited records for legal, tax, accounting, payment, safety, fraud-prevention or dispute purposes. Where data is retained, Ride should restrict its use to the applicable retention purpose and delete it when that purpose ends.
+Deletion is blocked while the account has a live service or an unpaid platform balance. The page tells you which applies and, for a balance, the outstanding amount in BDT.
 
-Deleting the account may not automatically cancel an active booking, settle an unpaid amount, complete a refund or erase records Ride is legally required to retain. The page must explain any material consequences before the user confirms deletion.
+* **Live booking or order:** an active ride, delivery, rental, emergency ambulance request, workshop booking or shop order must be completed or cancelled first.
+* **Unpaid platform dues:** outstanding driver commission — commission charged on your completed rides less any commission you have already paid to Ride, so a fully settled driver is not blocked — courier cash-on-delivery (COD) remittance still owed to Ride, or a non-zero owned-shop ledger balance.
+* **While blocked:** your account stays open, and you can still sign in to view, settle or dispute the balance. A number carrying unpaid dues cannot be moved to another number, or released for a new registration.
 
-**Do not publish a fixed completion period until the legal and operational team has approved an achievable SLA.** Google Play requires a genuine account-deletion route, not merely a link to a general contact page. The request channel must be monitored and tested.
+### What happens when deletion runs
+
+* **Deactivation is immediate.** There is no waiting period and no scheduled later deletion: once your number is verified and both preconditions pass, the account closes in the same operation.
+* **Profile details are removed.** Your name, email address, profile photo, account phone number, saved addresses, and the pickup and drop-off addresses stored on your past rides are replaced with placeholders in that same transaction. The number you verified is tombstoned, and it can be used to register a new account.
+* **The account can no longer be used.** Signing in with the deleted account is rejected, so any session that was still open stops working on its next request.
+* **Records we keep.** Deletion does not erase the transaction, payment, tax, accounting, safety, fraud-prevention and dispute records Ride is required to retain under applicable Bangladesh law. Where a record is retained, its use stays limited to that purpose, and it is deleted or anonymised when the purpose ends. No fixed retention period is promised for those records here.
+* **Deletion is not a refund or a settlement.** Any amount you owe Ride remains owed, and Ride may pursue it using the contact details it holds for that purpose, to the extent the law allows.
+
+### Contact
+
+* **Data Controller:** Ride Digital Services
+* **Postal Address:** 7/1-D, R.K. Mission Road, Dhaka-1203, Bangladesh
+* **Privacy Inquiries:** privacy@ride.digital-papyrus.com
 
 ---
 

@@ -59,71 +59,94 @@
 appId: com.node.bd
 ---
 - stopApp: com.node.bd
+# The load hop itself is shared (it was lifted from here): two openLink rounds
+# with optional-assert pacing, driven by -e DEV_CLIENT_URL. Emulator runs used
+# to hard-code http://10.0.2.2:8081 in this file; pass it as DEV_CLIENT_URL now:
+#   -e DEV_CLIENT_URL='ride://expo-development-client/?url=http%3A%2F%2F10.0.2.2%3A8081'
+- runFlow: ../util/_dev-client-boot.yaml
+# The load gate and the dev-menu dismissal now live INSIDE that subflow.
+# They used to be duplicated here: an `extendedWaitUntil` on the menu's
+# "Runtime version" (150s timeout) followed by an unconditional BACK. Adding
+# the same dismissal to the shared hop would leave this gate waiting for a menu
+# that had already been closed — the documented hazard of having two copies —
+# so the local pair was removed rather than kept in sync by hand. The "fatal
+# load gate" property still holds: the subflow waits for the menu and presses
+# BACK, and a launcher stuck on a blank/error screen fails at this flow's first
+# real assertion below rather than pretending to pass.
+# Two possible app states after a load: logged-out data shows the welcome
+# walkthrough (tap Sign In → phone-entry); an existing session boots straight
+# to the rider home. Drive the walkthrough when present, then settle.
 - repeat:
-    times: 2
+    times: 6
     commands:
-      - openLink: "node://expo-development-client/?url=http%3A%2F%2F10.0.2.2%3A8081"
-      # Pacing only — ~80s while the delayed intent + fetch + load run. The
-      # dev menu, once up, covers the app UI so these stay WARNED until the
-      # fatal gate below (do NOT dismiss the menu here).
-      - assertVisible:
-          id: "phone-entry.set-phone"
-          optional: true
-      - assertVisible:
-          id: "customer.home.el-2"
-          optional: true
-      - assertVisible:
-          id: "phone-entry.set-phone"
-          optional: true
-      - assertVisible:
-          id: "customer.home.el-2"
-          optional: true
-      - assertVisible:
-          id: "phone-entry.set-phone"
-          optional: true
-      - assertVisible:
-          id: "customer.home.el-2"
-          optional: true
-      - assertVisible:
-          id: "phone-entry.set-phone"
-          optional: true
-      - assertVisible:
-          id: "customer.home.el-2"
-          optional: true
-      # FATAL load gate: the menu pops exactly when a load succeeds and stays up.
-      # A launcher stuck on blank/error screens (dead URL, poisoned post-clear
-      # state) times out here with a clean signal instead of failing downstream.
-      - extendedWaitUntil:
-          visible: ".*Runtime version.*"
-          timeout: 150000
-      # Dismiss the menu — BACK lands on MainActivity with the app UI under it.
-      - pressKey: BACK
-      # After load, the app is either at phone-entry (logged-out) or rider home (logged-in).
-      # Drive the login flow when phone-entry is present.
       - runFlow:
           when:
             visible:
               id: "phone-entry.set-phone"
           commands:
             - tapOn:
-                id: "phone-entry.set-phone"
-              - eraseText
-              - inputText: ${PHONE}
-              - tapOn:
-                  id: "phone-entry.set-role"
-              - tapOn:
-                  id: "phone-entry.handle-login"
-              - extendedWaitUntil:
-                  visible: "Welcome Back"
-                  timeout: 15000
-              - tapOn:
-                  id: "login.set-password"
-              - inputText: ${PASSWORD}
-              - tapOn:
-                  id: "login.handle-login"
-      # Final gate (fatal, unconditional): rider home must be up — either we just
-      # logged in or the session already put us there.
+                id: "welcome.replace-phone-entry"
+      # Bounded non-fatal waits — the round's sleep; each succeeds fast once
+      # its element is on screen, so settled-state rounds are nearly free.
+      - assertVisible:
+          id: "phone-entry.set-phone"
+          optional: true
+      - assertVisible:
+          id: "customer.home.el-2"
+          optional: true
+# Login ONLY when phone-entry is up (logged-out run). A logged-in run skips
+# the whole block.
+- runFlow:
+    when:
+      visible:
+        id: "phone-entry.set-phone"
+    commands:
+      - tapOn:
+          id: "phone-entry.set-phone"
+      # THREE device-measured defects fixed here 2026-11-11 (Pixel 6a) — between them
+      # these made every one of the 30 flows that consume this subflow fail at login:
+      #  1. `eraseText` on an ALREADY EMPTY field hangs the Maestro driver
+      #     (DEADLINE_EXCEEDED after 120 s, fatal). Seed one digit first, then clear.
+      #  2. Calling flows pass the FULL 13-digit number (8801613249520), but this screen
+      #     renders a fixed "+880" prefix and phone-entry.tsx:47 requires
+      #     `+880${phone}` to be exactly 14 chars, so the field's
+      #     onChangeText — strip non-digits, strip leading zeros, slice(0,10) — truncates
+      #     it to "8801613249" and login silently never advances. Type the 10-digit
+      #     NATIONAL part; evalScript normalises whatever the caller passed.
+      #  3. The soft keyboard shrinks the window, so the Log In button sits below the fold
+      #     and `tapOn id:` reports "Element not found". Hide the keyboard first.
+      - inputText: "1"
+      - eraseText
+      - evalScript: ${output.national = String(PHONE).replace(/^\+?880/, "").replace(/^0+/, "").slice(0, 10)}
+      - inputText: ${output.national}
+      - hideKeyboard
+      - tapOn:
+          id: "phone-entry.set-role"
+      - tapOn:
+          id: "phone-entry.handle-login"
       - extendedWaitUntil:
-          visible:
-            id: "customer.home.el-2"
-          timeout: 30000
+          visible: "Welcome Back"
+          timeout: 15000
+      - tapOn:
+          id: "login.set-password"
+      - inputText: ${PASSWORD}
+      - hideKeyboard
+      - tapOn:
+          id: "login.handle-login"
+# Final gate (fatal, unconditional): rider home must be up — either we just
+# logged in or the session already put us there.
+#
+# GATE REPOINTED 2026-11-11 (device-measured): this asserted `customer.home.el-2`,
+# which is the "Where to?" row INSIDE the ride-booking sheet — it exists in
+# home/index.tsx:1012 but the home now opens on the service-category grid, so the
+# row is not rendered until a service is chosen. Every flow through this subflow
+# therefore died at this gate on a freshly logged-in home.
+#
+# What the rider actually lands on is the SERVICES HUB — app/index.tsx:156 redirects
+# there, and its service tiles (services-hub.tsx:153 `handle-select`) push
+# /(main)/(customer)/(tabs)/home with a `service` param, which is what renders the
+# FROM/TO rows. So the at-rest ground is the hub's tile.
+- extendedWaitUntil:
+    visible:
+      id: "customer.services-hub.handle-select"
+    timeout: 30000

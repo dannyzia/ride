@@ -90,9 +90,9 @@ export default function DeliveryListScreen() {
     <TouchableOpacity
       className="rounded-xl p-4 mb-3"
       style={{ backgroundColor: surfaceBg, borderWidth: 1, borderColor }}
-      onPress={() => router.push(`/(main)/(customer)/(delivery)/request-detail?id=${item.leg_id}`)}
+      onPress={() => router.push(`/(main)/(customer)/parcel/request-detail?id=${item.leg_id}`)}
       activeOpacity={0.7}
-     testID="customer.delivery.push-request-detail">
+     testID="customer.parcel.push-request-detail">
       <View className="flex-row justify-between items-start mb-2">
         <Text className="text-sm font-JakartaBold" style={{ color: textPrimary }} numberOfLines={1}>
           {item.pickup_address} → {item.dropoff_address}
@@ -121,13 +121,13 @@ export default function DeliveryListScreen() {
     <SafeAreaView style={{ flex: 1, backgroundColor: isDark ? colors.bgDark : colors.bgLight }}>
       {/* Header */}
       <View className="flex-row items-center justify-between px-4 py-3">
-        <TouchableOpacity onPress={() => router.back()} testID="customer.delivery.el-1">
+        <TouchableOpacity onPress={() => router.back()} testID="customer.parcel.el-1">
           <Ionicons name="arrow-back" size={24} color={textPrimary} />
         </TouchableOpacity>
         <Text className="text-lg font-JakartaBold" style={{ color: textPrimary }}>
           {t("delivery.title")}
         </Text>
-        <TouchableOpacity onPress={() => router.push('/(main)/(customer)/(delivery)/request-create')} testID="customer.delivery.push-request-create">
+        <TouchableOpacity onPress={() => router.push('/(main)/(customer)/parcel/request-create')} testID="customer.parcel.push-request-create">
           <Ionicons name="add-circle" size={28} color={colors.primary} />
         </TouchableOpacity>
       </View>
@@ -148,8 +148,8 @@ export default function DeliveryListScreen() {
           <TouchableOpacity
             className="mt-6 px-8 py-3 rounded-xl"
             style={{ backgroundColor: colors.primary }}
-            onPress={() => router.push('/(main)/(customer)/(delivery)/request-create')}
-           testID="customer.delivery.push-request-create-2">
+            onPress={() => router.push('/(main)/(customer)/parcel/request-create')}
+           testID="customer.parcel.push-request-create-2">
             <Text className="text-white font-JakartaBold">{t("delivery.empty_cta")}</Text>
           </TouchableOpacity>
         </View>

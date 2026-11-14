@@ -11,6 +11,9 @@
 # Class: AUTOMATABLE.
 appId: com.node.bd
 ---
+# Riders land on the services hub (outside (tabs)), so guarantee the tab bar
+# exists before tapping it. No-op when it is already rendered.
+- runFlow: _enter-tabs.yaml
 - tapOn:
     id: "customer._layout.on-press"
     text: ".*Profile.*|.*Account.*"

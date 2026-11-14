@@ -14,6 +14,12 @@ export const site = {
   businessAddress: '7/1-D, R.K. Mission Road, Dhaka - 1203',
   playStoreUrl: 'https://play.google.com/store/apps/details?id=com.ride.bd',
   appStoreUrl: '',
+  /**
+   * Ride API origin (Expo API routes). The /delete-account form posts to this
+   * server-side only; it must match EXPO_PUBLIC_SERVER_URL in eas.json.
+   * Empty string disables the web deletion form and falls back to email.
+   */
+  rideApiUrl: 'https://ride-api.digital-papyrus.com',
   lastUpdated: '5 November 2026',
   /** Set true only after the live app, SDKs, backend and retention rules are audited. */
   privacyPolicyApproved: true,

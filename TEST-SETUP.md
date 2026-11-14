@@ -9,7 +9,7 @@
   - `lib/config.ts` — consumes `EXPO_PUBLIC_DEV_LAN_IP` (inlined at BUNDLE time — no runtime fallback)
   - `.env.local` — dev env values Metro inlines into the JS bundle
   - `AGENTS.md` § Essential Commands / § Testing — command quick reference
-**Last verified:** 2026-09-04, by orchestrator (skeptic session), live on device 9a76528e
+**Last verified:** 2026-11-09, by orchestrator (Batch-2 Item 11 device session — Ridmik IME failure mode added to §5)
 **How to update:** whenever a new failure mode is found during a device session, add it to §5 the same day.
 
 ---
@@ -88,3 +88,4 @@ to `:8081`.
 | execbro "stale CDP target" | app process dead/JS bridge gone | force-stop app, `scan_metro` again |
 | jest picks up `admin-test-results/admin-panel.spec.ts` | Maestro output dir swept by testMatch | already ignored (jest `testPathIgnorePatterns` + `.gitignore`) — if it reappears, check both |
 | `npx expo run:android` native build fails inside the agent worktree: react-native-reanimated's CMake step dies with `ninja: build.ninja still dirty after 100 tries` | The agent worktree lives DEEPLY NESTED (`Ride\.kilo\worktrees\…`), which pushes reanimated's CMake object paths past the **Windows 250-character MAX_PATH limit** (measured 2026-11-12, Stage 6 device session) | Build from a SHORT detached worktree instead: `git worktree add --detach D:\nodelaunch <ref>` at the drive root, then junction its `node_modules` from the main tree (`New-Item -ItemType Junction -Path D:\nodelaunch\node_modules -Target <main>\node_modules`). The build completes there; the deeply-nested worktree stays the edit/commit surface |
+| DevLauncher phone-entry field fills with garbage + recurring spinner-of-death modal; adb/Maestro text input unusable | Phone's default keyboard is Ridmik (Bengali IME) — it auto-fills/garbles app text fields and fights adb input | Switch the device keyboard to Gboard, or bypass UI login: E2E fixture accounts (e.g. Shop Owner `+8801799999992` / `test1234`) log in via the auth API using the dev OTP/password bypass (`DEV_OTP_BYPASS`/`DEV_OTP` in `.env.local`), then drive only the post-login screens |

@@ -22,6 +22,7 @@ import { useMonetizationStateStore } from "@/store/useMonetizationStateStore";
 
 import PaymentWebView from "@/components/PaymentWebView";
 import { useTranslation } from "react-i18next";
+import { useShallow } from "zustand/react/shallow";
 import { LAUNCH_FREE_PACKAGE_CODE } from "@/lib/launchFreePackage";
 
 interface DuesData {
@@ -75,11 +76,16 @@ export default function WalletScreen() {
   const [credits, setCredits] = useState<CancellationCredit[]>([]);
 
   const activeSubscription = useDriverStore((s) => s.activeSubscription);
-  const monetization = useMonetizationStateStore((s) => ({
-    state: s.state,
-    frozenSubscription: s.frozenSubscription,
-    isDispatchLocked: s.isDispatchLocked,
-  }));
+  // `useShallow` is REQUIRED on zustand v5 — see the driver home's long note: a
+  // selector returning a fresh object literal re-renders forever and throws
+  // "Maximum update depth exceeded".
+  const monetization = useMonetizationStateStore(
+    useShallow((s) => ({
+      state: s.state,
+      frozenSubscription: s.frozenSubscription,
+      isDispatchLocked: s.isDispatchLocked,
+    })),
+  );
 
   // C10-1 grant source: match on the stable plan code, never on the admin-editable name.
   const isLaunchFreeGrant = activeSubscription?.package_code === LAUNCH_FREE_PACKAGE_CODE;

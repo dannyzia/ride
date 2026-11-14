@@ -117,7 +117,7 @@ export const LEGAL_DOCS: LegalDocMeta[] = [
     eyebrow: 'Your data, your choice',
     title: 'Request account deletion',
     intro:
-      'Request deletion of your Ride account and associated personal data without reinstalling or opening the app. Working draft page with a working email channel.'
+      'Request deletion of your Ride account and associated personal data from the app, or from this page with a phone OTP — no app install required. Working draft page with an email fallback.'
   },
   {
     letter: 'M',
@@ -148,7 +148,7 @@ export const LEGAL_DOCS_BN: LegalDocMetaBn[] = [
   { letter: 'I', eyebrow: 'ফেরত নীতি', title: 'বাতিল, ফেরত ও টাকা ফেরত', intro: 'প্রতিটি সেবার জন্য বাতিল, ফেরত ও টাকা ফেরতের খসড়া নীতি। কার্যকরী খসড়া — অনুমোদিত নয়, বাধ্যতামূলক নয়।' },
   { letter: 'J', eyebrow: 'নিরাপত্তা মান', title: 'নিরাপত্তা ও কমিউনিটি মান', intro: 'গ্রাহক, পার্টনার ও মার্চেন্টদের জন্য খসড়া নিরাপত্তা ও কমিউনিটি মান। কার্যকরী খসড়া — অনুমোদিত নয়, বাধ্যতামূলক নয়।' },
   { letter: 'K', eyebrow: 'আইনি ও তথ্য স্বচ্ছতা', title: 'প্রাইভেসি বিজ্ঞপ্তি', intro: 'Ride কী প্রক্রিয়া করতে পারে তা বর্ণনাকারী খসড়া প্রাইভেসি বিজ্ঞপ্তি। সম্পূর্ণ হতে প্রোডাকশন তথ্য তালিকা ও আইনজীবী পর্যালোচনা প্রয়োজন।' },
-  { letter: 'L', eyebrow: 'আপনার তথ্য, আপনার সিদ্ধান্ত', title: 'অ্যাকাউন্ট মুছে ফেলার অনুরোধ', intro: 'অ্যাপ পুনরায় ইনস্টল বা খোলা ছাড়াই আপনার Ride অ্যাকাউন্ট ও সংশ্লিষ্ট ব্যক্তিগত তথ্য মুছে ফেলার অনুরোধ করুন। কার্যকরী খসড়া পেজ।' },
+  { letter: 'L', eyebrow: 'আপনার তথ্য, আপনার সিদ্ধান্ত', title: 'অ্যাকাউন্ট মুছে ফেলার অনুরোধ', intro: 'অ্যাপ থেকে, অথবা অ্যাপ ইনস্টল ছাড়াই এই পেজ থেকে ফোনের ওটিপি দিয়ে আপনার Ride অ্যাকাউন্ট ও সংশ্লিষ্ট ব্যক্তিগত তথ্য মুছে ফেলার অনুরোধ করুন। ইমেইল বিকল্পসহ কার্যকরী খসড়া পেজ।' },
   { letter: 'M', eyebrow: 'ওয়েবসাইট স্বচ্ছতা', title: 'কুকি বিজ্ঞপ্তি', intro: 'খসড়া ওয়েবসাইট কুকি বিজ্ঞপ্তি। সম্পূর্ণ হতে প্রোডাকশন কুকি তালিকা প্রয়োজন।' }
 ];
 

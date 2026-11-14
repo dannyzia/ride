@@ -60,6 +60,10 @@ jest.mock("@/src/db", () => {
     drivers: schema.drivers,
     vehicles: schema.vehicles,
     fleetSubs: schema.fleetSubscriptions,
+    // Batch-2 Item 10: the marketplace gate reads POSSESSION (operator_packages),
+    // so this suite's existing fleet-subscription fixture feeds that table instead.
+    // The projection below is the shape fleetMarketplaceEntitlements selects.
+    possessions: schema.operatorPackages,
     assignments: schema.awardedBidAssignments,
   };
 
@@ -87,6 +91,17 @@ jest.mock("@/src/db", () => {
       if (t === T.drivers) return mockDriverRows;
       if (t === T.vehicles) return mockVehicleRows;
       if (t === T.fleetSubs) return mockFleetSubRows;
+      if (t === T.possessions)
+        return mockFleetSubRows.map((r) => ({
+          fleet_id: (mockBidRows[0]?.fleet_id as string) ?? "",
+          fleet_name: "Fleet",
+          fleet_status: r.fleet_status,
+          package_id: "22222222-2222-4222-8222-222222222222",
+          possession_status: "active",
+          expires_at: r.current_period_end ?? r.expires_at ?? r.period_end ?? null,
+          plan_active: true,
+          plan_features: r.plan_features,
+        }));
       if (t === T.assignments) return mockAssignmentRows;
       return [];
     };
@@ -179,6 +194,11 @@ jest.mock("@/lib/ambulanceCerts", () => ({
   isVerifiedCertPair: async () => true,
   serviceLevelSatisfies: () => true,
 }));
+
+// accept-bid now imports the shared marketplace entitlement helper from
+// lib/marketplaceRbac, which constructs a Supabase admin client at module load.
+// This suite has no Supabase env; the gate itself is driven by the db mock.
+jest.mock("@/lib/supabaseServer", () => ({ supabaseAdmin: { from: jest.fn() } }));
 
 jest.mock("@/lib/platformConfig", () => ({
   isVerticalEnabled: async () => true,

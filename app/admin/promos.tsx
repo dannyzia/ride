@@ -249,10 +249,10 @@ export default function PromosScreen() {
     const discountValue = Number(form.discount_value);
     if (
       !Number.isFinite(discountValue) ||
-      !Number.isInteger(discountValue) ||
+      (form.discount_type !== "flat" && !Number.isInteger(discountValue)) ||
       discountValue <= 0
     ) {
-      toast.show("Discount value must be a positive integer", "error");
+      toast.show("Discount must be a positive number (whole percent)", "error");
       return null;
     }
     if (form.discount_type === "percent" && discountValue > 100) {
@@ -261,7 +261,7 @@ export default function PromosScreen() {
     }
     // Flat discount_value: admin enters taka, API stores paisa (×100).
     const discountValuePaisaOrPercent =
-      form.discount_type === "flat" ? discountValue * 100 : discountValue;
+      form.discount_type === "flat" ? Math.round(discountValue * 100) : discountValue;
     const maxUsesPerRider = Number(form.max_uses_per_rider);
     if (
       !Number.isFinite(maxUsesPerRider) ||
@@ -284,9 +284,9 @@ export default function PromosScreen() {
         form.max_discount_taka,
         "Max discount",
       );
-      if (maxDiscountPaisa != null) maxDiscountPaisa = maxDiscountPaisa * 100;
+      if (maxDiscountPaisa != null) maxDiscountPaisa = Math.round(maxDiscountPaisa * 100);
       minSpendPaisa = parseOptionalInt(form.min_spend_taka, "Min spend");
-      if (minSpendPaisa != null) minSpendPaisa = minSpendPaisa * 100;
+      if (minSpendPaisa != null) minSpendPaisa = Math.round(minSpendPaisa * 100);
       usageInterval = parseOptionalInt(form.usage_interval, "Usage interval");
     } catch (e) {
       toast.show((e as Error).message, "error");

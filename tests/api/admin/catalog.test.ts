@@ -10,7 +10,7 @@
  *    city boundary cache (stale polygons would misroute zone validation)
  *  - rider-intro-configs: GET maps the zone join into a flat shape; DELETE
  *    deactivates (soft) rather than removing
- *  - cancellation-policies: POST is catalog.write-gated, GET ungated
+ *  - cancellation-policies: GET and POST are catalog.write-gated
  */
 /* eslint-disable import/first, @typescript-eslint/no-require-imports */
 jest.mock("@/lib/adminRbac", () => ({
@@ -322,15 +322,22 @@ describe("admin rider-intro-configs", () => {
 });
 
 describe("admin cancellation-policies", () => {
-  test("GET lists policies ordered by priority (ungated read)", async () => {
+  test("GET lists policies ordered by priority (catalog.write-gated)", async () => {
+    setAllowed(["catalog.write"]);
     const rows = [{ id: "pol-1", priority: 10 }];
     (db.select as jest.Mock).mockImplementation(() => ({
       from: jest.fn(() => ({
         orderBy: jest.fn(async () => rows),
       })),
     }));
-    const res = await policiesRoute.GET();
+    const res = await policiesRoute.GET(jsonRequest(undefined, "http://localhost/api/admin/cancellation-policies"));
     expect((await getJson(res as unknown as Response)).policies).toEqual(rows);
+  });
+
+  test("GET is 401 without permission", async () => {
+    setAllowed([]);
+    const res = await policiesRoute.GET(jsonRequest(undefined, "http://localhost/api/admin/cancellation-policies"));
+    expect(res.status).toBe(401);
   });
 
   test("POST is catalog.write-gated", async () => {

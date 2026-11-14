@@ -19,6 +19,13 @@ export const OTP_VERIFY_MAX = 5; // verify attempts per session per window
 export const CHECK_USER_PHONE_MAX = 30; // check-user lookups per phone per window
 export const CHECK_USER_IP_MAX = 120; // check-user lookups per IP per window
 
+// Public web account-deletion portal (app/api/user/delete-otp, delete-confirm).
+// Deliberately tighter than login OTP: this is an unauthenticated SMS trigger
+// whose success path destroys an account.
+export const DELETE_OTP_PHONE_MAX = 3; // deletion OTP texts per phone per window
+export const DELETE_OTP_IP_MAX = 10; // deletion OTP texts per IP per window
+export const DELETE_OTP_VERIFY_MAX = 5; // verify attempts per challenge per window
+
 export async function rateLimitCount(key: string): Promise<number> {
   const windowStart = new Date(
     Math.floor(Date.now() / WINDOW_MS) * WINDOW_MS,

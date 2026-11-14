@@ -21,11 +21,15 @@ function StatCard({ label, value, color }: { label: string; value: string; color
 export default function LiveOps() {
   const [stats, setStats] = useState<LiveStats | null>(null);
   const [loading, setLoading] = useState(true);
+  // Polling every 5s means a toast would spam; surface the fault as a banner.
+  const [error, setError] = useState<string | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     const fetchStats = async () => {
       const res = await adminFetch<LiveStats>("/api/admin/live-stats");
+      if (res.error) setError(res.message ?? res.error);
+      else setError(null);
       if (res.data) setStats(res.data);
       setLoading(false);
     };
@@ -36,6 +40,11 @@ export default function LiveOps() {
 
   return (
     <AdminShell title="Live Ops" subtitle="Real-time operational overview (auto-refresh 5s)">
+      {error ? (
+        <Text style={{ color: colors.danger, fontFamily: "Jakarta-SemiBold", fontSize: 12, marginBottom: 12 }}>
+          Live stats unavailable ({error}) — values below may be stale.
+        </Text>
+      ) : null}
       {loading ? (
         <ActivityIndicator size="large" color={colors.adminAccent} style={{ marginTop: 40 }} />
       ) : (

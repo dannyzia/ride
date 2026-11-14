@@ -85,6 +85,20 @@ jest.mock("@/src/db", () => {
     if (table === schema.rentalRequests) return mockReqRows;
     if (table === schema.rentalBids) return mockBidRows;
     if (table === schema.fleetSubscriptions) return mockSubRows;
+    // Batch-2 Item 10: the marketplace gate reads POSSESSION now; the suite's
+    // subscription fixtures (fleet_status / plan_features / period_end) are
+    // projected into the shape fleetMarketplaceEntitlements selects.
+    if (table === schema.operatorPackages)
+      return mockSubRows.map((r) => ({
+        fleet_id: (mockBidRows[0]?.fleet_id as string) ?? "",
+        fleet_name: "Fleet",
+        fleet_status: r.fleet_status,
+        package_id: "22222222-2222-4222-8222-222222222222",
+        possession_status: "active",
+        expires_at: r.period_end ?? r.current_period_end ?? r.expires_at ?? null,
+        plan_active: true,
+        plan_features: r.plan_features,
+      }));
     if (table === schema.emergencyRequests) return mockEmergencyRows;
     return [];
   };
@@ -221,6 +235,11 @@ jest.mock("@/lib/auth", () => ({
 jest.mock("@/lib/ambulanceCerts", () => ({
   isVerifiedCertPair: async () => true,
 }));
+
+// accept-bid now imports the shared marketplace entitlement helper from
+// lib/marketplaceRbac, which constructs a Supabase admin client at module load.
+// This suite has no Supabase env; the gate itself is driven by the db mock.
+jest.mock("@/lib/supabaseServer", () => ({ supabaseAdmin: { from: jest.fn() } }));
 
 // ── Mock platformConfig (demoteWinner/sweep use getConfigInt) ──────
 jest.mock("@/lib/platformConfig", () => ({

@@ -81,7 +81,8 @@ describe("C2-4 unified delete (DELETE /api/user/account)", () => {
 
   it("delete with driver commission dues 409s with the outstanding amount", async () => {
     mockUserRow({ id: USER_ID, deleted_at: null });
-    const { tx } = fakeTx([[{ id: "d1" }], [{ total: 5000 }]]);
+    // driver, accrued commission 8000, settled 3000 → net due 5000.
+    const { tx } = fakeTx([[{ id: "d1" }], [{ total: 8000 }], [{ total: 3000 }]]);
     (db.transaction as jest.Mock).mockImplementation(async (fn: (t: unknown) => unknown) => fn(tx));
     const res = await DELETE(jsonRequest({}));
     expect(res.status).toBe(409);

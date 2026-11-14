@@ -1,5 +1,5 @@
 {
-  "total": 1360,
+  "total": 1402,
   "screens": {
     "(auth)/_layout.tsx": [
       {
@@ -27,12 +27,16 @@
     ],
     "(auth)/driver-enable-location.tsx": [
       {
+        "id": "driver-enable-location.prominent-disclosure",
+        "line": 59
+      },
+      {
         "id": "driver-enable-location.allow",
-        "line": 63
+        "line": 89
       },
       {
         "id": "driver-enable-location.skip",
-        "line": 68
+        "line": 94
       }
     ],
     "(auth)/driver-notifications-permission.tsx": [
@@ -76,15 +80,15 @@
     "(auth)/enable-location.tsx": [
       {
         "id": "enable-location.set-theme",
-        "line": 71
+        "line": 73
       },
       {
         "id": "enable-location.allow",
-        "line": 112
+        "line": 114
       },
       {
         "id": "enable-location.skip",
-        "line": 117
+        "line": 119
       }
     ],
     "(auth)/forgot-password.tsx": [
@@ -208,157 +212,161 @@
     "(auth)/otp-verify.tsx": [
       {
         "id": "otp-verify.set-otp",
-        "line": 188
+        "line": 191
       },
       {
         "id": "otp-verify.handle-verify-otp",
-        "line": 204
+        "line": 207
       },
       {
         "id": "otp-verify.send-otp",
-        "line": 210
+        "line": 213
       },
       {
         "id": "otp-verify.change-number",
-        "line": 226
+        "line": 229
       }
     ],
     "(auth)/phone-entry.tsx": [
       {
         "id": "phone-entry.set-phone",
-        "line": 204
+        "line": 213
       },
       {
         "id": "phone-entry.set-role",
-        "line": 225
+        "line": 234
       },
       {
         "id": "phone-entry.set-role-2",
-        "line": 242
+        "line": 251
       },
       {
         "id": "phone-entry.set-role-3",
-        "line": 259
+        "line": 268
       },
       {
         "id": "phone-entry.set-role-4",
-        "line": 276
+        "line": 285
       },
       {
         "id": "phone-entry.set-role-5",
-        "line": 293
+        "line": 302
       },
       {
         "id": "phone-entry.terms-checkbox",
-        "line": 308
+        "line": 317
+      },
+      {
+        "id": "phone-entry.marketing-checkbox",
+        "line": 343
       },
       {
         "id": "phone-entry.handle-login",
-        "line": 341
+        "line": 370
       },
       {
         "id": "phone-entry.handle-register",
-        "line": 347
+        "line": 376
       },
       {
         "id": "phone-entry.push-operator-register",
-        "line": 353
+        "line": 382
       },
       {
         "id": "phone-entry.push-operator-login",
-        "line": 366
+        "line": 395
       }
     ],
     "(auth)/register-delivery-man.tsx": [
       {
         "id": "register-delivery-man.upload-nid",
-        "line": 180
+        "line": 182
       },
       {
         "id": "register-delivery-man.upload-license",
-        "line": 187
+        "line": 189
       },
       {
         "id": "register-delivery-man.set-vehicle-note",
-        "line": 198
+        "line": 200
       },
       {
         "id": "register-delivery-man.submit",
-        "line": 214
+        "line": 216
       }
     ],
     "(auth)/register-fleet-owner.tsx": [
       {
         "id": "register-fleet-owner.set-fleet-name",
-        "line": 187
+        "line": 189
       },
       {
         "id": "register-fleet-owner.set-business-name",
-        "line": 196
+        "line": 198
       },
       {
         "id": "register-fleet-owner.set-license-number",
-        "line": 205
+        "line": 207
       },
       {
         "id": "register-fleet-owner.upload-trade-license",
-        "line": 212
+        "line": 214
       },
       {
         "id": "register-fleet-owner.submit",
-        "line": 229
+        "line": 231
       }
     ],
     "(auth)/register-shop-owner.tsx": [
       {
         "id": "register-shop-owner.set-shop-name",
-        "line": 228
+        "line": 230
       },
       {
         "id": "register-shop-owner.set-address",
-        "line": 237
+        "line": 239
       },
       {
         "id": "register-shop-owner.upload-trade-license",
-        "line": 263
+        "line": 265
       },
       {
         "id": "register-shop-owner.upload-food-cert",
-        "line": 271
+        "line": 273
       },
       {
         "id": "register-shop-owner.submit",
-        "line": 289
+        "line": 291
       }
     ],
     "(auth)/register.tsx": [
       {
         "id": "register.set-name",
-        "line": 180
+        "line": 185
       },
       {
         "id": "register.set-password",
-        "line": 196
+        "line": 201
       },
       {
         "id": "register.set-confirm-password",
-        "line": 212
+        "line": 217
       },
       {
         "id": "register.gender-picker",
-        "line": 222
+        "line": 227
       },
       {
         "id": "register.set-gender",
-        "line": 235
+        "line": 240
       },
       {
         "id": "register.handle-register",
-        "line": 260
+        "line": 265
       },
       {
         "id": "register.push-operator-register",
-        "line": 266
+        "line": 271
       }
     ],
     "(auth)/walkthrough-1.tsx": [
@@ -440,85 +448,39 @@
     "(main)/(customer)/(ambulance)/emergency.tsx": [
       {
         "id": "customer.ambulance.emergency.el-1",
-        "line": 182
+        "line": 191
       },
       {
         "id": "customer.ambulance.emergency.handle-cancel",
-        "line": 251
+        "line": 260
       },
       {
         "id": "customer.ambulance.emergency.set-service-level",
-        "line": 286
+        "line": 295
       },
       {
         "id": "customer.ambulance.emergency.set-requires-paramedic",
-        "line": 313
+        "line": 322
       },
       {
         "id": "customer.ambulance.emergency.set-patient-condition",
-        "line": 347
+        "line": 356
       },
       {
         "id": "customer.ambulance.emergency.set-pickup-address",
-        "line": 360
+        "line": 369
       },
       {
         "id": "customer.ambulance.emergency.set-dropoff-address",
-        "line": 373
+        "line": 382
+      },
+      {
+        "id": "customer.ambulance.emergency.set-health-consent",
+        "line": 400
       },
       {
         "id": "customer.ambulance.emergency.handle-create",
-        "line": 389
-      }
-    ],
-    "(main)/(customer)/(delivery)/index.tsx": [
-      {
-        "id": "customer.delivery.push-request-detail",
-        "line": 95
-      },
-      {
-        "id": "customer.delivery.el-1",
-        "line": 124
-      },
-      {
-        "id": "customer.delivery.push-request-create",
-        "line": 130
-      },
-      {
-        "id": "customer.delivery.push-request-create-2",
-        "line": 152
-      }
-    ],
-    "(main)/(customer)/(delivery)/request-create.tsx": [
-      {
-        "id": "customer.delivery.request-create.el-1",
-        "line": 98
-      },
-      {
-        "id": "customer.delivery.request-create.set-pickup-address",
-        "line": 123
-      },
-      {
-        "id": "customer.delivery.request-create.set-dropoff-address",
-        "line": 141
-      },
-      {
-        "id": "customer.delivery.request-create.set-item-note",
-        "line": 159
-      },
-      {
-        "id": "customer.delivery.request-create.set-receiver-phone",
-        "line": 178
-      },
-      {
-        "id": "customer.delivery.request-create.handle-submit",
-        "line": 188
-      }
-    ],
-    "(main)/(customer)/(delivery)/request-detail.tsx": [
-      {
-        "id": "customer.delivery.request-detail.el-1",
-        "line": 109
+        "line": 425
       }
     ],
     "(main)/(customer)/(rental-bidder)/[id].tsx": [
@@ -1332,23 +1294,23 @@
     "(main)/(customer)/(tabs)/settings/delete-account/index.tsx": [
       {
         "id": "customer.settings.delete-account.el-1",
-        "line": 107
+        "line": 113
       },
       {
         "id": "customer.settings.delete-account.set-theme",
-        "line": 122
+        "line": 128
       },
       {
         "id": "customer.settings.delete-account.handle-delete-press",
-        "line": 162
+        "line": 168
       },
       {
         "id": "customer.settings.delete-account.set-confirm-text",
-        "line": 182
+        "line": 188
       },
       {
         "id": "customer.settings.delete-account.handle-delete-press-2",
-        "line": 195
+        "line": 201
       }
     ],
     "(main)/(customer)/(tabs)/settings/delete-data/index.tsx": [
@@ -2049,6 +2011,56 @@
         "line": 54
       }
     ],
+    "(main)/(customer)/parcel/index.tsx": [
+      {
+        "id": "customer.parcel.push-request-detail",
+        "line": 95
+      },
+      {
+        "id": "customer.parcel.el-1",
+        "line": 124
+      },
+      {
+        "id": "customer.parcel.push-request-create",
+        "line": 130
+      },
+      {
+        "id": "customer.parcel.push-request-create-2",
+        "line": 152
+      }
+    ],
+    "(main)/(customer)/parcel/request-create.tsx": [
+      {
+        "id": "customer.parcel.request-create.el-1",
+        "line": 98
+      },
+      {
+        "id": "customer.parcel.request-create.set-pickup-address",
+        "line": 123
+      },
+      {
+        "id": "customer.parcel.request-create.set-dropoff-address",
+        "line": 141
+      },
+      {
+        "id": "customer.parcel.request-create.set-item-note",
+        "line": 159
+      },
+      {
+        "id": "customer.parcel.request-create.set-receiver-phone",
+        "line": 178
+      },
+      {
+        "id": "customer.parcel.request-create.handle-submit",
+        "line": 188
+      }
+    ],
+    "(main)/(customer)/parcel/request-detail.tsx": [
+      {
+        "id": "customer.parcel.request-detail.el-1",
+        "line": 109
+      }
+    ],
     "(main)/(customer)/profile/edit.tsx": [
       {
         "id": "customer.profile.edit.el-1",
@@ -2323,7 +2335,7 @@
         "line": 298
       },
       {
-        "id": "customer.services-hub.push-delivery",
+        "id": "customer.services-hub.push-parcel",
         "line": 328
       },
       {
@@ -2462,35 +2474,121 @@
     "(main)/(delivery)/index.tsx": [
       {
         "id": "delivery.push-earnings",
-        "line": 205
+        "line": 329
+      },
+      {
+        "id": "delivery.handle-banner-cta",
+        "line": 388
+      },
+      {
+        "id": "delivery.push-packages",
+        "line": 408
+      },
+      {
+        "id": "delivery.push-dues",
+        "line": 425
       },
       {
         "id": "delivery.inbox.hold-banner",
-        "line": 248
+        "line": 455
       },
       {
         "id": "delivery.push-active",
-        "line": 265
+        "line": 471
       },
       {
         "id": "delivery.inbox.offer-card",
-        "line": 288
+        "line": 494
       },
       {
         "id": "delivery.respond-reject",
-        "line": 364
+        "line": 568
       },
       {
         "id": "delivery.respond-accept",
-        "line": 375
+        "line": 578
       },
       {
         "id": "delivery.inbox.empty-state",
-        "line": 385
+        "line": 588
       },
       {
         "id": "delivery.inbox.history-row",
-        "line": 414
+        "line": 617
+      }
+    ],
+    "(main)/(delivery-staff)/dues.tsx": [
+      {
+        "id": "delivery-staff.dues.el-1",
+        "line": 315
+      },
+      {
+        "id": "delivery-staff.dues.load",
+        "line": 336
+      },
+      {
+        "id": "delivery-staff.dues.pay-package-bill",
+        "line": 390
+      },
+      {
+        "id": "delivery-staff.dues.pay-commission-dues",
+        "line": 419
+      },
+      {
+        "id": "delivery-staff.dues.begin-sequence",
+        "line": 443
+      },
+      {
+        "id": "delivery-staff.dues.go-to-packages",
+        "line": 471
+      },
+      {
+        "id": "delivery-staff.dues.go-to-packages-2",
+        "line": 493
+      }
+    ],
+    "(main)/(delivery-staff)/index.tsx": [
+      {
+        "id": "delivery-staff.el-1",
+        "line": 174
+      },
+      {
+        "id": "delivery-staff.push-delivery-staff",
+        "line": 216
+      }
+    ],
+    "(main)/(delivery-staff)/packages.tsx": [
+      {
+        "id": "delivery-staff.packages.pay-now",
+        "line": 280
+      },
+      {
+        "id": "delivery-staff.packages.set-activated",
+        "line": 294
+      },
+      {
+        "id": "delivery-staff.packages.set-activated-2",
+        "line": 310
+      },
+      {
+        "id": "delivery-staff.packages.el-1",
+        "line": 329
+      },
+      {
+        "id": "delivery-staff.packages.load",
+        "line": 350
+      },
+      {
+        "id": "delivery-staff.packages.purchase",
+        "line": 422
+      },
+      {
+        "id": "delivery-staff.packages.go-to-dues",
+        "line": 460
+      },
+      {
+        "id": "delivery-staff.packages.go-to-dues-2",
+        "line": 491
       }
     ],
     "(main)/(fleet)/(tabs)/dashboard/index.tsx": [
@@ -2577,6 +2675,48 @@
       {
         "id": "fleet.drivers.id.push-assign",
         "line": 476
+      }
+    ],
+    "(main)/(fleet)/integrations.tsx": [
+      {
+        "id": "fleet.integrations.error",
+        "line": 119
+      },
+      {
+        "id": "fleet.integrations.list",
+        "line": 126
+      },
+      {
+        "id": "fleet.integrations.row",
+        "line": 136
+      },
+      {
+        "id": "fleet.integrations.row-provider",
+        "line": 149
+      },
+      {
+        "id": "fleet.integrations.row-status",
+        "line": 155
+      },
+      {
+        "id": "fleet.integrations.row-capabilities",
+        "line": 164
+      },
+      {
+        "id": "fleet.integrations.row-last-sync",
+        "line": 172
+      },
+      {
+        "id": "fleet.integrations.row-last-error",
+        "line": 182
+      },
+      {
+        "id": "fleet.integrations.empty",
+        "line": 194
+      },
+      {
+        "id": "fleet.integrations.empty-body",
+        "line": 197
       }
     ],
     "(main)/(fleet)/marketplace.tsx": [
@@ -3000,67 +3140,67 @@
     "(main)/(rider)/d/(tabs)/index.tsx": [
       {
         "id": "rider.d.toggle-online",
-        "line": 1075
+        "line": 1079
       },
       {
         "id": "rider.d.push-shops",
-        "line": 1207
+        "line": 1211
       },
       {
         "id": "rider.d.set-theme",
-        "line": 1225
+        "line": 1229
       },
       {
         "id": "rider.d.push-break-mode",
-        "line": 1244
+        "line": 1248
       },
       {
         "id": "rider.d.toggle-online-2",
-        "line": 1256
+        "line": 1260
       },
       {
         "id": "rider.d.push-break-mode-2",
-        "line": 1270
+        "line": 1274
       },
       {
         "id": "rider.d.women-only-banner",
-        "line": 1327
+        "line": 1331
       },
       {
         "id": "rider.d.women-only-nudge",
-        "line": 1362
+        "line": 1366
       },
       {
         "id": "rider.d.push-due-amounts",
-        "line": 1439
+        "line": 1443
       },
       {
         "id": "rider.d.get-driver-fix",
-        "line": 1487
+        "line": 1491
       },
       {
         "id": "rider.d.push-packages",
-        "line": 1569
+        "line": 1573
       },
       {
         "id": "rider.d.push-hotspot-map",
-        "line": 1594
+        "line": 1598
       },
       {
         "id": "rider.d.push-rental-bidder",
-        "line": 1677
+        "line": 1681
       },
       {
         "id": "rider.d.set-show-recovery-dialog",
-        "line": 1746
+        "line": 1750
       },
       {
         "id": "rider.d.handle-force-end-session",
-        "line": 1752
+        "line": 1756
       },
       {
         "id": "rider.d.recover-session",
-        "line": 1788
+        "line": 1792
       }
     ],
     "(main)/(rider)/d/(tabs)/profile/index.tsx": [
@@ -3076,15 +3216,15 @@
     "(main)/(rider)/d/(tabs)/wallet/index.tsx": [
       {
         "id": "rider.d.wallet.push-packages",
-        "line": 371
+        "line": 377
       },
       {
         "id": "rider.d.wallet.handle-top-up",
-        "line": 448
+        "line": 454
       },
       {
         "id": "rider.d.wallet.push-payout-method",
-        "line": 466
+        "line": 472
       }
     ],
     "(main)/(rider)/documents/index.tsx": [
@@ -3108,27 +3248,27 @@
     "(main)/(rider)/due-amounts/index.tsx": [
       {
         "id": "rider.due-amounts.el-1",
-        "line": 208
+        "line": 220
       },
       {
         "id": "rider.due-amounts.fetch-data",
-        "line": 239
+        "line": 251
       },
       {
         "id": "rider.due-amounts.push-packages",
-        "line": 376
+        "line": 405
       },
       {
         "id": "rider.due-amounts.push-packages-2",
-        "line": 385
+        "line": 414
       },
       {
         "id": "rider.due-amounts.handle-pay-dues",
-        "line": 413
+        "line": 443
       },
       {
         "id": "rider.due-amounts.handle-pay-dues-2",
-        "line": 441
+        "line": 471
       }
     ],
     "(main)/(rider)/earnings-breakdown/index.tsx": [
@@ -4356,23 +4496,23 @@
     "(main)/(shop-owner)/dues.tsx": [
       {
         "id": "shop-owner.dues.el-1",
-        "line": 297
+        "line": 298
       },
       {
         "id": "shop-owner.dues.load",
-        "line": 318
+        "line": 319
       },
       {
         "id": "shop-owner.dues.pay-package-bill",
-        "line": 408
+        "line": 409
       },
       {
         "id": "shop-owner.dues.pay-commission-dues",
-        "line": 436
+        "line": 437
       },
       {
         "id": "shop-owner.dues.begin-sequence",
-        "line": 461
+        "line": 462
       }
     ],
     "(main)/(shop-owner)/index.tsx": [
@@ -4619,12 +4759,20 @@
     ],
     "admin/cancellation-policies.tsx": [
       {
+        "id": "admin.cancellation-policies.toggle-active",
+        "line": 75
+      },
+      {
         "id": "admin.cancellation-policies.set-form",
-        "line": 53
+        "line": 87
+      },
+      {
+        "id": "admin.cancellation-policies.set-form-2",
+        "line": 99
       },
       {
         "id": "admin.cancellation-policies.save",
-        "line": 69
+        "line": 103
       }
     ],
     "admin/city-boundaries.tsx": [
@@ -4778,19 +4926,19 @@
     "admin/fare-disputes.tsx": [
       {
         "id": "admin.fare-disputes.set-filter",
-        "line": 57
+        "line": 63
       },
       {
         "id": "admin.fare-disputes.set-selected",
-        "line": 66
+        "line": 72
       },
       {
         "id": "admin.fare-disputes.resolve",
-        "line": 92
+        "line": 98
       },
       {
         "id": "admin.fare-disputes.resolve-2",
-        "line": 95
+        "line": 101
       }
     ],
     "admin/fare-gate-metrics.tsx": [
@@ -4802,37 +4950,37 @@
     "admin/fleet-plans.tsx": [
       {
         "id": "admin.fleet-plans.set-billing-period",
-        "line": 243
+        "line": 245
       },
       {
         "id": "admin.fleet-plans.on-close",
-        "line": 323
+        "line": 325
       },
       {
         "id": "admin.fleet-plans.handle-save",
-        "line": 344
+        "line": 346
       },
       {
         "id": "admin.fleet-plans.toggle-active",
-        "line": 497
+        "line": 502
       },
       {
         "id": "admin.fleet-plans.set-editing-plan",
-        "line": 545
+        "line": 550
       },
       {
         "id": "admin.fleet-plans.set-editing-plan-2",
-        "line": 577
+        "line": 582
       }
     ],
     "admin/fleets.tsx": [
       {
         "id": "admin.fleets.change-status",
-        "line": 150
+        "line": 153
       },
       {
         "id": "admin.fleets.set-status-filter",
-        "line": 373
+        "line": 378
       }
     ],
     "admin/heat-monitor.tsx": [
@@ -4972,27 +5120,27 @@
     "admin/marketplace/certifications.tsx": [
       {
         "id": "admin.marketplace.certifications.handle-review",
-        "line": 98
+        "line": 101
       },
       {
         "id": "admin.marketplace.certifications.handle-review-2",
-        "line": 101
+        "line": 104
       }
     ],
     "admin/marketplace/couriers.tsx": [
       {
         "id": "admin.marketplace.couriers.handle-status-toggle",
-        "line": 99
+        "line": 105
       },
       {
         "id": "admin.marketplace.couriers.set-type-filter",
-        "line": 115
+        "line": 121
       }
     ],
     "admin/marketplace/delivery.tsx": [
       {
         "id": "admin.marketplace.delivery.set-active-tab",
-        "line": 113
+        "line": 124
       }
     ],
     "admin/marketplace/orders.tsx": [
@@ -5036,65 +5184,69 @@
     "admin/marketplace/rental.tsx": [
       {
         "id": "admin.marketplace.rental.set-selected-request",
-        "line": 130
+        "line": 140
       }
     ],
     "admin/marketplace/service-zones.tsx": [
       {
         "id": "admin.marketplace.service-zones.handle-delete",
-        "line": 114
+        "line": 118
       },
       {
         "id": "admin.marketplace.service-zones.handle-bulk-add",
-        "line": 158
+        "line": 162
       }
     ],
     "admin/marketplace/shops.tsx": [
       {
         "id": "admin.marketplace.shops.toggle-status",
-        "line": 69
+        "line": 70
       },
       {
         "id": "admin.marketplace.shops.toggle-status-2",
-        "line": 77
+        "line": 78
       },
       {
         "id": "admin.marketplace.shops.set-status-filter",
-        "line": 154
+        "line": 157
       }
     ],
     "admin/monitoring.tsx": [
       {
         "id": "admin.monitoring.fetch-econ",
-        "line": 493
+        "line": 565
       },
       {
         "id": "admin.monitoring.fetch-ops",
-        "line": 497
+        "line": 569
+      },
+      {
+        "id": "admin.monitoring.fetch-crashes",
+        "line": 573
       },
       {
         "id": "admin.monitoring.set-tab",
-        "line": 511
+        "line": 587
       },
       {
         "id": "admin.monitoring.el-1",
-        "line": 539
+        "line": 615
       },
       {
         "id": "admin.monitoring.set-ride-id-input",
-        "line": 559
+        "line": 635
       },
       {
         "id": "admin.monitoring.fetch-dispatch-log",
-        "line": 564
+        "line": 640
       },
       {
         "id": "admin.monitoring.set-chat-ride-id",
-        "line": 633
+        "line": 709
       },
       {
         "id": "admin.monitoring.fetch-chat",
-        "line": 638
+        "line": 714
       }
     ],
     "admin/packages.tsx": [
@@ -5290,31 +5442,27 @@
     "admin/premium-allowlist.tsx": [
       {
         "id": "admin.premium-allowlist.handle-deactivate",
-        "line": 162
+        "line": 138
       },
       {
         "id": "admin.premium-allowlist.handle-reactivate",
-        "line": 166
-      },
-      {
-        "id": "admin.premium-allowlist.el-1",
-        "line": 186
+        "line": 142
       },
       {
         "id": "admin.premium-allowlist.set-brand",
-        "line": 216
+        "line": 171
       },
       {
         "id": "admin.premium-allowlist.set-model",
-        "line": 233
+        "line": 188
       },
       {
         "id": "admin.premium-allowlist.handle-add",
-        "line": 243
+        "line": 199
       },
       {
         "id": "admin.premium-allowlist.set-filter",
-        "line": 266
+        "line": 222
       }
     ],
     "admin/pricing.tsx": [
@@ -5484,107 +5632,133 @@
     "admin/referral-campaigns.tsx": [
       {
         "id": "admin.referral-campaigns.open-edit",
-        "line": 405
+        "line": 413
       },
       {
         "id": "admin.referral-campaigns.open-deactivate",
-        "line": 418
+        "line": 426
       },
       {
         "id": "admin.referral-campaigns.fetch-list",
-        "line": 432
+        "line": 440
       },
       {
         "id": "admin.referral-campaigns.open-create",
-        "line": 435
+        "line": 443
       },
       {
         "id": "admin.referral-campaigns.close-modal",
-        "line": 460
+        "line": 468
       },
       {
         "id": "admin.referral-campaigns.handle-save",
-        "line": 467
+        "line": 475
       },
       {
         "id": "admin.referral-campaigns.set-confirm-deactivate",
-        "line": 493
+        "line": 501
       },
       {
         "id": "admin.referral-campaigns.confirm-deactivate-action",
-        "line": 500
+        "line": 508
       }
     ],
     "admin/ride-passes.tsx": [
       {
         "id": "admin.ride-passes.open-edit",
-        "line": 79
+        "line": 86
       },
       {
         "id": "admin.ride-passes.remove-pass",
-        "line": 80
-      },
-      {
-        "id": "admin.ride-passes.open-add",
         "line": 87
       },
       {
+        "id": "admin.ride-passes.open-add",
+        "line": 94
+      },
+      {
         "id": "admin.ride-passes.set-form",
-        "line": 97
+        "line": 104
       },
       {
         "id": "admin.ride-passes.save",
-        "line": 100
+        "line": 107
       }
     ],
     "admin/rider-intro-configs.tsx": [
       {
         "id": "admin.rider-intro-configs.open-edit",
-        "line": 169
+        "line": 172
       },
       {
         "id": "admin.rider-intro-configs.remove-config",
-        "line": 170
+        "line": 173
       },
       {
         "id": "admin.rider-intro-configs.open-add",
-        "line": 179
+        "line": 182
       },
       {
         "id": "admin.rider-intro-configs.set-form",
-        "line": 193
+        "line": 196
       },
       {
         "id": "admin.rider-intro-configs.set-form-2",
-        "line": 202
+        "line": 205
       },
       {
         "id": "admin.rider-intro-configs.set-form-3",
-        "line": 207
+        "line": 210
       },
       {
         "id": "admin.rider-intro-configs.set-form-4",
-        "line": 212
+        "line": 215
       },
       {
         "id": "admin.rider-intro-configs.set-form-5",
-        "line": 217
+        "line": 220
       },
       {
         "id": "admin.rider-intro-configs.set-form-6",
-        "line": 222
+        "line": 225
       },
       {
         "id": "admin.rider-intro-configs.set-form-7",
-        "line": 227
+        "line": 230
       },
       {
         "id": "admin.rider-intro-configs.set-form-8",
-        "line": 229
+        "line": 232
       },
       {
         "id": "admin.rider-intro-configs.save",
-        "line": 241
+        "line": 244
+      }
+    ],
+    "admin/riders.tsx": [
+      {
+        "id": "admin.riders.set-suspended",
+        "line": 103
+      },
+      {
+        "id": "admin.riders.set-refund-target",
+        "line": 113
+      },
+      {
+        "id": "admin.riders.set-search",
+        "line": 141
+      },
+      {
+        "id": "admin.riders.set-refund-taka",
+        "line": 166
+      },
+      {
+        "id": "admin.riders.set-refund-reason",
+        "line": 177
+      },
+      {
+        "id": "admin.riders.submit-refund",
+        "line": 182
       }
     ],
     "admin/sample-media.tsx": [
@@ -5640,49 +5814,53 @@
     "admin/support.tsx": [
       {
         "id": "admin.support.set-status-filter",
-        "line": 106
+        "line": 113
       },
       {
         "id": "admin.support.set-assign-input",
-        "line": 135
+        "line": 142
       },
       {
         "id": "admin.support.el-1",
-        "line": 148
+        "line": 155
       },
       {
         "id": "admin.support.set-reply-text",
-        "line": 163
+        "line": 170
       },
       {
         "id": "admin.support.set-is-internal",
-        "line": 166
+        "line": 173
       },
       {
         "id": "admin.support.send-reply",
-        "line": 170
+        "line": 177
       }
     ],
     "admin/tax-dashboard.tsx": [
       {
         "id": "admin.tax-dashboard.set-date",
-        "line": 48
+        "line": 116
       },
       {
         "id": "admin.tax-dashboard.fetch-data",
-        "line": 49
+        "line": 117
       },
       {
         "id": "admin.tax-dashboard.export-csv",
-        "line": 50
+        "line": 118
       },
       {
-        "id": "admin.tax-dashboard.update-rate",
-        "line": 80
+        "id": "admin.tax-dashboard.set-rate-drafts",
+        "line": 157
+      },
+      {
+        "id": "admin.tax-dashboard.save-rate",
+        "line": 160
       },
       {
         "id": "admin.tax-dashboard.toggle-rate",
-        "line": 83
+        "line": 165
       }
     ],
     "admin/trust-safety.tsx": [
@@ -5786,65 +5964,65 @@
     "admin/verification.tsx": [
       {
         "id": "admin.verification.kind-tabs",
-        "line": 144
+        "line": 147
       },
       {
         "id": "admin.verification.set-kind",
-        "line": 156
+        "line": 159
       },
       {
         "id": "admin.verification.row-item",
-        "line": 172
+        "line": 175
       },
       {
         "id": "admin.verification.el-1",
-        "line": 195
+        "line": 198
       },
       {
         "id": "admin.verification.set-reject-reason",
-        "line": 224
+        "line": 227
       },
       {
         "id": "admin.verification.set-reject-code",
-        "line": 236
+        "line": 239
       },
       {
         "id": "admin.verification.set-reject-field",
-        "line": 249
+        "line": 252
       },
       {
         "id": "admin.verification.set-reject-example",
-        "line": 257
+        "line": 260
       },
       {
         "id": "admin.verification.set-reject-note",
-        "line": 264
+        "line": 267
       },
       {
         "id": "admin.verification.submit-reject",
-        "line": 270
+        "line": 273
       },
       {
         "id": "admin.verification.reset-reject-form",
-        "line": 279
+        "line": 282
       },
       {
         "id": "admin.verification.handle-approve",
-        "line": 291
+        "line": 294
       },
       {
         "id": "admin.verification.set-rejecting-id",
-        "line": 300
+        "line": 303
       }
     ],
     "admin/zone-pnl.tsx": [
       {
         "id": "admin.zone-pnl.set-selected-zone",
-        "line": 84
+        "line": 88
       },
       {
         "id": "admin.zone-pnl.set-period",
-        "line": 106
+        "line": 110
       }
     ],
     "admin/zones.tsx": [
@@ -5884,7 +6062,7 @@
     "index.tsx": [
       {
         "id": ".run-auth-check",
-        "line": 249
+        "line": 261
       }
     ],
     "track/[rideId].tsx": [

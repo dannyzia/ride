@@ -23,6 +23,7 @@ import NetInfo from "@react-native-community/netinfo";
 import * as Linking from "expo-linking";
 import { routeNotification, routeDeepLink } from "@/lib/notificationRouter";
 import { useOtaBackgroundPolling } from "@/lib/otaBackgroundUpdate";
+import { initCrashReporter } from "@/lib/crashReporter";
 import { useInboxStore, type InboxEndpointBase } from "@/lib/notifications/inbox";
 import { getRideVerticalEnabled } from "@/lib/verticalFlags";
 
@@ -95,6 +96,12 @@ export default function RootLayout() {
   // boot). Interval runs only while the driver is online/account-active.
   useOtaBackgroundPolling();
 
+  // First-party crash reporter (Option B — no third-party SDKs). Installs
+  // the global ErrorUtils / window handlers once per app boot.
+  useEffect(() => {
+    initCrashReporter();
+  }, []);
+
   const [fontsLoaded] = useFonts({
     "Jakarta-Bold": require("../assets/fonts/PlusJakartaSans-Bold.ttf"),
     "Jakarta-ExtraBold": require("../assets/fonts/PlusJakartaSans-ExtraBold.ttf"),
@@ -146,7 +153,18 @@ export default function RootLayout() {
             if (data.exists && inAuthGroup && !isPublicRoute) {
               // S2.1 D-1 (§16): >1 ACTIVE role → the Login-as chooser
               // (OWNER-DECISION #9); a single-role account lands directly.
-              if (Array.isArray(data.active_roles) && data.active_roles.length > 1) {
+              //
+              // `roles_unknown` (verify-token could not resolve the role set in
+              // its budget) MUST go to the chooser too. Guessing "single role"
+              // there is how a multi-role account got silently dumped into one
+              // surface and the fleet portal became unreachable on device
+              // (measured 2026-11-10). The chooser re-reads /api/user/roles
+              // itself, so a genuinely single-role account just sees one row.
+              if (data.roles_unknown === true) {
+                router.replace(
+                  `/(auth)/login-as?phone=${encodeURIComponent(data.phone ?? "")}`,
+                );
+              } else if (Array.isArray(data.active_roles) && data.active_roles.length > 1) {
                 router.replace(
                   `/(auth)/login-as?phone=${encodeURIComponent(data.phone ?? "")}`,
                 );
@@ -174,9 +192,18 @@ export default function RootLayout() {
                 const errBody = await res.clone().json();
                 if (errBody?.error === "account_suspended") {
                   const r = typeof errBody.reason === "string" ? errBody.reason : null;
-                  router.replace(
-                    `/(auth)/account-locked${r ? `?reason=${encodeURIComponent(r)}` : ""}`,
-                  );
+                  // Two branches, not one template: the nav-integrity audit
+                  // resolves a target from its static prefix, and a `?reason=`
+                  // that lives inside a NESTED template is invisible to it — the
+                  // single-expression form was reported as a DANGLING
+                  // "/account-locked*" target even though the route exists
+                  // (app/(auth)/account-locked.tsx). Spelling the query in the
+                  // outer literal keeps both branches statically resolvable.
+                  if (r) {
+                    router.replace(`/(auth)/account-locked?reason=${encodeURIComponent(r)}`);
+                  } else {
+                    router.replace("/(auth)/account-locked");
+                  }
                   return;
                 }
               } catch {

@@ -6,6 +6,7 @@ import { useState, useEffect, useCallback } from "react";
 import { View, Text } from "react-native";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { AdminTable, type AdminColumn } from "@/components/admin/AdminTable";
+import { useAdminToast } from "@/components/admin/AdminToast";
 import { adminFetch } from "@/lib/adminFetch";
 import { colors } from "@/theme/goRide";
 
@@ -27,6 +28,7 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 export default function MarketplaceEmergency() {
+  const toast = useAdminToast();
   const [requests, setRequests] = useState<EmergencyRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
@@ -37,9 +39,16 @@ export default function MarketplaceEmergency() {
     setLoading(true);
     const params = new URLSearchParams({ page: String(page), limit: String(PAGE_SIZE) });
     const res = await adminFetch<{ requests: EmergencyRequest[]; total: number }>(`/api/admin/marketplace/emergency?${params.toString()}`);
-    if (res.data) { setRequests(res.data.requests ?? []); setTotal(res.data.total ?? 0); }
+    if (res.error) {
+      toast.show(res.message ?? res.error, "error");
+      setRequests([]);
+      setTotal(0);
+    } else {
+      setRequests(res.data?.requests ?? []);
+      setTotal(res.data?.total ?? 0);
+    }
     setLoading(false);
-  }, [page]);
+  }, [page, toast]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 

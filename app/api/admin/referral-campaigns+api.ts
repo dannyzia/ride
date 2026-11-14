@@ -12,8 +12,9 @@ const createSchema = z.object({
   name: z.string().min(1).max(100),
   referrer_reward_percent: z.number().int().min(1).max(100),
   referee_reward_percent: z.number().int().min(1).max(100),
-  max_uses_per_referrer: z.number().int().positive(),
-  max_uses_per_campaign: z.number().int().positive().nullable().optional(),
+  // -1 is the canonical "unlimited" sentinel (integer, never a float).
+  max_uses_per_referrer: z.number().int().refine((n) => n === -1 || n >= 1),
+  max_uses_per_campaign: z.number().int().refine((n) => n === -1 || n >= 1).nullable().optional(),
   is_active: z.boolean().optional().default(true),
 });
 

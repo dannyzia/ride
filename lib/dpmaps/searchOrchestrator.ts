@@ -18,6 +18,9 @@ import { getConfigValue } from '@/lib/platformConfig';
 import { logger } from '@/lib/logger';
 
 const BARIKOI_API_KEY = process.env.BARIKOI_API_KEY ?? '';
+// Measured 195–325 ms for a warm 10-row Dhaka answer; the old 500 ms budget
+// left no headroom and a timeout degrades to zero rows.
+const VENDOR_TIMEOUT_MS = 1000;
 
 export type SearchMode = 'vendor_only' | 'mixed_shadow' | 'dpmaps_primary' | 'dpmaps_sole';
 
@@ -87,10 +90,16 @@ async function queryVendorAutocomplete(
 ): Promise<AutocompleteSuggestion[]> {
   if (!BARIKOI_API_KEY) return [];
 
+  // Barikoi rejects a `city` filter that arrives without `district`:
+  //   HTTP 400 {"message":"city filter will not work without district. Please add district."}
+  // Measured 2026-11-11 against the live key — that 400 was the whole reason
+  // this endpoint returned {"suggestions":[]}, because the !res.ok branch was
+  // silent. Both must be sent; `district` alone and `city`+`district` both 200.
   const params = new URLSearchParams({
     q: query,
     api_key: BARIKOI_API_KEY,
     city: 'dhaka',
+    district: 'dhaka',
     sub_area: 'true',
     sub_district: 'true',
   });
@@ -102,8 +111,17 @@ async function queryVendorAutocomplete(
   const url = `https://barikoi.xyz/v2/api/search/autocomplete/place?${params}`;
 
   try {
-    const res = await fetch(url, { signal: AbortSignal.timeout(500) });
-    if (!res.ok) return [];
+    const res = await fetch(url, { signal: AbortSignal.timeout(VENDOR_TIMEOUT_MS) });
+    if (!res.ok) {
+      // Never swallow the provider's own diagnosis: a 400 here once meant
+      // "no POI rows anywhere in the app" with nothing in the logs.
+      const detail = (await res.json().catch(() => null)) as { message?: unknown } | null;
+      logger.warn('[dpmaps/search] Vendor autocomplete rejected the request', {
+        status: res.status,
+        provider_message: typeof detail?.message === 'string' ? detail.message : undefined,
+      });
+      return [];
+    }
     const body = (await res.json().catch(() => ({}))) as { places?: any[] };
     if (!Array.isArray(body.places)) return [];
 
@@ -119,7 +137,12 @@ async function queryVendorAutocomplete(
       }
 
       suggestions.push({
-        place_id: String(place.id || `vendor-${Math.random().toString(36).slice(2, 8)}`),
+        // Barikoi's `id` is null on many rows while `uCode` is the stable place
+        // code; a random fallback made the id (and the client's list key)
+        // change on every keystroke.
+        place_id: String(
+          place.id || place.uCode || `vendor-${Math.random().toString(36).slice(2, 8)}`,
+        ),
         title: place.address || place.name || query,
         subtitle: [place.area, place.city].filter(Boolean).join(', ') || 'Dhaka',
         category: place.location_type || 'area',

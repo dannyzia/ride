@@ -33,6 +33,7 @@
     "check:date-in-sql": "node scripts/check-date-in-sql.js",
     "check:scratch-policy": "node scripts/check-scratch-policy-gate.cjs",
     "check:i18n-orphans": "node scripts/audit-i18n-orphans.cjs --gate",
+    "check:i18n-braces": "node scripts/check-i18n-braces.cjs --gate",
     "check:i18n-dead-refs": "node scripts/audit-i18n-dead-refs.cjs --gate",
     "check:driver-dues:live": "cross-env RUN_LIVE_DUES_CHECK=1 npx tsx scripts/check-driver-dues-live.ts",
     "storybook:ios": "cross-env STORYBOOK_ENABLED=true expo run:ios",

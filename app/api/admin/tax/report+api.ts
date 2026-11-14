@@ -1,3 +1,4 @@
+import { adminErrorResponse } from '@/lib/adminRoute';
 import { db } from '@/src/db';
 import { taxLedgers } from '@/src/db/schema';
 import { inArray } from 'drizzle-orm';
@@ -39,8 +40,7 @@ export async function GET(request: Request) {
     return Response.json(report);
   } catch (err: unknown) {
     if (errors.getErrorStatus(err) === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
-    logger.error('[admin/tax/report] GET error', err);
-    return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
+    return adminErrorResponse(err, '[admin/tax/report] GET error');
   }
 }
 
@@ -55,7 +55,6 @@ export async function POST(request: Request) {
     return Response.json({ success: true });
   } catch (err: unknown) {
     if (errors.getErrorStatus(err) === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
-    logger.error('[admin/tax/report] POST error', err);
-    return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
+    return adminErrorResponse(err, '[admin/tax/report] POST error');
   }
 }

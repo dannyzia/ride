@@ -4,6 +4,7 @@ import { AdminShell } from "@/components/admin/AdminShell";
 import { AdminModal } from "@/components/admin/AdminModal";
 import { useAdminToast } from "@/components/admin/AdminToast";
 import { adminFetch } from "@/lib/adminFetch";
+import { takaToPaisa } from "@/lib/money";
 import { colors } from "@/theme/goRide";
 
 const STATUS_COLORS: Record<string, string> = { open: colors.amber, under_review: colors.info, resolved: colors.checkGreen, escalated: colors.danger };
@@ -33,15 +34,20 @@ export default function AdminFareDisputes() {
     setLoading(true);
     const params = filter ? `?status=${filter}` : "";
     const res = await adminFetch<{ disputes: FareDisputeRow[] }>(`/api/admin/fare-disputes${params}`);
-    if (res.data) setDisputes(res.data.disputes ?? []);
+    if (res.error) toast.show(res.message ?? res.error, "error");
+    else setDisputes(res.data?.disputes ?? []);
     setLoading(false);
-  }, [filter]);
+  }, [filter, toast]);
 
   useEffect(() => { fetchDisputes(); }, [fetchDisputes]);
 
   const resolve = async (action: 'admin_approved' | 'admin_rejected') => {
     if (!selected) return;
-    const adjBdt = parseInt(adjustmentTaka, 10) * 100 || undefined;
+    const adjBdt = adjustmentTaka.trim() ? takaToPaisa(adjustmentTaka) : undefined;
+    if (adjBdt !== undefined && !Number.isFinite(adjBdt)) {
+      toast.show("Adjustment must be a number", "error");
+      return;
+    }
     const res = await adminFetch(`/api/admin/fare-disputes`, {
       method: "PATCH", body: JSON.stringify({ dispute_id: selected.id, action, adjustment_bdt: adjBdt }), headers: { "Content-Type": "application/json" },
     });

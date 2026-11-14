@@ -6,6 +6,7 @@ import { useState, useEffect, useCallback } from "react";
 import { Text } from "react-native";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { AdminTable, type AdminColumn } from "@/components/admin/AdminTable";
+import { useAdminToast } from "@/components/admin/AdminToast";
 import { adminFetch } from "@/lib/adminFetch";
 import { colors } from "@/theme/goRide";
 
@@ -32,6 +33,7 @@ function formatPaisa(p: number): string {
 // ── Main screen ───────────────────────────────────────────────────────────
 
 export default function AdminFleetBilling() {
+  const toast = useAdminToast();
   const [transactions, setTransactions] = useState<BillingRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
@@ -44,12 +46,16 @@ export default function AdminFleetBilling() {
       transactions: BillingRow[];
       total: number;
     }>(`/api/admin/fleet-billing?page=${page}&limit=${PAGE_SIZE}`);
-    if (res.data) {
-      setTransactions(res.data.transactions ?? []);
-      setTotal(res.data.total ?? 0);
+    if (res.error) {
+      toast.show(res.message ?? res.error, "error");
+      setTransactions([]);
+      setTotal(0);
+    } else {
+      setTransactions(res.data?.transactions ?? []);
+      setTotal(res.data?.total ?? 0);
     }
     setLoading(false);
-  }, [page]);
+  }, [page, toast]);
 
   useEffect(() => {
     fetchData();

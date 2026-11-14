@@ -19,7 +19,7 @@ import { adminFetch } from "@/lib/adminFetch";
 import { colors } from "@/theme/goRide";
 import { VEHICLE_TYPES } from "@/lib/vehicleTypes";
 
-type Tab = "dispatch" | "chat" | "economics" | "ops";
+type Tab = "dispatch" | "chat" | "economics" | "ops" | "crashes";
 
 // ---------- S7 §7 A5 ops rows ----------
 interface OpsRow {
@@ -104,12 +104,28 @@ interface EconResponse {
   total: number;
 }
 
+// ---------- First-party crash log shapes ----------
+interface CrashRow {
+  id: string;
+  platform: string;
+  app_version: string;
+  error_message: string;
+  is_fatal: boolean;
+  created_at: string;
+}
+
+interface CrashesResponse {
+  crashes: CrashRow[];
+  total: number;
+}
+
 const TABS: { key: Tab; label: string }[] = [
   // S7 §7 A5 leads: the read-only ops counts are what a shift starts with.
   { key: "ops", label: "Ops Rows" },
   { key: "dispatch", label: "Dispatch Log" },
   { key: "chat", label: "Ride Chat" },
   { key: "economics", label: "Driver Economics" },
+  { key: "crashes", label: "Crash Logs" },
 ];
 
 function formatDateTime(iso: string | null | undefined): string {
@@ -170,6 +186,21 @@ export default function MonitoringScreen() {
   // legs today, delivery men online).
   const [opsRows, setOpsRows] = useState<OpsRow[]>([]);
   const [opsLoading, setOpsLoading] = useState(false);
+
+  // First-party crash logs (Option B) — recent client_crash_reports rows.
+  const [crashes, setCrashes] = useState<CrashRow[]>([]);
+  const [crashLoading, setCrashLoading] = useState(false);
+
+  const fetchCrashes = useCallback(async () => {
+    setCrashLoading(true);
+    const { data, error } = await adminFetch<CrashesResponse>(
+      "/api/admin/monitoring/crashes?limit=50",
+      { method: "GET" },
+    );
+    setCrashLoading(false);
+    setCrashes(data?.crashes ?? []);
+    if (error) toast.show(`Failed to load crash logs: ${error}`, "error");
+  }, [toast]);
 
   const fetchOps = useCallback(async () => {
     setOpsLoading(true);
@@ -283,6 +314,47 @@ export default function MonitoringScreen() {
   useEffect(() => {
     if (tab === "ops") fetchOps();
   }, [tab, fetchOps]);
+
+  // Crash logs are cheap reads — refetch on every visit so the list is live.
+  useEffect(() => {
+    if (tab === "crashes") fetchCrashes();
+  }, [tab, fetchCrashes]);
+
+  const crashColumns: AdminColumn<CrashRow>[] = [
+    {
+      key: "created_at",
+      header: "Time",
+      width: 170,
+      render: (row) => (
+        <Text style={styles.cellText}>{formatDateTime(row.created_at)}</Text>
+      ),
+    },
+    {
+      key: "platform",
+      header: "Platform",
+      width: 100,
+      render: (row) => (
+        <Text style={styles.cellText}>
+          {row.platform} · {row.app_version}
+        </Text>
+      ),
+    },
+    {
+      key: "error_message",
+      header: "Error",
+      width: 320,
+      render: (row) => (
+        <View style={{ gap: 4 }}>
+          {row.is_fatal ? (
+            <Text style={[styles.subText, { color: colors.danger }]}>fatal</Text>
+          ) : null}
+          <Text style={styles.cellPrimary} numberOfLines={3}>
+            {row.error_message}
+          </Text>
+        </View>
+      ),
+    },
+  ];
 
   const dispatchColumns: AdminColumn<DispatchOfferRow>[] = [
     {
@@ -495,6 +567,10 @@ export default function MonitoringScreen() {
           </Pressable>
         ) : tab === "ops" ? (
           <Pressable style={styles.refreshBtn} onPress={fetchOps} testID="admin.monitoring.fetch-ops">
+            <Text style={styles.refreshBtnText}>Refresh</Text>
+          </Pressable>
+        ) : tab === "crashes" ? (
+          <Pressable style={styles.refreshBtn} onPress={fetchCrashes} testID="admin.monitoring.fetch-crashes">
             <Text style={styles.refreshBtnText}>Refresh</Text>
           </Pressable>
         ) : null
@@ -734,6 +810,17 @@ export default function MonitoringScreen() {
           rowKey={(row) => row.driver_id}
           loading={econLoading}
           emptyMessage="No active/temporary drivers"
+          pagination={null}
+        />
+      ) : null}
+
+      {tab === "crashes" ? (
+        <AdminTable
+          columns={eColumns(crashColumns)}
+          rows={crashes}
+          rowKey={(row) => row.id}
+          loading={crashLoading}
+          emptyMessage="No crash reports"
           pagination={null}
         />
       ) : null}

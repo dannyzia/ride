@@ -5,7 +5,6 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import React, { useEffect, useRef, useState, useCallback } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
-import * as Location from "expo-location";
 import { supabase } from "@/lib/supabase";
 import { useDriverStore } from "@/store/useDriverStore";
 import { useDriverFlowStore } from "@/store/useDriverFlowStore";
@@ -36,6 +35,7 @@ import {
   type HotspotPoint,
 } from "@/lib/hotspots";
 import { useTranslation } from "react-i18next";
+import { useShallow } from "zustand/react/shallow";
 
 // LOW-13: drivers.vehicle_type is a machine key (e.g. bike_standard); show the
 // human label ("Bike Standard") in the header.
@@ -83,14 +83,11 @@ export default function DriverHome() {
     activeSubscription,
     isOnline,
     wsConnected,
-    sessionId,
-    onBreak,
     setDriver,
     setActiveSubscription,
     setIsOnline,
     setWsConnected,
     setSessionId,
-    setOnBreak,
     clearSession,
   } = useDriverStore();
   const { addRideOffer, removeRideOffer, setActiveRideId } = useRideOfferStore();
@@ -140,11 +137,18 @@ export default function DriverHome() {
   // §F.0(b) — fleet marketplace bidder entry card
   const [marketplaceAccess, setMarketplaceAccess] = useState<{ fleet_id: string; fleet_name: string; role: string }[] | null>(null);
   // Item 26 — monetization state banner (six-state: ACTIVE, OWING, LAPSED, CEILING_LOCKED, NO_PRODUCT, PRODUCT_FROZEN)
-  const monetization = useMonetizationStateStore((s) => ({
-    state: s.state,
-    isDispatchLocked: s.isDispatchLocked,
-    fetchMonetization: s.fetchMonetization,
-  }));
+  // `useShallow` is REQUIRED on zustand v5: a selector that builds a new object
+  // literal per call never compares equal, so the store re-renders the component
+  // forever and React throws "Maximum update depth exceeded" (redbox stack:
+  // forceStoreRerender / updateStoreInstance). Measured 2026-11-10 — this site
+  // is what put a Render Error over the driver home right after login.
+  const monetization = useMonetizationStateStore(
+    useShallow((s) => ({
+      state: s.state,
+      isDispatchLocked: s.isDispatchLocked,
+      fetchMonetization: s.fetchMonetization,
+    })),
+  );
 
   const markerPulseAnim = useRef(new Animated.Value(1)).current;
   const goOnlinePulse = useRef(new Animated.Value(0)).current;

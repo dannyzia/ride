@@ -3,9 +3,10 @@
  * Route: /admin/marketplace/delivery
  */
 import { useState, useEffect, useCallback } from "react";
-import { View, Text, ActivityIndicator, Pressable } from "react-native";
+import { View, Text, Pressable } from 'react-native';
 import { AdminShell } from "@/components/admin/AdminShell";
-import { AdminTable, type AdminColumn } from "@/components/admin/AdminTable";
+import { AdminTable, type AdminColumn } from '@/components/admin/AdminTable';
+import { useAdminToast } from "@/components/admin/AdminToast";
 import { adminFetch } from "@/lib/adminFetch";
 import { colors } from "@/theme/goRide";
 
@@ -40,6 +41,7 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 export default function MarketplaceDelivery() {
+  const toast = useAdminToast();
   const [activeTab, setActiveTab] = useState<"requests" | "legs">("requests");
   const [requests, setRequests] = useState<DeliveryRequest[]>([]);
   const [legs, setLegs] = useState<DeliveryLeg[]>([]);
@@ -51,15 +53,24 @@ export default function MarketplaceDelivery() {
   const fetchData = useCallback(async () => {
     setLoading(true);
     const params = new URLSearchParams({ page: String(page), limit: String(PAGE_SIZE) });
-    if (activeTab === "requests") {
-      const res = await adminFetch<{ requests: DeliveryRequest[]; total: number }>(`/api/admin/marketplace/delivery/requests?${params.toString()}`);
-      if (res.data) { setRequests(res.data.requests ?? []); setTotal(res.data.total ?? 0); }
+    if (activeTab === "legs") params.set("type", "legs");
+    const res = await adminFetch<{ requests?: DeliveryRequest[]; legs?: DeliveryLeg[]; total: number }>(
+      `/api/admin/marketplace/delivery?${params.toString()}`,
+    );
+    if (res.error) {
+      toast.show(res.message ?? res.error, "error");
+      if (activeTab === "requests") setRequests([]);
+      else setLegs([]);
+      setTotal(0);
+    } else if (activeTab === "requests") {
+      setRequests(res.data?.requests ?? []);
+      setTotal(res.data?.total ?? 0);
     } else {
-      const res = await adminFetch<{ legs: DeliveryLeg[]; total: number }>(`/api/admin/marketplace/delivery/legs?${params.toString()}`);
-      if (res.data) { setLegs(res.data.legs ?? []); setTotal(res.data.total ?? 0); }
+      setLegs(res.data?.legs ?? []);
+      setTotal(res.data?.total ?? 0);
     }
     setLoading(false);
-  }, [activeTab, page]);
+  }, [activeTab, page, toast]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 

@@ -23,10 +23,10 @@ tags:
     appId: com.node.bd
 - extendedWaitUntil:
     visible:
-      id: "customer.home.el-2"
+      id: "customer.services-hub.handle-select"
     timeout: 20000
 - tapOn:
-    id: "customer.home.el-2"
+    id: "customer.services-hub.handle-select"
 - extendedWaitUntil:
     visible:
       id: "customer.autocomplete.set-query"
@@ -93,9 +93,9 @@ tags:
           id: "customer.rate-driver.handle-submit"
       - extendedWaitUntil:
           visible:
-            id: "customer.home.el-2"
+            id: "customer.services-hub.handle-select"
           timeout: 20000
 - extendedWaitUntil:
     visible:
-      id: "customer.home.el-2"
+      id: "customer.services-hub.handle-select"
     timeout: 30000

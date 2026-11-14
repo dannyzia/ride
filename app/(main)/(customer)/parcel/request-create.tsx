@@ -78,7 +78,7 @@ export default function RequestCreateScreen() {
 
       if (res.ok) {
         const data = await res.json();
-        router.replace(`/(main)/(customer)/(delivery)/request-detail?id=${data.leg_id}`);
+        router.replace(`/(main)/(customer)/parcel/request-detail?id=${data.leg_id}`);
       } else {
         const err = await res.json();
         Alert.alert(t("common.error"), err.message || t("delivery_create.err_create_failed"));
@@ -95,7 +95,7 @@ export default function RequestCreateScreen() {
     <SafeAreaView style={{ flex: 1, backgroundColor: isDark ? colors.bgDark : colors.bgLight }}>
       {/* Header */}
       <View className="flex-row items-center px-4 py-3">
-        <TouchableOpacity onPress={() => router.back()} testID="customer.delivery.request-create.el-1">
+        <TouchableOpacity onPress={() => router.back()} testID="customer.parcel.request-create.el-1">
           <Ionicons name="arrow-back" size={24} color={textPrimary} />
         </TouchableOpacity>
         <Text className="text-lg font-JakartaBold ml-3" style={{ color: textPrimary }}>
@@ -120,7 +120,7 @@ export default function RequestCreateScreen() {
           placeholderTextColor={textSecondary}
           value={pickupAddress}
           onChangeText={setPickupAddress}
-         testID="customer.delivery.request-create.set-pickup-address"/>
+         testID="customer.parcel.request-create.set-pickup-address"/>
 
         {/* Dropoff */}
         <Text className="text-sm font-JakartaBold mb-2 mt-4" style={{ color: textSecondary }}>
@@ -138,7 +138,7 @@ export default function RequestCreateScreen() {
           placeholderTextColor={textSecondary}
           value={dropoffAddress}
           onChangeText={setDropoffAddress}
-         testID="customer.delivery.request-create.set-dropoff-address"/>
+         testID="customer.parcel.request-create.set-dropoff-address"/>
 
         {/* Item note (required — the courier reads this at pickup) */}
         <Text className="text-sm font-JakartaBold mb-2 mt-4" style={{ color: textSecondary }}>
@@ -156,7 +156,7 @@ export default function RequestCreateScreen() {
           placeholderTextColor={textSecondary}
           value={itemNote}
           onChangeText={setItemNote}
-         testID="customer.delivery.request-create.set-item-note"/>
+         testID="customer.parcel.request-create.set-item-note"/>
 
         {/* Receiver phone (handover contact — pays cash on delivery) */}
         <Text className="text-sm font-JakartaBold mb-2 mt-4" style={{ color: textSecondary }}>
@@ -175,7 +175,7 @@ export default function RequestCreateScreen() {
           keyboardType="phone-pad"
           value={receiverPhone}
           onChangeText={setReceiverPhone}
-         testID="customer.delivery.request-create.set-receiver-phone"/>
+         testID="customer.parcel.request-create.set-receiver-phone"/>
 
         {/* Submit */}
         <TouchableOpacity
@@ -185,7 +185,7 @@ export default function RequestCreateScreen() {
           }}
           onPress={handleSubmit}
           disabled={submitting || !pickupAddress || !dropoffAddress}
-         testID="customer.delivery.request-create.handle-submit">
+         testID="customer.parcel.request-create.handle-submit">
           {submitting ? (
             <ActivityIndicator color="white" />
           ) : (

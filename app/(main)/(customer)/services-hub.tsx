@@ -323,9 +323,9 @@ export default function ServicesHub() {
               borderWidth: 1,
               borderColor: borderColor,
             }}
-            onPress={() => router.push("/(main)/(customer)/(delivery)")}
+            onPress={() => router.push("/(main)/(customer)/parcel")}
             activeOpacity={0.8}
-           testID="customer.services-hub.push-delivery">
+           testID="customer.services-hub.push-parcel">
             <View
               className="w-14 h-14 rounded-full items-center justify-center mb-3"
               style={{ backgroundColor: colors.primary + "18" }}

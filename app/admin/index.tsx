@@ -1,7 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { View, Text, ActivityIndicator } from "react-native";
 import { AdminShell } from "@/components/admin/AdminShell";
+import { useAdminToast } from "@/components/admin/AdminToast";
 import { adminFetch } from "@/lib/adminFetch";
+import { formatBdt } from "@/lib/money";
 import { colors } from "@/theme/goRide";
 
 interface DashboardStats {
@@ -22,16 +24,18 @@ function StatCard({ label, value, color }: { label: string; value: string; color
 }
 
 export default function AdminDashboard() {
+  const toast = useAdminToast();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    (async () => {
-      const res = await adminFetch<DashboardStats>("/api/admin/dashboard");
-      if (res.data) setStats(res.data);
-      setLoading(false);
-    })();
-  }, []);
+  const fetchStats = useCallback(async () => {
+    const res = await adminFetch<DashboardStats>("/api/admin/dashboard");
+    if (res.error) toast.show(res.message ?? res.error, "error");
+    else setStats(res.data);
+    setLoading(false);
+  }, [toast]);
+
+  useEffect(() => { void fetchStats(); }, [fetchStats]);
 
   return (
     <AdminShell title="Dashboard" subtitle="Operational overview">
@@ -42,7 +46,7 @@ export default function AdminDashboard() {
           <StatCard label="Active Drivers" value={String(stats?.active_drivers ?? 0)} color={colors.primary} />
           <StatCard label="Pending Approvals" value={String(stats?.pending_approvals ?? 0)} color={colors.amber} />
           <StatCard label="Today's Rides" value={String(stats?.today_rides ?? 0)} color={colors.adminAccent} />
-          <StatCard label="Today Commission" value={`৳${((stats?.today_commission_bdt ?? 0) / 100).toFixed(0)}`} color={colors.primary} />
+          <StatCard label="Today Commission" value={formatBdt(stats?.today_commission_bdt ?? 0)} color={colors.primary} />
           <StatCard label="Pending Documents" value={String(stats?.pending_documents ?? 0)} color={stats && stats.pending_documents > 0 ? colors.danger : colors.textSecondaryDark} />
         </View>
       )}

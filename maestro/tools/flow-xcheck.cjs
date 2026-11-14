@@ -71,7 +71,12 @@
  *     files predate this gate and are grandfathered in that baseline, rather
  *     than force-fixed here — blocking all of them at once would reject working,
  *     committed flows and bury a real regression under pre-existing noise. The
- *     baseline is a RATCHET: it must only ever shrink. An earlier hand-rolled
+ *     baseline is a RATCHET: it must only ever shrink. SUPPRESSED literals are
+ *     exempt from this tier as well as from dead-copy: a suppression says the
+ *     text renders from outside app copy, so "resolves in no locale value" is
+ *     expected and proves nothing (2026-11-10 — the os-dialog "while using the
+ *     app" was rescued by containment in a locale value's prose, then blocked
+ *     here because this tier requires EXACT membership). An earlier hand-rolled
  *     audit put this at "40" and also reported 13 spurious DEAD COPY findings;
  *     both were wrong, because it scanned app/ but not components/. Do not
  *     re-derive these numbers by hand — run this gate.
@@ -493,6 +498,21 @@ for (const c of copyClaims) {
     .filter((s) => s.length >= 3);
   if (!cands.length) continue;
 
+  // A suppression asserts the text renders from OUTSIDE app copy (OS dialog,
+  // third-party payload). For such a literal BOTH questions the tiers below ask
+  // are the wrong question — "does it resolve in app source?" and "does it
+  // resolve in a locale VALUE?" — so it is skipped before either one runs. This
+  // check used to sit after the `hit` branch, which made it a dead-copy-only
+  // escape hatch: a suppressed literal that happened to resolve (as a FRAGMENT)
+  // in app source took the `hit` path and was then re-accused by LOCALE-ONLY,
+  // which requires EXACT membership in a locale value. MEASURED 2026-11-10:
+  // "while using the app" (Android runtime-permission dialog, category
+  // os-dialog) is a mid-phrase fragment of common.json's location
+  // `foreground_body` — "Ride uses your location while using the app to show…"
+  // — so dead-copy was satisfied by containment and locale-only blocked it.
+  const sup = cands.map((x) => suppressed.get(x)).find(Boolean);
+  if (sup) continue;
+
   // Resolve every candidate so the best (most specific) rescue is the one we
   // report: an exact hit outranks a fragment, a fragment outranks a wrap.
   const witnesses = cands.map((x) => ({ cand: x, w: rescue(x) }));
@@ -510,8 +530,6 @@ for (const c of copyClaims) {
     }
     continue;
   }
-  const sup = cands.map((x) => suppressed.get(x)).find(Boolean);
-  if (sup) continue; // suppression matches -> already accounted for
   deadCopy.push({ ...c, cands });
 }
 

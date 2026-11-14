@@ -1,3 +1,4 @@
+import { adminErrorResponse } from '@/lib/adminRoute';
 import { db } from '@/src/db';
 import { userDevices, users } from '@/src/db/schema';
 import { eq } from 'drizzle-orm';
@@ -77,7 +78,6 @@ export async function POST(request: Request) {
     return Response.json({ success: true, sent, failed, total: tokens.length });
   } catch (err: unknown) {
     if (errors.getErrorStatus(err) === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
-    logger.error('[admin/broadcast] error', err);
-    return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
+    return adminErrorResponse(err, '[admin/broadcast] error');
   }
 }

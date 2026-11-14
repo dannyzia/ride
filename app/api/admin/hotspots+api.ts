@@ -168,6 +168,9 @@ export async function DELETE(request: Request) {
       return Response.json({ error: 'invalid_uuid', message: 'id must be a UUID' }, { status: 400 });
     }
 
+    // Hard delete is intentional here: zone_heat is derived engine state
+    // (recomputed continuously from demand/supply), not a business record with
+    // history to preserve. Every other admin DELETE soft-deletes.
     const deleted = await db
       .delete(zoneHeat)
       .where(eq(zoneHeat.zone_id, parsedId.data))

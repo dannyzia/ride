@@ -22,13 +22,16 @@ import { useIsDark } from "@/lib/useAppearance";
 import CustomButton from "@/components/CustomButton";
 
 export default function RegisterScreen() {
-  const { phone: phoneParam, role: roleParam, terms: termsParam } = useLocalSearchParams<{
+  const { phone: phoneParam, role: roleParam, terms: termsParam, mkt: mktParam } = useLocalSearchParams<{
     phone?: string;
     role?: string;
     terms?: string;
+    mkt?: string;
   }>();
   // C1-1: consent flag carried from the phone-entry gate via otp-verify.
   const termsAccepted = termsParam === "1";
+  // §6: optional marketing opt-in carried alongside (default OFF).
+  const marketingOptIn = mktParam === "1";
   const [name, setName] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -91,7 +94,7 @@ export default function RegisterScreen() {
       // params — URLs leak into history/devtools/crash reports). A missing
       // handoff on the wizard side re-prompts here.
       // C1-1: consent rides the handoff so the wizard's submit carries it.
-      setRegistrationHandoff({ phone: phoneParam ?? "", name, password, terms_accepted: true, gender });
+      setRegistrationHandoff({ phone: phoneParam ?? "", name, password, terms_accepted: true, marketing_opt_in: marketingOptIn, gender });
       router.push(
         `${ROLE_WIZARDS[roleParam]}?phone=${encodeURIComponent(phoneParam ?? "")}&role=${encodeURIComponent(roleParam)}`,
       );
@@ -112,6 +115,8 @@ export default function RegisterScreen() {
           password,
           // C1-1: consent flag — register+api 400s terms_required without it.
           terms_accepted: true,
+          // §6: optional marketing opt-in (default false).
+          marketing_opt_in: marketingOptIn,
           // S8 §4.1: self-declared gender carried in POST /api/register body.
           gender,
         }),

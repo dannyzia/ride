@@ -37,6 +37,7 @@ import { colors } from "@/theme/goRide";
 import { useIsDark } from "@/lib/useAppearance";
 import { formatBDT, formatDate } from "@/lib/format";
 import { logger } from "@/lib/logger";
+import * as Crypto from "expo-crypto";
 import PaymentWebView from "@/components/PaymentWebView";
 
 type BillKind = "subscription_purchase" | "usage";
@@ -143,7 +144,7 @@ export default function ShopDuesScreen() {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "Idempotency-Key": crypto.randomUUID(),
+            "Idempotency-Key": Crypto.randomUUID(),
             Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify({ bill_kind: kind }),

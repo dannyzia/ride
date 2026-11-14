@@ -6,6 +6,7 @@ import { useState, useEffect, useCallback } from "react";
 import { View, Text, ActivityIndicator, Pressable, ScrollView } from "react-native";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { AdminTable, type AdminColumn } from "@/components/admin/AdminTable";
+import { useAdminToast } from "@/components/admin/AdminToast";
 import { adminFetch } from "@/lib/adminFetch";
 import { colors } from "@/theme/goRide";
 
@@ -53,6 +54,7 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 export default function MarketplaceRental() {
+  const toast = useAdminToast();
   const [requests, setRequests] = useState<RentalRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
@@ -67,12 +69,16 @@ export default function MarketplaceRental() {
     setLoading(true);
     const params = new URLSearchParams({ page: String(page), limit: String(PAGE_SIZE) });
     const res = await adminFetch<{ requests: RentalRequest[]; total: number }>(`/api/admin/marketplace/rental/requests?${params.toString()}`);
-    if (res.data) {
-      setRequests(res.data.requests ?? []);
-      setTotal(res.data.total ?? 0);
+    if (res.error) {
+      toast.show(res.message ?? res.error, "error");
+      setRequests([]);
+      setTotal(0);
+    } else {
+      setRequests(res.data?.requests ?? []);
+      setTotal(res.data?.total ?? 0);
     }
     setLoading(false);
-  }, [page]);
+  }, [page, toast]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -80,9 +86,13 @@ export default function MarketplaceRental() {
     setSelectedRequest(req);
     setDetailLoading(true);
     const res = await adminFetch<{ bids: RentalBid[]; events: RentalEvent[] }>(`/api/admin/marketplace/rental/requests/${req.id}`);
-    if (res.data) {
-      setDetailBids(res.data.bids ?? []);
-      setDetailEvents(res.data.events ?? []);
+    if (res.error) {
+      toast.show(res.message ?? res.error, "error");
+      setDetailBids([]);
+      setDetailEvents([]);
+    } else {
+      setDetailBids(res.data?.bids ?? []);
+      setDetailEvents(res.data?.events ?? []);
     }
     setDetailLoading(false);
   };

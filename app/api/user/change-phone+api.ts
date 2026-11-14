@@ -8,6 +8,7 @@ import { supabaseAdmin } from "@/lib/supabaseServer";
 import { logger } from "@/lib/logger";
 import { z } from "zod";
 import * as errors from "@/lib/errors";
+import { checkDeleteEligibility } from "@/lib/accountDelete";
 
 const changePhoneSchema = z
   .object({
@@ -26,6 +27,13 @@ const changePhoneSchema = z
  * survive. verify-token / check-user keep resolving by auth_uid.
  * The old phone no longer authenticates the account (Supabase phone updated
  * alongside the row).
+ *
+ * DEBT-EVASION GUARD (§A1/§A4): an account with unpaid dues or a live booking
+ * cannot move its registered number. Otherwise a debtor could park the
+ * account on a throwaway number and free the original for a fresh
+ * registration, which is the only path around the dues gate on delete.
+ * The guard runs BEFORE `consumeVerification`, so a blocked user does not
+ * burn the OTP sent to the new number.
  */
 export async function POST(request: Request) {
   try {
@@ -54,6 +62,29 @@ export async function POST(request: Request) {
       .limit(1);
     if (taken) {
       return Response.json({ error: 'phone_exists', message: 'Phone number already registered' }, { status: 409 });
+    }
+
+    const block = await db.transaction((tx) => checkDeleteEligibility(tx, dbUser.id));
+    if (block) {
+      if (block.type === "active_booking") {
+        return Response.json(
+          {
+            error: 'active_booking',
+            message: 'Finish or cancel your active booking before changing your registered phone number',
+            kind: block.commitment.kind,
+          },
+          { status: 409 },
+        );
+      }
+      return Response.json(
+        {
+          error: 'dues_outstanding',
+          message: 'Settle your outstanding dues before changing your registered phone number',
+          kind: block.dues.kind,
+          amount_bdt: block.dues.amount_bdt,
+        },
+        { status: 409 },
+      );
     }
 
     if (!consumeVerification(new_phone)) {

@@ -106,7 +106,7 @@ export default function RequestDetailScreen() {
     <SafeAreaView style={{ flex: 1, backgroundColor: isDark ? colors.bgDark : colors.bgLight }}>
       {/* Header */}
       <View className="flex-row items-center px-4 py-3">
-        <TouchableOpacity onPress={() => router.back()} testID="customer.delivery.request-detail.el-1">
+        <TouchableOpacity onPress={() => router.back()} testID="customer.parcel.request-detail.el-1">
           <Ionicons name="arrow-back" size={24} color={textPrimary} />
         </TouchableOpacity>
         <Text className="text-lg font-JakartaBold ml-3" style={{ color: textPrimary }}>

@@ -6,7 +6,11 @@ import { parseJsonBody } from "@/lib/parseBody";
 import { logger } from "@/lib/logger";
 import { z } from "zod";
 import * as errors from "@/lib/errors";
-import { checkDeleteDues, scrubAccountTx } from "@/lib/accountDelete";
+import {
+  checkDeleteEligibility,
+  deletionBlockedResponse,
+  scrubAccountTx,
+} from "@/lib/accountDelete";
 
 const deleteDataSchema = z.object({
   confirm: z.literal("DELETE MY DATA").optional(),
@@ -32,19 +36,14 @@ export async function POST(request: Request) {
     const parsed = await parseJsonBody(request, deleteDataSchema);
     if (!parsed.ok) return parsed.response;
 
-    const failure = await db.transaction(async (tx) => {
-      const dues = await checkDeleteDues(tx, dbUser.id);
-      if (dues) return dues;
+    const block = await db.transaction(async (tx) => {
+      const blocked = await checkDeleteEligibility(tx, dbUser.id);
+      if (blocked) return blocked;
       await scrubAccountTx(tx, dbUser.id);
       return null;
     });
 
-    if (failure) {
-      return Response.json(
-        { error: 'dues_outstanding', message: 'Outstanding dues must be settled before deletion', kind: failure.kind, amount_bdt: failure.amount_bdt },
-        { status: 409 },
-      );
-    }
+    if (block) return deletionBlockedResponse(block);
 
     return Response.json({ success: true }, { status: 200 });
 

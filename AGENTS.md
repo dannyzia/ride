@@ -320,6 +320,14 @@ grep -ri "clerk\|stripe\|firebase" app/ lib/ utils-server/ src/   # must return 
 # MEASURED, do not "tighten" this to locale-only without re-measuring — and treat that as an i18n
 # -discipline decision, not a bug fix. Suppress genuinely external text (OS dialog, third-party API)
 # via maestro/tools/flow-xcheck-suppressions.json.
+# A SUPPRESSION EXEMPTS THE LITERAL FROM BOTH TIERS, not just dead-copy (fixed 2026-11-10): the
+# suppression lookup used to sit AFTER the rescue branch, so a suppressed literal that happened to
+# resolve as a FRAGMENT of a live locale value took the `hit` path and was then re-accused by
+# LOCALE-ONLY, which requires EXACT membership in a locale value. MEASURED: the os-dialog "while
+# using the app" is a mid-phrase fragment of common.json's location `foreground_body` ("Ride uses
+# your location while using the app to show…") and was the gate's only remaining blocking literal;
+# the blocking count is now 0. A suppressed literal is skipped before either tier runs, so it can
+# be neither MASKED nor LOCALE-ONLY.
 # Since 2026-10-05 the corpus admits only LIVE locale values: a key classified ORPHANED by
 # scripts/audit-i18n-orphans.cjs (spawned at RUN time with --json, like the nav audit) renders
 # nothing, so its value must never rescue an assertion — the shape by which the 106 keys purged
@@ -464,6 +472,27 @@ grep -ri "clerk\|stripe\|firebase" app/ lib/ utils-server/ src/   # must return 
 # gate fault pairs + real-tree baseline/resolution checks) and tests/meta/purge-orphan-keys.test.ts
 # (18 tests: purge + its fault pairs).
 # Run: node scripts/audit-i18n-orphans.cjs [--json | --gate [--json]]
+# i18n braces gate — scripts/check-i18n-braces.cjs. Every JSON file under i18n/locales/**
+# (globbed, so a new locale or split namespace is covered) is walked; each STRING value has its
+# well-formed `{{name}}` placeholders removed and is then checked for a surviving `{` or `}`.
+# That one rule catches all three shapes at once — single-brace `{amount}`, unterminated
+# `{{amount}` and `{amount}}` — because react-i18next leaves every one of them verbatim on
+# screen ("Debt ceiling: {amount}"). The bug is invisible to tsc, eslint, the orphan gate and
+# en/bn parity: the key resolves, both locales agree, the call site passes the param. Found by
+# hand twice (monetization.ceiling_warn, shop.packages.*, 2026-11-10); this gate is the net.
+# Wired as `npm run check:i18n-braces`, a step in the CI `test` job and in `weekly-validation`,
+# so a PR, a push, a web-UI commit and the weekly replay all run it. No suppression list by
+# design — a locale value has no legitimate stray brace; use `{{'{'}}`/i18next's escape if one
+# is ever truly needed, so the gate keeps its teeth. Exit 0 = clean; 1 = malformed values listed
+# with file:key; 2 = could not run (no locale files, unreadable/unparseable JSON) — 2 is distinct
+# from 0 on purpose, because "found nothing to scan" must never read as "scanned and clean".
+# Pinned by tests/meta/i18n-braces-gate.test.ts (10 tests): the shipped CLI is copied into a
+# throwaway tree (it resolves inputs from __dirname, so there is no path to fake) and run against
+# one fixture per fault shape, across BOTH locales, plus the exit-2 paths and --json; every
+# finding case is PAIRED with a fault-injected copy whose detector is neutralised and must report
+# the same faulty tree clean — a gate that has become a no-op fails the suite instead of passing
+# quietly. The fault injection throws if its anchor line moves, never injecting nothing.
+# Run: node scripts/check-i18n-braces.cjs [--gate | --json]
 # After ANY app/ change: node maestro/tools/testid-manifest.cjs   (regenerate the map first)
 # Deleting a screen: preview the damage with `node scripts/audit-deletion-impact.cjs` (every
 # no-inbound screen + the testIDs and locale keys that die with it); then §Deleting a screen of

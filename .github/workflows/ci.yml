@@ -204,6 +204,15 @@ jobs:
       - name: i18n orphan gate (new orphans only)
         run: npm run check:i18n-orphans
 
+      # i18n braces gate: every locale value's placeholder must be a well-formed
+      # {{name}}. A single-brace {name} renders verbatim on screen and is
+      # invisible to tsc, eslint, the orphan gate and the en/bn parity check —
+      # the key exists, both locales agree, the call site passes the param.
+      # Exit 1 = at least one malformed value, exit 2 = the tool could not run
+      # (no/unparseable locale files) — 2 must never be read as clean.
+      - name: i18n braces gate (single-brace params)
+        run: npm run check:i18n-braces
+
       # Scratch-only DB policy regression gate: asserts the concurrency-locks
       # job and the default-suite skip gate in tests/meta/concurrency-gate.test.ts
       # are still in place, so a regression (removed job, dropped env var, or a
@@ -458,6 +467,11 @@ jobs:
 
       - name: i18n orphan gate (new orphans only)
         run: npm run check:i18n-orphans
+
+      # Single-brace {name} placeholders render verbatim — see the main `test`
+      # job's step for the full rationale.
+      - name: i18n braces gate (single-brace params)
+        run: npm run check:i18n-braces
 
       - name: Typecheck (root)
         run: npx tsc --noEmit

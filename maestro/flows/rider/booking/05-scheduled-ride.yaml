@@ -46,6 +46,15 @@ tags: [rider, booking, scheduling]
     direction: DOWN
 - tapOn:
     id: "customer.home.push-schedule-ride"
+# SCROLL BEFORE THE SUBMIT ASSERT (2026-11-11, device-measured): the schedule
+# screen's submit button is the LAST child of its ScrollView
+# (schedule-ride/index.tsx L379-394, after the pickup/destination card, date and
+# time controls), so on a Pixel 6a it renders below the fold and the bare
+# `extendedWaitUntil visible` failed with the screen fully loaded (05 burned 20 s).
+- scrollUntilVisible:
+    element:
+      id: "customer.schedule-ride.handle-schedule"
+    direction: DOWN
 - extendedWaitUntil:
     visible:
       id: "customer.schedule-ride.handle-schedule"

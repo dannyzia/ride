@@ -1,3 +1,4 @@
+import { adminErrorResponse } from '@/lib/adminRoute';
 import { db } from '@/src/db';
 import { supportTickets } from '@/src/db/schema';
 import { eq } from 'drizzle-orm';
@@ -16,7 +17,7 @@ export async function POST(request: Request, { id }: { id: string }) {
     const uuidParam = z.string().uuid().safeParse(id);
     if (!uuidParam.success) return Response.json({ error: 'invalid_uuid', message: 'Invalid UUID format' }, { status: 400 });
 
-    await requireAdminPermission('finance.write')(request);
+    await requireAdminPermission('support.write')(request);
     const parsed = await parseJsonBody(request, assignSchema);
     if (!parsed.ok) return parsed.response;
 
@@ -27,7 +28,6 @@ export async function POST(request: Request, { id }: { id: string }) {
     return Response.json({ success: true });
   } catch (err: unknown) {
     if (errors.getErrorStatus(err) === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
-    logger.error('[admin/tickets/assign] error', err);
-    return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
+    return adminErrorResponse(err, '[admin/tickets/assign] error');
   }
 }

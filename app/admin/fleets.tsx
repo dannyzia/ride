@@ -6,6 +6,7 @@ import { useState, useEffect, useCallback } from "react";
 import { View, Text, ActivityIndicator, Pressable, Alert } from "react-native";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { AdminTable, type AdminColumn } from "@/components/admin/AdminTable";
+import { useAdminToast } from "@/components/admin/AdminToast";
 import { adminFetch } from "@/lib/adminFetch";
 import { colors } from "@/theme/goRide";
 
@@ -74,9 +75,11 @@ function StatusBadge({ status }: { status: string }) {
 function FleetActions({
   fleet,
   onStatusChange,
+  onError,
 }: {
   fleet: FleetRow;
   onStatusChange: (fleetId: string, newStatus: string) => void;
+  onError: (message: string) => void;
 }) {
   const [loading, setLoading] = useState(false);
 
@@ -88,7 +91,7 @@ function FleetActions({
         body: JSON.stringify({ status: newStatus }),
       });
       if (res.error) {
-        Alert.alert("Error", res.message ?? res.error);
+        onError(res.message ?? res.error);
       } else {
         onStatusChange(fleet.id, newStatus);
       }
@@ -166,6 +169,7 @@ function FleetActions({
 // ── Main screen ───────────────────────────────────────────────────────────
 
 export default function AdminFleets() {
+  const toast = useAdminToast();
   const [fleets, setFleets] = useState<FleetRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -186,12 +190,13 @@ export default function AdminFleets() {
       fleets: FleetRow[];
       total: number;
     }>(`/api/admin/fleets?${params.toString()}`);
-    if (res.data) {
-      setFleets(res.data.fleets ?? []);
-      setTotal(res.data.total ?? 0);
+    if (res.error) toast.show(res.message ?? res.error, "error");
+    else {
+      setFleets(res.data?.fleets ?? []);
+      setTotal(res.data?.total ?? 0);
     }
     setLoading(false);
-  }, [search, statusFilter, page]);
+  }, [search, statusFilter, page, toast]);
 
   useEffect(() => {
     fetchFleets();
@@ -306,7 +311,7 @@ export default function AdminFleets() {
       header: "Actions",
       width: 200,
       render: (r) => (
-        <FleetActions fleet={r} onStatusChange={handleStatusChange} />
+        <FleetActions fleet={r} onStatusChange={handleStatusChange} onError={(message) => toast.show(message, "error")} />
       ),
     },
   ];

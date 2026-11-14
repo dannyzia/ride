@@ -32,8 +32,14 @@ import {
 interface VerifyTokenResponse {
   exists: boolean;
   role?: string;
-  /** S2.1 D-1: ACTIVE-only role list — >1 routes to the Login-as chooser. */
-  active_roles?: string[];
+  /**
+   * S2.1 D-1: ACTIVE-only role list — >1 routes to the Login-as chooser.
+   * `null` means the server could NOT resolve the set (roles_unknown), which is
+   * not the same as "one role" and must not be routed as if it were.
+   */
+  active_roles?: string[] | null;
+  /** verify-token could not resolve roles in budget — route to the chooser. */
+  roles_unknown?: boolean;
   phone?: string | null;
   /** Node launch (Component A): additive boot flags; existing consumers ignore it. */
   flags?: { ride_vertical_enabled?: boolean };
@@ -153,9 +159,15 @@ export default function Splash() {
         // Signed in via Supabase but the users row never landed — the
         // registration flow picks up at phone-entry.
         redirect("/(auth)/phone-entry");
-      } else if (data.active_roles && data.active_roles.length > 1) {
+      } else if (
+        data.roles_unknown === true ||
+        (Array.isArray(data.active_roles) && data.active_roles.length > 1)
+      ) {
         // S2.1 D-1 (§16): a cold boot with a persisted session routes multi-
         // role accounts through the chooser too — same authority as the gate.
+        // `roles_unknown` counts as "multi": guessing a single role here is how
+        // a fleet_owner who also drives was silently dropped into the driver
+        // surface and could never reach the fleet portal (2026-11-10).
         redirect(
           `/(auth)/login-as?phone=${encodeURIComponent(data.phone ?? "")}`,
         );

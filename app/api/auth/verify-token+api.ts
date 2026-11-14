@@ -81,18 +81,54 @@ export async function POST(request: Request) {
   // fully-unverified multi-holder straight into the chooser forever.
   async function respond(row: { id: string; role: string; phone: string | null; name: string | null }) {
     logger.info('[verify-token] respond called for user', { id: row.id, role: row.role });
-    let held: any[] = [];
+    // ROLE RESOLUTION FAILS OPEN, NEVER CLOSED.
+    //
+    // This used to race heldRoles() against a 2.5s timer and, on timeout, fall
+    // back to `[row.role]` — the PRIMARY role only. That answer is not "slow",
+    // it is WRONG: it tells the client "single-role account", so the auth gate
+    // (app/_layout.tsx) skips the Login-as chooser and drops the user into one
+    // surface. For a fleet_owner who also drives, that made the fleet portal
+    // STRUCTURALLY unreachable on device (measured 2026-11-10: the chooser was
+    // skipped after a successful login and enterFleet() never ran). 2.5s is
+    // well inside a cold serverless invocation's 6 sequential queries, so the
+    // wrong branch was a coin flip on real hardware, not an edge case.
+    //
+    // Now: one bounded, longer attempt; if it still fails, say so explicitly
+    // with `roles_unknown: true` and NO fasified role list. The gate sends
+    // those accounts to the chooser, which re-reads /api/user/roles itself and
+    // shows the truth (a genuinely single-role account simply sees one row).
+    // `role` stays for legacy clients that never read active_roles.
+    const ROLES_BUDGET_MS = 10_000;
+    let held: { role: string; status: string }[] | null = null;
+    // The timer is cleared in `finally`: left armed it keeps the isolate alive
+    // for the rest of the budget after a fast success (measured: jest reported
+    // "did not exit one second after the test run" with the uncleared version).
+    let budgetTimer: ReturnType<typeof setTimeout> | undefined;
     try {
-      const timeout = new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error('heldRoles timeout')), 2500)
-      );
-      held = await Promise.race([heldRoles(row.id), timeout]);
-      logger.info('[verify-token] heldRoles result', { count: held.length });
+      held = await Promise.race([
+        heldRoles(row.id),
+        new Promise<never>((_, reject) => {
+          budgetTimer = setTimeout(
+            () => reject(new Error('heldRoles timeout')),
+            ROLES_BUDGET_MS,
+          );
+        }),
+      ]);
+      logger.info('[verify-token] heldRoles result', { count: held?.length ?? 0 });
     } catch (err: any) {
-      logger.warn('[verify-token] heldRoles fallback to primary role', { message: err?.message });
+      logger.warn('[verify-token] heldRoles unresolved — reporting roles_unknown (never a single-role guess)', {
+        message: err?.message,
+        budget_ms: ROLES_BUDGET_MS,
+      });
+    } finally {
+      if (budgetTimer) clearTimeout(budgetTimer);
     }
-    const active: string[] = held.filter((r) => r.status === 'active').map((r) => r.role);
-    if (active.length === 0 && row.role) {
+    const roles_unknown = held === null;
+    const active: string[] = (held ?? [])
+      .filter((r) => r.status === 'active')
+      .map((r) => r.role);
+    // Only a RESOLVED, genuinely empty answer falls back to the primary role.
+    if (!roles_unknown && active.length === 0 && row.role) {
       active.push(row.role);
     }
     // Staff lane (Flow 15): an active shop_members row surfaces the shop
@@ -117,7 +153,10 @@ export async function POST(request: Request) {
       role: row.role,
       phone: row.phone,
       name: row.name,
-      active_roles: active,
+      // null = "not resolved", never an empty list: the gate must be able to
+      // tell "one role" apart from "we do not know yet".
+      active_roles: roles_unknown ? null : active,
+      roles_unknown,
       // Node launch (DESIGN-NODE-LAUNCH.md Component A): additive boot flags
       // for the authenticated splash path. Backward compatible — existing
       // consumers ignore the field. Fresh read, fail-closed

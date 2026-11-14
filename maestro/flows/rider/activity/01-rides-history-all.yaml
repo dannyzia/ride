@@ -13,6 +13,9 @@ tags: [rider, activity]
       PASSWORD: "test1234"
     commands:
       - runFlow: ../../shared/auth/_login-rider.yaml
+# Riders land on the services hub, outside (tabs) — no tab bar there. Measured
+# 2026-11-11: this tap failed with the hub on screen (190 s). No-op inside tabs.
+- runFlow: ../../shared/util/_enter-tabs.yaml
 - tapOn:
     id: "customer._layout.on-press"
     text: ".*Activity.*|.*Rides.*"

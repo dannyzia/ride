@@ -1,11 +1,20 @@
 /**
- * Delivery Man surface — dispatched-offers inbox (S6, plan 27 §6.1).
+ * Delivery-surface landing — dispatched-offers inbox (S6, plan 27 §6.1) 
+ * plus the delivery monetization hub (Batch-2 Item 12).
  *
  * The §6.1 flow: the ONE live offer with full details (shop, pickup,
  * customer contact, dropoff, order value, fee, parcel class) → accept /
  * reject (reject advances the chain on the next tick), the active accepted
  * delivery (one active job at a time — Amendment 2), the F-33 dispatch-hold
  * banner, and recent history. Earnings summary links to the earnings tab.
+ *
+ * The monetization hub mirrors the shop-owner hub shape
+ * (`app/(main)/(shop-owner)/index.tsx`): statement from GET /api/delivery/dues,
+ * four-state banner NO_PRODUCT > LAPSED > OWING > ACTIVE (server precedence),
+ * and two nav cards to the delivery monetization slots.
+ *
+ * Login-as routing is UNCHANGED: a delivery_man still lands on /(main)/(delivery)
+ * (their existing jobs area). The hub is where the monetization banner + nav live.
  */
 import { useCallback, useEffect, useState } from "react";
 import {
@@ -19,10 +28,11 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
 import { Ionicons } from "@expo/vector-icons";
-import { router } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import { useTranslation } from "react-i18next";
 import { API_URL } from "@/lib/config";
 import { supabase } from "@/lib/supabase";
+import { formatBDT } from "@/lib/format";
 import { logger } from "@/lib/logger";
 import { colors } from "@/theme/goRide";
 import { useIsDark } from "@/lib/useAppearance";
@@ -60,12 +70,53 @@ interface OffersResponse {
   history: HistoryRow[];
 }
 
+interface DeliveryMine {
+  delivery: {
+    id: string;
+    name: string;
+    status: string;
+    is_verified: boolean;
+    logo_url: string | null;
+  } | null;
+  // /api/delivery/mine answers `role: "delivery"` (it is a single-operator
+  // surface) — NOT the shop's OWNER|MANAGER|STAFF vocabulary. The former
+  // `role === "OWNER"` gate therefore never matched and hid the banner and
+  // both nav cards from every real courier.
+  role: "delivery" | null;
+}
+
+interface OpenBill {
+  id: string;
+  kind: string;
+  amount_bdt: number;
+  due_at: string | null;
+  created_at: string;
+}
+
+interface Statement {
+  state: "NO_PRODUCT" | "LAPSED" | "OWING" | "ACTIVE";
+  total_unpaid_paisa: number;
+  unpaid_subscription_paisa: number;
+  net_commission_paisa: number;
+  debt_ceiling_paisa: number;
+  credit_headroom_paisa: number;
+  open_subscription_bills: OpenBill[];
+  open_usage_bills: OpenBill[];
+  active_package: {
+    package_id: string;
+    name: string | null;
+    started_at: string;
+    expires_at: string | null;
+  } | null;
+}
+
 const VERTICAL_KEY: Record<string, string> = {
   shop_order: "shop_order",
   food_order: "food_order",
   workshop_product: "workshop_product",
   p2p_parcel: "p2p_parcel",
 };
+
 
 export default function DeliveryInboxScreen() {
   const { t } = useTranslation();
@@ -84,10 +135,10 @@ export default function DeliveryInboxScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [ineligible, setIneligible] = useState(false);
   const [busy, setBusy] = useState(false);
-  // C7-5: the last respond failure, as an inbox i18n key — rendered on the
-  // offer row (expired / claimed / hold each get their own message, never
-  // silent). Cleared on the next respond attempt or successful reload.
   const [respondError, setRespondError] = useState<string | null>(null);
+
+  const [mine, setMine] = useState<DeliveryMine | null>(null);
+  const [myStatement, setMyStatement] = useState<Statement | null>(null);
 
   const load = useCallback(async (silent = false) => {
     if (!silent) {
@@ -105,12 +156,11 @@ export default function DeliveryInboxScreen() {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.status === 403) {
-        // Server is the gate: no active courier row / toggle OFF / not active.
         setIneligible(true);
         setData(null);
         return;
       }
-      if (!res.ok) throw new Error(`offers GET ${res.status}`);
+      if (!res.ok) throw new Error("offers GET " + res.status);
       setIneligible(false);
       setData((await res.json()) as OffersResponse);
     } catch (e) {
@@ -122,6 +172,65 @@ export default function DeliveryInboxScreen() {
       setRefreshing(false);
     }
   }, []);
+
+  const loadMine = useCallback(async () => {
+    try {
+      const session = await supabase.auth.getSession();
+      const token = session.data.session?.access_token;
+      if (!token) return;
+      const mineRes = await fetch(`${API_URL}/api/delivery/mine`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!mineRes.ok) {
+        setMine({ delivery: null, role: null });
+      } else {
+        const data = (await mineRes.json()) as DeliveryMine;
+        setMine(data);
+      }
+    } catch (e) {
+      logger.error("[delivery] mine load failed", e);
+      setMine({ delivery: null, role: null });
+    }
+  }, []);
+
+  const loadStatement = useCallback(async () => {
+    try {
+      const session = await supabase.auth.getSession();
+      const token = session.data.session?.access_token;
+      if (!token) return;
+      const res = await fetch(`${API_URL}/api/delivery/dues`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const data = (await res.json()) as Statement & { message?: string };
+        setMyStatement(data);
+      } else {
+        setMyStatement(null);
+      }
+    } catch (e) {
+      logger.error("[delivery] statement load failed", e);
+      setMyStatement(null);
+    }
+  }, []);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await load(true);
+    await loadMine();
+    await loadStatement();
+    setRefreshing(false);
+  }, [load, loadMine, loadStatement]);
+
+  useFocusEffect(
+    useCallback(() => {
+      void loadMine();
+      void loadStatement();
+      const id = setInterval(() => {
+        void loadStatement();
+      }, 60_000);
+      return () => clearInterval(id);
+    }, [loadMine, loadStatement]),
+  );
 
   useEffect(() => {
     void load();
@@ -164,7 +273,7 @@ export default function DeliveryInboxScreen() {
         }
         if (decision === "accept") {
           await load(true);
-          router.push(`/(main)/(delivery)/active/${legId}` as never);
+          router.push("/(main)/(delivery)/active/" + legId as never);
         } else {
           await load(true);
         }
@@ -175,17 +284,33 @@ export default function DeliveryInboxScreen() {
     [load],
   );
 
-  // Named per-branch wrappers (2026-10-15): the testID codemod derives an
-  // element's id from the FIRST named call in its handler, so distinct handler
-  // names are what make these two buttons derive `delivery.respond-accept` /
-  // `delivery.respond-reject` instead of one shared `respond` id plus a
-  // positional `-2` suffix (the `respond-el` / `respond-el-2` debt).
   const respondAccept = useCallback((legId: string) => respond(legId, "accept"), [respond]);
   const respondReject = useCallback((legId: string) => respond(legId, "reject"), [respond]);
 
   const offer = data?.offer ?? null;
   const active = data?.active ?? null;
   const history = data?.history ?? [];
+
+  // Gated on the courier identity, not a staff role: the payer on this
+  // surface is the delivery operator themselves.
+  const isCourier = Boolean(mine?.delivery);
+
+  const stateKey = (myStatement?.state ?? "NO_PRODUCT").toLowerCase();
+  const bannerColor =
+    myStatement?.state === "OWING"
+      ? colors.amber
+      : myStatement?.state === "ACTIVE"
+        ? colors.success
+        : colors.danger;
+
+  const handleBannerCta = useCallback(() => {
+    if (!myStatement) return;
+    router.push(
+      myStatement.state === "NO_PRODUCT" || myStatement.state === "LAPSED"
+        ? "/(main)/(delivery-staff)/packages"
+        : "/(main)/(delivery-staff)/dues",
+    );
+  }, [myStatement]);
 
   return (
     <SafeAreaView className="flex-1" style={{ backgroundColor: C.bg }}>
@@ -201,13 +326,13 @@ export default function DeliveryInboxScreen() {
           onPress={() => router.push("/(main)/(delivery)/earnings" as never)}
           className="flex-row items-center gap-1 px-2 py-1"
           accessibilityLabel={t("delivery.earnings.title")}
-         
-         testID="delivery.push-earnings">
+          testID="delivery.push-earnings">
           <Ionicons name="wallet-outline" size={18} color={colors.primary} />
           <Text className="text-[13px] font-JakartaSemiBold" style={{ color: colors.primary }}>
             {t("delivery.earnings.title")}
           </Text>
         </TouchableOpacity>
+
       </View>
 
       {loading ? (
@@ -221,14 +346,96 @@ export default function DeliveryInboxScreen() {
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
-              onRefresh={() => {
-                setRefreshing(true);
-                void load(true);
-              }}
+              onRefresh={onRefresh}
               tintColor={colors.primary}
             />
           }
         >
+          {isCourier && myStatement ? (
+            <View
+              className="rounded-2xl p-4 mb-4"
+              style={{
+                backgroundColor: `${bannerColor}14`,
+                borderWidth: 1,
+                borderColor: bannerColor,
+              }}
+            >
+              <View className="flex-row items-start">
+                <Ionicons
+                  name={myStatement.state === "ACTIVE" ? "checkmark-circle" : "alert-circle"}
+                  size={20}
+                  color={bannerColor}
+                />
+                <View className="flex-1 ml-2">
+                  <Text
+                    className="text-[13px] font-JakartaSemiBold"
+                    style={{ color: bannerColor }}
+                  >
+                    {t(`monetization.states.${stateKey}`)}
+                    {myStatement.state === "OWING" && myStatement.total_unpaid_paisa > 0
+                      ? " · " + formatBDT(myStatement.total_unpaid_paisa)
+                      : ""}
+                  </Text>
+                  <Text className="text-[11px] mt-1" style={{ color: C.sub }}>
+                    {t(`delivery.dues.hint_${stateKey}`)}
+                  </Text>
+                </View>
+              </View>
+              <TouchableOpacity
+                className="rounded-full py-2 items-center mt-3"
+                style={{ backgroundColor: colors.primary }}
+                onPress={handleBannerCta}
+                testID="delivery.handle-banner-cta">
+                <Text className="text-[13px] font-JakartaBold" style={{ color: colors.white }}>
+                  {myStatement.state === "NO_PRODUCT" || myStatement.state === "LAPSED"
+                    ? t("delivery.dashboard.banner_packages_cta")
+                    : myStatement.state === "OWING"
+                      ? t("delivery.dashboard.banner_dues_cta")
+                      : t("delivery.dashboard.banner_bills_cta")}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          ) : null}
+
+          {isCourier ? (
+            <>
+              {/* Delivery packages — the postpaid rail lives on the packages
+                  screen; this card is its entry point. */}
+              <TouchableOpacity
+                className="rounded-2xl p-4 mb-4 flex-row items-center justify-between"
+                style={{ backgroundColor: C.surface, borderWidth: 1, borderColor: C.border }}
+                onPress={() => router.push("/(main)/(delivery-staff)/packages")}
+                testID="delivery.push-packages">
+                <View className="flex-1 pr-3">
+                  <Text className="text-[13px] font-JakartaBold" style={{ color: C.text }}>
+                    {t("delivery.dashboard.packages_card_title")}
+                  </Text>
+                  <Text className="text-[11px] mt-1" style={{ color: C.sub }}>
+                    {t("delivery.dashboard.packages_card_hint")}
+                  </Text>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color={C.sub} />
+              </TouchableOpacity>
+
+              {/* Balances & bills — package bills and platform commission. */}
+              <TouchableOpacity
+                className="rounded-2xl p-4 mb-4 flex-row items-center justify-between"
+                style={{ backgroundColor: C.surface, borderWidth: 1, borderColor: C.border }}
+                onPress={() => router.push("/(main)/(delivery-staff)/dues")}
+                testID="delivery.push-dues">
+                <View className="flex-1 pr-3">
+                  <Text className="text-[13px] font-JakartaBold" style={{ color: C.text }}>
+                    {t("delivery.dashboard.dues_card_title")}
+                  </Text>
+                  <Text className="text-[11px] mt-1" style={{ color: C.sub }}>
+                    {t("delivery.dashboard.dues_card_hint")}
+                  </Text>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color={C.sub} />
+              </TouchableOpacity>
+            </>
+          ) : null}
+
           {ineligible ? (
             <View className="items-center py-10 gap-3">
               <Ionicons name="lock-closed-outline" size={40} color={C.sub} />
@@ -260,9 +467,8 @@ export default function DeliveryInboxScreen() {
                 <TouchableOpacity
                   className="rounded-[14px] p-4 mb-4 border"
                   style={{ borderColor: C.border, backgroundColor: C.surface }}
-                  onPress={() => router.push(`/(main)/(delivery)/active/${active.id}` as never)}
-                 
-                 testID="delivery.push-active">
+                  onPress={() => router.push("/(main)/(delivery)/active/" + active.id as never)}
+                  testID="delivery.push-active">
                   <View className="flex-row items-center justify-between mb-2">
                     <Text className="text-[11px] font-JakartaSemiBold uppercase" style={{ color: colors.primary }}>
                       {t(`delivery.status.${active.status}`)}
@@ -299,8 +505,7 @@ export default function DeliveryInboxScreen() {
                     </View>
                   ) : null}
                   <Text className="text-[16px] font-JakartaBold" style={{ color: C.text }}>
-                    {offer.shop_name ??
-                      t(`delivery.vertical.${VERTICAL_KEY[offer.source_vertical] ?? "shop_order"}`)}
+                    {offer.shop_name ?? t(`delivery.vertical.${VERTICAL_KEY[offer.source_vertical] ?? "shop_order"}`)}
                   </Text>
 
                   <View className="mt-3 gap-2">
@@ -321,7 +526,7 @@ export default function DeliveryInboxScreen() {
                         <Ionicons name="person-outline" size={15} color={C.sub} />
                         <Text className="text-[13px] font-Jakarta flex-1" style={{ color: C.text }}>
                           {offer.customer_name ?? ""}
-                          {offer.customer_phone ? ` · ${offer.customer_phone}` : ""}
+                          {offer.customer_phone ? " · " + offer.customer_phone : ""}
                         </Text>
                       </View>
                     ) : null}
@@ -360,7 +565,6 @@ export default function DeliveryInboxScreen() {
                       style={{ borderColor: C.border, opacity: busy ? 0.6 : 1 }}
                       disabled={busy}
                       onPress={() => void respondReject(offer.id)}
-                     
                       testID="delivery.respond-reject">
                       <Text className="text-[14px] font-JakartaSemiBold" style={{ color: C.text }}>
                         {t("delivery.inbox.reject")}
@@ -371,7 +575,6 @@ export default function DeliveryInboxScreen() {
                       style={{ backgroundColor: colors.primary, opacity: busy ? 0.6 : 1 }}
                       disabled={busy}
                       onPress={() => void respondAccept(offer.id)}
-                     
                       testID="delivery.respond-accept">
                       <Text className="text-[14px] font-JakartaSemiBold text-white">
                         {t("delivery.inbox.accept")}
@@ -415,8 +618,7 @@ export default function DeliveryInboxScreen() {
                       >
                         <View className="flex-1 pr-3">
                           <Text className="text-[13px] font-JakartaSemiBold" style={{ color: C.text }} numberOfLines={1}>
-                            {h.shop_name ??
-                              t(`delivery.vertical.${VERTICAL_KEY[h.source_vertical] ?? "shop_order"}`)}
+                            {h.shop_name ?? t(`delivery.vertical.${VERTICAL_KEY[h.source_vertical] ?? "shop_order"}`)}
                           </Text>
                           <Text className="text-[11px] font-Jakarta" style={{ color: C.sub }}>
                             {t(`delivery.status.${h.status}`)}
@@ -436,4 +638,13 @@ export default function DeliveryInboxScreen() {
       )}
     </SafeAreaView>
   );
+}
+
+function readType(data: unknown): string | null {
+  try {
+    const parsed = JSON.parse(String(data)) as { type?: unknown };
+    return typeof parsed.type === "string" ? parsed.type : null;
+  } catch {
+    return null;
+  }
 }

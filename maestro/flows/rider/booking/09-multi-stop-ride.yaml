@@ -23,14 +23,19 @@ tags: [rider, booking]
       DEST_NAME: "Gulshan"
     commands:
       - runFlow: ../../shared/booking/_select-destination.yaml
+# STOP_INDEX = the 0-based position of the empty row "+ Add stop" just appended
+# (see _add-stop.yaml's measured-defect note 2): rows are appended, so the first
+# stop is index 0 and the second is index 1.
 - runFlow:
     env:
       STOP_NAME: "Mohakhali"
+      STOP_INDEX: "0"
     commands:
       - runFlow: ../../shared/booking/_add-stop.yaml
 - runFlow:
     env:
       STOP_NAME: "Banani"
+      STOP_INDEX: "1"
     commands:
       - runFlow: ../../shared/booking/_add-stop.yaml
 - extendedWaitUntil:

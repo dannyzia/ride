@@ -30,6 +30,9 @@ export default function PhoneEntryScreen(props: { mode?: "user" | "operator" } =
   // C1-1 (STAGE C1-FIX): T&C + Privacy consent gate — one checkbox between
   // role choice and phone/OTP, covering all five paths (F-01 REG node).
   const [termsAccepted, setTermsAccepted] = useState(false);
+  // Separated consent (§4 mandatory / §6 optional): marketing opt-in is
+  // independent, defaults OFF, and never blocks registration.
+  const [marketingOptIn, setMarketingOptIn] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -43,6 +46,12 @@ export default function PhoneEntryScreen(props: { mode?: "user" | "operator" } =
   // phone-entry.terms-checkbox from this identifier (an inline arrow derives
   // set-terms-accepted, which does not round-trip against the recorded id).
   const termsCheckbox = () => setTermsAccepted((v) => !v);
+  const marketingCheckbox = () => setMarketingOptIn((v) => !v);
+
+  // Separated consent params: terms stays mandatory (terms=1), marketing
+  // rides alongside as mkt=1 only when opted in (default absent = OFF).
+  const consentSuffix = (marketing: boolean) =>
+    `${marketing ? "&mkt=1" : ""}`;
 
   const handleLogin = async () => {
     const fullPhone = `+880${phone}`;
@@ -127,12 +136,12 @@ export default function PhoneEntryScreen(props: { mode?: "user" | "operator" } =
         // keepers get the unchanged login hint.
         const held = Array.isArray(checkData.roles) ? checkData.roles : [];
         if (held.length > 1) {
-          router.push(`/(auth)/otp-verify?phone=${encodeURIComponent(fullPhone)}&role=${role}&terms=1`);
+          router.push(`/(auth)/otp-verify?phone=${encodeURIComponent(fullPhone)}&role=${role}&terms=1${consentSuffix(marketingOptIn)}`);
           return;
         }
         setError("An account with this phone already exists. Please login.");
       } else {
-        router.push(`/(auth)/otp-verify?phone=${encodeURIComponent(fullPhone)}&role=${role}&terms=1`);
+        router.push(`/(auth)/otp-verify?phone=${encodeURIComponent(fullPhone)}&role=${role}&terms=1${consentSuffix(marketingOptIn)}`);
       }
     } catch (e) {
       setError("Network error. Please try again.");
@@ -320,10 +329,30 @@ export default function PhoneEntryScreen(props: { mode?: "user" | "operator" } =
           {t("auth.terms.agree_prefix")}{" "}
           <Text style={{ color: colors.primary }} onPress={() => router.push("/(auth)/terms")}>
             {t("auth.terms.terms_link")}
-          </Text>{" "}{t("auth.terms.and")}{" "}
+          </Text>{" "}          {t("auth.terms.and")}{" "}
           <Text style={{ color: colors.primary }} onPress={() => router.push("/(auth)/privacy")}>
             {t("auth.terms.privacy_link")}
           </Text>
+        </Text>
+      </TouchableOpacity>
+
+      {/* §6 optional marketing opt-in — default OFF, never blocks progress. */}
+      <TouchableOpacity
+        onPress={marketingCheckbox}
+        className="flex-row items-start mb-4"
+        testID="phone-entry.marketing-checkbox">
+        <View
+          className="w-6 h-6 rounded-md border items-center justify-center mr-3 mt-[2px]"
+          style={{
+            backgroundColor: marketingOptIn ? colors.primary : surfaceBg,
+            borderColor: marketingOptIn ? colors.primary : borderColor,
+          }}>
+          {marketingOptIn ? (
+            <Text style={{ color: colors.white, fontSize: 16, fontWeight: "bold" }}>✓</Text>
+          ) : null}
+        </View>
+        <Text className="flex-1 text-[13px] font-JakartaBold leading-[18px]" style={{ color: textSecondary }}>
+          {t("auth.terms.marketing_opt_in")}
         </Text>
       </TouchableOpacity>
 

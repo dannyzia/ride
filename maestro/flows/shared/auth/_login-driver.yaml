@@ -24,8 +24,17 @@ appId: com.node.bd
     timeout: 20000
 - tapOn:
     id: "phone-entry.set-phone"
+# Device-measured 2026-11-11: (1) `eraseText` on an empty field hangs the driver
+# (120 s DEADLINE_EXCEEDED, fatal) — seed a digit first; (2) the screen renders a
+# fixed "+880" prefix and phone-entry.tsx:47 needs `+880${phone}` to be 14 chars,
+# so the 13-digit value callers pass is truncated to "8801613249" — type the
+# 10-digit NATIONAL part, normalised from whatever PHONE holds;
+# (3) keyboard up hides the Log In button → hideKeyboard before the taps.
+- inputText: "1"
 - eraseText
-- inputText: ${PHONE}
+- evalScript: ${output.national = String(PHONE).replace(/^\+?880/, "").replace(/^0+/, "").slice(0, 10)}
+- inputText: ${output.national}
+- hideKeyboard
 - tapOn:
     id: "phone-entry.set-role-2"
 - tapOn:
@@ -36,6 +45,7 @@ appId: com.node.bd
 - tapOn:
     id: "login.set-password"
 - inputText: ${PASSWORD}
+- hideKeyboard
 - tapOn:
     id: "login.handle-login"
 # Driver home ground: map + status surfaces (labels per driver_home i18n section).

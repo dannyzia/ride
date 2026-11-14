@@ -5,7 +5,7 @@
 #
 # COUNTERPART-API call: _counterpart-courier-accept → POST /api/delivery/requests/{id}/accept
 # Gate 1 REWIRE: home chip ("Delivery") and request form = semantic IDs
-# (customer.delivery.request-create.handle-submit, request-create.tsx L216);
+# (customer.parcel.request-create.handle-submit, request-create.tsx L216);
 # mid-flow screen sequence unverifiable without device run → text taps retained.
 # Class: AUTOMATABLE + COUNTERPART-API. BLOCKED until roster fixtures land.
 appId: com.node.bd
@@ -29,7 +29,7 @@ tags: [marketplace, v6-delivery, counterpart-api]
     visible: ".*pickup.*|.*drop.*|.*parcel.*"
     timeout: 20000
 - tapOn:
-    id: "customer.delivery.request-create.handle-submit"
+    id: "customer.parcel.request-create.handle-submit"
 - extendedWaitUntil:
     visible: ".*broadcast.*|.*bids?.*|.*pending.*"
     timeout: 30000

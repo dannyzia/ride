@@ -6,6 +6,7 @@ import { useState, useEffect, useCallback } from "react";
 import { View, Text, ActivityIndicator, Pressable, Alert } from "react-native";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { AdminTable, type AdminColumn } from "@/components/admin/AdminTable";
+import { useAdminToast } from "@/components/admin/AdminToast";
 import { adminFetch } from "@/lib/adminFetch";
 import { colors } from "@/theme/goRide";
 
@@ -28,6 +29,7 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 export default function MarketplaceCouriers() {
+  const toast = useAdminToast();
   const [couriers, setCouriers] = useState<CourierRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [typeFilter, setTypeFilter] = useState<string>("");
@@ -40,9 +42,13 @@ export default function MarketplaceCouriers() {
     const params = new URLSearchParams({ page: String(page), limit: String(PAGE_SIZE) });
     if (typeFilter) params.set("type", typeFilter);
     const res = await adminFetch<{ couriers: CourierRow[]; total: number }>(`/api/admin/marketplace/couriers?${params.toString()}`);
-    if (res.data) { setCouriers(res.data.couriers ?? []); setTotal(res.data.total ?? 0); }
+    if (res.error) toast.show(res.message ?? res.error, "error");
+    else {
+      setCouriers(res.data?.couriers ?? []);
+      setTotal(res.data?.total ?? 0);
+    }
     setLoading(false);
-  }, [typeFilter, page]);
+  }, [typeFilter, page, toast]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -59,7 +65,7 @@ export default function MarketplaceCouriers() {
             body: JSON.stringify({ status: newStatus }),
           });
           if (res.error) {
-            Alert.alert("Error", res.message ?? res.error);
+            toast.show(res.message ?? res.error, "error");
           } else {
             setCouriers((prev) => prev.map((c) => c.id === courier.id ? { ...c, status: newStatus } : c));
           }

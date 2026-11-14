@@ -52,9 +52,10 @@ export default function AdminSupport() {
     setLoading(true);
     const params = statusFilter ? `?status=${statusFilter}` : "";
     const res = await adminFetch<{ tickets: Ticket[] }>(`/api/admin/tickets${params}`);
-    if (res.data) setTickets(res.data.tickets ?? []);
+    if (res.error) toast.show(res.message ?? res.error, "error");
+    else setTickets(res.data?.tickets ?? []);
     setLoading(false);
-  }, [statusFilter]);
+  }, [statusFilter, toast]);
 
   useEffect(() => { fetchTickets(); }, [fetchTickets]);
 
@@ -65,7 +66,8 @@ export default function AdminSupport() {
     setAssignInput("");
     setModalVisible(true);
     const res = await adminFetch<{ replies: TicketReply[] }>(`/api/admin/tickets/${ticket.id}/replies`);
-    if (res.data) setReplies(res.data.replies ?? []);
+    if (res.error) toast.show(res.message ?? res.error, "error");
+    else setReplies(res.data?.replies ?? []);
   };
 
   const sendReply = async () => {
@@ -79,7 +81,12 @@ export default function AdminSupport() {
     if (res.data?.success) {
       toast.show("Reply sent", "success");
       setReplyText("");
-      setReplies([...replies, { id: "new", author_id: "", is_internal: isInternal, message: replyText.trim(), created_at: new Date().toISOString() }]);
+      // Optimistic row needs a unique key; refetch the thread so the server's
+      // row (with the real author) replaces it.
+      setReplies([...replies, { id: `local-${Date.now()}`, author_id: "", is_internal: isInternal, message: replyText.trim(), created_at: new Date().toISOString() }]);
+      const refreshed = await adminFetch<{ replies: TicketReply[] }>(`/api/admin/tickets/${selectedTicket.id}/replies`);
+      if (refreshed.error) toast.show(refreshed.message ?? refreshed.error, "error");
+      else setReplies(refreshed.data?.replies ?? []);
     } else {
       toast.show(res.error ?? "Failed to send reply", "error");
     }

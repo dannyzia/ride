@@ -1,3 +1,4 @@
+import { adminErrorResponse } from '@/lib/adminRoute';
 import { db } from '@/src/db';
 import { riderPasses } from '@/src/db/schema';
 import { eq, desc } from 'drizzle-orm';
@@ -35,8 +36,7 @@ export async function GET(request: Request) {
     return Response.json({ passes: rows });
   } catch (err: unknown) {
     if (errors.getErrorStatus(err) === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
-    logger.error('[admin/rider-passes] GET error', err);
-    return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
+    return adminErrorResponse(err, '[admin/rider-passes] GET error');
   }
 }
 
@@ -49,8 +49,7 @@ export async function POST(request: Request) {
     return Response.json({ pass });
   } catch (err: unknown) {
     if (errors.getErrorStatus(err) === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
-    logger.error('[admin/rider-passes] POST error', err);
-    return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
+    return adminErrorResponse(err, '[admin/rider-passes] POST error');
   }
 }
 
@@ -64,8 +63,7 @@ export async function PATCH(request: Request) {
     return Response.json({ success: true });
   } catch (err: unknown) {
     if (errors.getErrorStatus(err) === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
-    logger.error('[admin/rider-passes] PATCH error', err);
-    return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
+    return adminErrorResponse(err, '[admin/rider-passes] PATCH error');
   }
 }
 
@@ -81,7 +79,6 @@ const id = searchParams.get('id');
     return Response.json({ success: true });
   } catch (err: unknown) {
     if (errors.getErrorStatus(err) === 401) return Response.json({ error: 'unauthorized', message: 'Authentication required' }, { status: 401 });
-    logger.error('[admin/rider-passes] DELETE error', err);
-    return Response.json({ error: 'internal_error', message: 'An internal server error occurred' }, { status: 500 });
+    return adminErrorResponse(err, '[admin/rider-passes] DELETE error');
   }
 }

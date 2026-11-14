@@ -11,6 +11,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { View, Text, ActivityIndicator, Pressable, TextInput, Alert, Linking } from "react-native";
 import { AdminShell } from "@/components/admin/AdminShell";
+import { useAdminToast } from "@/components/admin/AdminToast";
 import { adminFetch } from "@/lib/adminFetch";
 import { colors } from "@/theme/goRide";
 
@@ -48,6 +49,7 @@ const KINDS: { key: Kind; label: string }[] = [
 ];
 
 export default function AdminVerification() {
+  const toast = useAdminToast();
   const [kind, setKind] = useState<Kind>("shop");
   const [rows, setRows] = useState<PendingRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -73,9 +75,10 @@ export default function AdminVerification() {
     const res = await adminFetch<{ pending: PendingRow[] }>(
       `/api/admin/verification/pending?kind=${kind}`,
     );
-    setRows(res.data?.pending ?? []);
+    if (res.error) toast.show(res.message ?? res.error, "error");
+    else setRows(res.data?.pending ?? []);
     setLoading(false);
-  }, [kind]);
+  }, [kind, toast]);
 
   useEffect(() => {
     fetchData();
@@ -98,7 +101,7 @@ export default function AdminVerification() {
             });
             setBusyId(null);
             if (res.error) {
-              Alert.alert("Error", res.message ?? res.error);
+              toast.show(res.message ?? res.error, "error");
             } else {
               removeRow(row.id);
             }
@@ -132,7 +135,7 @@ export default function AdminVerification() {
     });
     setBusyId(null);
     if (res.error) {
-      Alert.alert("Error", res.message ?? res.error);
+      toast.show(res.message ?? res.error, "error");
     } else {
       resetRejectForm();
       removeRow(row.id);

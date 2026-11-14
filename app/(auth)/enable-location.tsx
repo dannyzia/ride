@@ -1,4 +1,5 @@
 import { View, Text, StatusBar, TouchableOpacity, Alert, Linking } from "react-native";
+import { useTranslation } from "react-i18next";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import * as Location from "expo-location";
@@ -26,6 +27,7 @@ const showSettingsPrompt = (onProceed: () => void) => {
 };
 
 export default function EnableLocation() {
+  const { t } = useTranslation();
   const isDark = useIsDark();
   const setTheme = useAppearance((s) => s.setTheme);
 
@@ -85,12 +87,12 @@ export default function EnableLocation() {
         </View>
       </View>
 
-      {/* Title */}
+      {/* Title — §5 foreground prominent disclosure (shown BEFORE the OS dialog). */}
       <Text
         className="text-[24px] font-JakartaBold text-center mb-3 px-4"
         style={{ color: textPrimary }}
       >
-        Allow Ride to access your location
+        {t("auth.location.foreground_title")}
       </Text>
 
       {/* Description */}
@@ -98,7 +100,7 @@ export default function EnableLocation() {
         className="text-[16px] font-Jakarta text-center px-6"
         style={{ color: textSecondary }}
       >
-        We need your location to find drivers near you.
+        {t("auth.location.foreground_body")}
       </Text>
 
       {/* Bottom spacer */}
