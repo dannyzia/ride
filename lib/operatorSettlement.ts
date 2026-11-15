@@ -31,7 +31,6 @@
 // here so a future writer that bypasses the floor fails loudly instead of
 // stranding an unpayable bill.
 import { and, asc, desc, eq, sql } from "drizzle-orm";
-import { randomUUID } from "crypto";
 import { db } from "@/src/db";
 import { operatorBills, operatorPackages, packages } from "@/src/db/schema";
 import { getOperatorUnpaidObligations, type DuesExecutor } from "@/lib/commissionDues";
@@ -355,7 +354,7 @@ export async function initiateUsageSettlement(
 
   const initiated = await initiatePortposPayment({
     user_id: params.userId,
-    idempotency_key: `operator_usage_settle_${randomUUID()}`,
+    idempotency_key: `operator_usage_settle_${crypto.randomUUID()}`,
     amount_bdt: priced,
     purpose: "subscription_settlement",
     package_name: params.packageName ?? "Commission Dues",
@@ -486,7 +485,7 @@ export async function initiateOperatorSettlement(
   const initiated = await initiatePortposPayment({
     user_id: params.userId,
     // driver_id intentionally omitted: NULL for every non-driver settlement.
-    idempotency_key: `operator_settle_${randomUUID()}`,
+    idempotency_key: `operator_settle_${crypto.randomUUID()}`,
     amount_bdt: open.amount_bdt,
     purpose: "subscription_settlement",
     package_name:
