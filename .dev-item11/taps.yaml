@@ -1,0 +1,5 @@
+appId: com.ride.bd
+---
+- tapOn: "Go back"
+- tapOn: "Enter URL manually"
+- tapOn: "http://10.0.0.25:8081"

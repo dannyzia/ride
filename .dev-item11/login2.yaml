@@ -1,0 +1,11 @@
+appId: com.ride.bd
+---
+- tapOn:
+    id: "phone-entry.set-role-3"
+- tapOn:
+    id: "phone-entry.terms-checkbox"
+- tapOn:
+    id: "phone-entry.handle-login"
+- extendedWaitUntil:
+    visible: "Welcome Back"
+    timeout: 25000

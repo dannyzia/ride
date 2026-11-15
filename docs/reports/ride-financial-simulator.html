@@ -1,0 +1,1717 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<!--
+  Purpose:           Ride Financial Simulator — month-by-month business simulation for the
+                     owner (Zia) and a prospective operating partner. Replaces the pilot
+                     unit-economics page (map-api-cost-report.html), which stays on disk
+                     until the owner accepts this one.
+  Owner:             Orchestrator (built by Builder Model per plans/simulator-redesign-r3-prompt.md)
+  Status:            ACTIVE — design-time estimate. Nothing launched. Illustrative scenario
+                     numbers are placeholders, never forecasts.
+  Source of truth:   Owner rate matrix + vectors (plans/map-report-rebuild-prompt.md §3, engine
+                     paisa rounding from r2); app rates = scripts/seed-pricing.js @ 3e94ea5;
+                     package prices + split ruling = owner inputs (r1/r2 briefs).
+  Related:
+    - plans/simulator-redesign-r3-prompt.md — canonical brief (r3)
+    - plans/map-report-rebuild-prompt.md / -r2.md — fare engine rules and reconciliation
+    - docs/reports/map-api-cost-report.html — previous page (kept until acceptance)
+    - lib/fareCalc.ts — real fare engine; scripts/verify-fare-matrix.ts — engine cross-check
+  Last checked:      NOT re-run after the architect fixes of 2026-11-07 — run scripts/verify-simulator.mjs and scripts/smoke-simulator.mjs before relying on this page.
+  How to update:     All defaults live in the CONFIG object of the model script block (script tag with id "model"); UI reads outputs only.
+-->
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ride — Financial Simulator (design-time)</title>
+<style>
+  :root {
+    --bg: #f6f7fb; --card: #ffffff; --ink: #1c2333; --ink-2: #5a6478;
+    --line: #dfe3ee; --accent: #2f6fd0; --accent-soft: #e8f0fc;
+    --green: #1d8a4e; --amber: #b9770e; --red: #c0392b;
+    --mono: ui-monospace, 'SF Mono', 'Fira Code', Consolas, monospace;
+  }
+  body.dark {
+    --bg: #12141c; --card: #1b1e2b; --ink: #e6e9f2; --ink-2: #9aa3b8;
+    --line: #2c3145; --accent: #6aa2e8; --accent-soft: #1d2637;
+    --green: #4bc98a; --amber: #e0a63d; --red: #e07a6a;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', sans-serif;
+    background: var(--bg); color: var(--ink);
+    font-size: 15px; line-height: 1.5;
+    font-variant-numeric: tabular-nums;
+  }
+  .topbar {
+    position: sticky; top: 0; z-index: 30;
+    background: var(--card); border-bottom: 1px solid var(--line);
+    padding: 0.5rem 1rem; display: flex; flex-wrap: wrap; gap: 0.5rem 1rem; align-items: center;
+  }
+  .brand { font-weight: 700; margin-right: 0.5rem; }
+  .brand small { display: block; font-weight: 400; color: var(--ink-2); font-size: 0.72rem; }
+  .ctl-group { display: flex; gap: 0.3rem; align-items: center; flex-wrap: wrap; }
+  .ctl-label { font-size: 0.72rem; color: var(--ink-2); text-transform: uppercase; letter-spacing: 0.04em; }
+  .pill {
+    border: 1px solid var(--line); background: transparent; color: var(--ink);
+    border-radius: 999px; padding: 0.18rem 0.7rem; font-size: 0.8rem; cursor: pointer;
+  }
+  .pill[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+  .btn {
+    border: 1px solid var(--line); background: var(--card); color: var(--ink);
+    border-radius: 6px; padding: 0.28rem 0.7rem; font-size: 0.8rem; cursor: pointer;
+  }
+  .btn:hover { border-color: var(--accent); }
+  .horizon-in { width: 3.6rem; text-align: right; }
+  .tabstrip {
+    position: sticky; top: 3.4rem; z-index: 25;
+    background: var(--bg); border-bottom: 1px solid var(--line);
+    display: flex; gap: 0.25rem; padding: 0.35rem 1rem 0; overflow-x: auto;
+  }
+  .tabstrip button {
+    border: 1px solid transparent; border-bottom: none; background: transparent;
+    color: var(--ink-2); padding: 0.4rem 0.9rem; font-size: 0.88rem; cursor: pointer;
+    border-radius: 8px 8px 0 0; white-space: nowrap;
+  }
+  .tabstrip button[aria-selected="true"] {
+    background: var(--card); border-color: var(--line); color: var(--ink); font-weight: 600;
+  }
+  main { padding: 1.1rem 1rem 3rem; max-width: 1240px; margin: 0 auto; }
+  section[data-tab] { display: none; }
+  section[data-tab].active { display: block; }
+  h2 { font-size: 1.05rem; margin: 0.2rem 0 0.8rem; }
+  h3 { font-size: 0.95rem; margin-bottom: 0.5rem; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 0.95rem 1.1rem; }
+  .cards2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 0.9rem; }
+  .cards2 > *, .stack > *, .kpis > * { min-width: 0; }
+  .stack { display: grid; gap: 0.9rem; }
+  .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(185px, 1fr)); gap: 0.7rem; }
+  .kpi { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 0.7rem 0.9rem; }
+  .kpi .lab { color: var(--ink-2); font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.04em; }
+  .kpi .val { font-family: var(--mono); font-size: 1.3rem; font-weight: 700; margin-top: 0.15rem; }
+  .kpi .sub { color: var(--ink-2); font-size: 0.75rem; margin-top: 0.1rem; }
+  .kpi.good .val { color: var(--green); }
+  .kpi.bad .val { color: var(--red); }
+  .kpi.amber .val { color: var(--amber); }
+  .banner-warn {
+    background: #fdf3e0; border: 1px solid #ecd9ae; color: #7a5410;
+    border-radius: 8px; padding: 0.5rem 0.9rem; font-size: 0.85rem; margin-bottom: 0.8rem;
+  }
+  body.dark .banner-warn { background: #2a2413; border-color: #5a4a1c; color: #e0b95c; }
+  .banner-red {
+    background: #fbe9e6; border: 1px solid #ecc8c2; color: #8c2f21;
+    border-radius: 8px; padding: 0.5rem 0.9rem; font-size: 0.85rem; margin-bottom: 0.8rem;
+  }
+  body.dark .banner-red { background: #2c1714; border-color: #5c2c24; color: #e89b8d; }
+  .takeaway { font-size: 0.86rem; color: var(--ink-2); margin: 0.15rem 0 0.45rem; }
+  .table-scroll { overflow-x: auto; }
+  table.fin { width: 100%; border-collapse: collapse; font-size: 0.86rem; }
+  table.fin th {
+    text-align: right; padding: 0.4rem 0.5rem; color: var(--ink-2); font-weight: 600;
+    font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.03em;
+    border-bottom: 2px solid var(--line); white-space: nowrap;
+  }
+  table.fin th:first-child, table.fin td:first-child { text-align: left; }
+  table.fin td {
+    padding: 0.38rem 0.5rem; text-align: right; border-bottom: 1px solid var(--line);
+    font-family: var(--mono); font-size: 0.8rem; white-space: nowrap;
+  }
+  table.fin td:first-child { font-family: inherit; }
+  table.fin tr.total td { border-top: 2px solid var(--line); font-weight: 700; }
+  .in-row { display: flex; align-items: center; gap: 0.45rem; margin: 0.32rem 0; flex-wrap: wrap; }
+  .in-row label { color: var(--ink-2); min-width: 210px; font-size: 0.84rem; }
+  .num {
+    width: 92px; background: var(--bg); border: 1px solid var(--line); color: var(--ink);
+    border-radius: 6px; padding: 0.26rem 0.5rem; font-family: var(--mono); font-size: 0.86rem; text-align: right;
+  }
+  .num:focus { outline: 2px solid var(--accent-soft); border-color: var(--accent); }
+  .num.empty { border-color: var(--amber); background: #fff8ec; }
+  body.dark .num.empty { background: #2a2413; }
+  .unit { color: var(--ink-2); font-size: 0.76rem; }
+  .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-left: 4px; vertical-align: middle; cursor: help; }
+  .dot.owner { background: #8e5cd6; }
+  .dot.code { background: var(--accent); }
+  .dot.seed { background: #d07a1f; }
+  .dot.est { background: var(--green); }
+  .dot.tbd { background: var(--red); }
+  .legend { display: flex; flex-wrap: wrap; gap: 0.3rem 0.9rem; align-items: center; font-size: 0.76rem; color: var(--ink-2); }
+  .pillbar { display: flex; gap: 0.35rem; flex-wrap: wrap; margin: 0.3rem 0 0.6rem; }
+  details.box { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 0.7rem 1rem; }
+  details.box summary { cursor: pointer; font-weight: 600; }
+  .muted { color: var(--ink-2); }
+  .pos { color: var(--green); }
+  .neg { color: var(--red); }
+  .chart-card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 0.8rem 1rem; }
+  .chart-card svg { width: 100%; max-width: 100%; height: auto; display: block; }
+  .chart-legend { display: flex; flex-wrap: wrap; gap: 0.3rem 1rem; font-size: 0.76rem; color: var(--ink-2); margin-top: 0.3rem; }
+  .swatch { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 4px; vertical-align: middle; }
+  body.presenting .dev-only, body.presenting .dot { display: none !important; }
+  @media (max-width: 640px) {
+    body { font-size: 14.5px; }
+    main { padding: 0.9rem 0.6rem 2.5rem; }
+    .kpis { grid-template-columns: repeat(2, 1fr); }
+    .in-row label { min-width: 128px; }
+    .tabstrip { top: 6.2rem; }
+  }
+  @media print {
+    .topbar, .tabstrip, .no-print { display: none !important; }
+    body { background: #fff; }
+    body.dark { --bg: #fff; --card: #fff; --ink: #111; --ink-2: #444; --line: #ccc; }
+    section[data-tab] { display: block !important; page-break-before: always; }
+    section[data-tab]:first-of-type { page-break-before: auto; }
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar no-print">
+  <div class="brand">Ride Financial Simulator<small>design-time estimate. Nothing launched.</small></div>
+  <div class="ctl-group"><span class="ctl-label">Scenario</span>
+    <button class="pill" data-scenario="pilot" aria-pressed="false">Pilot</button>
+    <button class="pill" data-scenario="base" aria-pressed="true">Base</button>
+    <button class="pill" data-scenario="growth" aria-pressed="false">Growth</button>
+    <button class="pill" data-scenario="custom" aria-pressed="false">Custom</button>
+  </div>
+  <div class="ctl-group"><span class="ctl-label">Mode</span>
+    <button class="pill" data-monetization="package" aria-pressed="true">Package</button>
+    <button class="pill" data-monetization="commission" aria-pressed="false">Commission</button>
+    <button class="pill" data-monetization="both" aria-pressed="false">Both</button>
+  </div>
+  <div class="ctl-group"><span class="ctl-label">View</span>
+    <button class="pill" data-view="combined" aria-pressed="true">Combined</button>
+    <button class="pill" data-view="partner" aria-pressed="false">Partner</button>
+    <button class="pill" data-view="owner" aria-pressed="false">Owner</button>
+  </div>
+  <div class="ctl-group"><span class="ctl-label">Horizon</span>
+    <input type="number" class="num horizon-in" id="in-horizon" min="12" max="60" step="1" value="36" aria-label="horizon months"> <span class="unit">mo</span>
+  </div>
+  <div class="ctl-group">
+    <button class="pill" id="btn-present" aria-pressed="false">Presentation</button>
+    <button class="pill" id="btn-dark" aria-pressed="false">Dark</button>
+    <button class="btn" id="btn-reset">Reset</button>
+    <button class="btn" id="btn-export">Export JSON</button>
+    <button class="btn" id="btn-import">Import JSON</button>
+    <input type="file" id="file-import" accept="application/json" hidden>
+    <button class="btn" id="btn-print">Print</button>
+  </div>
+</div>
+
+<div class="tabstrip no-print" role="tablist">
+  <button role="tab" data-tab="dashboard" aria-selected="true">Dashboard</button>
+  <button role="tab" data-tab="assumptions" aria-selected="false">Assumptions</button>
+  <button role="tab" data-tab="pricing" aria-selected="false">Pricing</button>
+  <button role="tab" data-tab="unit" aria-selected="false">Unit economics</button>
+  <button role="tab" data-tab="ladder" aria-selected="false">Scale ladder</button>
+  <button role="tab" class="dev-only" data-tab="sources" aria-selected="false">Sources &amp; checks</button>
+</div>
+
+<main>
+  <section data-tab="dashboard" class="active">
+    <h2>Dashboard</h2>
+    <div id="honesty-banner"></div>
+    <div class="kpis" id="kpi-row"></div>
+    <div class="stack" style="margin-top:0.9rem">
+      <div class="cards2">
+        <div class="chart-card" id="chart-drivers"></div>
+        <div class="chart-card" id="chart-revcost"></div>
+        <div class="chart-card" id="chart-cash"></div>
+        <div class="chart-card" id="chart-calls"></div>
+      </div>
+      <div class="card" id="scenario-compare"></div>
+      <div class="card" id="tornado"></div>
+      <details class="box" id="monthly-box">
+        <summary>Monthly table</summary>
+        <div class="pillbar no-print">
+          <button class="pill" id="btn-yearly" aria-pressed="false">Yearly roll-up</button>
+        </div>
+        <div class="table-scroll" id="monthly-table"></div>
+      </details>
+    </div>
+  </section>
+
+  <section data-tab="assumptions">
+    <h2>Assumptions <span class="muted" style="font-weight:400;font-size:0.85rem">— every input in one place. Empty required inputs are amber; results exclude them until filled.</span></h2>
+    <div id="assumptions" class="stack"></div>
+  </section>
+
+  <section data-tab="pricing">
+    <h2>Pricing <span class="muted" style="font-weight:400;font-size:0.85rem">— fares are an input to the business: commission mode, driver affordability, rider competitiveness. The selected set feeds commission mode and take rates.</span></h2>
+    <div id="pricing-banner"></div>
+    <div class="stack">
+      <div class="card">
+        <h3>Fuel price</h3>
+        <div id="fuel-inputs"></div>
+      </div>
+      <div class="card">
+        <div class="pillbar" id="pricing-set-pills">
+          <button class="pill" data-set="matrix" aria-pressed="true">Owner matrix</button>
+          <button class="pill" data-set="app" aria-pressed="false">App today</button>
+          <button class="pill" data-set="launch" aria-pressed="false">Launch-zone set (editable)</button>
+        </div>
+        <div class="table-scroll"><table class="fin" id="pricing-table"><thead></thead><tbody></tbody></table></div>
+        <div class="note muted" id="pricing-note"></div>
+      </div>
+      <div class="cards2">
+        <div class="card">
+          <h3>Trip calculator</h3>
+          <div id="trip-calc-inputs"></div>
+          <div class="table-scroll"><table class="fin" id="trip-calc"><tbody></tbody></table></div>
+        </div>
+        <div class="chart-card" id="chart-farefuel"></div>
+      </div>
+      <div class="card">
+        <h3>Effective take rate per tier — package ÷ driver gross (affordability)</h3>
+        <div class="table-scroll"><table class="fin" id="take-rates"><thead></thead><tbody></tbody></table></div>
+      </div>
+    </div>
+  </section>
+
+  <section data-tab="unit">
+    <h2>Unit economics — per driver and per ride, by tier, at month-12 scenario volume</h2>
+    <div class="stack">
+      <div class="card">
+        <div class="table-scroll"><table class="fin" id="unit-table"><thead></thead><tbody></tbody></table></div>
+        <div class="note muted" id="unit-note"></div>
+      </div>
+      <div class="card">
+        <h3>Waterfall — selected tier, per driver per month</h3>
+        <div class="in-row"><label for="wf-tier">Tier</label><select id="wf-tier" class="num" style="width:auto;text-align:left"></select></div>
+        <div id="waterfall" style="padding:0.4rem 0"></div>
+      </div>
+    </div>
+  </section>
+
+  <section data-tab="ladder">
+    <h2>Scale ladder — 50 to 5,000 paying drivers, both call modes, pro-rata allowance</h2>
+    <div class="note muted" style="margin-bottom:0.7rem">Differs from the r2 page, which did not deduct the 20K-call allowance (≈2,000 ৳ at pilot volumes). This page applies the pro-rata rule and is the source of truth; slide 8b should be regenerated from here.</div>
+    <div class="cards2">
+      <div class="card"><h3>Design-time trace — 4.84 calls/ride (unverified)</h3><div class="table-scroll"><table class="fin" id="ladder-trace"><thead></thead><tbody></tbody></table></div></div>
+      <div class="card"><h3>Conservative — 9.24 calls/ride (design-time estimate)</h3><div class="table-scroll"><table class="fin" id="ladder-cons"><thead></thead><tbody></tbody></table></div></div>
+    </div>
+    <div class="note muted" style="margin-top:0.6rem">Assumptions: every paying driver buys the tier package; benchmark productivity; "left" = partner share − partner-paid map cost (pro-rata allowance), before marketing, support, VAT and gateway fees; owner-borne costs not deducted. "Map cost" is the gross cheapest-plan cost.</div>
+  </section>
+
+  <section data-tab="sources">
+    <h2>Sources &amp; checks</h2>
+    <div class="stack">
+      <div class="card">
+        <h3>Consistency check</h3>
+        <div id="consistency-line"></div>
+        <details class="box" style="margin-top:0.5rem"><summary>Show details</summary><div class="table-scroll" id="consistency-details" style="margin-top:0.5rem"></div></details>
+        <div class="note muted">This checks the page against the config object in this same file. It does <b>not</b> verify that these numbers match the live app or measured usage. Repo cross-checks: <span class="mono">scripts/verify-simulator.mjs</span> (this file's model) and <span class="mono">scripts/verify-fare-matrix.ts</span> (lib/fareCalc.ts engine).</div>
+      </div>
+      <div class="card">
+        <h3>Provenance legend</h3>
+        <div class="legend">
+          <span><span class="dot owner"></span> owner input</span>
+          <span><span class="dot code"></span> from repo (code/seed)</span>
+          <span><span class="dot seed"></span> Barikoi pricing as listed in the old report, unverified</span>
+          <span><span class="dot est"></span> design-time estimate</span>
+          <span><span class="dot tbd"></span> to be determined</span>
+        </div>
+      </div>
+      <div class="card">
+        <h3>Open questions &amp; TBD register</h3>
+        <div id="tbd-register"></div>
+      </div>
+      <div class="card">
+        <h3>Later phases (not modeled)</h3>
+        <div class="note muted">Food delivery, shop logistics and parcels are excluded from this simulator. They return as modeled phases only after the rides pilot.</div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<script id="model">
+'use strict';
+/* ════════════ CONFIG — single source of truth ════════════
+   Pure model block: no DOM access. scripts/verify-simulator.mjs extracts
+   this block and runs it in a vm context. */
+const CONFIG = {
+  horizon: 36,
+  daysPerMonth: 30,
+  fuel: { petrol: 140, cng: 43, electricity: null },          // owner input (electricity TBD)
+  floor: { km: 2, min: 10 },                                   // owner matrix floor reference
+  workingDays: 26,                                             // design-time estimate
+  ridesPerRiderDay: 1.2,                                       // design-time estimate
+  participationPct: 65,                                        // design-time estimate
+  monetization: 'package',                                     // package | commission | both
+  commissionPct: null,                                           // TBD — the owner has not given a commission rate
+  pricingSet: 'matrix',                                        // matrix | app | launch
+  tripMix: { km: null, min: null },                            // null = each tier's own reference trip
+  callsPerRide: { trace: 4.84, conservative: 9.24, measured: null },  // trace unverified; measured TBD
+  activeCallsMode: 'conservative',
+  barikoi: { payg: 0.100, businessBase: 50000, businessIncluded: 1000000, businessOverage: 0.060,
+             scaleBase: 90000, scaleIncluded: 2000000, scaleOverage: 0.075 },   // as listed, unverified
+  allowanceCalls: 20000,                                       // owner input
+  allowanceMode: 'monthly',                                    // monthly | lifetime (open owner decision)
+  vatPct: null, pkgIncludesVat: null,                                                // TBD
+  gatewayPct: 0,                                               // owner treats gateway fees as part of revenue
+  tiers: {
+    bike_basic:     { cc: '0-100',          fuelKind: 'petrol', mileage: 45, mv: 2.5, perMin: 2.00, refKm: 4, refMin: 30, uber: 108,
+                      app: { base: 25, perKm: 7.75,  perMin: 1.75, floorKm: 2, floorMin: 10 }, launch: null, package: 474,  bench: 9, mixPct: 60 },
+    bike_standard:  { cc: '100-150',        fuelKind: 'petrol', mileage: 40, mv: 2.5, perMin: 2.00, refKm: 4, refMin: 30, uber: 108,
+                      app: { base: 25, perKm: 9.50,  perMin: 1.80, floorKm: 2, floorMin: 10 }, launch: null, package: 494,  bench: 9, mixPct: 0 },
+    bike_plus:      { cc: '150+',           fuelKind: 'petrol', mileage: 25, mv: 2.5, perMin: 2.00, refKm: 4, refMin: 30, uber: 113,
+                      app: { base: 25, perKm: 10.50, perMin: 1.90, floorKm: 2, floorMin: 10 }, launch: null, package: 603,  bench: 9, mixPct: 0 },
+    scooter:        { cc: 'electric twin',  fuelKind: 'petrol', mileage: null, mv: null, perMin: null, refKm: null, refMin: null, uber: null,
+                      app: { base: 25, perKm: 7.75,  perMin: 1.75, floorKm: 2, floorMin: 10 }, launch: null, package: null, bench: 9, mixPct: 0 },
+    cng:            { cc: '—',              fuelKind: 'cng',    mileage: 18, mv: 5.0, perMin: 2.50, refKm: 5, refMin: 45, uber: 159,
+                      app: { base: 40, perKm: 15.00, perMin: 2.00, floorKm: 3, floorMin: 15 }, launch: null, package: 720,  bench: 7, mixPct: 25 },
+    car_compact:    { cc: '0-1000',         fuelKind: 'petrol', mileage: null, mv: null, perMin: null, refKm: null, refMin: null, uber: null,
+                      app: null, launch: null, package: null, bench: 5, mixPct: 0 },
+    car_economy:    { cc: '0-1000',         fuelKind: 'petrol', mileage: 15, mv: 1.5, perMin: 3.00, refKm: 5, refMin: 45, uber: 242.5,
+                      app: { base: 45, perKm: 15.00, perMin: 3.50, floorKm: 4, floorMin: 20 }, launch: null, package: 858,  bench: 5, mixPct: 15 },
+    car_comfort:    { cc: '1000-1500',      fuelKind: 'petrol', mileage: 12, mv: 1.5, perMin: 3.00, refKm: 8, refMin: 60, uber: 390,
+                      app: { base: 50, perKm: 18.00, perMin: 3.75, floorKm: 4, floorMin: 20 }, launch: null, package: 926,  bench: 5, mixPct: 0 },
+    car_premium:    { cc: '1500-2000',      fuelKind: 'petrol', mileage: 10, mv: 1.5, perMin: 3.00, refKm: 8, refMin: 60, uber: 436,
+                      app: { base: 65, perKm: 21.00, perMin: 4.00, floorKm: 4, floorMin: 20 }, launch: null, package: 995,  bench: 5, mixPct: 0 },
+    car_xl:         { cc: 'SUV / 7-seater', fuelKind: 'petrol', mileage: 8,  mv: 1.5, perMin: 3.00, refKm: 8, refMin: 60, uber: 490,
+                      app: { base: 80, perKm: 25.00, perMin: 4.25, floorKm: 4, floorMin: 20 }, launch: null, package: 1097, bench: 5, mixPct: 0 },
+    e_three_wheeler:{ cc: 'electric 3W',    fuelKind: 'electric', mileage: null, mv: null, perMin: null, refKm: null, refMin: null, uber: null,
+                      app: null, launch: null, package: null, bench: null, mixPct: 0 },
+  },
+  drivers: { checkpoints: { 1: 20, 3: 60, 6: 150, 12: 400, 24: 1000, 36: 2000 } },   // illustrative placeholder
+  churnPct: 3,                                        // illustrative placeholder, %/mo
+  productivity: { startPct: 55, rampMonths: 6 },      // % of benchmark at month 1, ramp length; illustrative
+  costs: {
+    owner:  { serverPerMonth: null, smsPerMessage: null, otpPerNewDriver: null, otpPerNewRider: null,
+              otpPerActiveUserPerMonth: null, domainStorePerMonth: null, otherPerMonth: null },
+    partner:{ cacPerGrossAdd: null, riderMarketingPerMonth: null, supportDriversPerAgent: null,
+              supportSalaryPerAgent: null, otherPerMonth: null },
+  },
+  ladderSizes: [50, 100, 250, 500, 1000, 2500, 5000],
+  scenarios: {   // illustrative placeholders — never forecasts
+    pilot:  { label: 'Pilot (~20 drivers flat)', checkpoints: { 1: 20, 3: 20, 6: 20, 12: 20, 24: 20, 36: 20 }, churnPct: 0, productivity: { startPct: 55, rampMonths: 6 } },
+    base:   { label: 'Base', checkpoints: { 1: 20, 3: 60, 6: 150, 12: 400, 24: 1000, 36: 2000 }, churnPct: 3, productivity: { startPct: 55, rampMonths: 6 } },
+    growth: { label: 'Growth', checkpoints: { 1: 30, 3: 150, 6: 500, 12: 1500, 24: 4000, 36: 8000 }, churnPct: 5, productivity: { startPct: 45, rampMonths: 4 } },
+  },
+  vectors: [
+    { key: 'bike_basic',    exp: { perKm: 7.78,  base: 15.56, floor: 51.12,  total: 106.67, gap: 1.25 } },
+    { key: 'bike_standard', exp: { perKm: 8.75,  base: 17.50, floor: 55.00,  total: 112.50, gap: -4.00 } },
+    { key: 'bike_plus',     exp: { perKm: 14.00, base: 28.00, floor: 76.00,  total: 144.00, gap: -21.53 } },
+    { key: 'cng',           exp: { perKm: 11.94, base: 23.89, floor: 72.78,  total: 196.11, gap: -18.92 } },
+    { key: 'car_economy',   exp: { perKm: 14.00, base: 28.00, floor: 86.00,  total: 233.00, gap: 4.08 } },
+    { key: 'car_comfort',   exp: { perKm: 17.50, base: 35.00, floor: 100.00, total: 355.00, gap: 9.86 } },
+    { key: 'car_premium',   exp: { perKm: 21.00, base: 42.00, floor: 114.00, total: 390.00, gap: 11.79 } },
+    { key: 'car_xl',        exp: { perKm: 26.25, base: 52.50, floor: 135.00, total: 442.50, gap: 10.73 } },
+  ],
+};
+
+const TIER_KEYS = Object.keys(CONFIG.tiers);
+const ECON_TIERS = ['bike_basic', 'bike_standard', 'bike_plus', 'cng', 'car_economy', 'car_comfort', 'car_premium', 'car_xl', 'e_three_wheeler'];
+
+const r2 = (n) => Math.round(n * 100) / 100;
+const interpolate = (cp, m) => {
+  const points = Object.keys(cp).map(Number).sort((a, b) => a - b);
+  if (m <= points[0]) return cp[points[0]];
+  const last = points[points.length - 1];
+  if (m >= last) return cp[last];
+  for (let i = 0; i < points.length - 1; i++) {
+    const a = points[i], b = points[i + 1];
+    if (m >= a && m <= b) return cp[a] + (cp[b] - cp[a]) * (m - a) / (b - a);
+  }
+  return cp[last];
+};
+
+/* fare engine — owner matrix formula with the app's paisa rounding (r2) */
+function deriveFare(key, cfg, fuelOverride) {
+  const t = cfg.tiers[key];
+  const set = cfg.pricingSet;
+  if (set === 'app') {
+    const a = t.app;
+    if (!a) return null;
+    const perKmP = a.perKm * 100;
+    const baseP = a.base * 100;
+    const floorP = baseP + Math.round(perKmP * a.floorKm) + a.floorMin * a.perMin * 100;
+    return { perKm: a.perKm, base: a.base, floor: floorP / 100, perKmP, baseP, perMinP: a.perMin * 100 };
+  }
+  if (set === 'launch') {
+    const l = t.launch;
+    if (!l || [l.base, l.perKm, l.perMin, l.floorKm, l.floorMin].some(v => v == null)) return null;
+    const perKmP = l.perKm * 100;
+    const baseP = l.base * 100;
+    const floorP = baseP + Math.round(perKmP * l.floorKm) + l.floorMin * l.perMin * 100;
+    return { perKm: l.perKm, base: l.base, floor: floorP / 100, perKmP, baseP, perMinP: l.perMin * 100 };
+  }
+  const fuel = fuelOverride != null ? fuelOverride : cfg.fuel[t.fuelKind === 'electric' ? 'electricity' : t.fuelKind];
+  if (fuel == null || !t.mileage || !t.mv || t.perMin == null) return null;
+  const perKm = fuel / t.mileage * t.mv;
+  const perKmP = perKm * 100;
+  const baseP = cfg.floor.km * perKmP;
+  const floorP = baseP + Math.round(perKmP * cfg.floor.km) + cfg.floor.min * t.perMin * 100;
+  return { perKm, base: baseP / 100, floor: floorP / 100, perKmP, baseP, perMinP: t.perMin * 100 };
+}
+function fareAt(d, km, min) {
+  const total = (d.baseP + Math.round(d.perKmP * km) + min * d.perMinP) / 100;
+  return Math.max(total, d.floor);
+}
+function tierRefFare(key, cfg) {
+  const d = deriveFare(key, cfg);
+  const t = cfg.tiers[key];
+  if (!d || t.refKm == null) return null;
+  return fareAt(d, t.refKm, t.refMin);
+}
+function avgFare(cfg) {
+  const mixSum = TIER_KEYS.reduce((s, k) => s + (cfg.tiers[k].mixPct || 0), 0);
+  if (mixSum <= 0) return null;
+  let sum = 0;
+  for (const k of TIER_KEYS) {
+    const share = cfg.tiers[k].mixPct / mixSum;
+    if (share <= 0) continue;
+    let f;
+    if (cfg.tripMix.km != null) {
+      const d = deriveFare(k, cfg);
+      f = d ? fareAt(d, cfg.tripMix.km, cfg.tripMix.min) : null;
+    } else {
+      f = tierRefFare(k, cfg);
+    }
+    if (f == null) return null;
+    sum += share * f;
+  }
+  return sum;
+}
+/* revenue treatment shared by simulate(), the Unit tab and the Ladder:
+   VAT only when the owner says package prices include it; gateway fee deducted before the split. */
+function adjustRevenue(rev, cfg) {
+  let r = rev;
+  if (cfg.pkgIncludesVat === 'yes' && cfg.vatPct != null) r = r / (1 + cfg.vatPct / 100);
+  if (cfg.gatewayPct != null) r = r * (1 - cfg.gatewayPct / 100);
+  return r;
+}
+function cheapestPlan(calls, cfg) {
+  const b = cfg.barikoi;
+  const plans = { PAYG: calls * b.payg, Business: b.businessBase + Math.max(0, calls - b.businessIncluded) * b.businessOverage, Scale: b.scaleBase + Math.max(0, calls - b.scaleIncluded) * b.scaleOverage };
+  const key = Object.keys(plans).reduce((a, x) => plans[x] < plans[a] ? x : a, 'PAYG');
+  return { key, cost: plans[key] };
+}
+
+/* per-driver, per-month economics for one tier — the SAME rules as simulate(): the partner keeps
+   100% of revenue inside the owner allowance and 50% above it, and pays the pro-rata share of the
+   map bill; SMS and server are owner costs. ctx = { f: allowance share, cpr, effCall: bill per call }. */
+function perDriverEcon(cfg, key, ctx) {
+  const t = cfg.tiers[key];
+  const rMo = (t.bench || 0) * cfg.workingDays;
+  const d = deriveFare(key, cfg);
+  const refFare = d && t.refKm != null && t.refMin != null ? fareAt(d, t.refKm, t.refMin) : null;
+  const grossRef = refFare != null ? refFare * rMo : null;
+  const needPkg = cfg.monetization !== 'commission';
+  const needCom = cfg.monetization !== 'package';
+  let rev = 0, ok = rMo > 0;
+  if (needPkg) { if (t.package == null) ok = false; else rev += t.package; }
+  if (needCom) { if (refFare == null || cfg.commissionPct == null) ok = false; else rev += cfg.commissionPct / 100 * refFare * rMo; }
+  if (!ok) return { rMo, grossRef, rev: null, partnerRev: null, ownerRev: null, partnerMap: null, net: null };
+  rev = adjustRevenue(rev, cfg);
+  const f = ctx.f;
+  const partnerRev = rev * (f + 0.5 * (1 - f));
+  const ownerRev = rev - partnerRev;
+  const partnerMap = ctx.cpr * ctx.effCall * (1 - f) * rMo;
+  return { rMo, grossRef, rev, partnerRev, ownerRev, partnerMap, net: partnerRev - partnerMap };
+}
+
+/* ════════════ SIMULATE — pure ════════════ */
+function simulate(cfg) {
+  const H = Math.max(1, Math.round(cfg.horizon));
+  const months = [];
+  const mixSum = TIER_KEYS.reduce((s, k) => s + (cfg.tiers[k].mixPct || 0), 0);
+  const share = {};
+  for (const k of TIER_KEYS) share[k] = mixSum > 0 ? (cfg.tiers[k].mixPct || 0) / mixSum : 0;
+  const bench = mixSum > 0 ? TIER_KEYS.reduce((s, k) => s + share[k] * (cfg.tiers[k].bench || 0), 0) : 0;
+  const avgPackage = mixSum > 0 ? TIER_KEYS.reduce((s, k) => s + share[k] * (cfg.tiers[k].package || 0), 0) : 0;
+  const avgF = avgFare(cfg);
+  let cpr = cfg.callsPerRide[cfg.activeCallsMode];
+  const missing = [];
+  if (cpr == null) { missing.push('measured calls per ride (conservative value used meanwhile)'); cpr = cfg.callsPerRide.conservative; }
+  const oc = cfg.costs.owner, pc = cfg.costs.partner;
+  [['server/hosting', oc.serverPerMonth], ['SMS per message', oc.smsPerMessage], ['OTP per new driver', oc.otpPerNewDriver],
+   ['OTP per new rider', oc.otpPerNewRider], ['OTP per active user', oc.otpPerActiveUserPerMonth], ['domain & store fees', oc.domainStorePerMonth],
+   ['driver acquisition cost', pc.cacPerGrossAdd], ['rider marketing', pc.riderMarketingPerMonth], ['support salary', pc.supportSalaryPerAgent],
+   ['support ratio (drivers per agent)', pc.supportDriversPerAgent]
+  ].forEach((pair) => { if (pair[1] == null) missing.push(pair[0]); });
+  if (cfg.monetization !== 'package' && cfg.commissionPct == null) missing.push('commission rate');
+  if (cfg.monetization !== 'package' && avgF == null) missing.push('fares for commission mode (tier inputs incomplete)');
+  if (cfg.vatPct == null || cfg.pkgIncludesVat == null) missing.push('VAT treatment');
+  for (const k of TIER_KEYS) {
+    const tk = cfg.tiers[k];
+    if ((tk.mixPct || 0) > 0 && (tk.package == null || !tk.bench)) missing.push('package price / benchmark rides for ' + k);
+  }
+
+  let lifetimeRemaining = cfg.allowanceMode === 'lifetime' ? cfg.allowanceCalls : null;
+
+  let cumP = 0, cumO = 0;
+  let partnerBe = null, partnerPayback = null, partnerPeak = 0;
+  let ownerBe = null, ownerPayback = null, ownerPeak = 0;
+  let prevRidersDay = 0;
+  const costsHonorable = missing.length === 0;
+
+  for (let m = 1; m <= H; m++) {
+    const P = interpolate(cfg.drivers.checkpoints, m);
+    const prevP = m === 1 ? 0 : months[m - 2].P;
+    const adds = Math.max(0, P - prevP * (1 - cfg.churnPct / 100));
+    const prog = cfg.productivity.rampMonths > 0 ? Math.min(1, m / cfg.productivity.rampMonths) : 1;
+    const startFrac = cfg.productivity.startPct / 100;
+    const prod = bench > 0 ? bench * (startFrac + (1 - startFrac) * prog) : 0;
+    const ridesDay = P * prod;
+    const rides = ridesDay * cfg.workingDays;
+    const ridersDay = cfg.ridesPerRiderDay > 0 ? ridesDay / cfg.ridesPerRiderDay : 0;
+    const calls = rides * cpr;
+
+    let revenue = 0;
+    if ((cfg.monetization === 'package' || cfg.monetization === 'both') && avgPackage != null) revenue += P * avgPackage;
+    if ((cfg.monetization === 'commission' || cfg.monetization === 'both') && avgF != null && cfg.commissionPct != null) revenue += cfg.commissionPct / 100 * avgF * rides;
+    revenue = adjustRevenue(revenue, cfg);
+
+    const plan = cheapestPlan(calls, cfg);
+    const poolBefore = cfg.allowanceMode === 'lifetime' && lifetimeRemaining != null ? Math.max(0, lifetimeRemaining) : cfg.allowanceCalls;
+    let partnerMap = 0, ownerMap = 0;
+    if (calls > 0 && plan.cost > 0) {
+      const covered = Math.min(calls, poolBefore);
+      partnerMap = plan.cost * (calls - covered) / calls;
+      ownerMap = plan.cost - partnerMap;
+      if (cfg.allowanceMode === 'lifetime' && lifetimeRemaining != null) lifetimeRemaining -= covered;
+    }
+
+    let f = null, partnerShare = null, ownerShare = null;
+    if (cpr > 0 && rides > 0) {
+      const pool = poolBefore;
+      const poolRides = pool / cpr;   // allowance is denominated in calls; convert to rides
+      f = Math.min(1, poolRides / rides);
+      partnerShare = revenue * f + 0.5 * revenue * (1 - f);
+      ownerShare = 0.5 * revenue * (1 - f);
+    }
+
+    const newRidersDay = Math.max(0, ridesDay - prevRidersDay);
+    prevRidersDay = ridesDay;
+    const smsMsgs = (oc.otpPerNewDriver || 0) * adds + (oc.otpPerNewRider || 0) * newRidersDay + (oc.otpPerActiveUserPerMonth || 0) * ridersDay;
+    const ownerCosts = (oc.serverPerMonth || 0) + smsMsgs * (oc.smsPerMessage || 0) + (oc.domainStorePerMonth || 0) + (oc.otherPerMonth || 0) + ownerMap;
+    const agents = pc.supportDriversPerAgent ? Math.max(1, Math.ceil(P / pc.supportDriversPerAgent)) : 0;
+    const partnerCosts = (pc.cacPerGrossAdd || 0) * adds + (pc.riderMarketingPerMonth || 0) + agents * (pc.supportSalaryPerAgent || 0) + (pc.otherPerMonth || 0) + partnerMap;
+
+    const partnerNet = (partnerShare || 0) - partnerCosts;
+    const ownerNet = (ownerShare || 0) - ownerCosts;
+    cumP += partnerNet; cumO += ownerNet;
+    if (costsHonorable) {
+      if (partnerBe == null && partnerNet >= 0) partnerBe = m;
+      if (ownerBe == null && ownerNet >= 0) ownerBe = m;
+      if (partnerPayback == null && cumP >= 0) partnerPayback = m;
+      if (ownerPayback == null && cumO >= 0) ownerPayback = m;
+    }
+    partnerPeak = Math.max(partnerPeak, -cumP);
+    ownerPeak = Math.max(ownerPeak, -cumO);
+
+    const takeRate = avgF != null && rides > 0 ? revenue / (avgF * rides) * 100 : null;
+    months.push({
+      m, P: Math.round(P), adds: Math.round(adds), ridesDay: Math.round(ridesDay), ridersDay: Math.round(ridersDay),
+      rides: Math.round(rides), calls: Math.round(calls), plan: plan.key, mapCost: plan.cost,
+      partnerMap, ownerMap, revenue, partnerShare, ownerShare, ownerCosts, partnerCosts,
+      partnerNet, ownerNet, cumP, cumO, takeRate,
+      f,
+    });
+  }
+
+  const summary = {
+    partnerBreakEven: partnerBe, partnerPayback, partnerPeakFunding: costsHonorable ? partnerPeak : null,
+    ownerBreakEven: ownerBe, ownerPayback, ownerPeakFunding: costsHonorable ? ownerPeak : null,
+    driversAt12: interpolate(cfg.drivers.checkpoints, 12),
+    ownerNet24: months[23] ? months[23].ownerNet : null,
+    allowanceRidesDay: cpr > 0 ? cfg.allowanceCalls / cpr / cfg.daysPerMonth : null,
+    missingCosts: missing,
+    partnerMarginTotal: months.reduce((s, x) => s + (x.partnerShare || 0) - x.partnerMap, 0),
+    partnerMargin12: months[11] ? (months[11].partnerShare || 0) - months[11].partnerMap : null,
+  };
+  return { months, summary };
+}
+
+/* ════════════ INTERNAL CONSISTENCY CHECKS (not a live-app check) ════════════ */
+function consistencyChecks() {
+  const out = [];
+  for (const v of CONFIG.vectors) {
+    const d = deriveFare(v.key, CONFIG);
+    const t = CONFIG.tiers[v.key];
+    if (!d || t.refKm == null) { out.push({ name: v.key + ' inputs', pass: false }); continue; }
+    const tot = fareAt(d, t.refKm, t.refMin);
+    const gap = (t.uber - tot) / tot * 100;
+    out.push({ name: v.key + ' perKm', pass: r2(d.perKm) === v.exp.perKm });
+    out.push({ name: v.key + ' base', pass: r2(d.base) === v.exp.base });
+    out.push({ name: v.key + ' floor', pass: r2(d.floor) === v.exp.floor });
+    out.push({ name: v.key + ' total @ref', pass: r2(tot) === v.exp.total });
+    out.push({ name: v.key + ' gap vs Uber', pass: r2(gap) === v.exp.gap });
+  }
+  const d154 = deriveFare('bike_basic', Object.assign({}, CONFIG, { fuel: Object.assign({}, CONFIG.fuel, { petrol: 154 }) }));
+  const tot154 = fareAt(d154, CONFIG.tiers.bike_basic.refKm, CONFIG.tiers.bike_basic.refMin);
+  out.push({ name: 'fuel 140 to 154: bike_basic ref total', pass: r2(tot154) === 111.33 });
+  const vcfg = JSON.parse(JSON.stringify(CONFIG));
+  vcfg.horizon = 1;
+  vcfg.drivers = { checkpoints: { 1: 100 } };
+  vcfg.churnPct = 0;
+  vcfg.productivity = { startPct: 100, rampMonths: 0 };
+  for (const k of TIER_KEYS) vcfg.tiers[k].mixPct = k === 'bike_basic' ? 100 : 0;
+  vcfg.monetization = 'package';
+  vcfg.activeCallsMode = 'trace';
+  const s1 = simulate(vcfg).months[0];
+  const near = (a, b) => Math.abs(a - b) <= 1;
+  out.push({ name: 'rides m1 (100 drivers, 9/day, 26d)', pass: near(s1.rides, 23400) });
+  out.push({ name: 'revenue m1 (packages 474)', pass: near(s1.revenue, 47400) });
+  out.push({ name: 'calls m1 (4.84/ride)', pass: near(s1.calls, 113256) });
+  out.push({ name: 'partner revenue share m1 (f=0.1766)', pass: near(s1.partnerShare, 27885) });
+  out.push({ name: 'owner revenue share m1', pass: near(s1.ownerShare, 19515) });
+  out.push({ name: 'cheapest plan m1', pass: s1.plan === 'PAYG' });
+  out.push({ name: 'map cost m1 (PAYG)', pass: near(s1.mapCost, 11326) });
+  out.push({ name: 'partner map m1 (pro-rata)', pass: near(s1.partnerMap, 9326) });
+  out.push({ name: 'owner map m1 (pro-rata)', pass: near(s1.ownerMap, 2000) });
+  out.push({ name: 'partner net before people/marketing m1', pass: near(s1.partnerShare - s1.partnerMap, 18560) });
+  const lcfg = JSON.parse(JSON.stringify(vcfg));
+  lcfg.horizon = 2;
+  lcfg.drivers = { checkpoints: { 1: 100, 2: 100 } };
+  lcfg.allowanceMode = 'lifetime';
+  const lm = simulate(lcfg).months;
+  out.push({ name: 'lifetime allowance: month 1 split uses the allowance', pass: near(lm[0].partnerShare, 27885) });
+  out.push({ name: 'lifetime allowance: month 2 is 50/50 once used up', pass: near(lm[1].partnerShare, 23700) && near(lm[1].ownerShare, 23700) });
+  const ccfg = JSON.parse(JSON.stringify(vcfg));
+  ccfg.monetization = 'commission';
+  const cs = simulate(ccfg);
+  out.push({ name: 'commission mode with empty rate: zero revenue and flagged', pass: cs.months[0].revenue === 0 && cs.summary.missingCosts.indexOf('commission rate') >= 0 });
+  const mcfg = JSON.parse(JSON.stringify(vcfg));
+  mcfg.activeCallsMode = 'measured';
+  const ms = simulate(mcfg);
+  out.push({ name: 'measured calls empty: conservative used, flagged, revenue kept', pass: near(ms.months[0].revenue, 47400) && ms.summary.missingCosts.some(function (x) { return x.indexOf('measured calls per ride') === 0; }) });
+  const vtcfg = JSON.parse(JSON.stringify(vcfg));
+  vtcfg.vatPct = 5; vtcfg.pkgIncludesVat = 'yes';
+  out.push({ name: 'VAT wired: prices incl. 5% VAT -> revenue 47,400 / 1.05', pass: near(simulate(vtcfg).months[0].revenue, 47400 / 1.05) });
+  return out;
+}
+</script>
+<script>
+'use strict';
+/* ════════════ UI — reads outputs only. DOM built with elements, never string HTML. ════════════ */
+const $ = (id) => document.getElementById(id);
+const set = (id, v) => { const e = document.getElementById(id); if (e) e.textContent = v; };
+const SVGNS = 'http://www.w3.org/2000/svg';
+
+function h(tag, attrs = {}, ...kids) {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (v == null) continue;
+    if (k === 'class') e.className = v;
+    else if (k === 'text') e.textContent = v;
+    else if (k.startsWith('on')) e.addEventListener(k.slice(2), v);
+    else e.setAttribute(k, v);
+  }
+  for (const kid of kids.flat(Infinity)) {
+    if (kid == null || kid === false) continue;
+    e.append(kid instanceof Node ? kid : document.createTextNode(String(kid)));
+  }
+  return e;
+}
+function s(tag, attrs = {}, ...kids) {
+  const e = document.createElementNS(SVGNS, tag);
+  for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v);
+  for (const kid of kids.flat(Infinity)) {
+    if (kid == null || kid === false) continue;
+    e.append(kid instanceof Node ? kid : document.createTextNode(String(kid)));
+  }
+  return e;
+}
+
+const fmtTK = (n) => {
+  if (n == null || !isFinite(n)) return '—';
+  const a = Math.abs(n), sign = n < 0 ? '−' : '';
+  if (a >= 1e6) return sign + '৳' + (a / 1e6).toFixed(2) + 'M';
+  if (a >= 1000) return sign + '৳' + (a / 1000).toFixed(1) + 'k';
+  return sign + '৳' + Math.round(a).toLocaleString('en-US');
+};
+const fmtT = (n, dec = 2) => (n == null || !isFinite(n)) ? '—' : '৳' + Number(n).toLocaleString('en-US', { minimumFractionDigits: dec, maximumFractionDigits: dec });
+const fmtN = (n) => (n == null || !isFinite(n)) ? '—' : Math.round(n).toLocaleString('en-US');
+const fmtPct = (n, dec = 1) => (n == null || !isFinite(n)) ? '—' : n.toFixed(dec) + '%';
+
+let state = JSON.parse(JSON.stringify(CONFIG));
+state.scenario = 'base';
+state.view = 'combined';
+state.activeTab = 'dashboard';
+state.monthlyYearly = false;
+state.presenting = false;
+state.dark = false;
+
+/* launch-zone price set: every field starts empty (the owner enters them in Pricing) */
+function ensureLaunch(st) {
+  for (const k of TIER_KEYS) {
+    const t = st.tiers[k];
+    if (t && !t.launch) t.launch = { base: null, perKm: null, perMin: null, floorKm: null, floorMin: null };
+  }
+}
+/* import: merge an exported file over the defaults so older exports cannot crash the page */
+function mergeOverDefaults(src) {
+  const out = JSON.parse(JSON.stringify(CONFIG));
+  (function merge(dst, from) {
+    for (const k of Object.keys(from)) {
+      if (from[k] && typeof from[k] === 'object' && !Array.isArray(from[k]) && dst[k] && typeof dst[k] === 'object') merge(dst[k], from[k]);
+      else if (k in dst) dst[k] = from[k];
+    }
+  })(out, src);
+  if (src.drivers && src.drivers.checkpoints) out.drivers = { checkpoints: Object.assign({}, src.drivers.checkpoints) };
+  return out;
+}
+ensureLaunch(state);
+
+/* ════════════ binding helpers ════════════ */
+function getPath(path) { return path.split('.').reduce((o, k) => (o == null ? undefined : o[k]), state); }
+function setPath(path, v) {
+  const keys = path.split('.');
+  const last = keys.pop();
+  keys.reduce((o, k) => o[k], state)[last] = v;
+}
+function bindNum(path, opts = {}) {
+  const v = getPath(path);
+  return h('input', {
+    type: 'number',
+    class: 'num' + (v == null && opts.required ? ' empty' : ''),
+    min: opts.min != null ? opts.min : 0,
+    step: opts.step != null ? opts.step : 1,
+    value: v == null ? '' : v,
+    placeholder: v == null && opts.required ? 'enter value' : null,
+    'aria-label': opts.label || path,
+    'data-bind': path,
+    oninput: (e) => {
+      const raw = e.target.value;
+      if (raw === '') { setPath(path, null); }
+      else {
+        const n = parseFloat(raw);
+        setPath(path, isFinite(n) && n >= (opts.min != null ? opts.min : 0) ? n : null);
+      }
+      if (opts.scenarioEdits) markCustom();
+      e.target.classList.toggle('empty', e.target.value === '');
+      render();
+    },
+  });
+}
+function inRow(label, input, unit, dotType, note) {
+  const lab = h('label', {}, label + ' ');
+  if (dotType) lab.append(h('span', { class: 'dot ' + dotType, title: dotTitle(dotType) }));
+  return h('div', { class: 'in-row' }, lab, input, unit ? h('span', { class: 'unit' }, unit) : null, note ? h('span', { class: 'unit' }, note) : null);
+}
+function dotTitle(t) {
+  return { owner: 'owner input', code: 'from repo (code/seed)', seed: 'Barikoi pricing as listed in the old report, unverified', est: 'design-time estimate', tbd: 'to be determined' }[t] || '';
+}
+function markCustom() {
+  if (state.scenario !== 'custom') {
+    state.scenario = 'custom';
+    syncTopbar();
+  }
+}
+
+/* ════════════ ASSUMPTIONS TAB ════════════ */
+function buildAssumptions() {
+  ensureLaunch(state);
+  const host = $('assumptions');
+  host.replaceChildren();
+  const cpWrap = h('div', { class: 'in-row' }, h('label', {}, 'Paying drivers at month'));
+  for (const m of [1, 3, 6, 12, 24, 36]) {
+    cpWrap.append(h('label', { style: 'min-width:auto;font-family:var(--mono)' }, 'M' + m), bindNum('drivers.checkpoints.' + m, { min: 0, required: true, scenarioEdits: true }));
+  }
+  host.append(h('div', { class: 'card' },
+    h('h3', {}, 'Drivers — paying-driver checkpoints (illustrative placeholders, never forecasts)'),
+    cpWrap,
+    inRow('Monthly churn', bindNum('churnPct', { min: 0, step: 0.1, required: true, scenarioEdits: true }), '% of paying drivers / month ', 'est', 'illustrative placeholder'),
+    inRow('Productivity start', bindNum('productivity.startPct', { min: 1, max: 100, step: 5, scenarioEdits: true }), '% of benchmark at month 1', 'est'),
+    inRow('Productivity ramp', bindNum('productivity.rampMonths', { min: 0, step: 1, scenarioEdits: true }), 'months to benchmark', 'est'),
+    inRow('Working days / month', bindNum('workingDays', { min: 1, step: 1 }), 'days', 'est'),
+    h('div', { class: 'note muted' }, 'Benchmark rides per driver per day: bike 9, CNG 7, car 5 (from the old cost report).')
+  ));
+  const amRow = h('div', { class: 'in-row' }, h('label', {}, 'Allowance reset ', h('span', { class: 'dot owner', title: 'owner input' })));
+  for (const [val, text] of [['monthly', 'Monthly (default)'], ['lifetime', 'One-time lifetime']]) {
+    amRow.append(h('button', {
+      class: 'pill', type: 'button', 'aria-pressed': String(state.allowanceMode === val),
+      onclick: (e) => { state.allowanceMode = val; e.target.parentElement.querySelectorAll('.pill').forEach(x => x.setAttribute('aria-pressed', String(x.dataset.val === val))); render(); },
+      'data-val': val,
+    }, text));
+  }
+  host.append(h('div', { class: 'card' }, h('h3', {}, 'Monetization'),
+    inRow('Commission rate', bindNum('commissionPct', { min: 0, max: 100, step: 0.5, required: true }), '% of fare (commission / both modes) — blank = TBD', 'tbd'),
+    inRow('Owner allowance', bindNum('allowanceCalls', { min: 0, step: 100 }), 'calls / month', 'owner'),
+    amRow,
+    h('div', { class: 'note muted' }, 'Open owner decision: does the 20K-call allowance reset every month, or is it a one-time pilot allowance? Dashboard defaults to monthly.')
+  ));
+  const vatSel = h('select', {
+    class: 'num', style: 'width:auto;text-align:left', 'aria-label': 'package prices include VAT',
+    onchange: (e) => { state.pkgIncludesVat = e.target.value === '' ? null : e.target.value; render(); },
+  },
+    h('option', { value: '', text: 'not set (TBD)', selected: state.pkgIncludesVat == null ? '' : null }),
+    h('option', { value: 'yes', text: 'prices include VAT', selected: state.pkgIncludesVat === 'yes' ? '' : null }),
+    h('option', { value: 'no', text: 'prices exclude VAT', selected: state.pkgIncludesVat === 'no' ? '' : null }));
+  host.append(h('div', { class: 'card' }, h('h3', {}, 'Revenue treatment'),
+    inRow('Package prices', vatSel, '', 'tbd', 'owner to confirm'),
+    inRow('VAT', bindNum('vatPct', { min: 0, max: 100, step: 0.1 }), '% — applied only when prices include VAT', 'tbd'),
+    inRow('Gateway fee', bindNum('gatewayPct', { min: 0, max: 100, step: 0.1 }), '% of revenue deducted before the split (0 = fees are part of revenue)', 'tbd')
+  ));
+  const modeRow = h('div', { class: 'in-row' }, h('label', {}, 'Calls per ride mode ', h('span', { class: 'dot est', title: dotTitle('est') })));
+  for (const [val, text] of [['trace', 'Trace ' + CONFIG.callsPerRide.trace + ' (unverified)'], ['conservative', 'Conservative ' + CONFIG.callsPerRide.conservative], ['measured', 'Measured']]) {
+    modeRow.append(h('button', {
+      class: 'pill', type: 'button', 'data-val': val, 'aria-pressed': String(state.activeCallsMode === val),
+      onclick: (e) => { state.activeCallsMode = val; e.currentTarget.parentElement.querySelectorAll('.pill').forEach(x => x.setAttribute('aria-pressed', String(x.dataset.val === val))); render(); },
+    }, text));
+  }
+  host.append(h('div', { class: 'card' }, h('h3', {}, 'Map calls and Barikoi plans'), modeRow,
+    inRow('Measured calls per ride', bindNum('callsPerRide.measured', { min: 0, step: 0.1 }), 'calls — blank = TBD; if Measured is selected while blank, Conservative is used and flagged', 'tbd'),
+    inRow('Pay-As-You-Go', bindNum('barikoi.payg', { min: 0, step: 0.005 }), '৳ / call', 'seed'),
+    inRow('Business plan', bindNum('barikoi.businessBase', { min: 0, step: 1000 }), '৳ / month base', 'seed'),
+    inRow('Business included', bindNum('barikoi.businessIncluded', { min: 0, step: 100000 }), 'calls', 'seed'),
+    inRow('Business overage', bindNum('barikoi.businessOverage', { min: 0, step: 0.005 }), '৳ / call', 'seed'),
+    inRow('Scale plan', bindNum('barikoi.scaleBase', { min: 0, step: 1000 }), '৳ / month base', 'seed'),
+    inRow('Scale included', bindNum('barikoi.scaleIncluded', { min: 0, step: 100000 }), 'calls', 'seed'),
+    inRow('Scale overage', bindNum('barikoi.scaleOverage', { min: 0, step: 0.005 }), '৳ / call', 'seed'),
+    h('div', { class: 'note muted' }, 'Barikoi prices are as listed in the old report and are unverified.')
+  ));
+  host.append(h('div', { class: 'card' }, h('h3', {}, 'Owner costs (empty = excluded from results)'),
+    inRow('Server & hosting', bindNum('costs.owner.serverPerMonth', { min: 0, step: 100, required: true }), '৳ / month', 'tbd'),
+    inRow('SMS / OTP cost', bindNum('costs.owner.smsPerMessage', { min: 0, step: 0.1, required: true }), '৳ / message', 'tbd'),
+    inRow('OTPs per new driver', bindNum('costs.owner.otpPerNewDriver', { min: 0, step: 1, required: true }), 'messages', 'tbd'),
+    inRow('OTPs per new rider', bindNum('costs.owner.otpPerNewRider', { min: 0, step: 1, required: true }), 'messages', 'tbd'),
+    inRow('OTPs per active user / month', bindNum('costs.owner.otpPerActiveUserPerMonth', { min: 0, step: 0.1, required: true }), 'messages', 'tbd'),
+    inRow('Domain & app-store fees', bindNum('costs.owner.domainStorePerMonth', { min: 0, step: 100, required: true }), '৳ / month', 'tbd'),
+    inRow('Other owner costs', bindNum('costs.owner.otherPerMonth', { min: 0, step: 100 }), '৳ / month', 'owner')
+  ));
+  host.append(h('div', { class: 'card' }, h('h3', {}, 'Partner costs (empty = excluded from results)'),
+    inRow('Driver acquisition cost', bindNum('costs.partner.cacPerGrossAdd', { min: 0, step: 50, required: true }), '৳ / gross add', 'tbd'),
+    inRow('Rider marketing budget', bindNum('costs.partner.riderMarketingPerMonth', { min: 0, step: 500, required: true }), '৳ / month', 'tbd'),
+    inRow('Support ratio', bindNum('costs.partner.supportDriversPerAgent', { min: 1, step: 5, required: true }), 'paying drivers per agent (min 1 agent)', 'tbd'),
+    inRow('Support salary', bindNum('costs.partner.supportSalaryPerAgent', { min: 0, step: 500, required: true }), '৳ / agent / month', 'tbd'),
+    inRow('Other partner costs', bindNum('costs.partner.otherPerMonth', { min: 0, step: 500 }), '৳ / month', 'owner'),
+    h('div', { class: 'note muted' }, 'Legal and accounts: 0 by owner ruling — risk note: the app computes VAT and AIT; licensing is unresearched.')
+  ));
+  /* tier inputs: package, benchmark, mix, matrix and trip inputs for every tier */
+  const ti = h('table', { class: 'fin' });
+  ti.append(h('thead', {}, h('tr', {},
+    h('th', { text: 'Tier' }), h('th', { text: 'Package ৳/mo' }), h('th', { text: 'Rides/day benchmark' }), h('th', { text: 'Mix %' }),
+    h('th', { text: 'Mileage km/unit' }), h('th', { title: 'owner-defined; meaning to be confirmed', text: 'MV factor' }), h('th', { text: '৳ / min' }),
+    h('th', { text: 'Ref km' }), h('th', { text: 'Ref min' }), h('th', { text: 'Uber ref ৳' }))));
+  const tib = h('tbody');
+  for (const k of TIER_KEYS) {
+    const req = k === 'e_three_wheeler';
+    tib.append(h('tr', {}, h('td', { text: k + (req ? ' (km per kWh)' : '') }),
+      h('td', {}, bindNum('tiers.' + k + '.package', { min: 0, step: 1, required: req })),
+      h('td', {}, bindNum('tiers.' + k + '.bench', { min: 0, step: 1, required: req })),
+      h('td', {}, bindNum('tiers.' + k + '.mixPct', { min: 0, max: 100, step: 5 })),
+      h('td', {}, bindNum('tiers.' + k + '.mileage', { min: 0, step: 0.5, required: req })),
+      h('td', {}, bindNum('tiers.' + k + '.mv', { min: 0, step: 0.1, required: req })),
+      h('td', {}, bindNum('tiers.' + k + '.perMin', { min: 0, step: 0.25, required: req })),
+      h('td', {}, bindNum('tiers.' + k + '.refKm', { min: 0, step: 0.5, required: req })),
+      h('td', {}, bindNum('tiers.' + k + '.refMin', { min: 0, step: 1, required: req })),
+      h('td', {}, bindNum('tiers.' + k + '.uber', { min: 0, step: 1, required: req }))));
+  }
+  ti.append(tib);
+  host.append(h('div', { class: 'card' }, h('h3', {}, 'Tier inputs (owner)'),
+    h('div', { class: 'table-scroll' }, ti),
+    h('div', { class: 'note muted' }, 'Package prices are owner inputs. Mix % normalizes to 100% across all tiers; the default fleet is 60% bike_basic, 25% cng, 15% car_economy. The electric three-wheeler is the wedge vehicle: fill its row (and the electricity price in Pricing) to include it. Mileage, MV factor and per-minute rate feed the Owner matrix set; reference trip and Uber reference feed every set.')
+  ));
+}
+
+/* ════════════ PRICING TAB ════════════ */
+function buildPricingStatic() {
+  $('fuel-inputs').replaceChildren(
+    inRow('Petrol price', bindNum('fuel.petrol', { min: 0, step: 1 }), '৳ / litre', 'owner'),
+    inRow('CNG price', bindNum('fuel.cng', { min: 0, step: 1 }), '৳ / m³', 'owner'),
+    inRow('Electricity price', bindNum('fuel.electricity', { min: 0, step: 0.25 }), '৳ / kWh', 'tbd', 'feeds the e-three-wheeler row')
+  );
+  $('trip-calc-inputs').replaceChildren(
+    inRow('Trip distance', Object.assign(h('input', { type: 'number', class: 'num', min: 0, step: 0.5, value: 5, 'aria-label': 'trip km', oninput: renderPricing }), { id: 'pc-km' })),
+    inRow('Trip duration', Object.assign(h('input', { type: 'number', class: 'num', min: 0, step: 1, value: 25, 'aria-label': 'trip minutes', oninput: renderPricing }), { id: 'pc-min' }), 'min')
+  );
+  document.querySelectorAll('#pricing-set-pills .pill').forEach(p => {
+    p.addEventListener('click', () => { state.pricingSet = p.dataset.set; renderPricing(); renderTakeRates(); });
+  });
+}
+function hasRef(key) { const t = state.tiers[key]; return t.refKm != null && t.refMin != null; }
+function driverGrossRef(key, d) {
+  const t = state.tiers[key];
+  return fareAt(d, t.refKm, t.refMin) * (t.bench || 0) * state.workingDays;
+}
+
+function pricingSetHeaders() {
+  if (state.pricingSet === 'matrix') return ['Mileage km/unit', 'MV factor', '৳ / min'];
+  if (state.pricingSet === 'app') return ['Per km ৳', '—', '৳ / min'];
+  return ['Per km ৳', 'Base ৳ (input)', '৳ / min', 'Floor km', 'Floor min'];
+}
+
+function renderPricing() {
+  document.querySelectorAll('#pricing-set-pills .pill').forEach(p => p.setAttribute('aria-pressed', String(p.dataset.set === state.pricingSet)));
+  const setNames = {
+    matrix: 'Owner design matrix (fuel-driven; not the live pricing table).',
+    app: 'App today — scripts/seed-pricing.js @ 3e94ea5, paisa converted to taka.',
+    launch: 'Launch-zone set — fill all five fields per tier; reference trip and Uber reference come from Assumptions → Tier inputs. Feeds commission mode and take rates.',
+  };
+  const noteEl = $('pricing-note');
+  noteEl.replaceChildren('' + setNames[state.pricingSet] + ' Distance charges rounded to paisa (engine convention).');
+
+  const ae = document.activeElement;
+  const focusKey = ae && ae.dataset && ae.dataset.bind ? ae.dataset.bind : null;
+
+  const table = $('pricing-table');
+  table.querySelector('thead').replaceChildren(h('tr', {},
+    h('th', { text: 'Tier' }), h('th', { text: 'cc / class' }), h('th', { text: 'Fuel ৳/unit' }),
+    pricingSetHeaders().map(c => h('th', { title: c === 'MV factor' ? 'owner-defined; meaning to be confirmed' : null, text: c })),
+    h('th', { text: 'Base ৳' }), h('th', { text: 'Floor ৳' }),
+    h('th', { text: 'Ref trip' }), h('th', { text: 'Ref fare ৳' }), h('th', { text: 'Uber ৳' }), h('th', { text: 'Gap' }),
+    h('th', { text: 'Take @ref' })));
+  const tb = table.querySelector('tbody');
+  tb.replaceChildren();
+  for (const key of TIER_KEYS) {
+    const t = state.tiers[key];
+    const d = deriveFare(key, state);
+    const cells = [];
+    cells.push(h('td', { text: key + (key === 'e_three_wheeler' ? ' (tbd)' : '') }));
+    cells.push(h('td', { text: t.cc }));
+    if (t.fuelKind === 'electric') {
+      cells.push(h('td', {}, bindNum('fuel.electricity', { min: 0, step: 0.25 })));
+    } else {
+      cells.push(h('td', { text: state.fuel[t.fuelKind] != null ? fmtT(state.fuel[t.fuelKind], 0) + ' (' + t.fuelKind + ')' : '—' }));
+    }
+    if (state.pricingSet === 'matrix') {
+      cells.push(h('td', { text: t.mileage != null ? String(t.mileage) : '—' }));
+      cells.push(h('td', { text: t.mv != null ? String(t.mv) : '—' }));
+      cells.push(h('td', { text: t.perMin != null ? fmtT(t.perMin) : '—' }));
+    } else if (state.pricingSet === 'app') {
+      cells.push(h('td', { class: 'muted', text: t.app ? num2(t.app.perKm) : '—' }));
+      cells.push(h('td', { class: 'muted', text: '—' }));
+      cells.push(h('td', { text: t.app ? fmtT(t.app.perMin) : '—' }));
+    } else {
+      cells.push(h('td', {}, bindNum('tiers.' + key + '.launch.perKm', { min: 0, step: 0.25 })));
+      cells.push(h('td', {}, bindNum('tiers.' + key + '.launch.base', { min: 0, step: 1 })));
+      cells.push(h('td', {}, bindNum('tiers.' + key + '.launch.perMin', { min: 0, step: 0.1 })));
+      cells.push(h('td', {}, bindNum('tiers.' + key + '.launch.floorKm', { min: 0, step: 0.5 })));
+      cells.push(h('td', {}, bindNum('tiers.' + key + '.launch.floorMin', { min: 0, step: 1 })));
+    }
+    cells.push(h('td', { text: d ? fmtT(d.base) : '—' }));
+    cells.push(h('td', { text: d ? fmtT(d.floor) : '—' }));
+    if (hasRef(key) && d) {
+      const fare = fareAt(d, t.refKm, t.refMin);
+      cells.push(h('td', { text: t.refKm + ' km · ' + t.refMin + ' min' }));
+      cells.push(h('td', { text: fmtT(fare) }));
+      cells.push(h('td', { text: t.uber != null ? fmtT(t.uber) : '—' }));
+      const gap = (t.uber - fare) / fare * 100;
+      cells.push(h('td', { class: gap >= 0 ? 'pos' : 'neg', text: fmtPct(r2(gap)) }));
+      const gr = driverGrossRef(key, d);
+      cells.push(h('td', { text: t.package != null && gr > 0 ? fmtPct(t.package / gr * 100, 1) : '—' }));
+    } else {
+      const nCol = key === 'e_three_wheeler' ? 'enter value' : '—';
+      cells.push(h('td', { class: 'muted', text: nCol }));
+      cells.push(h('td', { class: 'muted', text: nCol }));
+      cells.push(h('td', { class: 'muted', text: '—' }));
+      cells.push(h('td', { class: 'muted', text: '—' }));
+      cells.push(h('td', { class: 'muted', text: '—' }));
+    }
+    tb.append(h('tr', {}, cells));
+  }
+
+  /* trip calculator */
+  const km = parseFloat($('pc-km').value) || 0, min = parseFloat($('pc-min').value) || 0;
+  const tc = $('trip-calc').querySelector('tbody');
+  tc.replaceChildren(...ECON_TIERS.map(key => {
+    const d = deriveFare(key, state);
+    if (!d) return h('tr', {}, h('td', { text: key }), h('td', { class: 'muted', text: 'enter inputs' }));
+    const fare = fareAt(d, km, min);
+    const raw = (d.baseP + Math.round(d.perKmP * km) + min * d.perMinP) / 100;
+    return h('tr', {}, h('td', { text: key }), h('td', { text: fmtT(fare) }),
+      h('td', { class: raw < d.floor ? 'neg' : 'muted', text: raw < d.floor ? 'floor applied' : '—' }));
+  }));
+
+  renderFareFuelChart();
+  renderTakeRates();
+
+  /* disagreement banner (Pricing tab only) */
+  const host = $('pricing-banner');
+  host.replaceChildren();
+  const diffs = [];
+  for (const key of ECON_TIERS) {
+    const dM = deriveFare(key, Object.assign({}, state, { pricingSet: 'matrix' }));
+    const t = state.tiers[key];
+    if (!dM || !t.app) continue;
+    const dA = deriveFare(key, Object.assign({}, state, { pricingSet: 'app' }));
+    const mRef = fareAt(dM, t.refKm, t.refMin), aRef = fareAt(dA, t.refKm, t.refMin);
+    const dRef = (mRef - aRef) / aRef * 100, dFloor = (dM.floor - dA.floor) / dA.floor * 100;
+    if (Math.abs(dRef) > 1 || Math.abs(dFloor) > 1) diffs.push(key + ' (ref ' + fmtPct(r2(dRef), 1) + ' / floor ' + fmtPct(r2(dFloor), 1) + ')');
+  }
+  if (diffs.length > 0) {
+    host.append(h('div', { class: 'banner-red' },
+      'Matrix and live pricing disagree — ' + diffs.length + ' tier(s) exceed 1%: ' + diffs.join(' · ') +
+      '. The matrix is the owner design model; app today shows what the app charges. Not reconciled — decision pending with the owner.'));
+  }
+  if (focusKey) {
+    const el = document.querySelector('[data-bind="' + focusKey + '"]');
+    if (el) { el.focus(); }
+  }
+}
+const num2 = (n) => Number(n).toFixed(2);
+
+function renderTakeRates() {
+  const table = $('take-rates');
+  table.querySelector('thead').replaceChildren(h('tr', {},
+    h('th', { text: 'Tier' }), h('th', { text: 'Ref fare ৳' }), h('th', { text: 'Driver gross @ref /mo' }),
+    h('th', { text: 'Package ৳/mo' }), h('th', { text: 'Effective take @ref' }),
+    h('th', { text: 'Driver gross @floor /mo' }), h('th', { text: 'Effective take @floor' })));
+  const tb = table.querySelector('tbody');
+  tb.replaceChildren();
+  for (const key of ECON_TIERS) {
+    const t = state.tiers[key];
+    const d = deriveFare(key, state);
+    if (!d || t.package == null || !hasRef(key)) {
+      tb.append(h('tr', {}, h('td', { text: key }), h('td', { class: 'muted', text: 'enter inputs' })));
+      continue;
+    }
+    const refFare = fareAt(d, t.refKm, t.refMin);
+    const grossR = refFare * (t.bench || 0) * state.workingDays;
+    const grossF = d.floor * (t.bench || 0) * state.workingDays;
+    tb.append(h('tr', {},
+      h('td', { text: key }), h('td', { text: fmtT(refFare) }), h('td', { text: fmtTK(grossR) }),
+      h('td', { text: fmtT(t.package, 0) }),
+      h('td', { text: fmtPct(t.package / grossR * 100, 1) }),
+      h('td', { text: fmtTK(grossF) }),
+      h('td', { text: fmtPct(t.package / grossF * 100, 1) })));
+  }
+}
+
+function renderFareFuelChart() {
+  const host = $('chart-farefuel');
+  const steps = [];
+  for (let f = 100; f <= 200.01; f += 10) steps.push(Math.round(f));
+  const keys = ['bike_basic', 'bike_standard', 'bike_plus', 'cng', 'car_economy'];
+  const series = keys.map((key, i) => ({
+    name: key, color: CHART_COLORS[i % CHART_COLORS.length],
+    values: steps.map(f => {
+      const cfgF = Object.assign(JSON.parse(JSON.stringify(state)), { pricingSet: 'matrix' });
+      cfgF.fuel = Object.assign({}, state.fuel);
+      cfgF.fuel[state.tiers[key].fuelKind] = f;
+      const d = deriveFare(key, cfgF);
+      const t = state.tiers[key];
+      return d && hasRef(key) ? fareAt(d, t.refKm, t.refMin) : null;
+    }),
+  }));
+  const svg = lineChart(steps.map(f => 'M' + f), series, { yLabel: '৳' });
+  const rise = series[0].values[10] && series[0].values[0] ? fmtPct((series[0].values[10] / series[0].values[0] - 1) * 100, 0) : '—';
+  host.replaceChildren(
+    h('div', { class: 'takeaway' }, 'Fare vs fuel price (100→200): bike_basic ref fare moves about ' + rise + ' across the band — linear in fuel.'),
+    svg, chartLegend(series));
+}
+
+/* ════════════ CHART BUILDERS (inline SVG) ════════════ */
+function chartFrame(W, Hh, ymin, ymax, xTickLabels, yFmt) {
+  const L = 52, R = 12, T = 10, B = 24;
+  const g = [];
+  const Y = (v) => T + (Hh - T - B) * (1 - (v - ymin) / (ymax - ymin));
+  for (let i = 0; i <= 4; i++) {
+    const v = ymin + (ymax - ymin) * i / 4;
+    g.push(s('line', { x1: L, y1: Y(v), x2: W - R, y2: Y(v), stroke: 'var(--line)', 'stroke-width': 1 }));
+    g.push(s('text', { x: L - 4, y: Y(v) + 3, 'text-anchor': 'end', 'font-size': 9, fill: 'var(--ink-2)' }, yFmt(v)));
+  }
+  const tickN = Math.min(6, xTickLabels.length);
+  const X = (i) => L + (xTickLabels.length === 1 ? (W - L - R) / 2 : i * (W - L - R) / (xTickLabels.length - 1));
+  for (let i = 0; i < tickN; i++) {
+    const idx = Math.round(i * (xTickLabels.length - 1) / Math.max(1, tickN - 1));
+    g.push(s('text', { x: X(idx), y: Hh - 6, 'text-anchor': 'middle', 'font-size': 9, fill: 'var(--ink-2)' }, xTickLabels[idx]));
+  }
+  return { g, X, Y, L, R, W, Hh };
+}
+function lineChart(xLabels, series, opts = {}) {
+  const W = 600, Hh = 250;
+  const all = series.flatMap(sr => sr.values).filter(v => v != null && isFinite(v));
+  if (opts.zeroLine) all.push(0);
+  let ymin = Math.min.apply(null, all.length ? all : [0]);
+  let ymax = Math.max.apply(null, all.length ? all : [1]);
+  if (ymin === ymax) { ymin -= 1; ymax += 1; }
+  const pad = (ymax - ymin) * 0.08 || 1;
+  ymin -= pad; ymax += pad;
+  const frame = chartFrame(W, Hh, ymin, ymax, xLabels, opts.yFmt || fmtTK);
+  const g = frame.g.slice();
+  if (opts.zeroLine && ymin < 0 && ymax > 0) {
+    g.push(s('line', { x1: frame.L, y1: frame.Y(0), x2: W - frame.R, y2: frame.Y(0), stroke: 'var(--ink-2)', 'stroke-width': 1, 'stroke-dasharray': '3,3' }));
+  }
+  for (const sr of series) {
+    const pts = [];
+    sr.values.forEach((v, i) => { if (v != null && isFinite(v)) pts.push(frame.X(i) + ',' + frame.Y(v)); });
+    g.push(s('polyline', { points: pts.join(' '), fill: 'none', stroke: sr.color, 'stroke-width': 2, 'stroke-dasharray': sr.dashed ? '5,3' : null }));
+    sr.values.forEach((v, i) => {
+      if (v == null || !isFinite(v)) return;
+      g.push(s('circle', { cx: frame.X(i), cy: frame.Y(v), r: 2, fill: sr.color }));
+    });
+  }
+  if (opts.markers) {
+    for (const mk of opts.markers) {
+      const idx = xLabels.indexOf('M' + mk.m) >= 0 ? xLabels.indexOf('M' + mk.m) : xLabels.indexOf(mk.m);
+      if (idx < 0) continue;
+      for (const sr of series) {
+        const v = sr.values[idx];
+        if (v == null) continue;
+        g.push(s('circle', { cx: frame.X(idx), cy: frame.Y(v), r: 4.5, fill: mk.color, stroke: 'var(--card)', 'stroke-width': 1.5 }));
+        g.push(s('text', { x: frame.X(idx), y: frame.Y(v) - 9, 'text-anchor': 'middle', 'font-size': 9.5, fill: 'var(--ink)', 'font-weight': 700 }, mk.label));
+      }
+    }
+  }
+  return s('svg', { viewBox: '0 0 ' + W + ' ' + Hh, role: 'img', 'aria-label': opts.yLabel || 'chart' }, g);
+}
+function stackedBarChart(xLabels, revSeries, costSeries) {
+  const W = 600, Hh = 250;
+  const revTot = xLabels.map((_, i) => revSeries.reduce((a, sr) => a + (sr.values[i] || 0), 0));
+  const costTot = xLabels.map((_, i) => costSeries.reduce((a, sr) => a + (sr.values[i] || 0), 0));
+  const ymax = Math.max.apply(null, revTot.concat(costTot).concat([1])) * 1.08;
+  const frame = chartFrame(W, Hh, 0, ymax, xLabels, fmtTK);
+  const g = frame.g.slice();
+  const slot = (W - frame.L - frame.R) / xLabels.length;
+  const bw = Math.max(2, Math.min(9, slot * 0.34));
+  xLabels.forEach((_, i) => {
+    const cx = frame.L + slot * i + slot / 2;
+    let acc = 0;
+    for (const sr of revSeries) {
+      const v = sr.values[i] || 0;
+      const y1 = frame.Y(acc + v), y2 = frame.Y(acc);
+      g.push(s('rect', { x: cx - bw - 1, y: y1, width: bw, height: Math.max(0.5, y2 - y1), fill: sr.color }));
+      acc += v;
+    }
+    let acc2 = 0;
+    for (const sr of costSeries) {
+      const v = sr.values[i] || 0;
+      const y1 = frame.Y(acc2 + v), y2 = frame.Y(acc2);
+      g.push(s('rect', { x: cx + 1, y: y1, width: bw, height: Math.max(0.5, y2 - y1), fill: sr.color, 'fill-opacity': 0.7 }));
+      acc2 += v;
+    }
+  });
+  return s('svg', { viewBox: '0 0 ' + W + ' ' + Hh, role: 'img', 'aria-label': 'revenue vs costs' }, g);
+}
+function stepChart(xLabels, series, opts = {}) {
+  const W = 600, Hh = 250;
+  const all = series.flatMap(sr => sr.values).filter(v => v != null && isFinite(v));
+  if (opts.hline != null) all.push(opts.hline);
+  const ymax = Math.max.apply(null, all.concat([1])) * 1.12;
+  const frame = chartFrame(W, Hh, 0, ymax, xLabels, fmtTK);
+  const g = frame.g.slice();
+  if (opts.hline != null) {
+    g.push(s('line', { x1: frame.L, y1: frame.Y(opts.hline), x2: W - frame.R, y2: frame.Y(opts.hline), stroke: 'var(--green)', 'stroke-width': 1.5, 'stroke-dasharray': '5,3' }));
+    g.push(s('text', { x: W - frame.R - 4, y: frame.Y(opts.hline) - 5, 'text-anchor': 'end', 'font-size': 9.5, fill: 'var(--green)' }, opts.hlineLabel || ''));
+  }
+  for (const sr of series) {
+    const pts = [];
+    sr.values.forEach((v, i) => {
+      if (v == null || !isFinite(v)) return;
+      const x = frame.X(i), y = frame.Y(v);
+      if (pts.length === 0) pts.push('M' + x + ',' + y);
+      else { pts.push('H' + x); pts.push('V' + y); }
+      if (i === sr.values.length - 1) pts.push('H' + (W - frame.R));
+    });
+    g.push(s('path', { d: pts.join(' '), fill: 'none', stroke: sr.color, 'stroke-width': 2 }));
+  }
+  return s('svg', { viewBox: '0 0 ' + W + ' ' + Hh, role: 'img', 'aria-label': 'calls vs allowance' }, g);
+}
+function tornadoChart(base, rows) {
+  const W = 600, rowH = 36, L = 150, R = 120, T = 8;
+  const Hh = T + rows.length * rowH + 10;
+  const vals = [];
+  for (const rr of rows) { vals.push(rr.lo.cum, rr.hi.cum, base.cum); }
+  let lo = Math.min.apply(null, vals), hi = Math.max.apply(null, vals);
+  if (lo === hi) { lo -= 1; hi += 1; }
+  const pad = (hi - lo) * 0.08 || 1; lo -= pad; hi += pad;
+  const X = (v) => L + (W - L - R) * (v - lo) / (hi - lo);
+  const g = [];
+  g.push(s('line', { x1: X(base.cum), y1: T, x2: X(base.cum), y2: Hh - 6, stroke: 'var(--ink-2)', 'stroke-width': 1, 'stroke-dasharray': '3,3' }));
+  g.push(s('text', { x: X(base.cum), y: Hh - 6, 'text-anchor': 'middle', 'font-size': 9, fill: 'var(--ink-2)' }, 'base ' + fmtTK(base.cum)));
+  rows.forEach((rr, i) => {
+    const y = T + i * rowH + rowH / 2;
+    const a = Math.min(rr.lo.cum, rr.hi.cum), b = Math.max(rr.lo.cum, rr.hi.cum);
+    g.push(s('text', { x: 6, y: y + 3, 'text-anchor': 'start', 'font-size': 10, fill: 'var(--ink)' }, rr.name));
+    g.push(s('line', { x1: L, y1: y, x2: W - R, y2: y, stroke: 'var(--line)', 'stroke-width': 1 }));
+    g.push(s('rect', { x: X(a), y: y - 7, width: Math.max(2, X(b) - X(a)), height: 14, rx: 3, fill: 'var(--accent)', 'fill-opacity': 0.55 }));
+    g.push(s('text', { x: W - R + 4, y: y + 3, 'text-anchor': 'start', 'font-size': 8.5, fill: 'var(--ink-2)' }, fmtTK(rr.lo.cum) + ' … ' + fmtTK(rr.hi.cum)));
+  });
+  return s('svg', { viewBox: '0 0 ' + W + ' ' + Hh, role: 'img', 'aria-label': 'tornado sensitivity' }, g);
+}
+function chartLegend(series) {
+  return h('div', { class: 'chart-legend' }, series.map(sr => h('span', {}, h('span', { class: 'swatch', style: 'background:' + sr.color }), sr.name)));
+}
+
+/* ════════════ DASHBOARD ════════════ */
+function runSim() { return simulate(state); }
+
+const CHART_COLORS = ['#2f6fd0', '#c0392b', '#1d8a4e', '#b9770e', '#7d5bd0', '#0f8a8a'];
+
+function kpiLab(t) { return h('div', { class: 'lab', text: t }); }
+function kpiVal(t) { return h('div', { class: 'val', text: t }); }
+function kpiSub(t) { return h('div', { class: 'sub', text: t }); }
+function kpiTile(lab, val, cls, sub) { return h('div', { class: 'kpi ' + (cls || '') }, kpiLab(lab), kpiVal(val), sub ? kpiSub(sub) : null); }
+
+function renderDashboard() {
+  const sim = runSim();
+  const M = sim.months;
+  const sm = sim.summary;
+  const showPartner = state.view !== 'owner';
+  const showOwner = state.view !== 'partner';
+  const needInputs = sm.missingCosts.length > 0;
+
+  const hb = $('honesty-banner');
+  hb.replaceChildren();
+  hb.append(h('div', { class: 'banner-warn' }, 'Driver numbers (scenario checkpoints, churn, productivity ramp) are illustrative placeholders, not forecasts. Calls per ride in use: ' + state.activeCallsMode + ' (' + (state.callsPerRide[state.activeCallsMode] != null ? state.callsPerRide[state.activeCallsMode] : 'not set, conservative used') + '), a design-time estimate until measured. Nothing is launched.'));
+  if (needInputs) {
+    hb.append(h('div', { class: 'banner-warn' },
+      sm.missingCosts.length + ' inputs are not entered. Results exclude them — profit figures are before unentered costs and revenue treatment. Missing: ' + sm.missingCosts.join(', ') + '.'));
+  }
+
+  const kpis = $('kpi-row');
+  kpis.replaceChildren();
+  kpis.append(needInputs
+    ? kpiTile('Viability status', 'Needs cost inputs', 'amber', sm.missingCosts.length + ' inputs missing — enter them in Assumptions')
+    : (sm.partnerPayback != null && sm.partnerPayback <= state.horizon)
+      ? kpiTile('Viability status', 'Payback mo ' + sm.partnerPayback, 'good', 'partner, within horizon')
+      : kpiTile('Viability status', 'No payback', 'bad', 'within ' + state.horizon + ' months'));
+  if (showPartner) {
+    kpis.append(kpiTile('Partner break-even month', needInputs ? 'needs inputs' : (sm.partnerBreakEven != null ? 'mo ' + sm.partnerBreakEven : 'none in horizon'), needInputs ? 'amber' : '', 'first month partner net ≥ 0'));
+    kpis.append(kpiTile('Partner peak funding need', needInputs ? 'needs inputs' : fmtTK(sm.partnerPeakFunding), needInputs ? 'amber' : '', 'most negative cumulative cash'));
+  }
+  if (showOwner) kpis.append(kpiTile('Owner net @ month 24', fmtTK(sm.ownerNet24), needInputs ? 'amber' : (sm.ownerNet24 == null ? '' : (sm.ownerNet24 >= 0 ? 'good' : 'bad')), needInputs ? 'before unentered costs' : 'revenue share − owner costs (incl. map)'));
+  if (showPartner) kpis.append(kpiTile('Partner margin before people & marketing', fmtTK(sm.partnerMargin12) + ' /mo @ 12', '', 'partner share − partner map cost; horizon total ' + fmtTK(sm.partnerMarginTotal)));
+  kpis.append(kpiTile('Paying drivers @ month 12', fmtN(sm.driversAt12), 'amber', 'illustrative placeholder, not a forecast'));
+  const covOf = (c) => c ? state.allowanceCalls / c / state.daysPerMonth : null;
+  kpis.append(kpiTile('Allowance coverage', fmtN(covOf(state.callsPerRide.conservative)) + '–' + fmtN(covOf(state.callsPerRide.trace)) + ' rides/day', '', 'conservative ' + state.callsPerRide.conservative + ' → trace ' + state.callsPerRide.trace + ' calls/ride (trace unverified)' + (state.callsPerRide.measured ? '; measured ' + fmtN(covOf(state.callsPerRide.measured)) + ' rides/day' : '')));
+
+  const mLabels = M.map(x => 'M' + x.m);
+  const driversSeries = [];
+  driversSeries.push({ name: 'Paying drivers', color: CHART_COLORS[0], values: M.map(x => x.P) });
+  driversSeries.push({ name: 'Rides / day', color: CHART_COLORS[3], values: M.map(x => x.ridesDay), dashed: true });
+  const last = M[M.length - 1];
+  $('chart-drivers').replaceChildren(
+    h('div', { class: 'takeaway' }, 'Drivers grow from ' + fmtN(M[0].P) + ' to ' + fmtN(last.P) + ' over ' + M.length + ' months; rides/day end at ' + fmtN(last.ridesDay) + ' (' + fmtN(last.ridersDay) + ' active riders/day).'),
+    lineChart(mLabels, driversSeries, { yLabel: 'drivers / rides per day', yFmt: fmtN }),
+    chartLegend(driversSeries));
+
+  const revSeries = [];
+  if (showPartner) revSeries.push({ name: 'Partner share', color: CHART_COLORS[0], values: M.map(x => x.partnerShare) });
+  if (showOwner) revSeries.push({ name: 'Owner share', color: CHART_COLORS[4], values: M.map(x => x.ownerShare) });
+  const costSeries = [];
+  if (showPartner) costSeries.push({ name: 'Partner costs', color: CHART_COLORS[1], values: M.map(x => x.partnerCosts) });
+  if (showOwner) costSeries.push({ name: 'Owner costs', color: CHART_COLORS[3], values: M.map(x => x.ownerCosts) });
+  $('chart-revcost').replaceChildren(
+    h('div', { class: 'takeaway' }, needInputs
+      ? 'Revenue vs costs — excludes ' + sm.missingCosts.length + ' unentered cost inputs'
+      : 'Revenue vs costs — partner nets ' + fmtTK(M[M.length - 1].partnerNet) + '/month at month ' + M.length),
+    stackedBarChart(mLabels, revSeries, costSeries),
+    chartLegend(revSeries.concat(costSeries)));
+
+  const cashSeries = [];
+  if (showPartner) cashSeries.push({ name: 'Partner cumulative', color: CHART_COLORS[0], values: M.map(x => x.cumP) });
+  if (showOwner) cashSeries.push({ name: 'Owner cumulative', color: CHART_COLORS[4], values: M.map(x => x.cumO) });
+  const markers = [];
+  if (!needInputs && showPartner && sm.partnerBreakEven != null) markers.push({ m: sm.partnerBreakEven, label: 'break-even', color: CHART_COLORS[2] });
+  if (!needInputs && showPartner && sm.partnerPayback != null) markers.push({ m: sm.partnerPayback, label: 'payback', color: CHART_COLORS[0] });
+  const cashTakeaway = needInputs
+    ? 'Cumulative cash — enter partner costs to size the funding need'
+    : (showPartner ? 'Partner needs about ' + fmtTK(sm.partnerPeakFunding) + ' before turning cash positive' : 'Owner cumulative cash');
+  $('chart-cash').replaceChildren(
+    h('div', { class: 'takeaway' }, cashTakeaway),
+    lineChart(mLabels, cashSeries, { zeroLine: true, markers, yLabel: 'cumulative ৳' }),
+    chartLegend(cashSeries));
+
+  const callSeries = [{ name: 'Map calls /mo', color: CHART_COLORS[1], values: M.map(x => x.calls) }];
+  const paygMonths = M.filter(x => x.plan === 'PAYG').length;
+  $('chart-calls').replaceChildren(
+    h('div', { class: 'takeaway' }, 'Map calls vs the owner allowance — ' + paygMonths + ' of ' + M.length + ' month(s) bill on Pay-As-You-Go; cheaper plans take over as volume crosses included tiers.'),
+    stepChart(mLabels, callSeries, { hline: state.allowanceCalls, hlineLabel: 'owner allowance (' + fmtN(state.allowanceCalls) + ' calls)' }),
+    chartLegend(callSeries));
+
+  renderScenarioCompare();
+  renderTornado();
+  renderMonthlyTable(sim);
+}
+
+function renderScenarioCompare() {
+  const host = $('scenario-compare');
+  host.replaceChildren(h('h3', {}, 'Scenario comparison ', h('span', { class: 'muted', style: 'font-weight:400;font-size:0.78rem' }, '— driver checkpoints, churn and ramp differ; illustrative placeholders, never forecasts')));
+  const tbl = h('table', { class: 'fin' });
+  tbl.append(h('thead', {}, h('tr', {},
+    h('th', { text: 'Scenario' }), h('th', { text: 'Revenue @12' }), h('th', { text: 'Revenue @24' }),
+    h('th', { text: 'Partner net @24' }), h('th', { text: 'Owner net @24' }),
+    h('th', { text: 'Partner peak funding' }), h('th', { text: 'Break-even' }))));
+  const tb = h('tbody');
+  for (const name of ['pilot', 'base', 'growth']) {
+    const cfg = JSON.parse(JSON.stringify(state));
+    const def = CONFIG.scenarios[name];
+    cfg.drivers = { checkpoints: Object.assign({}, def.checkpoints) };
+    cfg.churnPct = def.churnPct;
+    cfg.productivity = Object.assign({}, def.productivity);
+    const sim = simulate(cfg);
+    const at = (m) => sim.months[m - 1];
+    const be = sim.summary.missingCosts.length ? 'needs inputs' : (sim.summary.partnerBreakEven != null ? 'mo ' + sim.summary.partnerBreakEven : 'none');
+    tb.append(h('tr', {},
+      h('td', { text: def.label }),
+      h('td', { text: at(12) ? fmtTK(at(12).revenue) : '—' }),
+      h('td', { text: at(24) ? fmtTK(at(24).revenue) : '—' }),
+      h('td', { text: at(24) ? fmtTK(at(24).partnerNet) : '—' }),
+      h('td', { text: at(24) ? fmtTK(at(24).ownerNet) : '—' }),
+      h('td', { text: sim.summary.missingCosts.length ? 'needs inputs' : fmtTK(sim.summary.partnerPeakFunding) }),
+      h('td', { text: be })));
+  }
+  tbl.append(tb);
+  host.append(h('div', { class: 'table-scroll' }, tbl));
+}
+
+function renderTornado() {
+  const host = $('tornado');
+  const params = [
+    { name: 'Paying drivers', apply: (cfg, f) => { for (const m of Object.keys(cfg.drivers.checkpoints)) cfg.drivers.checkpoints[m] = Math.max(1, Math.round(cfg.drivers.checkpoints[m] * f)); } },
+    { name: 'Churn', apply: (cfg, f) => { cfg.churnPct = Math.max(0, cfg.churnPct * f); } },
+    { name: 'Package price', apply: (cfg, f) => { for (const k of TIER_KEYS) if (cfg.tiers[k].package) cfg.tiers[k].package = Math.round(cfg.tiers[k].package * f); } },
+    { name: 'Rides per driver', apply: (cfg, f) => { cfg.productivity.startPct = Math.round(cfg.productivity.startPct * f); } },
+    { name: 'Calls per ride', apply: (cfg, f) => { for (const k of Object.keys(cfg.callsPerRide)) if (cfg.callsPerRide[k]) cfg.callsPerRide[k] = r2(cfg.callsPerRide[k] * f); } },
+    { name: 'Driver CAC', apply: (cfg, f) => { if (cfg.costs.partner.cacPerGrossAdd != null) cfg.costs.partner.cacPerGrossAdd = Math.round(cfg.costs.partner.cacPerGrossAdd * f); } },
+    { name: 'Support salary', apply: (cfg, f) => { if (cfg.costs.partner.supportSalaryPerAgent != null) cfg.costs.partner.supportSalaryPerAgent = Math.round(cfg.costs.partner.supportSalaryPerAgent * f); } },
+  ];
+  const baseCfg = JSON.parse(JSON.stringify(state));
+  baseCfg.horizon = Math.max(24, state.horizon);
+  const runPair = (c) => {
+    const sim = simulate(c);
+    const m24 = sim.months[23];
+    return { cum: m24 ? m24.cumP : 0, peak: sim.summary.partnerPeakFunding != null ? sim.summary.partnerPeakFunding : 0 };
+  };
+  const base = runPair(baseCfg);
+  const rows = params.map(p => {
+    const loCfg = JSON.parse(JSON.stringify(baseCfg)); p.apply(loCfg, 0.8);
+    const hiCfg = JSON.parse(JSON.stringify(baseCfg)); p.apply(hiCfg, 1.2);
+    return { name: p.name, lo: runPair(loCfg), hi: runPair(hiCfg) };
+  });
+  const missing = simulate(baseCfg).summary.missingCosts.length > 0;
+  host.replaceChildren(
+    h('h3', {}, 'Sensitivity at month 24 ', h('span', { class: 'muted', style: 'font-weight:400;font-size:0.78rem' }, '— ±20% per input; partner cumulative net, peak funding in tooltip text')),
+    missing ? h('div', { class: 'banner-warn' }, 'Partner cost inputs are missing — the tornado shows map-cost-only sensitivity.') : null,
+    tornadoChart(base, rows),
+    h('div', { class: 'note muted' }, 'Each bar spans the ±20% range of that input for partner cumulative net at month 24; the dashed line is the current base. Peak funding per variant: ' + rows.map(rr => rr.name + ' ' + fmtTK(Math.max(rr.lo.peak, rr.hi.peak))).join(' · ') + '.')
+  );
+}
+
+function renderMonthlyTable(sim) {
+  const host = $('monthly-table');
+  const M = sim.months;
+  const yearly = state.monthlyYearly;
+  const row = (label, x) => h('tr', {},
+    h('td', { text: label }), h('td', { text: fmtN(x.P) }), h('td', { text: fmtN(x.adds) }),
+    h('td', { text: fmtN(x.ridesDay) }), h('td', { text: fmtN(x.ridersDay) }), h('td', { text: fmtN(x.calls) }),
+    h('td', { text: x.plan }), h('td', { text: fmtTK(x.revenue) }), h('td', { text: fmtTK(x.partnerShare) }),
+    h('td', { text: fmtTK(x.ownerShare) }), h('td', { text: fmtTK(x.partnerCosts) }), h('td', { text: fmtTK(x.ownerCosts) }),
+    h('td', { class: x.partnerNet >= 0 ? 'pos' : 'neg', text: fmtTK(x.partnerNet) }),
+    h('td', { class: x.ownerNet >= 0 ? 'pos' : 'neg', text: fmtTK(x.ownerNet) }),
+    h('td', { text: fmtTK(x.cumP) }), h('td', { text: fmtTK(x.cumO) }));
+  const tbl = h('table', { class: 'fin' });
+  tbl.append(h('thead', {}, h('tr', {},
+    h('th', { text: 'Month' }), h('th', { text: 'Drivers' }), h('th', { text: 'Gross adds' }), h('th', { text: 'Rides/day' }),
+    h('th', { text: 'Riders/day' }), h('th', { text: 'Calls' }), h('th', { text: 'Plan' }), h('th', { text: 'Revenue' }),
+    h('th', { text: 'Partner share' }), h('th', { text: 'Owner share' }), h('th', { text: 'Partner costs' }), h('th', { text: 'Owner costs' }),
+    h('th', { text: 'Partner net' }), h('th', { text: 'Owner net' }), h('th', { text: 'Partner cum' }), h('th', { text: 'Owner cum' }))));
+  const tb = h('tbody');
+  if (yearly) {
+    for (let y = 1; y * 12 - 11 <= M.length + 11; y++) {
+      const seg = M.slice((y - 1) * 12, y * 12);
+      if (seg.length === 0) break;
+      const agg = (f) => seg.reduce((a, x) => a + f(x), 0);
+      const lastS = seg[seg.length - 1];
+      tb.append(row('Year ' + y + ' (M' + seg[0].m + '–' + lastS.m + ')', {
+        P: lastS.P, adds: agg(x => x.adds), ridesDay: lastS.ridesDay, ridersDay: lastS.ridersDay,
+        calls: agg(x => x.calls), plan: lastS.plan, revenue: agg(x => x.revenue),
+        partnerShare: agg(x => x.partnerShare), ownerShare: agg(x => x.ownerShare),
+        partnerCosts: agg(x => x.partnerCosts), ownerCosts: agg(x => x.ownerCosts),
+        partnerNet: agg(x => x.partnerNet), ownerNet: agg(x => x.ownerNet),
+        cumP: lastS.cumP, cumO: lastS.cumO,
+      }));
+    }
+  } else {
+    for (const x of M) tb.append(row('M' + x.m, x));
+  }
+  tbl.append(tb);
+  host.replaceChildren(tbl);
+}
+
+/* ════════════ UNIT ECONOMICS TAB ════════════ */
+/* partner and owner economics per driver per month — the same rules as simulate():
+   the partner keeps 100% of revenue inside the owner allowance and 50% above it, and pays the
+   pro-rata share of the map bill; SMS and server are owner costs. */
+function unitEcon(key, ctx) { return perDriverEcon(state, key, ctx); }
+
+function renderUnit() {
+  const sim = runSim();
+  const m12 = sim.months[11];
+  const callsM12 = m12 ? m12.calls : 0;
+  const plan = cheapestPlan(callsM12, state);
+  const effCall = callsM12 > 0 ? plan.cost / callsM12 : 0;
+  const cpr = state.callsPerRide[state.activeCallsMode] != null ? state.callsPerRide[state.activeCallsMode] : state.callsPerRide.conservative;
+  const oc = state.costs.owner;
+  const f12 = m12 && m12.f != null ? m12.f : 1;
+  const ctx = { f: f12, cpr, effCall };
+  const smsDriverMo = oc.smsPerMessage != null && oc.otpPerActiveUserPerMonth != null ? oc.smsPerMessage * oc.otpPerActiveUserPerMonth : null;
+  const table = $('unit-table');
+  table.querySelector('thead').replaceChildren(h('tr', {},
+    h('th', { text: 'Tier' }), h('th', { text: 'Rides /mo' }), h('th', { text: 'Driver gross @ref /mo' }),
+    h('th', { text: 'Package ৳/mo' }), h('th', { text: 'Effective take @ref' }),
+    h('th', { text: 'Platform revenue /ride' }), h('th', { text: 'Partner share /driver /mo' }),
+    h('th', { text: 'Partner map /driver /mo' }), h('th', { text: 'Partner net /driver /mo' }),
+    h('th', { text: 'Drivers per 10K partner cost' }), h('th', { text: 'Owner SMS /driver /mo' })));
+  const tb = h('tbody');
+  for (const key of ECON_TIERS) {
+    const t = state.tiers[key];
+    const e = unitEcon(key, ctx);
+    const grossR = e.grossRef;
+    const take = grossR && t.package != null ? t.package / grossR * 100 : null;
+    const platRide = e.rev != null && e.rMo > 0 ? e.rev / e.rMo : null;
+    const per10k = e.net != null && e.net > 0 ? Math.ceil(10000 / e.net) : '—';
+    tb.append(h('tr', {},
+      h('td', { text: key }), h('td', { text: fmtN(e.rMo) }),
+      h('td', { text: grossR != null ? fmtTK(grossR) : '—' }),
+      h('td', { text: t.package != null ? fmtT(t.package, 0) : '—' }),
+      h('td', { text: take != null ? fmtPct(take, 1) : '—' }),
+      h('td', { text: platRide != null ? fmtT(platRide) : '—' }),
+      h('td', { text: e.partnerRev != null ? fmtTK(e.partnerRev) : '—' }),
+      h('td', { text: e.partnerMap != null ? fmtTK(e.partnerMap) : '—' }),
+      h('td', { class: e.net != null && e.net >= 0 ? 'pos' : 'neg', text: e.net != null ? fmtTK(e.net) : '—' }),
+      h('td', { text: String(per10k) }),
+      h('td', {}, smsDriverMo != null ? fmtTK(smsDriverMo) : h('span', { class: 'muted', text: 'enter value' }))));
+  }
+  table.querySelector('tbody').replaceChildren(tb);
+  set('unit-note', 'At month-12 scenario volume (' + fmtN(callsM12) + ' calls/mo) the cheapest Barikoi plan is ' + plan.key + '; effective cost per call ' + fmtT(effCall, 3) + '. Allowance share f = ' + fmtPct(f12 * 100, 1) + '. Partner share = revenue × (f + 0.5 × (1 − f)); partner map cost = the pro-rata share of the plan bill (calls above the owner allowance); SMS and server are owner costs. Partner net per driver = partner share − partner map cost. Drivers per 10K = ceil(10,000 ÷ partner net). Same rules as the Dashboard and the Ladder.');
+
+  /* waterfall */
+  const sel = $('wf-tier');
+  if (sel.options.length === 0) {
+    for (const key of ECON_TIERS) sel.append(h('option', { value: key, text: key }));
+    sel.value = 'bike_basic';
+    sel.addEventListener('change', renderUnit);
+  }
+  const key = sel.value;
+  const t = state.tiers[key];
+  const d = deriveFare(key, state);
+  const wf = $('waterfall');
+  if (!d || !hasRef(key) || !(t.bench > 0)) {
+    wf.replaceChildren(h('div', { class: 'note muted' }, 'Enter tier inputs and package price to draw the waterfall.'));
+    return;
+  }
+  const refFare = fareAt(d, t.refKm, t.refMin);
+  const rMo = (t.bench || 0) * state.workingDays;
+  const gross = refFare * rMo;
+  const pkg = t.package;
+  const e = unitEcon(key, ctx);
+  if (e.rev == null) {
+    wf.replaceChildren(h('div', { class: 'note muted' }, 'Enter the inputs this tier needs (package, benchmark rides, commission rate if used) to draw the waterfall.'));
+    return;
+  }
+  const ownerD = e.ownerRev;
+  const mapD = e.partnerMap;
+  const net = e.net;
+  const bars = [
+    { label: 'Platform revenue', v: e.rev, base: 0, color: CHART_COLORS[0] },
+    { label: '− owner share', v: -ownerD, base: e.rev, color: CHART_COLORS[4] },
+    { label: '− partner map', v: -mapD, base: e.partnerRev, color: CHART_COLORS[1] },
+    { label: '= partner net', v: net, base: 0, color: CHART_COLORS[2] },
+  ];
+  const W = 560, Hh = 200, L = 8, B = 30, T = 12;
+  const ymax = Math.max(e.rev, 1) * 1.15;
+  const Y = (v) => T + (Hh - T - B) * (1 - v / ymax);
+  const bw = 90, gap = 24;
+  const g = [];
+  bars.forEach((b2, i) => {
+    const x = L + 20 + i * (bw + gap);
+    const v = Math.abs(b2.v);
+    const yTop = Y(b2.v >= 0 ? b2.base + v : b2.base);
+    const yBot = Y(b2.v >= 0 ? b2.base : b2.base - v);
+    g.push(s('rect', { x, y: yTop, width: bw, height: Math.max(2, yBot - yTop), fill: b2.color, rx: 3 }));
+    g.push(s('text', { x: x + bw / 2, y: yTop - 5, 'text-anchor': 'middle', 'font-size': 10, fill: 'var(--ink)' }, fmtTK(b2.v)));
+    g.push(s('text', { x: x + bw / 2, y: Hh - 12, 'text-anchor': 'middle', 'font-size': 9.5, fill: 'var(--ink-2)' }, b2.label));
+  });
+  wf.replaceChildren(
+    h('div', { class: 'takeaway' }, key + ': platform revenue ' + fmtTK(e.rev) + '/mo → partner share ' + fmtTK(e.partnerRev) + ' → partner net ' + fmtTK(net) + '/mo after the pro-rata map cost (' + fmtTK(mapD) + ') at benchmark ' + (t.bench || 0) + ' rides/day × ' + state.workingDays + ' days. SMS and server are owner costs.'),
+    s('svg', { viewBox: '0 0 ' + W + ' ' + Hh, role: 'img', 'aria-label': 'waterfall' }, g),
+    h('div', { class: 'note muted' }, 'Driver gross at reference trip: ' + fmtTK(gross) + '/mo — package take rate ' + (gross > 0 && pkg != null ? fmtPct(pkg / gross * 100, 1) : '—') + '.'));
+}
+
+/* ════════════ LADDER TAB ════════════ */
+function renderLadder() {
+  const mixKeys = TIER_KEYS;
+  const mixSum = mixKeys.reduce((a, k) => a + (state.tiers[k].mixPct || 0), 0) || 100;
+  const blendPackage = mixKeys.reduce((a, k) => a + (state.tiers[k].mixPct || 0) / mixSum * (state.tiers[k].package || 0), 0);
+  const blendRidesMo = mixKeys.reduce((a, k) => a + (state.tiers[k].mixPct || 0) / mixSum * ((state.tiers[k].bench || 0) * state.workingDays), 0);
+  for (const [mode, tblId] of [['trace', 'ladder-trace'], ['conservative', 'ladder-cons']]) {
+    const cpr = state.callsPerRide[mode];
+    const table = $(tblId);
+    table.querySelector('thead').replaceChildren(h('tr', {},
+      h('th', { text: 'Paying drivers' }), h('th', { text: 'Calls /mo' }), h('th', { text: 'Plan' }),
+      h('th', { text: 'Map cost /mo (gross)' }), h('th', { text: 'Partner map (pro-rata)' }), h('th', { text: 'Owner map' }),
+      h('th', { text: 'Partner share /mo' }), h('th', { text: 'Left /mo' })));
+    const tb = h('tbody');
+    for (const n of state.ladderSizes) {
+      if (cpr == null || blendPackage <= 0) { tb.append(h('tr', {}, h('td', { text: fmtN(n) }), h('td', { colspan: 7, class: 'muted', text: 'enter value' }))); continue; }
+      const rides = n * blendRidesMo;
+      const calls = rides * cpr;
+      const plan = cheapestPlan(calls, state);
+      const f = Math.min(1, ((state.allowanceCalls / cpr) || 0) / (rides || 1));
+      const revenue = adjustRevenue(n * blendPackage, state);
+      const partnerShare = revenue * f + 0.5 * revenue * (1 - f);
+      const covered = Math.min(calls, state.allowanceCalls);
+      const partnerMap = plan.cost * (calls - covered) / (calls || 1);
+      const ownerMap = plan.cost - partnerMap;
+      const left = partnerShare - partnerMap;
+      tb.append(h('tr', {},
+        h('td', { text: fmtN(n) }), h('td', { text: fmtN(calls) }), h('td', { text: plan.key }),
+        h('td', { text: fmtTK(plan.cost) }), h('td', { text: fmtTK(partnerMap) }), h('td', { text: fmtTK(ownerMap) }),
+        h('td', { text: fmtTK(partnerShare) }), h('td', { class: 'pos', text: fmtTK(left) })));
+    }
+    table.querySelector('tbody').replaceChildren(tb);
+  }
+}
+
+/* ════════════ SOURCES TAB ════════════ */
+function renderSources() {
+  const checks = consistencyChecks();
+  const pass = checks.filter(c => c.pass).length;
+  const line = $('consistency-line');
+  line.replaceChildren(h('div', { class: 'check-line' },
+    h('b', { text: pass + ' of ' + checks.length + ' checks pass' }),
+    h('span', { class: 'muted' }, ' — internal consistency only (page vs its own config).')));
+  const det = $('consistency-details');
+  const tbl = h('table', { class: 'fin' });
+  tbl.append(h('thead', {}, h('tr', {}, h('th', { text: 'Check' }), h('th', { text: 'Result' }))));
+  const tb = h('tbody');
+  for (const c of checks) tb.append(h('tr', {}, h('td', { text: c.name }), h('td', { class: c.pass ? 'pass' : 'fail', text: c.pass ? 'PASS' : 'FAIL' })));
+  tbl.append(tb);
+  det.replaceChildren(tbl);
+
+  const questions = [
+    ['Does the 20K-call allowance reset monthly, or is it a one-time pilot allowance? (toggle in Assumptions; default monthly)', 'tbd'],
+    ['All owner cost inputs: server/hosting, SMS per message, OTP frequencies, domain & store fees', 'tbd'],
+    ['All partner cost inputs: driver CAC, rider marketing, support ratio and salary', 'tbd'],
+    ['Measured calls per ride', 'tbd'],
+    ['Incumbent commission % (rider price competitiveness check)', 'tbd'],
+    ['e_three_wheeler inputs: electricity price, km per kWh, MV factor, per-minute rate, reference trip, Uber ref', 'tbd'],
+    ['Meaning of the MV factor', 'tbd'],
+    ['Matrix vs app-pricing reconciliation (8/8 tiers >1% apart; banner on the Pricing tab)', 'tbd'],
+    ['car_compact: product-input sentinel in seeders; dev-DB row car_economy-identical with no repo source', 'tbd'],
+    ['Barikoi plan prices as listed in the old report — unverified', 'seed'],
+    ['Trace figure 4.84 calls/ride: unverified audit note', 'code'],
+    ['VAT and gateway-fee treatment (revenue shown ex-VAT)', 'tbd'],
+  ];
+  const reg = $('tbd-register');
+  reg.replaceChildren(h('ul', { style: 'margin-left:1.1rem' }, questions.map(q => h('li', { style: 'margin:0.22rem 0' }, h('span', { class: 'dot ' + q[1], title: dotTitle(q[1]) }), ' ' + q[0]))));
+}
+
+/* ════════════ MASTER RENDER ════════════ */
+function render() {
+  syncTopbar();
+  if (state.activeTab === 'dashboard') renderDashboard();
+  else if (state.activeTab === 'pricing') renderPricing();
+  else if (state.activeTab === 'unit') renderUnit();
+  else if (state.activeTab === 'ladder') renderLadder();
+  else if (state.activeTab === 'sources') renderSources();
+}
+function syncTopbar() {
+  document.querySelectorAll('[data-scenario]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.scenario === state.scenario)));
+  document.querySelectorAll('[data-monetization]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.monetization === state.monetization)));
+  document.querySelectorAll('[data-view]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.view === state.view)));
+  const hz = $('in-horizon');
+  if (document.activeElement !== hz) hz.value = String(state.horizon);
+  $('btn-present').setAttribute('aria-pressed', String(!!state.presenting));
+  $('btn-dark').setAttribute('aria-pressed', String(!!state.dark));
+  document.body.classList.toggle('presenting', !!state.presenting);
+  document.body.classList.toggle('dark', !!state.dark);
+}
+function renderTab(tab) {
+  if (tab === 'dashboard') renderDashboard();
+  else if (tab === 'pricing') renderPricing();
+  else if (tab === 'unit') renderUnit();
+  else if (tab === 'ladder') renderLadder();
+  else if (tab === 'sources') renderSources();
+}
+
+/* ════════════ BOOT + CONTROLS ════════════ */
+function applyScenario(name) {
+  if (name === 'custom') { state.scenario = 'custom'; syncTopbar(); render(); return; }
+  const def = CONFIG.scenarios[name];
+  if (!def) return;
+  state.scenario = name;
+  state.drivers = { checkpoints: Object.assign({}, def.checkpoints) };
+  state.churnPct = def.churnPct;
+  state.productivity = Object.assign({}, def.productivity);
+  syncTopbar();
+  buildAssumptions();
+  render();
+}
+function boot() {
+  buildAssumptions();
+  buildPricingStatic();
+  render();
+
+  document.querySelectorAll('[data-scenario]').forEach(b => b.addEventListener('click', () => applyScenario(b.dataset.scenario)));
+  document.querySelectorAll('[data-monetization]').forEach(b => b.addEventListener('click', () => { state.monetization = b.dataset.monetization; syncTopbar(); render(); }));
+  document.querySelectorAll('[data-view]').forEach(b => b.addEventListener('click', () => { state.view = b.dataset.view; syncTopbar(); render(); }));
+  document.querySelectorAll('.tabstrip [data-tab]').forEach(b => b.addEventListener('click', () => {
+    state.activeTab = b.dataset.tab;
+    document.querySelectorAll('.tabstrip [data-tab]').forEach(x => x.setAttribute('aria-selected', String(x.dataset.tab === state.activeTab)));
+    document.querySelectorAll('section[data-tab]').forEach(x => x.classList.toggle('active', x.dataset.tab === state.activeTab));
+    renderTab(state.activeTab);
+  }));
+  $('in-horizon').addEventListener('input', (e) => {
+    const n = parseInt(e.target.value, 10);
+    if (isFinite(n)) state.horizon = Math.min(60, Math.max(12, n));
+    render();
+  });
+  $('btn-present').addEventListener('click', () => {
+    state.presenting = !state.presenting;
+    syncTopbar();
+    if (state.presenting && state.activeTab === 'sources') document.querySelector('.tabstrip [data-tab="dashboard"]').click();
+  });
+  $('btn-dark').addEventListener('click', () => {
+    state.dark = !state.dark;
+    document.body.classList.toggle('dark', state.dark);
+    syncTopbar();
+    render();
+  });
+  $('btn-reset').addEventListener('click', () => {
+    const ui = { scenario: state.scenario, view: state.view, activeTab: state.activeTab, monthlyYearly: state.monthlyYearly };
+    state = JSON.parse(JSON.stringify(CONFIG));
+    state.scenario = ui.scenario; state.view = ui.view; state.activeTab = ui.activeTab; state.monthlyYearly = ui.monthlyYearly;
+    buildAssumptions();
+    buildPricingStatic();
+    render();
+  });
+  $('btn-export').addEventListener('click', () => {
+    const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+    const a = h('a', { href: URL.createObjectURL(blob), download: 'ride-simulator-inputs.json' });
+    a.click();
+    URL.revokeObjectURL(a.href);
+  });
+  $('btn-import').addEventListener('click', () => $('file-import').click());
+  $('file-import').addEventListener('change', (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const imported = JSON.parse(String(reader.result));
+        if (!imported || typeof imported !== 'object' || !imported.tiers) throw new Error('not a simulator export');
+        const ui = { scenario: state.scenario, view: state.view, activeTab: state.activeTab, monthlyYearly: state.monthlyYearly };
+        const keep = { presenting: state.presenting, dark: state.dark };
+        state = mergeOverDefaults(imported);
+        state.presenting = keep.presenting; state.dark = keep.dark;
+        state.scenario = imported.scenario || ui.scenario;
+        state.view = imported.view || ui.view;
+        state.activeTab = ui.activeTab;
+        state.monthlyYearly = ui.monthlyYearly;
+        buildAssumptions();
+        buildPricingStatic();
+        render();
+      } catch (err) {
+        alert('Import failed: ' + err.message);
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  });
+  $('btn-print').addEventListener('click', () => window.print());
+  $('btn-yearly').addEventListener('click', (e) => {
+    state.monthlyYearly = !state.monthlyYearly;
+    e.currentTarget.setAttribute('aria-pressed', String(state.monthlyYearly));
+    renderMonthlyTable(runSim());
+  });
+}
+
+boot();
+</script>
+</body>
+</html>

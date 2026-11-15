@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="560" viewBox="0 0 1800 560">
+<defs><linearGradient id="nodeGrad" x1="0" y1="1" x2="1" y2="0">
+  <stop offset="0%" stop-color="#00C6C8"/><stop offset="28%" stop-color="#0879F9"/>
+  <stop offset="54%" stop-color="#6138E8"/><stop offset="74%" stop-color="#C52DEB"/>
+  <stop offset="100%" stop-color="#FF8A20"/>
+</linearGradient>
+<linearGradient id="orbitGrad" x1="0" y1="0" x2="1" y2="1">
+  <stop offset="0%" stop-color="#00C6C8"/><stop offset="35%" stop-color="#0879F9"/>
+  <stop offset="68%" stop-color="#C52DEB"/><stop offset="100%" stop-color="#FF8A20"/>
+</linearGradient><filter id="soft" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="12"/></filter></defs>
+<g transform="translate(20 38) scale(0.92)"><path d="M 88 350 L 88 94 Q 88 62 116 84 L 386 346 Q 414 372 414 336 L 414 94" fill="none" stroke="url(#nodeGrad)" stroke-width="76" stroke-linecap="round" stroke-linejoin="round"/><path d="M 34 312 C 108 432 358 458 482 274" fill="none" stroke="url(#orbitGrad)" stroke-width="18" stroke-linecap="round"/><circle cx="482" cy="274" r="12" fill="#0879F9"/></g>
+<text x="520" y="302" font-family="Noto Sans, DejaVu Sans, sans-serif" font-size="220" font-weight="800" letter-spacing="8" fill="#102A66">NODE</text>
+<text x="528" y="398" font-family="Noto Sans, DejaVu Sans, sans-serif" font-size="58" font-weight="500" letter-spacing="0.5" fill="#48618C">Everything, connected.</text>
+</svg>

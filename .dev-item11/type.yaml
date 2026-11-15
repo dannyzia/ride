@@ -1,0 +1,28 @@
+appId: com.ride.bd
+---
+- pressKey: BACKSPACE
+- pressKey: BACKSPACE
+- pressKey: BACKSPACE
+- pressKey: BACKSPACE
+- pressKey: BACKSPACE
+- pressKey: BACKSPACE
+- pressKey: BACKSPACE
+- pressKey: BACKSPACE
+- pressKey: BACKSPACE
+- pressKey: BACKSPACE
+- pressKey: BACKSPACE
+- pressKey: BACKSPACE
+- pressKey: BACKSPACE
+- pressKey: BACKSPACE
+- pressKey: BACKSPACE
+- pressKey: BACKSPACE
+- pressKey: BACKSPACE
+- pressKey: BACKSPACE
+- pressKey: BACKSPACE
+- pressKey: BACKSPACE
+- pressKey: BACKSPACE
+- pressKey: BACKSPACE
+- pressKey: BACKSPACE
+- pressKey: BACKSPACE
+- pressKey: BACKSPACE
+- inputText: "http://localhost:8081"

@@ -1,0 +1,6 @@
+appId: com.ride.bd
+---
+- tapOn: "Get Started"
+- extendedWaitUntil:
+    visible: "Welcome Back"
+    timeout: 25000

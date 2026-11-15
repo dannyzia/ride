@@ -1,0 +1,6 @@
+appId: com.ride.bd
+---
+- tapOn:
+    id: "phone-entry.set-phone"
+- eraseText
+- inputText: "1799999992"

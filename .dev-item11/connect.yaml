@@ -1,0 +1,4 @@
+appId: com.ride.bd
+---
+- longPressOn: "http://10.0.0.25:8081"
+- tapOn: "(?i)select all"

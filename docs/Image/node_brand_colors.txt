@@ -1,0 +1,8 @@
+Primary navy: #102A66
+Cobalt: #0879F9
+Cyan: #00C6C8
+Violet: #6138E8
+Magenta: #C52DEB
+Orange: #FF8A20
+Green: #31B86A
+Warm white: #F8FBFF
